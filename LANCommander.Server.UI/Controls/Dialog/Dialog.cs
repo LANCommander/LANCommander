@@ -42,6 +42,18 @@ public abstract class Dialog<TOptions, TResult> : ComponentBase
     /// </summary>
     protected virtual Task<bool> OnOkAsync() => Task.FromResult(true);
 
+    /// <summary>
+    /// Shown at the start of the footer, beside OK and Cancel: progress, a hint, a count. Read each
+    /// time the dialog renders, so it follows the dialog's state without further calls.
+    /// </summary>
+    protected virtual RenderFragment? FooterContent => null;
+
+    /// <summary>
+    /// Shown in the title bar after the title: a chip for what is being edited, its owner, an
+    /// "unsaved" marker. Read each time the dialog renders, like <see cref="FooterContent"/>.
+    /// </summary>
+    protected virtual RenderFragment? TitleContent => null;
+
     /// <summary>Closes the dialog with <paramref name="result"/>, without going through OK.</summary>
     protected Task CloseAsync(TResult? result) => Frame?.CloseAsync(result) ?? Task.CompletedTask;
 
@@ -59,6 +71,10 @@ public abstract class Dialog<TOptions, TResult> : ComponentBase
     internal bool CanConfirmInternal => CanConfirm;
 
     internal TResult? ResultInternal => Result;
+
+    internal RenderFragment? FooterContentInternal => FooterContent;
+
+    internal RenderFragment? TitleContentInternal => TitleContent;
 
     protected override void OnAfterRender(bool firstRender) => Frame?.ContentRendered();
 }

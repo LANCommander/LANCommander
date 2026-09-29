@@ -51,7 +51,7 @@ public class FixtureDatabaseSeederTests(VisualServerFixture fixture)
         Assert.Equal(2, arenaBlitz.Actions!.Count);
         Assert.Equal(FixtureData.Games.ArenaBlitzMapPack, Assert.Single(arenaBlitz.DependentGames).Title);
 
-        Assert.Equal(8, await QueryAsync(c => c.Games!.CountAsync()));
+        Assert.Equal(FixtureData.Games.Total, await QueryAsync(c => c.Games!.CountAsync()));
     }
 
     [Fact]

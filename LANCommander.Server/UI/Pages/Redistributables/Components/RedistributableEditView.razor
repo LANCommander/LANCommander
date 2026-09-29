@@ -4,18 +4,18 @@
 
 <SideLayout>
     <Side>
-        <Menu>
+        <Menu Variant="MenuVariant.Section">
             @if (Id != Guid.Empty)
             {
-                <MenuItem Icon="IconType.Info" Href="@($"/Redistributables/{Id}/General")" Exact>General</MenuItem>
-                <MenuItem Icon="IconType.Archive" Href="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
-                <MenuItem Icon="IconType.SlidersHorizontal" Href="@($"/Redistributables/{Id}/Options")">Options</MenuItem>
-                <MenuItem Icon="IconType.Code" Href="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuItem Href="@($"/Redistributables/{Id}/General")" Exact>General</MenuItem>
+                <MenuItem Href="@($"/Redistributables/{Id}/Archives")">Archives</MenuItem>
+                <MenuItem Href="@($"/Redistributables/{Id}/Options")">Options</MenuItem>
+                <MenuItem Href="@($"/Redistributables/{Id}/Scripts")">Scripts</MenuItem>
             }
             else
             {
                 @* The other sections need a saved redistributable *@
-                <MenuItem Icon="IconType.Info" Href="/Redistributables/Add">General</MenuItem>
+                <MenuItem Href="/Redistributables/Add">General</MenuItem>
             }
         </Menu>
     </Side>

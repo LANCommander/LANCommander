@@ -5,34 +5,88 @@
     min-height: 0;
     overflow: hidden;
     background: var(--rz-base-background-color);
-    border: 1px solid var(--rz-base-700);
-    border-radius: var(--rz-border-radius);
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-lg);
 }
 
+// The whole of its container: no card in a card
+.lc-file-manager-borderless {
+    border: 0;
+    border-radius: 0;
+}
+
+// ── Nav bar: 48px. 30px ghost buttons, a divider, the breadcrumbs, New Folder, then the filter ──
 .lc-file-manager-nav {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 4px;
+    height: 48px;
+    padding: 0 10px;
+    border-bottom: 1px solid var(--lc-border-card-color);
+}
+
+.lc-file-manager .lc-file-manager-nav-button.lc-button {
+    width: 30px;
+    min-width: 30px;
+    height: 30px;
+    padding: 0;
+    color: var(--rz-text-secondary-color);
+    font-size: 16px;
+
+    // Disabled nav buttons fade to the faint text, with no plate
+    &:disabled {
+        background: none;
+        color: var(--lc-faint-text-color);
+    }
+}
+
+.lc-file-manager-nav-divider {
     flex-shrink: 0;
-    padding: 8px;
-    border-bottom: 1px solid var(--rz-base-700);
+    width: 1px;
+    height: 20px;
+    margin: 0 6px;
+    background: var(--lc-border-overlay-color);
 }
 
 .lc-file-manager-path {
     flex: 1;
     min-width: 0;
-    padding: 0 8px;
     overflow: hidden;
 
     .lc-breadcrumb {
         flex-wrap: nowrap;
         white-space: nowrap;
     }
+
+    // Where you are: 13/500 at full strength
+    .lc-breadcrumb-item:last-child > span {
+        color: var(--rz-text-title-color);
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    .lc-breadcrumb-item:not(.lc-breadcrumb-item-mono) {
+        font-size: 13px;
+    }
+}
+
+.lc-file-manager .lc-file-manager-new-folder.lc-button {
+    flex-shrink: 0;
+    height: 30px;
+    margin-inline-end: 6px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+.lc-file-manager-filter {
+    flex-shrink: 0;
+    width: 240px;
 }
 
 .lc-file-manager-upload {
     padding: 8px;
-    border-bottom: 1px solid var(--rz-base-700);
+    border-bottom: 1px solid var(--lc-border-subtle-color);
 }
 
 .lc-file-manager-loading {
@@ -47,9 +101,10 @@
     height: auto;
 }
 
+// ── Tree ──
 .lc-file-manager-tree {
-    padding: 8px 4px;
-    border-right: 1px solid var(--rz-base-700);
+    padding: 10px 8px;
+    border-right: 1px solid var(--lc-border-subtle-color);
     overflow: auto;
 
     .lc-tree-label {
@@ -57,10 +112,103 @@
     }
 }
 
+// The root is a path or an archive's name
+.lc-file-manager-root {
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+}
+
+// ── Entries ──
 .lc-file-manager-entries {
+    display: flex;
+    flex-direction: column;
     overflow: auto;
 
-    .lc-table {
+    > .lc-table {
+        flex: 1;
+        min-height: 0;
         border: none;
+    }
+}
+
+.lc-file-manager-icon-cell .lc-icon {
+    display: block;
+    font-size: 18px;
+}
+
+.lc-file-manager td.lc-file-manager-size {
+    color: var(--rz-text-secondary-color);
+}
+
+.lc-file-manager td.lc-file-manager-modified {
+    color: var(--lc-text-tertiary-color);
+}
+
+// Folders have no size of their own
+.lc-file-manager-none {
+    color: var(--lc-faint-text-color);
+}
+
+// Icon tones per family, as in the design: folder, program, text, image, video, archive
+.lc-file-tone-folder { color: #FFC53D; }
+.lc-file-tone-code { color: var(--lc-text-tertiary-color); }
+.lc-file-tone-text { color: var(--rz-text-secondary-color); }
+.lc-file-tone-image { color: #95DE64; }
+.lc-file-tone-video { color: #D3ADF7; }
+.lc-file-tone-archive { color: #FFA39E; }
+.lc-file-tone-plain { color: var(--lc-text-tertiary-color); }
+.lc-file-tone-root { color: var(--rz-text-secondary-color); }
+
+// Selected: the icon turns accent and the size reads at full strength (the rail and fill are the
+// table's). Radzen marks the row with its highlight state; no variable reaches the cells inside it.
+.lc-file-manager tr.rz-data-row.rz-state-highlight {
+    .lc-file-manager-icon-cell .lc-icon {
+        color: #69B1FF;
+    }
+
+    .lc-file-manager-name {
+        font-weight: 500;
+    }
+
+    td.lc-file-manager-size {
+        color: var(--rz-text-title-color);
+    }
+}
+
+// Entries that can't be picked stay listed for context: the name disabled, everything else faint
+.lc-file-manager tr[data-lc-mark="unselectable"] td {
+    color: var(--lc-faint-text-color);
+
+    .lc-icon {
+        color: inherit;
+    }
+
+    &.lc-file-manager-name,
+    &.lc-file-manager-size,
+    &.lc-file-manager-modified {
+        color: var(--lc-faint-text-color);
+    }
+
+    &.lc-file-manager-name {
+        color: var(--lc-text-disabled-color);
+    }
+}
+
+// Why some entries are dim: a 34px well beneath them
+.lc-file-manager-hint {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 9px;
+    height: 34px;
+    padding: 0 14px;
+    border-top: 1px solid var(--lc-border-subtle-color);
+    background: var(--lc-well);
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+
+    .lc-icon {
+        flex-shrink: 0;
+        font-size: 14px;
     }
 }

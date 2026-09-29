@@ -41,6 +41,18 @@
             FullPage = true,
             WaitFor = ".lc-confirm",
         },
+        new("Dialog.TitleContent", "A dialog with a chip and subtitle in its title bar, and a footer note",
+            @<OpenOnRender What="OpenOnRender.Overlay.DialogTitle" />)
+        {
+            FullPage = true,
+            WaitFor = ".lc-dialog-title .lc-tag",
+        },
+        new("Notification.Actions", "Notifications with an action link and a mono meta line",
+            @<OpenOnRender What="OpenOnRender.Overlay.NotificationActions" />)
+        {
+            FullPage = true,
+            WaitFor = ".lc-notification-meta",
+        },
         new("Notification.Levels", "Success, info, warning and error notifications",
             @<OpenOnRender What="OpenOnRender.Overlay.Notifications" />)
         {

@@ -1,28 +1,143 @@
 @using LANCommander.Server.Models
 @using LANCommander.Server.UI.Components
 @inherits Dialog<FilePickerOptions, IEnumerable<IFileManagerEntry>>
+@inject ArchiveService ArchiveService
 
-<FileManager ArchiveId="Options.ArchiveId"
-             WorkingDirectory="@Options.Root"
-             @bind-CurrentPath="_currentPath"
-             @bind-Selected="_selected"
-             EntrySelectable="Options.EntrySelectable"
-             EntryVisible="Options.EntryVisible"
-             SelectMultiple="Options.Multiple"
-             Features="FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs"
-             Style="height: 65vh" />
+@*
+    Browses an archive or the server's disk to pick a path; the title says which and what can be
+    picked, the footer exactly what OK returns. Open it with DialogSettings.Picker.
+*@
+<div class="file-picker-dialog">
+    <FileManager ArchiveId="Options.ArchiveId"
+                 WorkingDirectory="@Options.Root"
+                 @bind-CurrentPath="_currentPath"
+                 @bind-Selected="_selected"
+                 EntrySelectable="Options.EntrySelectable"
+                 EntryVisible="Options.EntryVisible"
+                 SelectMultiple="Options.Multiple"
+                 UnselectableHint="@UnselectableHint"
+                 RootName="@_archiveName"
+                 OnSourceLoaded="SourceLoaded"
+                 Features="Features"
+                 Borderless />
+</div>
 
 @code {
     FileManagerDirectory? _currentPath;
     IEnumerable<IFileManagerEntry> _selected = [];
+
+    string? _archiveName;
+    long? _archiveSize;
+    int? _entryCount;
+
+    bool BrowsingDisk => Options.ArchiveId is null || Options.ArchiveId == Guid.Empty;
+
+    /// <summary>
+    /// Whether only folders can be picked, told by asking the caller's rule about a sample of each,
+    /// since the rule itself is opaque.
+    /// </summary>
+    bool FoldersOnly
+    {
+        get
+        {
+            try
+            {
+                return Options.EntrySelectable(new FileManagerDirectory { Name = "folder", Path = "folder" })
+                    && !Options.EntrySelectable(new FileManagerFile { Name = "file.txt", Path = "file.txt" });
+            }
+            catch
+            {
+                return false;
+            }
+        }
+    }
+
+    string UnselectableHint => Options.UnselectableHint
+        ?? (FoldersOnly
+            ? "This picker takes a folder, so the {n} here are shown for context only."
+            : "The {n} here can't be picked, so they are shown for context only.");
+
+    // Only the disk can grow new folders; an archive's listing is read-only
+    FileManagerFeatures Features =>
+        FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel
+        | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.Filter
+        | (BrowsingDisk ? FileManagerFeatures.NewFolder : FileManagerFeatures.None);
+
+    bool TakesCurrentFolder => !_selected.Any() && _currentPath != null && Options.EntrySelectable(_currentPath);
+
+    protected override bool CanConfirm => _selected.Any() || TakesCurrentFolder;
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!BrowsingDisk)
+        {
+            var archive = await ArchiveService.GetAsync(Options.ArchiveId!.Value);
+
+            if (archive != null)
+            {
+                _archiveName = String.IsNullOrWhiteSpace(archive.Version) ? "archive.zip" : $"{archive.Version}.zip";
+                _archiveSize = archive.CompressedSize > 0 ? archive.CompressedSize : archive.UncompressedSize;
+            }
+        }
+    }
+
+    void SourceLoaded(IFileManagerSource source)
+    {
+        if (source is FileManagerArchiveSource archive)
+            _entryCount = archive.EntryCount;
+    }
+
+    /// <summary>What is being browsed: an archive with its name, size and entry count, or the disk and where it starts.</summary>
+    protected override RenderFragment TitleContent => BrowsingDisk
+        ? @<text>
+              <Tag Caps>Server disk</Tag>
+              @if (FoldersOnly)
+              {
+                  <Tag Caps Warning>Folders only</Tag>
+              }
+              @if (!String.IsNullOrWhiteSpace(Options.Root))
+              {
+                  <span class="lc-dialog-subtitle lc-dialog-subtitle-mono">rooted at @Options.Root</span>
+              }
+          </text>
+        : @<text>
+              <Tag Caps Icon="IconType.Archive">Archive</Tag>
+              <span class="lc-dialog-subtitle lc-dialog-subtitle-mono">@ArchiveSummary</span>
+          </text>;
+
+    string ArchiveSummary => String.Join(" · ", new[]
+    {
+        _archiveName,
+        _archiveSize is > 0 ? ByteSizeLib.ByteSize.FromBytes(_archiveSize.Value).ToString("0.00") : null,
+        _entryCount is { } count ? $"{count:N0} {(count == 1 ? "entry" : "entries")}" : null,
+    }.Where(part => part != null));
+
+    protected override RenderFragment FooterContent => @<div class="file-picker-footer">
+        @if (_selected.Any())
+        {
+            <span class="file-picker-verb">@Options.Verb</span>
+            <code class="file-picker-value">@string.Join(", ", _selected.Select(e => Options.Describe(e.Path)))</code>
+        }
+        else if (TakesCurrentFolder)
+        {
+            <span class="file-picker-verb">Nothing picked, so this takes the folder you are in —</span>
+            <code class="file-picker-value">@Options.Describe(_currentPath!.Path)</code>
+        }
+        else
+        {
+            <span class="file-picker-verb">Pick an entry to continue</span>
+        }
+        <span class="file-picker-footer-spacer"></span>
+        <span class="file-picker-hint">Double-click a folder to open it</span>
+    </div>;
 
     protected override Task<bool> OnOkAsync()
     {
         // Nothing selected picks the folder being shown
         if (_selected.Any())
             Result = _selected;
-        else if (_currentPath != null && Options.EntrySelectable(_currentPath))
-            Result = [_currentPath];
+        else if (TakesCurrentFolder)
+            Result = [_currentPath!];
         else
             Result = [];
 

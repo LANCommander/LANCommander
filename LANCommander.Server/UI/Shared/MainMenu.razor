@@ -1,29 +1,18 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
-@using LANCommander.Server.Settings
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Data
+@using LANCommander.Server.Services.Enums
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject SettingsProvider<Settings> SettingsProvider
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject ServerManager ServerManager
+@inject NavigationManager NavigationManager
+@inject ILogger<MainMenu> Logger
+@implements IDisposable
 
-<Menu>
-    @if (_user?.Identity?.IsAuthenticated ?? false)
-    {
-        <SubMenu Title="@_user.Identity.Name" Icon="IconType.UserCircle">
-            <MenuItem Href="/Profile" Exact>General</MenuItem>
-            @if (SettingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
-            {
-                <MenuItem Href="/Profile/Library">Library</MenuItem>
-            }
-            <MenuItem Href="/Profile/ConnectedAccounts">Connected Accounts</MenuItem>
-            @if (SettingsProvider.CurrentValue.Server.Authentication.AllowPassword)
-            {
-                <MenuItem Href="/Profile/ChangePassword">Change Password</MenuItem>
-            }
-            <MenuItem Href="/Profile/Saves">Saves</MenuItem>
-            <MenuItem Href="/Logout" Icon="IconType.SignOut">Logout</MenuItem>
-        </SubMenu>
-        <MenuDivider />
-    }
-
+@* The sidebar's navigation. Items that front a list carry a count of it, never the records themselves *@
+<Menu Variant="MenuVariant.Sidebar">
     <SubMenu Title="Dashboards" Icon="IconType.Gauge">
         <MenuItem Href="/" Exact>Overview</MenuItem>
         <MenuItem Href="/Dashboard/SessionPlaytime">Average Session Playtime</MenuItem>
@@ -32,7 +21,7 @@
 
     @if (_user != null && _user.IsInRole(RoleService.AdministratorRoleName))
     {
-        <MenuItem Href="/Games" Icon="IconType.GameController">Games</MenuItem>
+        <MenuItem Href="/Games" Icon="IconType.GameController" Count="_games">Games</MenuItem>
         <SubMenu Title="Metadata" Icon="IconType.Tag">
             <MenuItem Href="/Metadata/Collections">Collections</MenuItem>
             <MenuItem Href="/Metadata/Companies">Companies</MenuItem>
@@ -43,7 +32,7 @@
         </SubMenu>
         <MenuItem Href="/Redistributables" Icon="IconType.Package">Redistributables</MenuItem>
         <MenuItem Href="/Tools" Icon="IconType.Wrench">Tools</MenuItem>
-        <MenuItem Href="/Servers" Icon="IconType.HardDrives">Servers</MenuItem>
+        <MenuItem Href="/Servers" Icon="IconType.HardDrives" Extra="@RunningServers">Servers</MenuItem>
         <SubMenu Title="Scripting" Icon="IconType.Code">
             <MenuItem Href="/Scripting/Snippets">Snippets</MenuItem>
             <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
@@ -53,7 +42,7 @@
             <MenuItem Href="/Pages/Edit">Edit</MenuItem>
             <MenuItem Href="/Pages" Exact>View</MenuItem>
         </SubMenu>
-        <MenuItem Href="/Issues" Icon="IconType.Bug">Issues</MenuItem>
+        <MenuItem Href="/Issues" Icon="IconType.Bug" Count="@(_openIssues is > 0 ? _openIssues : null)">Issues</MenuItem>
         <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
         <SubMenu Title="Settings" Icon="IconType.Gear">
             <MenuItem Href="/Settings/General">General</MenuItem>
@@ -93,11 +82,64 @@
 @code {
     ClaimsPrincipal? _user;
 
+    int? _games;
+    int? _openIssues;
+    int? _runningServers;
+
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity?.IsAuthenticated ?? false)
             _user = authState.User;
+
+        NavigationManager.LocationChanged += RefreshOnNavigation;
+
+        await RefreshCountsAsync();
     }
+
+    // Servers carry only a live dot while any is running, never a count
+    RenderFragment? RunningServers => _runningServers is > 0
+        ? @<text><span class="lc-sidebar-running" role="img" aria-label="@($"{_runningServers} running")"></span></text>
+        : null;
+
+    void RefreshOnNavigation(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(async () =>
+    {
+        await RefreshCountsAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>The counts each query returns; the sidebar never loads the records themselves.</summary>
+    async Task RefreshCountsAsync()
+    {
+        if (_user == null || !_user.IsInRole(RoleService.AdministratorRoleName))
+            return;
+
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            // The same rows the Games page lists: base games, with expansions and mods under them
+            _games = await context.Set<Game>().CountAsync(g =>
+                g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod));
+
+            _openIssues = await context.Set<Issue>().CountAsync(i => i.ResolvedOn == null);
+
+            var running = 0;
+
+            foreach (var serverId in await context.Set<Data.Models.Server>().Select(s => s.Id).ToListAsync())
+            {
+                if (ServerManager.IsManaging(serverId) && await ServerManager.GetStatusAsync(serverId) == ServerProcessStatus.Running)
+                    running++;
+            }
+
+            _runningServers = running;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not count the sidebar's records");
+        }
+    }
+
+    public void Dispose() => NavigationManager.LocationChanged -= RefreshOnNavigation;
 }

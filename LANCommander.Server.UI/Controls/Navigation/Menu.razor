@@ -16,6 +16,9 @@
     /// <summary>Items side by side instead of stacked.</summary>
     [Parameter] public bool Horizontal { get; set; }
 
+    /// <summary>How a vertical menu is drawn: compact, the main sidebar, or an edit page's section list.</summary>
+    [Parameter] public MenuVariant Variant { get; set; }
+
     /// <summary>Called when any item is clicked, e.g. so a dropdown can close.</summary>
     [Parameter] public EventCallback OnItemClick { get; set; }
 
@@ -29,6 +32,8 @@
         _class = new ClassBuilder()
             .Add("lc-menu")
             .Add(Horizontal ? "lc-menu-horizontal" : "lc-menu-vertical")
+            .If(!Horizontal && Variant == MenuVariant.Sidebar, "lc-menu-sidebar")
+            .If(!Horizontal && Variant == MenuVariant.Section, "lc-menu-section")
             .Add(Class)
             .Build();
     }

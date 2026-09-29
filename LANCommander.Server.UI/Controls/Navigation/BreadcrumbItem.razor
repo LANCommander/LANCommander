@@ -1,6 +1,6 @@
 @namespace LANCommander.Server.UI.Controls
 
-<li class="lc-breadcrumb-item">
+<li class="@(Mono ? "lc-breadcrumb-item lc-breadcrumb-item-mono" : "lc-breadcrumb-item")">
     @if (Href != null)
     {
         <a href="@Href">@Content</a>
@@ -23,6 +23,9 @@
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Sets the text in mono, for a path's root: an archive name, a drive, a server's directory.</summary>
+    [Parameter] public bool Mono { get; set; }
 
     RenderFragment Content => @<text>
         @if (Icon != IconType.None)

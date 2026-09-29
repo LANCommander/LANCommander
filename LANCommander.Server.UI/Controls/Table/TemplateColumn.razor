@@ -4,11 +4,12 @@
 
 @* A column of custom content that isn't tied to one sortable value, e.g. a list of tags *@
 <RadzenDataGridColumn TItem="TItem"
-                      Title="@Title"
+                      Title="@(HideTitle ? "" : Title)"
                       Sortable="false"
                       Visible="@(Host?.IsVisible(_info, Hide) ?? !Hide)"
-                      Pickable="true"
+                      Pickable="false"
                       Width="@Width"
+                      CssClass="@CellClass"
                       WhiteSpace="WhiteSpace.Wrap">
     <Template Context="item">
         @ChildContent(item)
@@ -16,6 +17,7 @@
 </RadzenDataGridColumn>
 
 @code {
+    /// <summary>Header text; also the column's name in the column picker.</summary>
     [Parameter, EditorRequired] public string Title { get; set; } = "";
 
     [Parameter, EditorRequired] public RenderFragment<TItem> ChildContent { get; set; } = default!;
@@ -23,10 +25,16 @@
     /// <summary>Hidden until shown through the column picker.</summary>
     [Parameter] public bool Hide { get; set; }
 
+    /// <summary>Leaves the header blank, e.g. over a column of icons. The column picker still lists it by <see cref="Title"/>.</summary>
+    [Parameter] public bool HideTitle { get; set; }
+
     /// <summary>Navigation properties to load for this column, comma separated.</summary>
     [Parameter] public string? Include { get; set; }
 
     [Parameter] public string? Width { get; set; }
+
+    /// <summary>Extra classes for the column's cells.</summary>
+    [Parameter] public string? CellClass { get; set; }
 
     /// <summary>Identifies the column in remembered settings. Defaults to the title.</summary>
     [Parameter] public string? Key { get; set; }
@@ -42,6 +50,7 @@
             Key = Key ?? Title,
             Title = Title,
             Includes = TableColumnIncludes.Parse(Include),
+            HiddenByDefault = Hide,
         };
 
         Host?.Register(_info);

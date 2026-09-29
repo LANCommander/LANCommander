@@ -5,6 +5,7 @@ using Microsoft.Extensions.Logging;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Text.Json;
 using YamlDotNet.Serialization;
@@ -26,6 +27,53 @@ namespace LANCommander.SDK
 
         public event DataReceivedEventHandler? OutputDataReceived;
         public event DataReceivedEventHandler? ErrorDataReceived;
+
+        /// <summary>Raised by <see cref="ExecuteServerAsync"/> right after the server process has started.</summary>
+        public event EventHandler<Process>? ProcessStarted;
+
+        /// <summary>
+        /// Whether <see cref="WriteInputLineAsync"/> can currently deliver input: the process is
+        /// running and was started with redirected standard input (i.e. not via shell execute).
+        /// </summary>
+        public bool CanWriteInput
+        {
+            get
+            {
+                try
+                {
+                    return Process != null
+                        && Process.StartInfo.RedirectStandardInput
+                        && !Process.HasExited;
+                }
+                catch (InvalidOperationException)
+                {
+                    // Process was never started or has been disposed
+                    return false;
+                }
+            }
+        }
+
+        /// <summary>Writes a line to the running process's standard input.</summary>
+        /// <returns>False when the process has no redirected standard input or is no longer running.</returns>
+        public async Task<bool> WriteInputLineAsync(string line)
+        {
+            if (!CanWriteInput)
+                return false;
+
+            try
+            {
+                await Process.StandardInput.WriteLineAsync(line);
+                await Process.StandardInput.FlushAsync();
+
+                return true;
+            }
+            catch (Exception ex) when (ex is InvalidOperationException or IOException or ObjectDisposedException)
+            {
+                logger?.LogWarning(ex, "Could not write to the server process's standard input");
+
+                return false;
+            }
+        }
 
         public void AddVariable(string key, string value)
         {
@@ -82,6 +130,7 @@ namespace LANCommander.SDK
             {
                 processStartInfo.RedirectStandardError = true;
                 processStartInfo.RedirectStandardOutput = true;
+                processStartInfo.RedirectStandardInput = true;
             }
             
             Process.StartInfo = processStartInfo;
@@ -89,7 +138,7 @@ namespace LANCommander.SDK
             if (OutputDataReceived != null && !processStartInfo.UseShellExecute)
                 Process.OutputDataReceived += OutputDataReceived;
             
-            if (OutputDataReceived != null && !processStartInfo.UseShellExecute)
+            if (ErrorDataReceived != null && !processStartInfo.UseShellExecute)
                 Process.ErrorDataReceived += ErrorDataReceived;
             
             logger?.LogTrace("Running server executable");
@@ -100,6 +149,8 @@ namespace LANCommander.SDK
             bool exited = false;
 
             Process.Start();
+
+            ProcessStarted?.Invoke(this, Process);
 
             Process.Exited += (sender, args) =>
             {

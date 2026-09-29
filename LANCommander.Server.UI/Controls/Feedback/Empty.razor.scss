@@ -1,26 +1,49 @@
+// Empty: a dashed box on Surface with a quiet icon, a title, a line of help and an optional action
 .lc-empty {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
-    padding: 2rem 1rem;
-    color: var(--rz-text-secondary-color);
+    padding: 26px 20px;
+    border: 1px dashed var(--lc-border-dialog-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-panel-background);
+    color: var(--lc-text-tertiary-color);
     text-align: center;
 
     .lc-empty-icon {
-        font-size: 3rem;
-        color: var(--rz-base-500);
+        margin-bottom: 12px;
+        color: var(--lc-text-disabled-color);
+        font-size: 28px;
+    }
+
+    .lc-empty-title {
+        margin-bottom: 5px;
+        color: var(--rz-text-title-color);
+        font-size: 14px;
+        font-weight: 600;
+    }
+
+    .lc-empty-description {
+        font-size: 12px;
+        line-height: 1.5;
     }
 
     .lc-empty-actions {
-        margin-top: 0.5rem;
+        margin-top: 14px;
     }
 }
 
 .lc-empty-small {
-    padding: 0.75rem;
+    padding: 12px;
+    border: 0;
+    background: none;
 
     .lc-empty-icon {
-        font-size: 1.75rem;
+        margin-bottom: 6px;
+        font-size: 22px;
+    }
+
+    .lc-empty-actions {
+        margin-top: 8px;
     }
 }

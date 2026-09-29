@@ -1,5 +1,5 @@
 .lc-badge {
-    --lc-badge-color: var(--rz-base-400);
+    --lc-badge-color: var(--lc-text-tertiary-color);
 
     display: inline-flex;
     align-items: center;
@@ -9,13 +9,15 @@
 
 .lc-badge-dot {
     position: relative;
-    width: 6px;
-    height: 6px;
+    flex-shrink: 0;
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
     background: var(--lc-badge-color);
 }
 
-.lc-badge-success { --lc-badge-color: var(--rz-success); }
+// Running now is the live green, brighter than the success fill
+.lc-badge-success { --lc-badge-color: var(--lc-live-color); }
 .lc-badge-info { --lc-badge-color: var(--rz-info); }
 .lc-badge-warning { --lc-badge-color: var(--rz-warning); }
 .lc-badge-danger { --lc-badge-color: var(--rz-danger); }
@@ -27,6 +29,36 @@
     border: 1px solid var(--lc-badge-color);
     border-radius: 50%;
     animation: lc-badge-pulse 1.2s ease-in-out infinite;
+}
+
+// Count: a 20px accent pill with a mono figure, or a quiet Raised chip in a panel header
+.lc-badge-count {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 7px;
+    border-radius: 999px;
+    background: var(--rz-primary);
+    color: #FFFFFF;
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+    font-weight: 500;
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.lc-badge-count-neutral {
+    height: auto;
+    min-width: 0;
+    padding: 2px 8px;
+    border: 1px solid var(--lc-border-card-color);
+    background: var(--lc-raised);
+    color: var(--rz-text-secondary-color);
+    font-weight: 400;
+    line-height: 15px;
 }
 
 @keyframes lc-badge-pulse {

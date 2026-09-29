@@ -1,0 +1,513 @@
+// ScriptEditorDialog, opened as a picker with the compact footer, arranged like the launcher's
+// script debugger: a 46px toolbar, then three columns of cards 14px apart (the scripts, the editor
+// over its console, the script's own fields), with the status bar in the dialog footer.
+// Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
+
+$script-editor-scripts-width: 250px;
+$script-editor-rail-width: 288px;
+
+.script-editor {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+// "• unsaved" in the title bar
+.script-editor-unsaved {
+    flex-shrink: 0;
+    color: var(--lc-warning-text-color);
+    font-size: 13px;
+}
+
+// ── Toolbar: 30px buttons with 12px text, split by standalone hairlines ──
+.script-editor-toolbar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 4px;
+    height: 46px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--lc-border-card-color);
+
+    .lc-button.lc-button {
+        height: 30px;
+        padding: 0 10px;
+        font-size: 12px;
+    }
+}
+
+.script-editor-divider {
+    flex-shrink: 0;
+    width: 1px;
+    height: 20px;
+    margin: 0 4px;
+    background: var(--lc-border-overlay-color);
+}
+
+.script-editor-toolbar-spacer {
+    flex: 1;
+}
+
+.script-editor-caret {
+    margin-inline-start: 2px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+}
+
+// RUNNING and the run's time: the success caps tag, 24px as drawn, with a live dot
+.lc-tag.script-editor-running {
+    flex-shrink: 0;
+    height: 24px;
+    padding: 0 9px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+
+    .lc-tag-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+}
+
+.script-editor-running-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-live-color);
+}
+
+.script-editor-running-time {
+    font-family: var(--lc-font-mono);
+    font-weight: 400;
+    letter-spacing: 0;
+}
+
+// ── Body: three columns of cards ──
+.script-editor-body {
+    display: flex;
+    flex: 1;
+    gap: 14px;
+    min-height: 0;
+    padding: 14px;
+}
+
+// A card on the well: the scripts, the editor and the console
+%script-editor-well-card {
+    overflow: hidden;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-well);
+    box-shadow: var(--lc-inset-highlight);
+}
+
+.script-editor-kicker {
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    text-transform: uppercase;
+}
+
+.script-editor-count {
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+// ── Scripts: grouped by owner ──
+.script-editor-scripts {
+    @extend %script-editor-well-card;
+
+    display: flex;
+    flex: 0 0 $script-editor-scripts-width;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.script-editor-panel-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    height: 34px;
+    padding: 0 12px;
+    border-bottom: 1px solid var(--lc-border-card-color);
+
+    .script-editor-kicker {
+        flex: 1;
+    }
+}
+
+.script-editor-script-list {
+    flex: 1;
+    min-height: 0;
+    overflow: auto;
+    padding: 8px 6px;
+}
+
+.script-editor-group + .script-editor-group .script-editor-group-header {
+    padding-top: 12px;
+}
+
+.script-editor-group-header {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 4px 8px 4px 6px;
+    border: 0;
+    background: none;
+    color: var(--lc-text-title-color);
+    font: inherit;
+    text-align: start;
+    cursor: pointer;
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+        border-radius: var(--lc-radius-md);
+    }
+}
+
+.script-editor-group-caret {
+    flex-shrink: 0;
+    color: var(--lc-text-disabled-color);
+    font-size: 11px;
+    transition: transform 0.15s;
+}
+
+.script-editor-group-caret-open {
+    color: var(--lc-text-tertiary-color);
+    transform: rotate(90deg);
+}
+
+.script-editor-group-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    font-size: 12px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.script-editor-group-kind {
+    flex-shrink: 0;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 10px;
+    letter-spacing: 0.04em;
+}
+
+.script-editor-group-scripts {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+// A script: 28px, its type (or ADMIN) at the end; the open one Raised with a short rail
+.script-editor-script {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    height: 28px;
+    padding: 0 8px 0 22px;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: none;
+    color: var(--lc-text-secondary-color);
+    font: inherit;
+    font-size: 13px;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+    }
+
+    .lc-tag {
+        flex-shrink: 0;
+        margin: 0;
+    }
+}
+
+.script-editor-script-current {
+    padding-inline-start: 16px;
+    background: var(--lc-raised);
+    color: var(--lc-text-title-color);
+
+    &:hover {
+        background: var(--lc-raised);
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset-block: 6px;
+        inset-inline-start: 0;
+        width: var(--lc-selection-rail);
+        border-radius: 1px;
+        background: var(--lc-selection-rail-color);
+    }
+}
+
+// Running: a dot before the name
+.script-editor-script-running {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-warning-text-color);
+}
+
+.script-editor-script-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.script-editor-panel-footer {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--lc-border-card-color);
+
+    .lc-dropdown,
+    .lc-button {
+        width: 100%;
+    }
+}
+
+// ── The editor over its console ──
+.script-editor-main {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    gap: 14px;
+    min-width: 0;
+    min-height: 0;
+}
+
+.script-editor-code {
+    @extend %script-editor-well-card;
+
+    flex: 1;
+    min-height: 200px;
+
+    > div,
+    .monaco-editor-container {
+        height: 100%;
+    }
+}
+
+.script-editor-console {
+    @extend %script-editor-well-card;
+
+    display: flex;
+    flex: 0 0 216px;
+    flex-direction: column;
+    min-height: 0;
+}
+
+// ── Rail: the script's fields, then what it runs with ──
+.script-editor-rail {
+    display: flex;
+    flex: 0 0 $script-editor-rail-width;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+    overflow: auto;
+}
+
+.script-editor-card {
+    flex-shrink: 0;
+    padding: 14px;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-panel-background);
+    box-shadow: var(--lc-inset-highlight);
+
+    > .script-editor-kicker {
+        margin-bottom: 12px;
+    }
+
+    // 34px fields with 12px labels, 12px apart
+    .lc-form-item {
+        margin-bottom: 12px;
+    }
+
+    .lc-form-item-label,
+    .lc-form-item label {
+        margin-bottom: 6px;
+        font-size: 12px;
+    }
+
+    .lc-text-input,
+    .lc-select {
+        height: 34px;
+    }
+}
+
+.script-editor-rail-divider {
+    height: 1px;
+    margin: 14px 0;
+    background: var(--lc-border-subtle-color);
+}
+
+.script-editor-admin {
+    align-items: flex-start;
+    gap: 11px;
+
+    .lc-switch-label {
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+.script-editor-admin-label {
+    color: var(--lc-text-secondary-color);
+    font-size: 13px;
+}
+
+.script-editor-admin-help {
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    line-height: 1.4;
+}
+
+.script-editor-variables {
+    flex: 0 0 auto;
+}
+
+.script-editor-card-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 11px;
+
+    .script-editor-kicker {
+        flex: 1;
+    }
+}
+
+.script-editor-help {
+    margin: 0 0 11px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.script-editor-chips {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+}
+
+// A variable: a mono well chip in the variable colour; click to insert it
+.script-editor-chip {
+    display: inline-flex;
+    align-items: center;
+    height: 22px;
+    padding: 0 7px;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-well);
+    color: #9CDCFE;
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+    cursor: pointer;
+
+    &:hover {
+        border-color: var(--lc-border-strong-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 1px;
+    }
+}
+
+.script-editor-chip-more {
+    border-style: dashed;
+    color: var(--lc-text-disabled-color);
+}
+
+// Cmdlet chips in the PowerShell function colour, snippet chips in a neutral tone
+.script-editor-chip-cmdlet {
+    color: #DCDCAA;
+}
+
+.script-editor-chip-snippet {
+    color: var(--lc-text-secondary-color);
+}
+
+// Snippets are grouped by their folder, each group a small label over its chips
+.script-editor-snippet-group + .script-editor-snippet-group {
+    margin-top: 11px;
+}
+
+.script-editor-snippet-group-name {
+    display: block;
+    margin-bottom: 6px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+// ── Status bar, in the footer beside Cancel and Save ──
+.script-editor-status {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    min-width: 0;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.script-editor-status-state {
+    color: var(--lc-text-secondary-color);
+}
+
+.script-editor-status-problems,
+.script-editor-status-mono,
+.script-editor-status-save {
+    font-family: var(--lc-font-mono);
+}
+
+.script-editor-status-problems {
+    color: var(--lc-danger-text-color);
+}
+
+.script-editor-status-mono {
+    color: var(--lc-text-tertiary-color);
+}
+
+.script-editor-status-save {
+    color: var(--lc-text-disabled-color);
+}
+
+@media (max-width: 1100px) {
+    .script-editor-body {
+        flex-direction: column;
+        overflow: auto;
+    }
+
+    .script-editor-scripts,
+    .script-editor-rail {
+        flex-basis: auto;
+    }
+}

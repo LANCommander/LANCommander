@@ -1,26 +1,131 @@
+// Toolbar: 32px controls. Search on the left, then the count, view and column controls on the right.
 .lc-table-toolbar {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    margin-bottom: 12px;
+    gap: 10px;
+    margin-bottom: 10px;
 
     .lc-table-toolbar-start,
     .lc-table-toolbar-end {
         display: flex;
         flex-wrap: wrap;
         align-items: center;
-        gap: 8px;
+        gap: 10px;
     }
 
     .lc-table-toolbar-end {
         flex-grow: 1;
         justify-content: flex-end;
     }
+}
+
+// Search on a well, 268 wide, with the "/" key it answers to
+.lc-table-search-box {
+    position: relative;
+    width: 268px;
+    max-width: 100%;
 
     .lc-table-search {
-        width: 240px;
+        display: block;
+        width: 100%;
+    }
+
+    .lc-table-search .rz-textbox {
+        height: 32px;
+        padding-inline-end: 30px;
+        background: var(--lc-well);
+        font-size: 13px;
+    }
+}
+
+.lc-table-search-key {
+    position: absolute;
+    top: 50%;
+    inset-inline-end: 10px;
+    padding: 1px 4px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-sm);
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 10px;
+    line-height: 1.2;
+    pointer-events: none;
+    transform: translateY(-50%);
+
+    // Typing replaces the hint
+    .lc-table-search-box:focus-within & {
+        display: none;
+    }
+}
+
+.lc-table-total {
+    color: var(--lc-text-secondary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+// Column picker: the Columns button's panel, one checkbox per column
+.lc-table-column-picker {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 180px;
+    max-height: 360px;
+    overflow-y: auto;
+}
+
+.lc-table-column-option {
+    display: flex;
+    align-items: center;
+    min-height: 30px;
+    padding-inline: 4px;
+    border-radius: var(--lc-radius-md);
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+
+    .lc-checkbox-label {
+        flex: 1;
+        cursor: pointer;
+    }
+}
+
+// Filter bar: whatever the page puts there (active filters), then the current order at the end
+.lc-table-filterbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    min-height: 26px;
+    margin-bottom: 10px;
+}
+
+.lc-table-sorted {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    margin-inline-start: auto;
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.lc-table-sorted-label {
+    color: var(--lc-text-disabled-color);
+}
+
+.lc-table-sorted-value {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: var(--lc-text-secondary-color);
+
+    .lc-icon {
+        color: var(--lc-selection-rail-color);
+        font-size: 11px;
     }
 }
 
@@ -28,6 +133,42 @@
     display: flex;
     justify-content: center;
     padding: 2rem;
+}
+
+// The frame: rows and footer in one Surface card, lit along the top edge
+.lc-table-frame {
+    overflow: hidden;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--rz-base-background-color);
+    box-shadow: var(--lc-inset-highlight);
+
+    .lc-table-grid.rz-data-grid {
+        border: 0;
+        border-radius: 0;
+        background: transparent;
+    }
+}
+
+// Inside a panel that already draws the card: no second edge
+.lc-table-frameless .lc-table-frame {
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+// Tiles sit on the page itself; only the footer keeps its well, as a bar of its own
+.lc-table-frame-tiles {
+    overflow: visible;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+
+    .lc-table-footer {
+        border: 1px solid var(--lc-border-color);
+        border-radius: var(--lc-radius-lg);
+    }
 }
 
 .lc-table-grid {
@@ -41,12 +182,477 @@
         gap: 4px;
     }
 
+    // The checkbox column lines its boxes up under the header's, at the row's leading edge
     .lc-table-select {
-        text-align: center;
+        text-align: start;
     }
 
     // Tags in cells wrap onto several lines
     .lc-tag {
         margin-block: 2px;
+    }
+}
+
+// Rows 46px and a 38px kicker-cased head. Radzen sizes cells by padding alone, so the heights and
+// the tracking go on our grid; the small (compact) table keeps Radzen's own density.
+.lc-table:not(.lc-table-small) .lc-table-grid {
+    thead th {
+        height: var(--lc-row-head-height);
+    }
+
+    tbody td {
+        height: var(--lc-row-height);
+    }
+
+    // Child rows sit a step lower than their parent
+    tbody tr[data-lc-child] > td {
+        height: 40px;
+    }
+}
+
+.lc-table-grid thead > tr > th {
+    border-bottom: 1px solid var(--lc-border-color);
+    letter-spacing: var(--lc-kicker-tracking);
+}
+
+// Rows are split by 6% hairlines, never by fill; the frame draws the grid's outer edges
+.lc-table-grid {
+    --rz-grid-cell-border: 1px solid var(--lc-divider-row-color);
+}
+
+.lc-table-frame {
+    --rz-grid-data-border-shadow: none;
+}
+
+// Sorted: the header lights up and gets an 11px accent arrow. Radzen marks the sorted header only
+// with aria-sort and draws the arrow as a Material Symbols ligature; no variable sets which glyph or
+// its colour, so both are set here.
+.lc-table-grid thead th.rz-sortable-column[aria-sort="ascending"],
+.lc-table-grid thead th.rz-sortable-column[aria-sort="descending"] {
+    color: var(--lc-text-title-color);
+
+    .rz-column-title,
+    .rz-column-title-content {
+        color: var(--lc-text-title-color);
+    }
+
+    .rz-sortable-column-icon.rzi-sort-asc,
+    .rz-sortable-column-icon.rzi-sort-desc {
+        width: auto;
+        height: auto;
+        margin-inline-start: 6px;
+        color: var(--lc-selection-rail-color);
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    .rzi-sort-asc::before {
+        content: "arrow_upward";
+    }
+
+    .rzi-sort-desc::before {
+        content: "arrow_downward";
+    }
+}
+
+// Selected: Raised plus a full-height 2px rail down the row's leading edge. Radzen only fills
+// selected rows when a click selects them (rz-selectable); ours are checked, so the fill is set here.
+.lc-table-grid tbody tr.rz-data-row.rz-state-highlight {
+    > td {
+        background-color: var(--lc-raised);
+    }
+
+    > td:first-child {
+        box-shadow: inset var(--lc-selection-rail) 0 0 var(--lc-selection-rail-color);
+    }
+}
+
+// Keyboard focus: the whole row outlined inside its edges, no fill of its own. Radzen outlines the
+// focused cell and fills the focused row; the design marks the row, so the cell rules are undone.
+.lc-table-grid {
+    --rz-grid-cell-focus-background-color: transparent;
+    --rz-grid-cell-focus-color: inherit;
+    --rz-grid-cell-focus-outline: none;
+
+    tbody tr.rz-data-row.rz-state-focused > td.rz-state-focused {
+        outline: none;
+    }
+
+    &:focus-within tbody tr.rz-data-row.rz-state-focused {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+    }
+}
+
+// Figures line up in mono, flush right
+.lc-table-numeric {
+    font-family: var(--lc-font-mono);
+    text-align: end;
+}
+
+// A header per group, e.g. per letter: 28px on the well, sticky within the grid's scroll area,
+// hairlines above and below, the letter and its count in mono
+.lc-table .lc-table-grid tbody tr:has(.lc-table-group) > td {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    height: 28px;
+    padding-block: 0;
+    border-top: 1px solid var(--lc-border-subtle-color);
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+    background: var(--lc-well);
+}
+
+.lc-table-group {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 10px;
+}
+
+.lc-table-group-title {
+    color: var(--lc-text-title-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+    font-weight: 500;
+}
+
+.lc-table-group-count {
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+// Rows with children, when a column carries the toggle: a caret before the title and the
+// children's count after it; child rows are indented by the caret and its gap, in a quieter voice
+.lc-table-inline-expander .lc-table-grid {
+    // The grid's own toggle (a button around the chevron, indented by level) gives way to the one
+    // in the title cell
+    .rz-cell-toggle > .rz-button:has(> .rz-row-toggler) {
+        display: none;
+    }
+
+    .rz-expanded-row > td {
+        background-color: transparent;
+    }
+
+    .rz-cell-toggle {
+        gap: 0;
+    }
+}
+
+.lc-table-expandable {
+    display: inline-flex;
+    align-items: center;
+    gap: 9px;
+    min-width: 0;
+    max-width: 100%;
+    vertical-align: middle;
+}
+
+.lc-table-expandable-content {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-table-expander {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 12px;
+    height: 20px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    cursor: pointer;
+
+    .lc-icon {
+        transition: transform 0.15s;
+    }
+
+    &:hover {
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        border-radius: var(--lc-radius-sm);
+        outline: 2px solid var(--lc-selection-rail-color);
+    }
+}
+
+.lc-table-expander-open .lc-icon {
+    transform: rotate(90deg);
+}
+
+.lc-table-child-summary {
+    flex-shrink: 0;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+.lc-table-expandable-child {
+    padding-inline-start: 21px;
+    color: var(--lc-text-secondary-color);
+    font-size: 13px;
+}
+
+// Footer: 42px on the well. The range in mono, then rows per page, then numbered page squares.
+.lc-table-footer {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px 12px;
+    min-height: 42px;
+    padding: 0 14px;
+    border-top: 1px solid var(--lc-border-color);
+    background: var(--lc-well);
+}
+
+.lc-table-range {
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+}
+
+.lc-table-pager {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.lc-table-pager-label {
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+// Rows per page: a 26px Raised select with the number in mono. Radzen sizes the dropdown by its
+// label's padding and line height, so both are set to fit the 26px box.
+.lc-table-footer .lc-table-page-size.rz-dropdown {
+    display: inline-flex;
+    align-items: center;
+    height: 26px;
+    min-height: 26px;
+    border-color: var(--lc-border-color);
+    background: var(--lc-raised);
+
+    .rz-dropdown-label,
+    .rz-inputtext {
+        display: flex;
+        align-items: center;
+        height: 24px;
+        padding-block: 0;
+        padding-inline-start: 10px;
+        font-family: var(--lc-font-mono);
+        font-size: 12px;
+        line-height: 24px;
+    }
+
+    .rz-dropdown-trigger {
+        height: 24px;
+    }
+}
+
+.lc-table-pager-divider {
+    width: 1px;
+    height: 18px;
+    margin-inline: 2px;
+    background: var(--lc-border-color);
+}
+
+.lc-table-pages {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.lc-table-page {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 26px;
+    height: 26px;
+    padding: 0 6px;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--lc-text-secondary-color);
+    font: inherit;
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover:not(:disabled, .lc-table-page-active) {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 1px;
+    }
+
+    &:disabled {
+        color: var(--lc-text-disabled-color);
+        cursor: default;
+    }
+
+    .lc-icon {
+        font-size: 14px;
+    }
+}
+
+.lc-table-page-active {
+    background: var(--rz-primary);
+    color: #FFFFFF;
+    cursor: default;
+}
+
+.lc-table-page-gap {
+    min-width: 16px;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    text-align: center;
+}
+
+// Table / grid toggle and the tile sizes: segmented tracks on the well, 24px options with a label
+.lc-table-view {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    height: 32px;
+    padding: 3px;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-well);
+}
+
+.lc-table-view-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    height: 24px;
+    padding: 0 10px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    background: transparent;
+    color: var(--lc-text-tertiary-color);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+
+    .lc-icon {
+        font-size: 13px;
+    }
+
+    &:hover {
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+    }
+}
+
+.lc-table-tile-sizes .lc-table-view-option {
+    padding: 0 9px;
+    font-weight: 400;
+}
+
+.lc-table-view-option-active {
+    background: var(--lc-popover);
+    box-shadow: var(--lc-inset-highlight);
+    color: var(--lc-text-title-color);
+
+    .lc-table-tile-sizes & {
+        font-weight: 500;
+    }
+}
+
+.lc-table-rows-hidden {
+    display: none;
+}
+
+// Tiles: fixed-width tiles wrapping in rows, 139px at the middle size
+.lc-table-tiles {
+    --lc-tile-width: 139px;
+
+    display: flex;
+    flex-wrap: wrap;
+    align-content: flex-start;
+    gap: 14px;
+    padding: 0 0 14px;
+
+    &[aria-busy="true"] {
+        opacity: 0.6;
+    }
+
+    > .lc-empty {
+        flex: 1;
+    }
+}
+
+.lc-table-tiles-small {
+    --lc-tile-width: 104px;
+}
+
+.lc-table-tiles-large {
+    --lc-tile-width: 186px;
+}
+
+.lc-table-tile {
+    position: relative;
+    flex: 0 0 var(--lc-tile-width);
+    width: var(--lc-tile-width);
+    min-width: 0;
+    border-radius: var(--lc-radius-md);
+
+    // Without a cover to ring, selection rings the whole tile
+    &.lc-table-tile-selected:not(:has(.lc-table-tile-cover)) {
+        box-shadow: 0 0 0 2px var(--lc-selection-rail-color);
+    }
+
+    // A tile template marks its artwork with lc-table-tile-cover; selection draws a 2px edge on it
+    &.lc-table-tile-selected .lc-table-tile-cover {
+        box-shadow: inset 0 0 0 2px var(--lc-selection-rail-color);
+    }
+}
+
+// The tick: 18px at the cover's corner. Shown while hovered or selected, and on every tile while
+// anything is selected, so the grid reads as a selection in progress.
+.lc-table-tile-select {
+    position: absolute;
+    top: 7px;
+    left: 7px;
+    z-index: 2;
+    display: flex;
+    opacity: 0;
+    transition: opacity 0.15s;
+
+    .lc-table-tile:hover &,
+    .lc-table-tile-selected &,
+    .lc-table-tiles-selecting &,
+    &:focus-within {
+        opacity: 1;
+    }
+
+    .rz-chkbox,
+    .rz-chkbox-box {
+        width: 18px;
+        height: 18px;
+    }
+
+    .rz-chkbox-box {
+        box-shadow: 0 1px 4px rgba(0, 0, 0, 0.45);
     }
 }

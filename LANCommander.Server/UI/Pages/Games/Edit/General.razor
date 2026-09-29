@@ -15,55 +15,60 @@
 @inject DialogService Dialogs
 @inject NavigationManager NavigationManager
 
-<GameEditView Id="Id" LoadRelationships>
-    <TitleTemplate>
-        @(context.Id == Guid.Empty ? "Add New Game" : "General")
-    </TitleTemplate>
+<GameEditView @ref="_view" Id="Id" LoadRelationships OnLoaded="OnGameLoaded" ContentClass="game-general-content">
     <TitleExtraTemplate>
-        @if (context.Id != Guid.Empty)
+        @if (IsDirty(context))
         {
-            <Button Icon="IconType.Export" OnClick="() => OpenExportDialogAsync(context)">Export</Button>
+            <span class="game-edit-unsaved" role="status">
+                <span class="game-edit-unsaved-dot" aria-hidden="true"></span>
+                Unsaved changes
+            </span>
         }
 
+        @if (context.Id != Guid.Empty)
+        {
+            <Button Text Icon="IconType.Export" OnClick="() => OpenExportDialogAsync(context)">Export</Button>
+        }
+
+        <Button Disabled="@(!IsDirty(context) || _saving)" OnClick="DiscardAsync">Discard</Button>
         <Button Primary Loading="_saving" OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
 
     <ChildContent>
-        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)">
-            <FormItem Label="Title" Required>
-                <GameMetadataLookup ButtonText="Lookup"
-                                    AutoFocus="context.Id == Guid.Empty"
-                                    @bind-Value="context.Title"
-                                    GameId="@context.Id"
-                                    OnImported="OnGameImported" />
-            </FormItem>
-            <FormItem Label="Sort Title">
-                <TextInput @bind-Value="context.SortTitle" />
-            </FormItem>
-            <FormItem Label="Notes">
-                <MarkdownEditor @bind-Value="context.Notes" SpellChecker="false" MinHeight="200px" />
-            </FormItem>
-            <FormItem Label="Description">
-                <MarkdownEditor @bind-Value="context.Description" SpellChecker="false" MinHeight="500px" />
-            </FormItem>
-            <FormItem Label="Engine">
-                <Select TValue="Guid?" Items="EngineItems" @bind-Value="context.EngineId" Placeholder="Select an Engine" Searchable Clearable />
-            </FormItem>
-            <FormItem Label="Type">
-                <EnumSelect TEnum="GameType" @bind-Value="context.Type" />
-            </FormItem>
+        @* As drawn: the fields the launcher shows first, in pairs; then the depot switches; then the rest in the same style *@
+        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)" Class="game-general-form">
+            <div class="game-form-pair">
+                <FormItem Label="Title" Required>
+                    <GameMetadataLookup ButtonText="Lookup"
+                                        AutoFocus="context.Id == Guid.Empty"
+                                        @bind-Value="context.Title"
+                                        GameId="@context.Id"
+                                        OnImported="OnGameImported" />
+                </FormItem>
+                <FormItem Label="Sort title" Help="Used for ordering in the launcher when it differs from the display title.">
+                    <TextInput @bind-Value="context.SortTitle" />
+                </FormItem>
+            </div>
+            <div class="game-form-pair">
+                <FormItem Label="Released on">
+                    <DatePicker TValue="DateTime?" @bind-Value="context.ReleasedOn" Format="yyyy-MM-dd" Clearable Class="game-general-date" />
+                </FormItem>
+                <FormItem Label="Type">
+                    <EnumSelect TEnum="GameType" @bind-Value="context.Type" />
+                </FormItem>
+            </div>
             @if (context.Type != GameType.MainGame)
             {
-                <FormItem Label="Base Game" Required>
+                <FormItem Label="Base game" Required>
                     <Flex Gap="Gap.Small">
                         <Select TValue="Guid?"
                                 Items="BaseGameItems(context)"
                                 @bind-Value="context.BaseGameId"
-                                Placeholder="Select a Game"
+                                Placeholder="Select a game"
                                 Searchable
                                 Style="flex: 1" />
 
-                        <Button Primary Icon="IconType.PencilSimple"
+                        <Button Icon="IconType.PencilSimple"
                                 Disabled="@(context.BaseGameId == null || context.BaseGameId == Guid.Empty)"
                                 Href="@($"/Games/{context.BaseGameId}")"
                                 NewTab>
@@ -72,14 +77,73 @@
                     </Flex>
                 </FormItem>
             }
-            <FormItem Label="Key Allocation Method">
-                <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="context.KeyAllocationMethod" />
+            @* Description is Markdown, which the launcher renders: a plain field by default, the editor on demand *@
+            <FormItem Label="Description">
+                <ChildContent>
+                    @if (_descriptionEditor)
+                    {
+                        <MarkdownEditor @bind-Value="context.Description" SpellChecker="false" MinHeight="300px" />
+                    }
+                    else
+                    {
+                        <TextArea @bind-Value="context.Description" Immediate Class="game-general-description" />
+                    }
+                </ChildContent>
+                <HelpTemplate>
+                    Written in Markdown.
+                    <button type="button" class="game-general-link" @onclick="() => _descriptionEditor = !_descriptionEditor">
+                        @(_descriptionEditor ? "Use the plain field" : "Open the Markdown editor")
+                    </button>
+                </HelpTemplate>
             </FormItem>
-            <FormItem Label="Released On">
-                <DatePicker TValue="DateTime?" @bind-Value="context.ReleasedOn" Clearable />
-            </FormItem>
-            <FormItem Label="Singleplayer">
-                <Checkbox @bind-Value="context.Singleplayer" />
+            <div class="game-form-pair">
+                <FormItem Label="Developers">
+                    <TaxonomyInput DataService="CompanyService" @bind-Values="context.Developers" Placeholder="Add a developer…" />
+                </FormItem>
+                <FormItem Label="Publishers">
+                    <TaxonomyInput DataService="CompanyService" @bind-Values="context.Publishers" Placeholder="Add a publisher…" />
+                </FormItem>
+            </div>
+
+            <Divider Class="game-general-divider" />
+
+            <Switch @bind-Value="context.Published" Class="game-general-switch">
+                <span class="game-general-switch-title">Show in depot</span>
+                <span class="game-general-switch-help">Players can install this title from the launcher.</span>
+            </Switch>
+            <Switch @bind-Value="context.Singleplayer" Class="game-general-switch">
+                <span class="game-general-switch-title">Singleplayer</span>
+                <span class="game-general-switch-help">Lists single-player as a way to play; the launcher can filter by it.</span>
+            </Switch>
+
+            <Divider Class="game-general-divider" />
+
+            <div class="game-form-pair">
+                <FormItem Label="Engine">
+                    <Select TValue="Guid?" Items="EngineItems" @bind-Value="context.EngineId" Placeholder="Select an engine" Searchable Clearable />
+                </FormItem>
+                <FormItem Label="Key allocation method">
+                    <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="context.KeyAllocationMethod" />
+                </FormItem>
+            </div>
+            <div class="game-form-pair">
+                <FormItem Label="Platforms">
+                    <TaxonomyInput DataService="PlatformService" @bind-Values="context.Platforms" Placeholder="Add a platform…" />
+                </FormItem>
+                <FormItem Label="Genres">
+                    <TaxonomyInput DataService="GenreService" @bind-Values="context.Genres" Placeholder="Add a genre…" />
+                </FormItem>
+            </div>
+            <div class="game-form-pair">
+                <FormItem Label="Tags">
+                    <TaxonomyInput DataService="TagService" @bind-Values="context.Tags" Placeholder="Add a tag…" />
+                </FormItem>
+                <FormItem Label="Collections">
+                    <TaxonomyInput DataService="CollectionService" @bind-Values="context.Collections" Placeholder="Add to a collection…" />
+                </FormItem>
+            </div>
+            <FormItem Label="Notes">
+                <MarkdownEditor @bind-Value="context.Notes" SpellChecker="false" MinHeight="200px" />
             </FormItem>
             <FormItem Label="External IDs">
                 <Flex Vertical Gap="Gap.Small">
@@ -92,27 +156,9 @@
                         </Flex>
                     }
                     <Flex Justify="Justify.End">
-                        <Button Primary Icon="IconType.Plus" OnClick="() => AddExternalId(context)">Add</Button>
+                        <Button Small Icon="IconType.Plus" OnClick="() => AddExternalId(context)">Add</Button>
                     </Flex>
                 </Flex>
-            </FormItem>
-            <FormItem Label="Developers">
-                <TaxonomyInput DataService="CompanyService" @bind-Values="context.Developers" />
-            </FormItem>
-            <FormItem Label="Publishers">
-                <TaxonomyInput DataService="CompanyService" @bind-Values="context.Publishers" />
-            </FormItem>
-            <FormItem Label="Platforms">
-                <TaxonomyInput DataService="PlatformService" @bind-Values="context.Platforms" />
-            </FormItem>
-            <FormItem Label="Genres">
-                <TaxonomyInput DataService="GenreService" @bind-Values="context.Genres" />
-            </FormItem>
-            <FormItem Label="Tags">
-                <TaxonomyInput DataService="TagService" @bind-Values="context.Tags" />
-            </FormItem>
-            <FormItem Label="Collections">
-                <TaxonomyInput DataService="CollectionService" @bind-Values="context.Collections" />
             </FormItem>
         </Form>
     </ChildContent>
@@ -123,6 +169,12 @@
 
     bool _loaded;
     bool _saving;
+    bool _descriptionEditor;
+
+    GameEditView? _view;
+
+    /// <summary>The fields as loaded or last saved; the header's "Unsaved changes" compares against it.</summary>
+    GameEditSnapshot? _saved;
 
     IEnumerable<SelectItem<Guid?>> EngineItems = [];
     IEnumerable<Game> Games = new List<Game>();
@@ -147,6 +199,22 @@
             .ToList();
 
         _loaded = true;
+    }
+
+    void OnGameLoaded(Game game)
+    {
+        _saved = GameEditSnapshot.Of(game);
+        _form?.MarkAsUnmodified();
+    }
+
+    bool IsDirty(Game game) => _saved != null && GameEditSnapshot.Of(game) != _saved;
+
+    async Task DiscardAsync()
+    {
+        _saved = null;
+
+        if (_view != null)
+            await _view.ReloadAsync();
     }
 
     IEnumerable<SelectItem<Guid?>> BaseGameItems(Game game) =>
@@ -177,6 +245,9 @@
                 game.BaseGame = null;
 
                 await GameService.UpdateAsync(game);
+
+                _saved = GameEditSnapshot.Of(game);
+                _form?.MarkAsUnmodified();
 
                 Notifications.Success("Game updated!");
             }

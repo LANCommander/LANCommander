@@ -5,47 +5,82 @@
     list-style: none;
 }
 
+// Rows 28px and 1px apart, each level 14px further in; chevron, icon and label 7px apart
 .lc-tree-node {
     position: relative;
     display: flex;
     align-items: center;
-    gap: 4px;
-    min-height: 32px;
+    gap: 7px;
+    min-height: 28px;
+    margin-bottom: 1px;
     padding-inline-end: 8px;
-    border-radius: var(--rz-border-radius);
+    border-radius: var(--lc-radius-md);
+    color: var(--rz-text-secondary-color);
+    font-size: 13px;
     cursor: pointer;
     user-select: none;
 
     &:hover {
-        background: var(--rz-base-700);
+        background: var(--lc-hover-background);
     }
 }
 
+// Selected is Raised, weight 500, and a short rail inset 6px from the row's top and bottom
 .lc-tree-node-selected {
-    background: var(--rz-primary-lighter);
-    color: var(--rz-primary-light);
+    background: var(--lc-raised);
+    color: var(--rz-text-title-color);
+    font-weight: 500;
+
+    &::before {
+        content: "";
+        position: absolute;
+        inset-block: 6px;
+        inset-inline-start: 0;
+        width: var(--lc-selection-rail);
+        border-radius: 1px;
+        background: var(--lc-selection-rail-color);
+    }
 
     &:hover {
-        background: var(--rz-primary-lighter);
+        background: var(--lc-raised);
     }
 }
 
+// An 11px chevron: #666 closed, #8C8C8C open. The button's hit area reaches past the glyph.
 .lc-tree-toggle,
 .lc-tree-toggle-spacer {
     display: inline-flex;
     flex-shrink: 0;
     align-items: center;
     justify-content: center;
-    width: 20px;
+    width: 11px;
     height: 20px;
 }
 
 .lc-tree-toggle {
+    position: relative;
     padding: 0;
     border: 0;
     background: none;
-    color: var(--rz-text-secondary-color);
+    color: var(--lc-text-disabled-color);
+    font-size: 11px;
     cursor: pointer;
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: -4px -5px;
+    }
+
+    &:has(.lc-tree-caret-open) {
+        color: var(--lc-text-tertiary-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 1px;
+        border-radius: var(--lc-radius-sm);
+    }
 }
 
 .lc-tree-caret {
@@ -58,7 +93,8 @@
 
 .lc-tree-icon {
     flex-shrink: 0;
-    color: var(--rz-text-secondary-color);
+    color: var(--lc-text-tertiary-color);
+    font-size: 15px;
 }
 
 .lc-tree-label {
@@ -97,16 +133,24 @@
     pointer-events: none;
 }
 
+// A 16px box. Radzen's .rz-chkbox-box is position:absolute/inset:0, so the wrapper must be sized and
+// positioned to bound it — otherwise it escapes to the relatively-positioned row and fills the whole line.
 .lc-tree-checkbox {
+    position: relative;
     display: inline-flex;
     flex-shrink: 0;
+    width: 16px;
+    height: 16px;
     align-items: center;
+    justify-content: center;
     padding: 0;
     border: 0;
     background: none;
     cursor: pointer;
 
     .rz-chkbox-box {
+        position: absolute;
+        inset: 0;
         display: inline-flex;
         align-items: center;
         justify-content: center;

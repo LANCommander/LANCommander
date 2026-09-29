@@ -21,6 +21,7 @@ public class ButtonTests : ControlsTestContext
         nameof(Button.Link) => x => x.Link,
         nameof(Button.Small) => x => x.Small,
         nameof(Button.Large) => x => x.Large,
+        nameof(Button.ExtraSmall) => x => x.ExtraSmall,
         _ => throw new ArgumentOutOfRangeException(nameof(name)),
     };
 
@@ -40,7 +41,7 @@ public class ButtonTests : ControlsTestContext
     [InlineData(nameof(Button.Text), false, "rz-variant-text", "rz-base")]
     [InlineData(nameof(Button.Text), true, "rz-variant-text", "rz-danger")]
     [InlineData(nameof(Button.Link), false, "rz-variant-text", "rz-primary")]
-    [InlineData(null, true, "rz-variant-outlined", "rz-danger")]
+    [InlineData(null, true, "rz-variant-outlined", "rz-base")]
     public void VariantFlags_MapToStyle(string? variant, bool danger, string expectedVariant, string expectedStyle)
     {
         var classes = RenderButton(p =>
@@ -57,6 +58,7 @@ public class ButtonTests : ControlsTestContext
 
     [Theory]
     [InlineData(nameof(Button.Small), "rz-button-sm")]
+    [InlineData(nameof(Button.ExtraSmall), "rz-button-xs")]
     [InlineData(nameof(Button.Large), "rz-button-lg")]
     [InlineData(null, "rz-button-md")]
     public void SizeFlags_MapToSize(string? size, string expected)
@@ -90,13 +92,35 @@ public class ButtonTests : ControlsTestContext
     }
 
     [Fact]
-    public void Loading_ShowsSpinnerInPlaceOfIcon_AndDisables()
+    public void Danger_Alone_IsTheSecondaryButtonWithDangerText()
+    {
+        var classes = RenderButton(p => p.Add(x => x.Danger, true)).Find("button").ClassList;
+
+        Assert.Contains("lc-button-danger", classes);
+        Assert.DoesNotContain("rz-danger", classes);
+    }
+
+    [Fact]
+    public void Danger_WithPrimary_StaysFilled()
+    {
+        var classes = RenderButton(p => p.Add(x => x.Danger, true).Add(x => x.Primary, true)).Find("button").ClassList;
+
+        Assert.Contains("rz-danger", classes);
+        Assert.DoesNotContain("lc-button-danger", classes);
+    }
+
+    [Fact]
+    public void Loading_ShowsRingInPlaceOfIcon_KeepsLabel_AndDisables()
     {
         var button = RenderButton(p => p.Add(x => x.Loading, true).Add(x => x.Icon, IconType.FloppyDisk));
 
-        Assert.True(button.Find("button").HasAttribute("disabled"));
-        Assert.Single(button.FindAll("svg.lc-icon"));
-        Assert.Single(button.FindAll("svg.lc-icon-spin"));
+        var element = button.Find("button");
+
+        Assert.True(element.HasAttribute("disabled"));
+        Assert.Contains("lc-button-loading", element.ClassList);
+        Assert.Single(button.FindAll(".lc-spinner"));
+        Assert.Empty(button.FindAll("svg.lc-icon"));
+        Assert.Equal("Save", button.Find(".lc-button-text").TextContent);
     }
 
     [Fact]
@@ -114,6 +138,29 @@ public class ButtonTests : ControlsTestContext
         Assert.Contains("rz-button-icon-only", button.Find("button").ClassList);
         Assert.Equal("Delete", button.Find("button").GetAttribute("title"));
         Assert.Empty(button.FindAll(".lc-button-text"));
+    }
+
+    [Fact]
+    public void IconOnly_KeepsSquareClass_AtEverySize()
+    {
+        foreach (var (apply, size) in new (Action<ComponentParameterCollectionBuilder<Button>>, string)[]
+                 {
+                     (_ => { }, "rz-button-md"),
+                     (p => p.Add(x => x.Small, true), "rz-button-sm"),
+                     (p => p.Add(x => x.ExtraSmall, true), "rz-button-xs"),
+                     (p => p.Add(x => x.Large, true), "rz-button-lg"),
+                 })
+        {
+            var classes = Render<Button>(p =>
+            {
+                p.Add(x => x.Icon, IconType.Plus);
+                p.AddUnmatched("title", "Add");
+                apply(p);
+            }).Find("button").ClassList;
+
+            Assert.Contains("rz-button-icon-only", classes);
+            Assert.Contains(size, classes);
+        }
     }
 
     [Fact]

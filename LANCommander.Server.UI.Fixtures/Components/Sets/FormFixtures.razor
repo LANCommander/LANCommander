@@ -9,8 +9,45 @@
         new("rpg", "Role-Playing", Disabled: true),
     ];
 
+    static readonly SelectItem<string>[] AddModes =
+    [
+        new("lookup", "Look up metadata"),
+        new("manual", "Enter manually"),
+        new("import", "Import", Disabled: true),
+    ];
+
+    static readonly SelectItem<string>[] DialogModes =
+    [
+        new("lookup", "Look up metadata", Icon: IconType.MagnifyingGlass),
+        new("manual", "Enter manually", Icon: IconType.PencilSimple),
+    ];
+
+    static readonly SelectItem<string>[] Views =
+    [
+        new("list", "List", Icon: IconType.List),
+        new("grid", "Grid", Icon: IconType.SquaresFour),
+    ];
+
     public IEnumerable<ComponentFixture> Fixtures =>
     [
+        new("Segmented.States", "Side-by-side choices: one chosen, one disabled, and stretched to fill",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Segmented TValue="string" Items="AddModes" Value="@("lookup")" />
+                <Segmented TValue="string" Items="AddModes" Value="@("manual")" Block />
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(Segmented<>)],
+        },
+        new("Segmented.Dialog", "The larger switch at the top of a dialog, with icons, and an icon-only view toggle",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Segmented TValue="string" Items="DialogModes" Value="@("lookup")" Dialog />
+                <Segmented TValue="string" Items="Views" Value="@("list")" Small IconOnly />
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(Segmented<>)],
+        },
         new("Form.Vertical", "A form with every input type, labels above the inputs",
             @<SampleForm />)
         {

@@ -7,7 +7,9 @@
 
 <StandaloneCodeEditor
     @ref="_editor"
+    CssClass="monaco-editor-container lc-code-input"
     OnDidChangeModelContent="OnChangedContent"
+    OnDidChangeCursorPosition="OnCursorMoved"
     OnDidInit="OnInit"
     ConstructionOptions="_editorConstructionOptions" />
 
@@ -20,6 +22,12 @@
     [Parameter] public EventCallback<string?> ValueChanged { get; set; }
     [Parameter] public string? ScriptType { get; set; }
     [Parameter] public IEnumerable<ModuleFunctionCompletion>? ModuleFunctions { get; set; }
+
+    /// <summary>The caret moved: its line and column, both from 1.</summary>
+    [Parameter] public EventCallback<(int Line, int Column)> OnCaretMoved { get; set; }
+
+    /// <summary>The number of errors the validator marked changed.</summary>
+    [Parameter] public EventCallback<int> OnProblemsChanged { get; set; }
 
     static bool _completionsRegistered;
     static bool _yamlCompletionsRegistered;
@@ -37,12 +45,21 @@
         {
             AutomaticLayout = true,
             Language = Language.Id,
-            Theme = "vs-dark",
+            Theme = "vs-dark", // EditorPalette replaces it once the editor exists
             Value = Value,
             Minimap = new EditorMinimapOptions { Enabled = false },
-            BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+            // Brackets take the delimiter colour; pairs are not coloured by depth
+            BracketPairColorization = new BracketPairColorizationOptions { Enabled = false },
             WordWrap = "on",
             FixedOverflowWidgets = true,
+            // Roboto Mono 12.5 on 20px lines (the half pixel is set once the editor exists, as the
+            // typed option is whole), 10px clear of the top, in a narrow gutter
+            FontFamily = "\"Roboto Mono\", ui-monospace, Consolas, monospace",
+            FontSize = 13,
+            LineHeight = 20,
+            Padding = new EditorPaddingOptions { Top = 10 },
+            LineNumbersMinChars = 3,
+            GlyphMargin = false,
         };
 
         if (Height > 0)
@@ -78,6 +95,8 @@
     {
         _isEditorInitialized = true;
 
+        await EditorPalette.ApplyAsync(JSRuntime);
+
         await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async (editor) =>
         {
             if (OnSave.HasDelegate)
@@ -86,6 +105,16 @@
 
         _module = await JSRuntime.InvokeAsync<IJSObjectReference>(
             "import", LANCommander.Server.UI.UIAssets.BundleUrl);
+
+        try
+        {
+            await _module.InvokeVoidAsync("setEditorOptions", _editor.Id, new { fontSize = 12.5 });
+        }
+        catch (JSException ex)
+        {
+            // A stale bundle without the export keeps the whole-pixel size
+            Logger.LogDebug(ex, "Could not set the editor's font size");
+        }
 
         if (Language.Id == "powershell" && !_completionsRegistered)
         {
@@ -202,5 +231,11 @@
             return;
 
         await _module.InvokeVoidAsync("validateScript");
+
+        if (OnProblemsChanged.HasDelegate)
+            await OnProblemsChanged.InvokeAsync(await _module.InvokeAsync<int>("getProblemCount"));
     }
+
+    Task OnCursorMoved(CursorPositionChangedEvent e) =>
+        OnCaretMoved.HasDelegate ? OnCaretMoved.InvokeAsync((e.Position.LineNumber, e.Position.Column)) : Task.CompletedTask;
 }

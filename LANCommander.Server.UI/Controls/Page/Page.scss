@@ -1,14 +1,27 @@
+// The page header: breadcrumb, a 22px title and a mono subtitle on the left, actions bottom-aligned
+// on the right, and a hairline under it all
 .lc-page-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
+    align-items: flex-end;
     justify-content: space-between;
-    gap: 8px 16px;
-    padding: 16px 24px;
+    gap: 8px 14px;
+    padding: 22px var(--lc-layout-gutter) 18px;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
 
     .lc-page-header-heading {
         display: flex;
-        align-items: baseline;
+        flex-direction: column;
+        min-width: 0;
+    }
+
+    .lc-page-header-breadcrumb {
+        margin-bottom: 9px;
+    }
+
+    .lc-page-header-title-row {
+        display: flex;
+        align-items: center;
         gap: 12px;
         min-width: 0;
     }
@@ -17,15 +30,31 @@
         margin: 0;
         overflow: hidden;
         color: var(--rz-text-title-color);
-        font-size: 1.25rem;
+        font-size: 22px;
         font-weight: 600;
-        line-height: 2rem;
+        letter-spacing: -0.015em;
+        line-height: 1.3;
         text-overflow: ellipsis;
         white-space: nowrap;
     }
 
+    .lc-page-header-tags {
+        display: flex;
+        flex-shrink: 0;
+        align-items: center;
+        gap: 8px;
+
+        .lc-tag {
+            margin-inline-end: 0;
+        }
+    }
+
     .lc-page-header-subtitle {
-        color: var(--rz-text-secondary-color);
+        display: block;
+        margin-top: 4px;
+        color: var(--lc-text-tertiary-color);
+        font-family: var(--lc-font-mono);
+        font-size: 12px;
     }
 
     .lc-page-header-extra {
@@ -36,6 +65,7 @@
     }
 }
 
+// The body sits 20px under the header's hairline, in the same gutter
 .lc-page-content {
-    padding: 0 24px 24px;
+    padding: 20px var(--lc-layout-gutter) var(--lc-layout-gutter);
 }

@@ -87,6 +87,79 @@ public class NavigationAndDisplayTests : ControlsTestContext
     }
 
     [Theory]
+    [InlineData(MenuVariant.Default, null)]
+    [InlineData(MenuVariant.Sidebar, "lc-menu-sidebar")]
+    [InlineData(MenuVariant.Section, "lc-menu-section")]
+    public void Menu_Variant_AddsItsClass(MenuVariant variant, string? expected)
+    {
+        var nav = Render<Menu>(p => p.Add(x => x.Variant, variant)).Find("nav");
+
+        Assert.Contains("lc-menu-vertical", nav.ClassList);
+        Assert.Equal(expected == "lc-menu-sidebar", nav.ClassList.Contains("lc-menu-sidebar"));
+        Assert.Equal(expected == "lc-menu-section", nav.ClassList.Contains("lc-menu-section"));
+    }
+
+    [Fact]
+    public void Menu_Horizontal_IgnoresVariant()
+    {
+        var nav = Render<Menu>(p => p.Add(x => x.Horizontal, true).Add(x => x.Variant, MenuVariant.Sidebar)).Find("nav");
+
+        Assert.DoesNotContain("lc-menu-sidebar", nav.ClassList);
+    }
+
+    [Theory]
+    [InlineData(1234, "1,234")]
+    [InlineData(0, "0")]
+    public void MenuItem_Count_ShowsTheFigure(int count, string expected)
+    {
+        var menu = Render<Menu>(p => p.AddChildContent<MenuItem>(i => i
+            .Add(x => x.Href, "/Games")
+            .Add(x => x.Count, count)
+            .AddChildContent("Games")));
+
+        Assert.Equal(expected, menu.Find(".lc-menu-item-count").TextContent);
+        Assert.Equal("Games", menu.Find(".lc-menu-item-text").TextContent);
+    }
+
+    [Fact]
+    public void MenuItem_WithoutCount_ShowsNoFigure()
+    {
+        var menu = Render<Menu>(p => p.AddChildContent<MenuItem>(i => i.Add(x => x.Href, "/Games").AddChildContent("Games")));
+
+        Assert.Empty(menu.FindAll(".lc-menu-item-count"));
+    }
+
+    [Fact]
+    public void MenuGroup_TitlesAndLabelsItsItems()
+    {
+        Services.GetRequiredService<NavigationManager>().NavigateTo("/Games/1/Archives");
+
+        var menu = Render<Menu>(p => p
+            .Add(x => x.Variant, MenuVariant.Section)
+            .AddChildContent<MenuGroup>(g => g
+                .Add(x => x.Title, "Content")
+                .Add(x => x.ChildContent, Items(("/Games/1/Archives", "Archives"), ("/Games/1/Keys", "Keys")))));
+
+        var title = menu.Find(".lc-menu-group-title");
+        var list = menu.Find(".lc-menu-group-list");
+
+        Assert.Equal("Content", title.TextContent);
+        Assert.Equal("group", list.GetAttribute("role"));
+        Assert.Equal(title.Id, list.GetAttribute("aria-labelledby"));
+        Assert.Equal(2, list.QuerySelectorAll(".lc-menu-item").Length);
+        Assert.Equal("Archives", Assert.Single(menu.FindAll("a.lc-menu-item-active")).TextContent.Trim());
+    }
+
+    [Fact]
+    public void MenuGroup_WithoutTitle_HasNoKicker()
+    {
+        var menu = Render<Menu>(p => p.AddChildContent<MenuGroup>(g => g.Add(x => x.ChildContent, Items(("/Games", "Games")))));
+
+        Assert.Empty(menu.FindAll(".lc-menu-group-title"));
+        Assert.False(menu.Find(".lc-menu-group-list").HasAttribute("aria-labelledby"));
+    }
+
+    [Theory]
     [InlineData(2, "Just now")]
     [InlineData(90, "A minute ago")]
     [InlineData(60 * 45, "45 minutes ago")]

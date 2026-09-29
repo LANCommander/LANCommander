@@ -1,0 +1,72 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TValue
+@inherits ControlBase
+
+@* A few mutually exclusive choices shown side by side on a well; the chosen one is Raised (Popover in a dialog) *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style" role="radiogroup">
+    @foreach (var item in Items)
+    {
+        var selected = EqualityComparer<TValue>.Default.Equals(item.Value, Value);
+
+        <button type="button"
+                role="radio"
+                aria-checked="@(selected ? "true" : "false")"
+                class="@(selected ? "lc-segmented-option lc-segmented-option-selected" : "lc-segmented-option")"
+                disabled="@item.Disabled"
+                title="@(IconOnly ? item.Label : null)"
+                aria-label="@(IconOnly ? item.Label : null)"
+                @onclick="() => SelectAsync(item.Value)">
+            @if (item.Icon != IconType.None)
+            {
+                <Icon Type="item.Icon" Class="lc-segmented-icon" />
+            }
+            @if (!IconOnly)
+            {
+                <span class="lc-segmented-label">@item.Label</span>
+            }
+        </button>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<SelectItem<TValue>> Items { get; set; } = [];
+
+    [Parameter] public TValue? Value { get; set; }
+
+    [Parameter] public EventCallback<TValue> ValueChanged { get; set; }
+
+    /// <summary>Stretches the options to fill the width.</summary>
+    [Parameter] public bool Block { get; set; }
+
+    /// <summary>
+    /// The larger switch at the top of a dialog ("Look up metadata / Enter manually"): a 34px track,
+    /// 26px options in 12px text, the chosen one on Popover with the lit edge. Implies <see cref="Block"/>.
+    /// </summary>
+    [Parameter] public bool Dialog { get; set; }
+
+    /// <summary>24px options, e.g. a view toggle in a table toolbar.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>Shows only each option's icon, with its label as the tooltip and accessible name.</summary>
+    [Parameter] public bool IconOnly { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-segmented")
+            .If(Block || Dialog, "lc-segmented-block")
+            .If(Dialog, "lc-segmented-dialog")
+            .If(Small, "lc-segmented-small")
+            .Add(Class)
+            .Build();
+    }
+
+    async Task SelectAsync(TValue value)
+    {
+        Value = value;
+
+        await ValueChanged.InvokeAsync(value);
+    }
+}

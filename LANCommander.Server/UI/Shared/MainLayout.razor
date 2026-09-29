@@ -1,6 +1,4 @@
-@using LANCommander.Server.Services.Abstractions
 @inherits LayoutComponentBase
-@inject IVersionProvider VersionProvider
 @inject UploadTracker UploadTracker
 @inject NavigationManager NavigationManager
 @implements IDisposable
@@ -13,16 +11,13 @@
 
     <Sidebar />
 
+    @* Pages sit straight on the canvas; the version lives in the profile menu *@
     <div class="lc-layout-main">
         <main class="lc-layout-content">
             <ErrorHandler Title="Unexpected Error">
                 @Body
             </ErrorHandler>
         </main>
-
-        <footer class="lc-layout-footer">
-            LANCommander v@(VersionProvider.GetCurrentVersion().WithoutMetadata().ToString())
-        </footer>
     </div>
 </div>
 

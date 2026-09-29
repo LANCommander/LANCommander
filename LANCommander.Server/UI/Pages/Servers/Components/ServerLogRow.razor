@@ -1,0 +1,39 @@
+@using LANCommander.Server.Services.Enums
+
+@* One line of a server console: time | level | message, coloured by level (see _servers.scss) *@
+<div class="@_class" role="listitem">
+    <span class="server-log-time">@_time</span>
+    <span class="server-log-level">@_label</span>
+    <span class="server-log-message">@Line.Message</span>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public ServerConsoleLine Line { get; set; } = default!;
+
+    /// <summary>The zone to show receipt times in; UTC when not given.</summary>
+    [Parameter] public TimeZoneInfo? TimeZone { get; set; }
+
+    string _class = "";
+    string _label = "";
+    string _time = "";
+
+    protected override void OnParametersSet()
+    {
+        var kind = Line.Kind == ServerConsoleLineKind.Command ? "command" : LevelName(Line.Level);
+
+        _class = $"server-log-row server-log-row-{kind}";
+        _label = Line.Kind == ServerConsoleLineKind.Command ? "▶" : LevelName(Line.Level).ToUpperInvariant();
+        _time = Line.Timestamp is { } timestamp
+            ? TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(timestamp, DateTimeKind.Utc), TimeZone ?? TimeZoneInfo.Utc).ToString("HH:mm:ss")
+            : "";
+    }
+
+    static string LevelName(ServerLogLevel level) => level switch
+    {
+        ServerLogLevel.Ready => "ready",
+        ServerLogLevel.Warn => "warn",
+        ServerLogLevel.Error => "error",
+        ServerLogLevel.Trace => "trace",
+        _ => "info",
+    };
+}

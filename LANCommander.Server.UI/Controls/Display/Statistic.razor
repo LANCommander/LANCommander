@@ -1,19 +1,31 @@
 @namespace LANCommander.Server.UI.Controls
 @inherits ControlBase
 
-@* A labelled figure, e.g. "Keys allocated: 3" *@
+@* A labelled figure: a kicker, the value in large mono, what it means beside it ("+5 vs last night"), and optionally how full something is *@
 <div @attributes="AdditionalAttributes" class="@_class" style="@Style">
     <div class="lc-statistic-title">@Title</div>
-    <div class="lc-statistic-value">
-        @if (ChildContent != null)
+    <div class="lc-statistic-row">
+        <span class="lc-statistic-value">
+            @if (ChildContent != null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                @Value
+            }
+        </span>
+        @if (Delta != null)
         {
-            @ChildContent
-        }
-        else
-        {
-            @Value
+            <span class="@_deltaClass">@Delta</span>
         }
     </div>
+    @if (Usage != null)
+    {
+        <div class="lc-statistic-usage" role="meter" aria-valuemin="0" aria-valuemax="100" aria-valuenow="@_usage.ToString("0", System.Globalization.CultureInfo.InvariantCulture)" aria-label="@Title">
+            <span class="lc-statistic-usage-value" style="width: @(_usage.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture))%"></span>
+        </div>
+    }
 </div>
 
 @code {
@@ -24,10 +36,39 @@
     /// <summary>Rich value content; replaces <see cref="Value"/>.</summary>
     [Parameter] public RenderFragment? ChildContent { get; set; }
 
+    /// <summary>
+    /// A short note beside the value: a change ("+5 vs last night"), a unit ("TB of 4 TB"), a
+    /// breakdown ("1 stopped"). Tertiary text unless a status flag colours it.
+    /// </summary>
+    [Parameter] public string? Delta { get; set; }
+
+    /// <summary>Colours <see cref="Delta"/> as good news.</summary>
+    [Parameter] public bool Success { get; set; }
+
+    /// <summary>Colours <see cref="Delta"/> as needing attention.</summary>
+    [Parameter] public bool Warning { get; set; }
+
+    /// <summary>Colours <see cref="Delta"/> as bad news.</summary>
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>Draws a 4px bar under the value filled to this percentage (0 to 100), e.g. storage used.</summary>
+    [Parameter] public double? Usage { get; set; }
+
     string? _class;
+    string? _deltaClass;
+    double _usage;
 
     protected override void OnParametersSet()
     {
         _class = new ClassBuilder().Add("lc-statistic").Add(Class).Build();
+
+        var status = StatusResolver.Resolve(success: Success, warning: Warning, danger: Danger);
+
+        _deltaClass = new ClassBuilder()
+            .Add("lc-statistic-delta")
+            .If(status != Status.None, $"lc-statistic-delta-{status.ClassSuffix()}")
+            .Build();
+
+        _usage = Math.Clamp(Usage ?? 0, 0, 100);
     }
 }

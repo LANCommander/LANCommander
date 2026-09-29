@@ -36,7 +36,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
                     SourceUrl = $"https://www.youtube.com/watch?v={video.Id}",
                     ThumbnailUrl = thumbnail?.Url ?? $"https://img.youtube.com/vi/{video.Id}/hqdefault.jpg",
                     Group = group,
-                    MimeType = "video/mp4"
+                    MimeType = "video/mp4",
+                    Name = video.Title,
+                    Duration = video.Duration,
                 });
             }
 

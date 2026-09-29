@@ -191,6 +191,92 @@ public class DockerServerEngine(
         }
     }
 
+    // Previous CPU counters per server; the one-shot stats call carries no pre-sample, so usage
+    // is computed across consecutive calls.
+    private readonly System.Collections.Concurrent.ConcurrentDictionary<Guid, (ulong ContainerUsage, ulong SystemUsage)> _cpuSamples = new();
+
+    public async Task<ServerProcessInfo?> GetProcessInfoAsync(Guid serverId)
+    {
+        if (!_tracked.TryGetValue(serverId, out var tracked)
+            || String.IsNullOrWhiteSpace(tracked.Id)
+            || !_dockerClients.TryGetValue(tracked.HostId, out var client))
+            return null;
+
+        try
+        {
+            using var timeout = new CancellationTokenSource(TimeSpan.FromSeconds(5));
+
+            var container = await client.Containers.InspectContainerAsync(tracked.Id, timeout.Token);
+
+            if (container?.State == null || !container.State.Running)
+            {
+                _cpuSamples.TryRemove(serverId, out _);
+                return null;
+            }
+
+            DateTime? startTime = DateTime.TryParse(container.State.StartedAt, null, System.Globalization.DateTimeStyles.AdjustToUniversal | System.Globalization.DateTimeStyles.AssumeUniversal, out var startedAt)
+                ? startedAt
+                : null;
+
+            var stats = new LastValueProgress<ContainerStatsResponse>();
+
+            await client.Containers.GetContainerStatsAsync(tracked.Id, new ContainerStatsParameters
+            {
+                Stream = false,
+                OneShot = true,
+            }, stats, timeout.Token);
+
+            double? cpuPercent = null;
+            long? memoryBytes = null;
+
+            if (stats.Value?.CPUStats != null)
+            {
+                var containerUsage = stats.Value.CPUStats.CPUUsage?.TotalUsage ?? 0;
+                var systemUsage = stats.Value.CPUStats.SystemUsage;
+
+                if (_cpuSamples.TryGetValue(serverId, out var previous)
+                    && systemUsage > previous.SystemUsage
+                    && containerUsage >= previous.ContainerUsage)
+                {
+                    // system_cpu_usage already spans every CPU, so this is a share of the whole machine
+                    cpuPercent = Math.Clamp((double)(containerUsage - previous.ContainerUsage) / (systemUsage - previous.SystemUsage) * 100d, 0d, 100d);
+                }
+
+                _cpuSamples[serverId] = (containerUsage, systemUsage);
+            }
+
+            if (stats.Value?.MemoryStats != null)
+            {
+                var usage = stats.Value.MemoryStats.Usage;
+
+                // Match `docker stats`: exclude reclaimable page cache
+                if (stats.Value.MemoryStats.Stats != null && stats.Value.MemoryStats.Stats.TryGetValue("inactive_file", out var inactiveFile) && inactiveFile < usage)
+                    usage -= inactiveFile;
+
+                memoryBytes = (long)usage;
+            }
+
+            return new ServerProcessInfo(
+                container.State.Pid > 0 ? (int)container.State.Pid : null,
+                startTime,
+                cpuPercent,
+                memoryBytes);
+        }
+        catch (Exception ex)
+        {
+            logger?.LogDebug(ex, "Could not read container stats for server {ServerId}", serverId);
+
+            return null;
+        }
+    }
+
+    private sealed class LastValueProgress<T> : IProgress<T>
+    {
+        public T? Value { get; private set; }
+
+        public void Report(T value) => Value = value;
+    }
+
     public async Task<ServerProcessStatus> GetStatusAsync(Guid serverId)
     {
         Data.Models.Server server = null;

@@ -35,7 +35,7 @@ public class DepotService(
             .Include(g => g.Publishers)
             .Include(g => g.Engine)
             .Include(g => g.MultiplayerModes)
-            .GetAsync();
+            .GetAsync(g => g.Published);
 
         var depotResults = new SDK.Models.DepotResults
         {
@@ -73,14 +73,14 @@ public class DepotService(
             .Include(g => g.SavePaths)
             .Include(g => g.Scripts)
             .Include(g => g.Tags)
-            .GetAsync(gameId);
+            .FirstOrDefaultAsync(g => g.Id == gameId && g.Published);
     }
 
     public async Task<ICollection<Guid>> GetPopularGameIds()
     {
         var sessions = await playSessionService
             .AsNoTracking()
-            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
+            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty && ps.Game != null && ps.Game.Published);
 
         var topGames = sessions
             .Where(ps => ps.Start.HasValue && ps.End.HasValue)
@@ -102,7 +102,7 @@ public class DepotService(
     {
         var sessions = await playSessionService
             .AsNoTracking()
-            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty);
+            .GetAsync(ps => ps.GameId.HasValue && ps.GameId.Value != Guid.Empty && ps.Game != null && ps.Game.Published);
 
         var ratings = await ratingService
             .AsNoTracking()

@@ -17,6 +17,9 @@ public sealed record TableSort(LambdaExpression Expression, bool Descending);
 /// <summary>The page of rows a <see cref="Table{TItem}"/> needs from its provider.</summary>
 public sealed record TableQuery(int Skip, int Take, IReadOnlyList<TableSort> Sorts, string? Search, IReadOnlyList<string> Includes)
 {
+    /// <summary>The table groups its rows, so the provider should fill <see cref="TableResult{TItem}.GroupCounts"/>.</summary>
+    public bool Grouped { get; init; }
+
     /// <summary>Applies <see cref="Sorts"/> and paging to <paramref name="source"/>.</summary>
     public IQueryable<TItem> Apply<TItem>(IQueryable<TItem> source, bool page = true)
     {
@@ -31,6 +34,23 @@ public sealed record TableResult<TItem>(IReadOnlyList<TItem> Items, int Total)
 {
     /// <summary>Child rows shown beneath a row when it is expanded, e.g. a game's DLC.</summary>
     public IReadOnlyDictionary<TItem, IReadOnlyList<TItem>>? Children { get; init; }
+
+    /// <summary>How many rows each group holds across every page, keyed by the group's value.</summary>
+    public IReadOnlyDictionary<string, int>? GroupCounts { get; init; }
+}
+
+/// <summary>How a <see cref="Table{TItem}"/> with a tile template shows its rows.</summary>
+public enum TableView
+{
+    Rows,
+    Tiles,
+}
+
+public enum TableTileSize
+{
+    Small,
+    Medium,
+    Large,
 }
 
 internal static class TableSorting

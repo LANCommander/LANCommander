@@ -3,23 +3,51 @@
 @using LANCommander.Server.UI.Pages.Servers.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<ServerEditView Id="Id" Title="Monitor">
-    @* "Console" (or no log) is the server process's own output; otherwise the Id of a log file console *@
-    @if (LogId == null || LogId == "Console")
-    {
-        <Console ServerId="@context.Id" />
-    }
-    else if (Guid.TryParse(LogId, out var consoleId) && consoleId != Guid.Empty)
-    {
-        <Console @key="consoleId" ServerId="@context.Id" ServerConsoleId="consoleId" />
-    }
-    else
-    {
-        <NotFound SubTitle="This server has no such console." />
-    }
+<ServerEditView Id="Id" Title="Monitor" Console="@_consoleName">
+    <div class="server-monitor">
+        <div class="server-monitor-console">
+            @* "Console" (or no log) is the server process's own output; otherwise the Id of a log file or RCON console *@
+            @if (LogId == null || LogId == "Console")
+            {
+                <Console ServerId="@context.Id" Server="context" />
+            }
+            else if (Guid.TryParse(LogId, out var consoleId) && consoleId != Guid.Empty)
+            {
+                <Console @key="consoleId" ServerId="@context.Id" ServerConsoleId="consoleId" Server="context" />
+            }
+            else
+            {
+                <NotFound SubTitle="This server has no such console." />
+            }
+        </div>
+
+        <ServerMonitorRail Server="context" />
+    </div>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string? LogId { get; set; }
+
+    // The header leads with the console being followed; the process's own output leaves it to the executable
+    string? _consoleName;
+
+    [Inject] ServerConsoleService ServerConsoleService { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _consoleName = null;
+
+        if (Guid.TryParse(LogId, out var consoleId) && consoleId != Guid.Empty)
+        {
+            try
+            {
+                _consoleName = (await ServerConsoleService.AsNoTracking().GetAsync(consoleId))?.Name;
+            }
+            catch
+            {
+                // The console view says it doesn't exist
+            }
+        }
+    }
 }

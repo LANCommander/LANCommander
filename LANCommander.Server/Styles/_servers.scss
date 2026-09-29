@@ -1,0 +1,581 @@
+// Servers: each server's header (status, process line, switcher, Restart/Stop) and the Monitor's
+// console beside its process and players. Values are the Server console board's.
+// Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
+
+// ── Header ───────────────────────────────────────────────────
+// The board draws this header tighter than the default page header
+.lc-page-header.server-header {
+    padding-top: 18px;
+    padding-bottom: 16px;
+
+    .lc-page-header-title-row {
+        gap: 14px;
+    }
+
+    .lc-page-header-tags {
+        gap: 14px;
+        min-width: 0;
+    }
+}
+
+.server-status-tag {
+    .lc-tag-text {
+        display: inline-flex;
+        align-items: center;
+        gap: 7px;
+    }
+}
+
+.server-status-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.server-status-running .server-status-dot {
+    background: var(--lc-live-color);
+}
+
+.server-header-meta {
+    overflow: hidden;
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// ── Switcher ─────────────────────────────────────────────────
+.server-switcher-caret {
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+// The popover's own padding is 12; the switcher's panel is drawn at 8
+.lc-popover:has(.server-switcher-panel) {
+    padding: 8px;
+}
+
+.server-switcher-panel {
+    display: flex;
+    flex-direction: column;
+    width: 300px;
+}
+
+.server-switcher-search {
+    width: 100%;
+    margin-bottom: 8px;
+}
+
+.server-switcher-heading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 8px 6px;
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: 0.07em;
+    text-transform: uppercase;
+
+    > span:first-child {
+        flex: 1;
+    }
+}
+
+.server-switcher-heading-count {
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-weight: 400;
+    letter-spacing: 0;
+    text-transform: none;
+}
+
+.server-switcher-heading-count-live {
+    color: var(--lc-success-text-color);
+}
+
+.server-switcher-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.server-switcher-entry,
+.server-switcher-all {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    height: 30px;
+    padding: 0 8px;
+    border-radius: var(--lc-radius-md);
+    font-size: 13px;
+    text-decoration: none;
+}
+
+.server-switcher-entry {
+    color: var(--lc-text-secondary-color);
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+        text-decoration: none;
+    }
+}
+
+// The current server is lifted, with no rail
+.server-switcher-entry-current {
+    background: var(--lc-hover-background);
+    color: var(--lc-text-title-color);
+}
+
+.server-switcher-entry-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.server-switcher-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-text-disabled-color);
+}
+
+.server-switcher-dot-running { background: var(--lc-live-color); }
+.server-switcher-dot-crashed { background: var(--lc-danger); }
+.server-switcher-dot-busy { background: var(--lc-warning-text-color); }
+
+.server-switcher-count {
+    flex-shrink: 0;
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+.server-switcher-count-off { color: var(--lc-text-disabled-color); }
+.server-switcher-count-crashed { color: var(--lc-danger-text-color); }
+.server-switcher-count-busy { color: var(--lc-warning-text-color); }
+
+.server-switcher-more {
+    align-self: flex-start;
+    margin: 0;
+    padding: 3px 8px 7px;
+    border: 0;
+    background: none;
+    color: var(--lc-accent-text-color);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+        color: #69B1FF;
+    }
+}
+
+.server-switcher-divider {
+    height: 1px;
+    margin: 8px 4px;
+    background: var(--lc-border-color);
+}
+
+.server-switcher-more + .server-switcher-divider {
+    margin-top: 2px;
+}
+
+.server-switcher-all {
+    color: var(--lc-accent-text-color);
+
+    .lc-icon {
+        font-size: 14px;
+    }
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: #69B1FF;
+        text-decoration: none;
+    }
+}
+
+// ── Monitor: console, with process and players in a rail ─────
+// Fills the window under the header (98px) and the content's padding (20 + 28)
+.server-monitor {
+    display: flex;
+    gap: 18px;
+    height: calc(100vh - 146px);
+    min-height: 420px;
+}
+
+.server-monitor-console {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.server-console {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.server-console-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-bottom: 12px;
+}
+
+.server-console-follow {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.server-console-follow-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-live-color);
+}
+
+// Scrolled away from the end: the dot goes grey and the label takes you back
+.server-console-follow-paused {
+    padding: 0;
+    border: 0;
+    background: none;
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    .server-console-follow-dot {
+        background: var(--lc-text-disabled-color);
+    }
+
+    &:hover {
+        color: var(--lc-accent-text-color);
+    }
+}
+
+.server-console-panel {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-well);
+}
+
+// ── Log lines: time | level (46px) | message ────────────────
+.server-log {
+    flex: 1;
+    min-height: 0;
+    padding: 12px 0;
+    overflow-y: auto;
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    line-height: 1.75;
+}
+
+.server-log-empty {
+    padding: 0 14px;
+    color: var(--lc-text-disabled-color);
+}
+
+.server-log-row {
+    display: flex;
+    gap: 12px;
+    padding: 0 14px;
+}
+
+.server-log-time {
+    flex-shrink: 0;
+    min-width: 8ch;
+    color: var(--lc-text-disabled-color);
+}
+
+.server-log-level {
+    flex-shrink: 0;
+    width: 46px;
+}
+
+.server-log-message {
+    min-width: 0;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+}
+
+.server-log-row-info {
+    .server-log-level { color: var(--lc-text-tertiary-color); }
+    .server-log-message { color: var(--lc-text-secondary-color); }
+}
+
+.server-log-row-ready {
+    .server-log-level { color: var(--lc-success-text-color); }
+    .server-log-message { color: var(--lc-text-title-color); }
+}
+
+.server-log-row-warn {
+    background: rgba(216, 150, 20, 0.10);
+
+    .server-log-level,
+    .server-log-message { color: var(--lc-warning-text-color); }
+}
+
+.server-log-row-error {
+    background: rgba(220, 68, 70, 0.12);
+
+    .server-log-level,
+    .server-log-message { color: var(--lc-danger-text-color); }
+}
+
+.server-log-row-trace {
+    .server-log-level,
+    .server-log-message { color: var(--lc-text-tertiary-color); }
+}
+
+// A command sent from the page, echoed in the prompt's accent
+.server-log-row-command {
+    .server-log-time,
+    .server-log-level,
+    .server-log-message { color: var(--lc-accent-text-color); }
+}
+
+// ── Command bar ──────────────────────────────────────────────
+.server-command-tooltip {
+    display: block;
+}
+
+.server-command {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 12px;
+    border-top: 1px solid var(--lc-border-color);
+}
+
+.server-command-prompt {
+    flex-shrink: 0;
+    color: var(--lc-accent-text-color);
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+}
+
+.server-command-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+}
+
+.server-command-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0;
+    border: 0;
+    outline: 0;
+    background: transparent;
+    color: var(--lc-text-title-color);
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+
+    &::placeholder {
+        color: var(--lc-text-disabled-color);
+    }
+}
+
+.server-command-key {
+    flex-shrink: 0;
+    padding: 2px 6px;
+    border: 1px solid var(--lc-border-strong-color);
+    border-radius: var(--lc-radius-sm);
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 10px;
+}
+
+.server-command-disabled {
+    cursor: not-allowed;
+
+    .server-command-prompt,
+    .server-command-key {
+        color: var(--lc-text-disabled-color);
+    }
+
+    // Disabled inputs swallow pointer events, which would keep the tooltip from opening
+    .server-command-input {
+        pointer-events: none;
+    }
+}
+
+// ── Rail ─────────────────────────────────────────────────────
+.server-monitor-rail {
+    display: flex;
+    flex: 0 0 300px;
+    flex-direction: column;
+    gap: 14px;
+    min-height: 0;
+}
+
+.server-monitor-pane {
+    flex-shrink: 0;
+    padding: 14px 16px;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-panel-background);
+    box-shadow: var(--lc-inset-highlight);
+}
+
+.server-monitor-heading {
+    margin: 0 0 12px;
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    text-transform: uppercase;
+}
+
+.server-monitor-meters {
+    margin-bottom: 14px;
+
+    .lc-progress {
+        margin-bottom: 14px;
+
+        &:last-child {
+            margin-bottom: 0;
+        }
+    }
+}
+
+.server-monitor-meter {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.server-monitor-meter-label {
+    flex: 1;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.server-monitor-meter-value {
+    color: var(--lc-text-title-color);
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+}
+
+// The process's facts sit under its meters, behind a hairline
+.server-monitor-meters + .server-monitor-facts {
+    padding-top: 14px;
+    border-top: 1px solid var(--lc-divider-row-color);
+}
+
+.server-monitor-facts {
+    display: grid;
+    grid-template-columns: 84px minmax(0, 1fr);
+    gap: 6px 12px;
+    margin: 0;
+    font-size: 12px;
+
+    dt {
+        color: var(--lc-text-tertiary-color);
+    }
+
+    dd {
+        min-width: 0;
+        margin: 0;
+        overflow: hidden;
+        color: var(--lc-text-color);
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+
+.server-monitor-mono {
+    font-family: var(--lc-font-mono);
+}
+
+// Players take the rest of the rail and scroll inside it
+.server-monitor-players-card {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+
+    .lc-card-body {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+}
+
+.server-monitor-players {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+
+    li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        height: 42px;
+        padding: 0 16px;
+        border-bottom: 1px solid var(--lc-divider-row-color);
+
+        &:last-child {
+            border-bottom: 0;
+        }
+    }
+
+    .lc-avatar-initial {
+        font-size: 9px;
+    }
+}
+
+.server-monitor-player-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.server-monitor-since {
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+@media (max-width: 1100px) {
+    .server-monitor {
+        flex-direction: column;
+        height: auto;
+    }
+
+    .server-console-panel {
+        height: 60vh;
+        flex: none;
+    }
+
+    .server-monitor-rail {
+        flex-basis: auto;
+    }
+}

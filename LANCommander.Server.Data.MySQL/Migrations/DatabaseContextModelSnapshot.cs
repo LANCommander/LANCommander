@@ -17,7 +17,7 @@ namespace LANCommander.Server.Data.MySQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 64);
 
             MySqlModelBuilderExtensions.AutoIncrementColumns(modelBuilder);
@@ -568,6 +568,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<string>("OptionSchema")
                         .HasColumnType("longtext");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("tinyint(1)");
 
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("datetime(6)");

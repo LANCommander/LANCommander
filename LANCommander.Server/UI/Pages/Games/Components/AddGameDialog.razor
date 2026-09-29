@@ -8,7 +8,12 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<AddGameDialog> Logger
 
-@* Adds a game by looking it up with a metadata provider, optionally fetching its art too *@
+@*
+    Adds a game by looking it up with a metadata provider, optionally fetching its art too, or
+    sends the user to the blank General form to enter it by hand.
+*@
+<Segmented TValue="bool" Items="Modes" Value="false" ValueChanged="ModeChanged" Block Class="add-game-mode" />
+
 <MetadataLookupPanel @ref="_panel" GameId="Guid.Empty" AutoFocus ShowCancel="false" OnImported="OnGameImportedAsync">
     <Checkbox Value="_autoDownloadMedia" ValueChanged="OnAutoDownloadMediaChanged" Style="margin-top: 8px">Automatically download art</Checkbox>
 </MetadataLookupPanel>
@@ -16,6 +21,22 @@
 @code {
     MetadataLookupPanel? _panel;
     bool _autoDownloadMedia;
+
+    static readonly IReadOnlyList<SelectItem<bool>> Modes =
+    [
+        new(false, "Look up metadata"),
+        new(true, "Enter manually"),
+    ];
+
+    async Task ModeChanged(bool manual)
+    {
+        if (!manual)
+            return;
+
+        await CloseAsync(false);
+
+        NavigationManager.NavigateTo("/Games/Add");
+    }
 
     static readonly MediaType[] AutoDownloadTypes =
     [

@@ -1,8 +1,17 @@
 @page "/Games/{id:guid}/Preview"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<GameEditView Id="Id" Title="Preview">
-    <GameDetailPreview />
+<GameEditView Id="Id" Title="Preview" Subtitle="exactly what the launcher shows" ContentClass="game-edit-content-bleed">
+    <TitleExtraTemplate>
+        <span class="game-preview-saves">
+            <Icon Type="IconType.CheckCircle" />
+            Media saves as you drop it
+        </span>
+        <Button Icon="IconType.PencilSimple" Href="@($"/Games/{Id}/General")">Edit details</Button>
+    </TitleExtraTemplate>
+    <ChildContent>
+        <GameDetailPreview />
+    </ChildContent>
 </GameEditView>
 
 @code {

@@ -1,7 +1,7 @@
 @namespace LANCommander.Server.UI.Controls
 @inherits FormInputBase<bool>
 
-<span class="@BuildClass("lc-switch")" style="@Style">
+<span class="@BuildClass(Value ? "lc-switch lc-switch-on" : "lc-switch")" style="@Style">
     <RadzenSwitch Name="@_id"
                   Value="Value"
                   ValueChanged="@((bool value) => SetValueAsync(value))"

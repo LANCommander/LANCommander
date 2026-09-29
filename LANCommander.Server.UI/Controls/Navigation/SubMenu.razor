@@ -23,7 +23,7 @@
         </span>
         <Icon Type="IconType.CaretDown" Class="lc-submenu-caret" />
     </button>
-    <ul class="lc-menu-list lc-submenu-list" hidden="@(!_open)">
+    <ul class="lc-menu-list lc-submenu-list" style="--lc-menu-depth: @Depth" hidden="@(!_open)">
         <CascadingValue Value="this" IsFixed>
             @ChildContent
         </CascadingValue>
@@ -42,6 +42,12 @@
 
     /// <summary>Starts open regardless of the current page.</summary>
     [Parameter] public bool Open { get; set; }
+
+    /// <summary>The enclosing SubMenu, if this group is nested inside another.</summary>
+    [CascadingParameter] SubMenu? Parent { get; set; }
+
+    /// <summary>Nesting level: a top-level group is 1, a group inside it 2, and so on. Drives the child indent and guide line.</summary>
+    internal int Depth => (Parent?.Depth ?? 0) + 1;
 
     readonly List<MenuItem> _items = [];
     bool _open;

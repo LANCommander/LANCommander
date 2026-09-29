@@ -32,6 +32,23 @@ namespace LANCommander.Server.Services
             }).FirstOrDefaultAsync(predicate);
         }
         
+        /// <summary>
+        /// The library's size on disk as the Games list reports it: each game's latest archive (by
+        /// creation date), compressed, summed. Older versions of a game aren't counted.
+        /// </summary>
+        public async Task<long> GetLibrarySizeAsync()
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            var archives = context.Set<Archive>().AsNoTracking();
+
+            // Queried from the archives' side as NOT EXISTS (a newer one for the same game), which
+            // every provider translates, including the in-memory one the service tests use
+            return await archives
+                .Where(a => a.GameId != null && !archives.Any(newer => newer.GameId == a.GameId && newer.CreatedOn > a.CreatedOn))
+                .SumAsync(a => a.CompressedSize);
+        }
+
         public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
         {
             return AppPaths.ResolveStorageLocationPath(storageLocation.Path, archive.ObjectKey);

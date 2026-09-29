@@ -10,13 +10,17 @@
 
     public IEnumerable<ComponentFixture> Fixtures =>
     [
-        new("Menu.Sidebar", "Sidebar navigation with an active item, an open group and a divider",
-            @<div style="width: 220px">
-                <Menu>
-                    <MenuItem Href="/Games" Icon="IconType.GameController">Games</MenuItem>
+        new("Menu.Sidebar", "Sidebar navigation with an active item, an open group, a nested group and a divider",
+            @<div style="width: 232px">
+                <Menu Variant="MenuVariant.Sidebar">
+                    <MenuItem Href="/Games" Icon="IconType.GameController" Count="218">Games</MenuItem>
                     <SubMenu Title="Metadata" Icon="IconType.Tag" Open>
                         <MenuItem Href="/Metadata/Genres">Genres</MenuItem>
                         <MenuItem Href="@Here" Exact>Tags</MenuItem>
+                        <SubMenu Title="Integrations" Open>
+                            <MenuItem Href="/Metadata/Integrations/IGDB">IGDB</MenuItem>
+                            <MenuItem Href="/Metadata/Integrations/Steam">Steam</MenuItem>
+                        </SubMenu>
                     </SubMenu>
                     <SubMenu Title="Scripting" Icon="IconType.Code">
                         <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
@@ -103,6 +107,16 @@
             Width = 400,
             Covers = [typeof(Breadcrumb), typeof(BreadcrumbItem)],
         },
+        new("Breadcrumb.MonoRoot", "A path under a mono root, as in the file pickers",
+            @<Breadcrumb>
+                <BreadcrumbItem Mono OnClick="() => { }">ns2-338.4.zip</BreadcrumbItem>
+                <BreadcrumbItem OnClick="() => { }">Natural Selection 2</BreadcrumbItem>
+                <BreadcrumbItem>x64</BreadcrumbItem>
+            </Breadcrumb>)
+        {
+            Width = 400,
+            Covers = [typeof(Breadcrumb), typeof(BreadcrumbItem)],
+        },
         new("Collapse.Panels", "Collapsible panels, one open, one with header actions",
             @<Collapse>
                 <Panel Header="Options" Open><Typography>Launch options for the game.</Typography></Panel>
@@ -139,6 +153,17 @@
             </Flex>)
         {
             Width = 360,
+            Covers = [typeof(Statistic)],
+        },
+        new("Statistic.Tiles", "Dashboard tiles: a coloured note beside the figure, and a usage meter",
+            @<div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px">
+                <Card><Statistic Title="Players online" Value="14" Delta="+5 vs last night" Success /></Card>
+                <Card><Statistic Title="Game servers" Value="4/6" Delta="1 stopped" Warning /></Card>
+                <Card><Statistic Title="Sessions this week" Value="268" Delta="41 h played" /></Card>
+                <Card><Statistic Title="Archive storage" Value="1.24" Delta="TB of 4 TB" Usage="31" /></Card>
+            </div>)
+        {
+            Width = 560,
             Covers = [typeof(Statistic)],
         },
         new("LocalTime.Formats", "Absolute and relative times",

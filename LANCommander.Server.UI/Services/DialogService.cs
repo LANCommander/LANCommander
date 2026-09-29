@@ -1,5 +1,6 @@
 using LANCommander.Server.UI.Controls;
 using LANCommander.Server.UI.Controls.Internal;
+using Microsoft.AspNetCore.Components;
 using Radzen;
 
 namespace LANCommander.Server.UI.Services;
@@ -28,15 +29,19 @@ public sealed class DialogService(Radzen.DialogService dialogs)
     {
         settings ??= new DialogSettings();
 
-        var result = await dialogs.OpenAsync<DialogFrame<TDialog, TOptions, TResult>>(title, Parameters(options, settings, drawer: false), new DialogOptions
+        var titleState = new DialogTitleState(title, settings);
+
+        var result = await dialogs.OpenAsync<DialogFrame<TDialog, TOptions, TResult>>(title, Parameters(options, settings, drawer: false, titleState), new DialogOptions
         {
             Width = settings.Width,
+            Height = settings.Height,
             ShowClose = !settings.NotClosable,
             CloseDialogOnEsc = !settings.NotClosable,
             CloseDialogOnOverlayClick = false,
             Draggable = false,
             Resizable = false,
-            CssClass = "lc-dialog-window",
+            CssClass = WindowClass(settings, "lc-dialog-window"),
+            TitleContent = _ => Title(titleState),
         });
 
         return result is TResult typed ? typed : default;
@@ -56,8 +61,11 @@ public sealed class DialogService(Radzen.DialogService dialogs)
     {
         settings ??= new DialogSettings();
 
-        var result = await dialogs.OpenSideAsync<DialogFrame<TDialog, TOptions, TResult>>(title, Parameters(options, settings, drawer: true), new SideDialogOptions
+        var titleState = new DialogTitleState(title, settings);
+
+        var result = await dialogs.OpenSideAsync<DialogFrame<TDialog, TOptions, TResult>>(title, Parameters(options, settings, drawer: true, titleState), new SideDialogOptions
         {
+            TitleContent = _ => Title(titleState),
             Position = DialogPosition.Right,
             Width = settings.Width,
             ShowClose = !settings.NotClosable,
@@ -69,10 +77,26 @@ public sealed class DialogService(Radzen.DialogService dialogs)
         return result is TResult typed ? typed : default;
     }
 
-    private static Dictionary<string, object> Parameters<TOptions>(TOptions options, DialogSettings settings, bool drawer) => new()
+    private static Dictionary<string, object> Parameters<TOptions>(TOptions options, DialogSettings settings, bool drawer, DialogTitleState titleState) => new()
     {
         ["Options"] = options!,
         ["Settings"] = settings,
         ["Drawer"] = drawer,
+        ["TitleState"] = titleState,
     };
+
+    // Radzen renders the title bar; ours puts the caller's and the dialog's content beside the title
+    private static RenderFragment Title(DialogTitleState state) => builder =>
+    {
+        builder.OpenComponent<DialogTitleSlot>(0);
+        builder.AddComponentParameter(1, nameof(DialogTitleSlot.State), state);
+        builder.CloseComponent();
+    };
+
+    private static string WindowClass(DialogSettings settings, string baseClass) =>
+        new ClassBuilder()
+            .Add(baseClass)
+            .If(settings.Picker, "lc-dialog-picker")
+            .If(settings.Picker && settings.CompactFooter, "lc-dialog-picker-compact")
+            .Build()!;
 }

@@ -1,134 +1,399 @@
 @page "/Games"
 @using LANCommander.Server.Models
+@using LANCommander.Server.Data
+@using LANCommander.Server.ImportExport
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.ImportExport.Services
+@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Providers.Metadata
+@using LANCommander.Server.UI.Providers
+@using Microsoft.EntityFrameworkCore
+@using ManifestGame = LANCommander.SDK.Models.Manifest.Game
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
+@inject ArchiveService ArchiveService
 @inject MetadataService MetadataService
+@inject MediaService MediaService
+@inject IMediaGrabberService MediaGrabberService
+@inject ExportService ExportService
+@inject ExportContextFactory ExportContextFactory
+@inject ImportContextFactory ImportContextFactory
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject ScriptProvider ScriptProvider
 @inject NavigationManager NavigationManager
 @inject DialogService Dialogs
+@inject AlertService Alerts
 @inject NotificationService Notifications
+@inject ILogger<Index> Logger
+@implements IAsyncDisposable
 
-<PageHeader Title="Games" Subtitle="@Total.ToString()" />
+@*
+    The library: the filter rail flush beside the navigation, and beside it the page's own header
+    over the list (or grid) of games. The page fills the window so the list scrolls within it.
+*@
+<div class="games-page">
+    <GameFilterRail @ref="_rail" Filters="_filters" FiltersChanged="FiltersChangedAsync" OnSaveView="SaveViewAsync" />
 
-<PageContent>
-    <DataTable @ref="Table"
-               TItem="Game"
-               Small
-               ColumnPicker
-               Selectable
-               @bind-Values="Selected"
-               @bind-Total="Total"
-               SearchProperty="g => g.Title"
-               Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
-               Query="g => g.BaseGameId == null || g.BaseGameId == Guid.Empty || (g.Type != GameType.Expansion && g.Type != GameType.Mod)"
-               OnRowDoubleClick="@(game => NavigationManager.NavigateTo($"/Games/{game.Id}"))">
-        <RightToolbar>
-            @if (Selected.Any())
+    <div class="games-main">
+        <PageHeader Title="Games" Subtitle="@HeaderSubtitle" Class="games-header">
+            <Extra>
+                <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
+                <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Game</Button>
+            </Extra>
+        </PageHeader>
+
+        <div class="games-content">
+            <ErrorHandler Inline Title="The games could not be displayed">
+                <DataTable @ref="Table"
+                           TItem="Game"
+                           ColumnPicker
+                           Selectable
+                           ShowTotal
+                           ShowSortSummary
+                           @bind-Values="Selected"
+                           @bind-Total="Total"
+                           SearchProperty="g => g.Title"
+                           SearchPlaceholder="Search titles"
+                           Children="(g, dg) => dg.BaseGameId == g.Id && (dg.Type == GameType.Expansion || dg.Type == GameType.Mod)"
+                           ChildSummary="children => GameListFormat.ChildSummary(children)"
+                           Query="_query"
+                           Group="g => g.TitleInitial"
+                           GroupColumn="@nameof(Game.Title)"
+                           GroupCounts="CountByInitialAsync"
+                           RowMark="RowMark"
+                           ViewChanged="view => _view = view"
+                           OnRowDoubleClick="@(game => NavigationManager.NavigateTo($"/Games/{game.Id}"))"
+                           Class="games-table">
+                    <FilterBar>
+                        @if (!_filters.IsEmpty)
+                        {
+                            <div class="games-chips" aria-label="Active filters">
+                                @if (_filters.View != GameFilters.AllGames)
+                                {
+                                    <span class="games-chip games-chip-accent">
+                                        View: @(GameFilters.Views.FirstOrDefault(v => v.Key == _filters.View)?.Name ?? _filters.View)
+                                        <button type="button" class="games-chip-close" aria-label="Show all games" @onclick="() => FiltersChangedAsync(_filters.WithView(GameFilters.AllGames))"><Icon Type="IconType.X" Bold /></button>
+                                    </span>
+                                }
+                                @foreach (var (facet, values) in _filters.Facets)
+                                {
+                                    @foreach (var value in values)
+                                    {
+                                        var label = _rail?.LabelOf(facet, value) ?? value;
+                                        var chip = $"{_rail?.TitleOf(facet) ?? facet.ToString()}: {label}";
+
+                                        <span class="games-chip">
+                                            @chip
+                                            <button type="button" class="games-chip-close" aria-label="@($"Remove {chip}")" @onclick="() => FiltersChangedAsync(_filters.Toggle(facet, value))"><Icon Type="IconType.X" Bold /></button>
+                                        </span>
+                                    }
+                                }
+                                <button type="button" class="games-link" @onclick="() => FiltersChangedAsync(new GameFilters())">Clear all</button>
+                            </div>
+                        }
+                    </FilterBar>
+                    <Tile Context="game">
+                        <GameTile Game="game"
+                                  State="@(_tileStates.TryGetValue(game.Id, out var state) ? state : null)"
+                                  WorkingText="@_tileWorkingText"
+                                  DoneText="@_tileDoneText" />
+                    </Tile>
+                    <Columns>
+                        <TemplateColumn TItem="Game" Title="Icon" HideTitle Include="Media" Width="54px" CellClass="games-icon-cell">
+                            @if (!IsChild(context))
+                            {
+                                var icon = context.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+
+                                @if (icon != null)
+                                {
+                                    <img class="games-icon" src="@($"/api/Media/{icon.Id}/Download?fileId={icon.FileId}")" alt="" loading="lazy" />
+                                }
+                                else if (MissingCover(context))
+                                {
+                                    <span class="games-icon games-icon-missing" title="Missing art"><Icon Type="IconType.Image" /></span>
+                                }
+                                else
+                                {
+                                    <span class="@($"games-icon games-icon-placeholder games-tile-tone-{GameTile.ToneOf(context.Title)}")" aria-hidden="true">@GameListFormat.Initials(context.Title)</span>
+                                }
+                            }
+                        </TemplateColumn>
+
+                        <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" Expander CellClass="games-title-cell">
+                            <span class="games-title">@context.Title</span>
+                            @if (IsChild(context))
+                            {
+                                <span class="games-type-badge">@context.Type.GetDisplayName()</span>
+                            }
+                        </BoundColumn>
+
+                        <TemplateColumn TItem="Game" Title="Platforms" Include="Platforms" Width="128px" CellClass="games-muted-cell">
+                            @if (context.Platforms?.Count > 0)
+                            {
+                                @string.Join(", ", context.Platforms.Select(p => p.Name))
+                            }
+                            else
+                            {
+                                <span class="games-none">—</span>
+                            }
+                        </TemplateColumn>
+
+                        <BoundColumn Property="g => g.Keys!.Count" Title="Keys" Include="Keys" Sortable Numeric Width="78px">
+                            @if (context.Keys?.Count > 0)
+                            {
+                                @context.Keys.Count.ToString("N0")
+                            }
+                            else
+                            {
+                                <span class="games-none">—</span>
+                            }
+                        </BoundColumn>
+                        <BoundColumn Property="g => g.Keys!.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable Numeric Hide>
+                            @context.Keys?.Count(k => k.ClaimedOn.HasValue)
+                        </BoundColumn>
+
+                        <BoundColumn Property="GameListFormat.LatestArchiveSize" Title="Archive" Key="Archive" Include="Archives" Sortable Numeric Width="108px" CellClass="games-muted-cell">
+                            @if (GameListFormat.ArchiveSize(context) is { } size)
+                            {
+                                @GameListFormat.Size(size)
+                            }
+                            else
+                            {
+                                <span class="games-danger">none</span>
+                            }
+                        </BoundColumn>
+
+                        <BoundColumn Property="g => g.UpdatedOn" Title="Updated" Sortable Numeric Width="112px" CellClass="games-faint-cell">
+                            <span title="@context.UpdatedOn.ToLocalTime().ToString("g")">@GameListFormat.Ago(context.UpdatedOn)</span>
+                        </BoundColumn>
+
+                        <BoundColumn Property="g => g.MultiplayerModes!.Any()" Title="Multiplayer" Include="MultiplayerModes" Sortable Hide>
+                            <Checkbox Value="context.MultiplayerModes?.Count > 0" Disabled aria-label="Multiplayer" />
+                        </BoundColumn>
+
+                        <TemplateColumn TItem="Game" Title="Collections" Include="Collections" Hide>
+                            @foreach (var collection in context.Collections ?? [])
+                            {
+                                <Tag>@collection.Name</Tag>
+                            }
+                        </TemplateColumn>
+
+                        <TemplateColumn TItem="Game" Title="Developers" Include="Developers" Hide>
+                            @foreach (var developer in context.Developers ?? [])
+                            {
+                                <Tag>@developer.Name</Tag>
+                            }
+                        </TemplateColumn>
+
+                        <TemplateColumn TItem="Game" Title="Publishers" Include="Publishers" Hide>
+                            @foreach (var publisher in context.Publishers ?? [])
+                            {
+                                <Tag>@publisher.Name</Tag>
+                            }
+                        </TemplateColumn>
+
+                        <TemplateColumn TItem="Game" Title="Genres" Include="Genres" Hide>
+                            @foreach (var genre in context.Genres ?? [])
+                            {
+                                <Tag>@genre.Name</Tag>
+                            }
+                        </TemplateColumn>
+
+                        <TemplateColumn TItem="Game" Title="Multiplayer Modes" Include="MultiplayerModes" Hide>
+                            @foreach (var mode in context.MultiplayerModes?.Select(mm => mm.Type).Distinct() ?? [])
+                            {
+                                <Tag>@mode.GetDisplayName()</Tag>
+                            }
+                        </TemplateColumn>
+
+                        <BoundColumn Property="g => g.CreatedOn" Title="Created On" Sortable Hide>
+                            <LocalTime Value="context.CreatedOn" />
+                        </BoundColumn>
+
+                        <BoundColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable Hide />
+
+                        <BoundColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Include="UpdatedBy" Sortable Hide />
+
+                        <ActionsColumn TItem="Game" Width="52px">
+                            <Dropdown Class="games-row-menu">
+                                <ChildContent>
+                                    <button type="button" class="games-kebab" aria-label="@($"Actions for {context.Title}")" title="Actions"><Icon Type="IconType.DotsThreeVertical" Bold /></button>
+                                </ChildContent>
+                                <Overlay>
+                                    <Menu>
+                                        <MenuItem Icon="IconType.PencilSimple" Href="@($"/Games/{context.Id}")">Edit</MenuItem>
+                                        <MenuItem Icon="IconType.Eye" Href="@($"/Games/{context.Id}/Preview")">Preview</MenuItem>
+                                        <MenuItem Icon="IconType.Image" Href="@($"/Games/{context.Id}/Media")">Media</MenuItem>
+                                        <MenuItem Icon="IconType.Export" OnClick="() => ExportAsync([context])">Export</MenuItem>
+                                        <MenuDivider />
+                                        <MenuItem Icon="IconType.Trash" Danger OnClick="() => ConfirmDeleteAsync(context)">Delete</MenuItem>
+                                    </Menu>
+                                </Overlay>
+                            </Dropdown>
+                        </ActionsColumn>
+                    </Columns>
+                </DataTable>
+            </ErrorHandler>
+
+            @if (Selected.Any() || _bulkStatus != null)
             {
-                <Button Icon="IconType.Stack" OnClick="AddToCollectionAsync">Add to Collection</Button>
+                @* Selection is keyed, so it survives paging and filtering; this bar says so and acts on all of it *@
+                <div class="@(_view == TableView.Tiles ? "games-bulkbar games-bulkbar-grid" : "games-bulkbar")" role="toolbar" aria-label="Selected games">
+                    @if (_bulkStatus != null)
+                    {
+                        <Spin Small />
+                        <span class="games-bulkbar-status">@_bulkStatus</span>
+                        @if (_bulkRunning)
+                        {
+                            <span class="games-bulkbar-divider"></span>
+                            <Button Text ExtraSmall OnClick="CancelBulk">Stop</Button>
+                        }
+                    }
+                    else
+                    {
+                        <span class="games-bulkbar-count">
+                            <span class="games-mono">@Selected.Count.ToString("N0")</span> @SelectedLabel
+                        </span>
+                        @if (Selected.Count < Total)
+                        {
+                            <button type="button" class="games-link games-bulkbar-link" @onclick="SelectAllMatchingAsync">Select all <span class="games-mono">@Total.ToString("N0")</span> matching</button>
+                        }
+                        <span class="games-bulkbar-divider"></span>
+                        @if (_view == TableView.Tiles)
+                        {
+                            <Button Primary ExtraSmall Icon="IconType.DownloadSimple" OnClick="FetchArtAsync">Download art</Button>
+                            <Button ExtraSmall Icon="IconType.ArrowsClockwise" OnClick="RematchMetadataAsync" Disabled="!_hasMetadataProviders" title="@(_hasMetadataProviders ? null : "No metadata provider is set up")">Re-match metadata</Button>
+                            <Button ExtraSmall Icon="IconType.Stack" OnClick="AddToCollectionAsync">Collection</Button>
+                        }
+                        else
+                        {
+                            <Button ExtraSmall Icon="IconType.Stack" OnClick="AddToCollectionAsync">Collection</Button>
+                            <Button ExtraSmall Icon="IconType.Tag" OnClick="AddTagsAsync">Tag</Button>
+                            <Button ExtraSmall Icon="IconType.Export" OnClick="() => ExportAsync(Selected.ToList())">Export</Button>
+                            <Button Text Danger ExtraSmall Icon="IconType.Trash" OnClick="DeleteSelectedAsync" Class="games-bulkbar-delete">Delete</Button>
+                        }
+                        <span class="games-bulkbar-divider"></span>
+                        <button type="button" class="games-bulkbar-clear" aria-label="Clear selection" title="Clear selection" @onclick="ClearSelectionAsync"><Icon Type="IconType.X" Bold /></button>
+                    }
+                </div>
             }
-            <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
-            <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Game</Button>
-        </RightToolbar>
-        <Columns>
-            <TemplateColumn TItem="Game" Title="Icon" Include="Media" Width="64px">
-                <Image Src="@GetIcon(context)" Width="32" Height="32" />
-            </TemplateColumn>
-
-            <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
-
-            <BoundColumn Property="g => g.MultiplayerModes.Any()" Title="Multiplayer" Include="MultiplayerModes" Sortable>
-                <Checkbox Value="context.MultiplayerModes?.Count > 0" Disabled aria-label="Multiplayer" />
-            </BoundColumn>
-
-            <BoundColumn Property="g => g.Keys.Count" Title="Total Keys" Include="Keys" Sortable>
-                @context.Keys?.Count
-            </BoundColumn>
-            <BoundColumn Property="g => g.Keys.Count(k => k.ClaimedOn.HasValue)" Title="Keys Allocated" Include="Keys" Sortable>
-                @context.Keys?.Count(k => k.ClaimedOn.HasValue)
-            </BoundColumn>
-
-            <TemplateColumn TItem="Game" Title="Collections" Include="Collections">
-                @foreach (var collection in context.Collections ?? [])
-                {
-                    <Tag>@collection.Name</Tag>
-                }
-            </TemplateColumn>
-
-            <TemplateColumn TItem="Game" Title="Developers" Include="Developers" Hide>
-                @foreach (var developer in context.Developers ?? [])
-                {
-                    <Tag>@developer.Name</Tag>
-                }
-            </TemplateColumn>
-
-            <TemplateColumn TItem="Game" Title="Publishers" Include="Publishers" Hide>
-                @foreach (var publisher in context.Publishers ?? [])
-                {
-                    <Tag>@publisher.Name</Tag>
-                }
-            </TemplateColumn>
-
-            <TemplateColumn TItem="Game" Title="Genres" Include="Genres" Hide>
-                @foreach (var genre in context.Genres ?? [])
-                {
-                    <Tag>@genre.Name</Tag>
-                }
-            </TemplateColumn>
-
-            <TemplateColumn TItem="Game" Title="Platforms" Include="Platforms" Hide>
-                @foreach (var platform in context.Platforms ?? [])
-                {
-                    <Tag>@platform.Name</Tag>
-                }
-            </TemplateColumn>
-
-            <TemplateColumn TItem="Game" Title="Multiplayer Modes" Include="MultiplayerModes" Hide>
-                @foreach (var mode in context.MultiplayerModes?.Select(mm => mm.Type).Distinct() ?? [])
-                {
-                    <Tag>@mode.GetDisplayName()</Tag>
-                }
-            </TemplateColumn>
-
-            <BoundColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
-                <LocalTime Value="context.CreatedOn" />
-            </BoundColumn>
-
-            <BoundColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
-                <LocalTime Value="context.UpdatedOn" />
-            </BoundColumn>
-
-            <BoundColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
-
-            <BoundColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Include="UpdatedBy" Sortable />
-
-            <ActionsColumn TItem="Game">
-                <Button Text Icon="IconType.PencilSimple" Href="@($"/Games/{context.Id}")" title="Edit" />
-                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this game?" OkText="Delete" Danger>
-                    <Button Text Danger Icon="IconType.X" title="Delete" />
-                </Popconfirm>
-            </ActionsColumn>
-        </Columns>
-    </DataTable>
-</PageContent>
+        </div>
+    </div>
+</div>
 
 @code {
     IList<Game> Selected = new List<Game>();
     int Total;
 
     DataTable<Game> Table = default!;
+    GameFilterRail? _rail;
+
+    GameFilters _filters = new();
+    System.Linq.Expressions.Expression<Func<Game, bool>> _query = GameFilters.Listed;
+    int _libraryTotal;
+    long _librarySize;
+    TableView _view;
+
+    readonly Dictionary<Guid, GameTileState> _tileStates = new();
+    string? _tileWorkingText;
+    string? _tileDoneText;
+    string? _bulkStatus;
+    bool _bulkRunning;
+    CancellationTokenSource _bulkCancellation = new();
+    IJSObjectReference? _domHelper;
 
     bool _hasMetadataProviders;
 
-    protected override void OnInitialized()
+    /// <summary>"2,417 titles · 4.61 TB" for the whole library, or "143 of 2,417" while filtered or searched.</summary>
+    string HeaderSubtitle
     {
-        _hasMetadataProviders = MetadataService.GetProviderNames().Any();
+        get
+        {
+            if (!_filters.IsEmpty || (Total > 0 && Total != _libraryTotal))
+                return $"{Total:N0} of {_libraryTotal:N0}";
+
+            var titles = $"{_libraryTotal:N0} {(_libraryTotal == 1 ? "title" : "titles")}";
+
+            return _librarySize > 0 ? $"{titles} · {GameListFormat.Size(_librarySize, "0.##")}" : titles;
+        }
     }
 
-    static string GetIcon(Game game)
-    {
-        var media = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+    /// <summary>In the grid, where selections are usually whole views, says when every match is selected.</summary>
+    string SelectedLabel => _view == TableView.Tiles && Total > 0 && Selected.Count >= Total
+        ? "selected — every match, not just this page"
+        : "selected";
 
-        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
+    protected override async Task OnInitializedAsync()
+    {
+        _hasMetadataProviders = MetadataService.GetProviderNames().Any();
+
+        await CountLibraryAsync();
+    }
+
+    async Task CountLibraryAsync()
+    {
+        await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+        _libraryTotal = await context.Set<Game>().CountAsync(GameFilters.Listed);
+
+        try
+        {
+            _librarySize = await ArchiveService.GetLibrarySizeAsync();
+        }
+        catch (Exception ex)
+        {
+            // The size is a nicety in the header; the list doesn't depend on it
+            Logger.LogWarning(ex, "Could not total the library's size");
+        }
+    }
+
+    /// <summary>Expansions and mods, listed under their base game.</summary>
+    static bool IsChild(Game game) => game.BaseGameId != null && game.BaseGameId != Guid.Empty && game.IsAddon;
+
+    static bool MissingCover(Game game) => game.Media != null && game.Media.All(m => m.Type != MediaType.Cover);
+
+    /// <summary>Base games without a cover are marked, so their icon slot shows the gap.</summary>
+    static string? RowMark(Game game) => !IsChild(game) && MissingCover(game) ? "missing-art" : null;
+
+    /// <summary>Each letter's count across every page of the filtered list, as one GROUP BY.</summary>
+    static async Task<IReadOnlyDictionary<string, int>> CountByInitialAsync(IQueryable<Game> rows)
+    {
+        var counts = await rows
+            .GroupBy(g => g.Title.Substring(0, 1).ToUpper())
+            .Select(g => new { g.Key, Count = g.Count() })
+            .ToListAsync();
+
+        return counts
+            .GroupBy(c => Game.InitialOf(c.Key))
+            .ToDictionary(g => g.Key, g => g.Sum(c => c.Count));
+    }
+
+    Task FiltersChangedAsync(GameFilters filters)
+    {
+        _filters = filters;
+        _query = filters.IsEmpty ? GameFilters.Listed : filters.ToExpression();
+
+        return Task.CompletedTask;
+    }
+
+    async Task SaveViewAsync()
+    {
+        var name = await Alerts.PromptAsync("Save View", "Name", okText: "Save", placeholder: "e.g. Needs covers");
+
+        if (string.IsNullOrWhiteSpace(name) || _rail == null)
+            return;
+
+        await _rail.SaveAsync(name.Trim());
+    }
+
+    /// <summary>After adding, changing or deleting games: the page, the counts and the totals.</summary>
+    async Task RefreshAsync()
+    {
+        await Table.ReloadAsync();
+        await CountLibraryAsync();
+
+        if (_rail != null)
+            await _rail.RefreshCountsAsync();
     }
 
     async Task AddAsync()
@@ -147,11 +412,14 @@
         });
     }
 
-    async Task DeleteAsync(Game game)
+    async Task ConfirmDeleteAsync(Game game)
     {
+        if (!await Alerts.ConfirmAsync($"Delete {game.Title}, with its archives and media? This cannot be undone.", "Delete Game", "Delete", danger: true))
+            return;
+
         try
         {
-            await GameService.DeleteAsync(game);
+            await GameService.DeleteAsync(await GameService.GetAsync(game.Id));
 
             Notifications.Success($"{game.Title} was successfully deleted!");
         }
@@ -160,21 +428,328 @@
             Notifications.Error(ex, "Could not delete the game!");
         }
 
-        await Table.ReloadAsync();
+        await RefreshAsync();
+    }
+
+    // Bulk actions on the selection
+
+    Task SelectAllMatchingAsync() => Table.SelectAllMatchingAsync();
+
+    async Task ClearSelectionAsync()
+    {
+        await Table.ClearSelectionAsync();
+        _tileStates.Clear();
+    }
+
+    void CancelBulk() => _bulkCancellation.Cancel();
+
+    /// <summary>A fresh token for a bulk run that Stop can cancel without affecting the next one.</summary>
+    CancellationToken BeginBulk()
+    {
+        if (_bulkCancellation.IsCancellationRequested)
+        {
+            _bulkCancellation.Dispose();
+            _bulkCancellation = new CancellationTokenSource();
+        }
+
+        _bulkRunning = true;
+
+        return _bulkCancellation.Token;
+    }
+
+    void EndBulk()
+    {
+        _bulkRunning = false;
+        _bulkStatus = null;
     }
 
     async Task AddToCollectionAsync()
     {
         var collections = await Dialogs.OpenAsync<AddToCollectionDialog, AddToCollectionOptions, IEnumerable<Collection>>("Add to Collection", new AddToCollectionOptions
         {
-            GameIds = Selected.Select(g => g.Id),
+            GameIds = Selected.Select(g => g.Id).ToList(),
         }, new DialogSettings { OkText = "Add" });
 
         if (collections != null)
         {
             await Table.ClearSelectionAsync();
-            await Table.ReloadAsync();
+            await RefreshAsync();
         }
+    }
+
+    async Task AddTagsAsync()
+    {
+        var tags = await Dialogs.OpenAsync<AddTagsDialog, AddToCollectionOptions, IEnumerable<LANCommander.Server.Data.Models.Tag>>("Tag Games", new AddToCollectionOptions
+        {
+            GameIds = Selected.Select(g => g.Id).ToList(),
+        }, new DialogSettings { OkText = "Tag" });
+
+        if (tags != null)
+        {
+            await Table.ClearSelectionAsync();
+            await RefreshAsync();
+        }
+    }
+
+    /// <summary>One .lcx per game, everything each export offers, downloaded without leaving the page.</summary>
+    async Task ExportAsync(IReadOnlyList<Game> games)
+    {
+        _domHelper ??= await ScriptProvider.ImportModuleAsync("DomHelper");
+
+        for (var i = 0; i < games.Count; i++)
+        {
+            _bulkStatus = $"Preparing export {i + 1:N0} of {games.Count:N0}";
+            StateHasChanged();
+
+            try
+            {
+                var context = ExportContextFactory.Create();
+                var items = await context.InitializeExportAsync(games[i].Id, ImportExportRecordType.Game);
+
+                await context.PrepareExportQueueAsync(items.Select(item => item.Id).ToList());
+
+                var contextId = ExportService.EnqueueContext(context);
+
+                await _domHelper.InvokeVoidAsync("Download", $"/api/Export/{contextId}");
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not export {Title}", games[i].Title);
+                Notifications.Error(ex, $"Could not export {games[i].Title}!");
+            }
+        }
+
+        _bulkStatus = null;
+    }
+
+    /// <summary>
+    /// Looks up a cover for each selected game and keeps the first match, showing each game's
+    /// progress on its tile. What makes the Missing art view something to act on.
+    /// </summary>
+    async Task FetchArtAsync()
+    {
+        var games = Selected.ToList();
+        var token = BeginBulk();
+        var added = 0;
+        var grabbers = MediaGrabberService.GetGrabberNames().ToList();
+
+        _tileStates.Clear();
+        _tileWorkingText = grabbers.Count == 1 ? $"searching {grabbers[0]}…" : "searching…";
+        _tileDoneText = "cover added";
+
+        foreach (var game in games)
+            _tileStates[game.Id] = GameTileState.Queued;
+
+        for (var i = 0; i < games.Count && !token.IsCancellationRequested; i++)
+        {
+            var game = games[i];
+
+            _bulkStatus = $"Downloading art {i + 1:N0} of {games.Count:N0}";
+            _tileStates[game.Id] = GameTileState.Working;
+            StateHasChanged();
+
+            try
+            {
+                var match = (await MediaGrabberService.SearchAsync(MediaType.Cover, game.Title)).FirstOrDefault();
+
+                if (match == null)
+                {
+                    _tileStates[game.Id] = GameTileState.NotFound;
+                    continue;
+                }
+
+                using var download = await MediaGrabberService.DownloadAsync(match);
+
+                await MediaService.WriteToFileAsync(new Media
+                {
+                    GameId = game.Id,
+                    Type = MediaType.Cover,
+                    SourceUrl = match.SourceUrl,
+                    MimeType = download.MimeType,
+                    StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
+                    Crc32 = string.Empty,
+                }, download.Stream);
+
+                _tileStates[game.Id] = GameTileState.Done;
+                added++;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not fetch a cover for {Title}", game.Title);
+                _tileStates[game.Id] = GameTileState.Failed;
+            }
+        }
+
+        EndBulk();
+
+        Notifications.Success($"Added {added:N0} {(added == 1 ? "cover" : "covers")} to {games.Count:N0} {(games.Count == 1 ? "game" : "games")}");
+
+        await RefreshAsync();
+    }
+
+    /// <summary>
+    /// Runs the metadata lookup again for each selected game, as the lookup dialog would with its
+    /// default choices: a store ID the game already carries first, else the best title match, then
+    /// every field the provider has a value for. The title stays the game's own.
+    /// </summary>
+    async Task RematchMetadataAsync()
+    {
+        var provider = MetadataService.GetProviderNames().Select(MetadataService.GetProvider).FirstOrDefault(p => p != null);
+
+        if (provider == null)
+        {
+            Notifications.Error("No metadata provider is set up");
+            return;
+        }
+
+        var games = Selected.ToList();
+        var token = BeginBulk();
+        var matched = 0;
+
+        _tileStates.Clear();
+        _tileWorkingText = $"matching {provider.ProviderName}…";
+        _tileDoneText = "metadata updated";
+
+        foreach (var game in games)
+            _tileStates[game.Id] = GameTileState.Queued;
+
+        for (var i = 0; i < games.Count && !token.IsCancellationRequested; i++)
+        {
+            var game = games[i];
+
+            _bulkStatus = $"Matching metadata {i + 1:N0} of {games.Count:N0}";
+            _tileStates[game.Id] = GameTileState.Working;
+            StateHasChanged();
+
+            try
+            {
+                var existing = await GameService.GetManifestAsync(game.Id);
+                var match = await FindMatchAsync(provider, game.Title, existing);
+                var fetched = match == null ? null : await provider.GetGameAsync(match.Id);
+
+                if (fetched == null)
+                {
+                    _tileStates[game.Id] = GameTileState.NotFound;
+                    continue;
+                }
+
+                using (var context = ImportContextFactory.Create())
+                {
+                    await context.InitializeMetadataUpdateAsync(MergeMetadata(fetched, existing, game.Id));
+                    await context.ImportQueueAsync();
+                }
+
+                _tileStates[game.Id] = GameTileState.Done;
+                matched++;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not re-match metadata for {Title}", game.Title);
+                _tileStates[game.Id] = GameTileState.Failed;
+            }
+        }
+
+        EndBulk();
+
+        Notifications.Success($"Updated metadata for {matched:N0} of {games.Count:N0} {(games.Count == 1 ? "game" : "games")}");
+
+        await RefreshAsync();
+    }
+
+    static async Task<MetadataSearchResult<ManifestGame>?> FindMatchAsync(IMetadataProvider provider, string title, ManifestGame? existing)
+    {
+        foreach (var externalId in existing?.ExternalIds ?? [])
+        {
+            if (string.IsNullOrWhiteSpace(externalId.Provider) || string.IsNullOrWhiteSpace(externalId.ExternalId))
+                continue;
+
+            var resolved = await provider.ResolveByExternalIdAsync(externalId.Provider, externalId.ExternalId);
+
+            if (resolved != null)
+                return resolved;
+        }
+
+        return (await provider.SearchGamesAsync(title, 1))?.Results.FirstOrDefault();
+    }
+
+    /// <summary>The fetched metadata over the game's own, keeping its title and anything the provider left empty.</summary>
+    static ManifestGame MergeMetadata(ManifestGame fetched, ManifestGame? existing, Guid id)
+    {
+        fetched.Id = id;
+
+        if (existing == null)
+            return fetched;
+
+        fetched.Title = existing.Title;
+
+        if (string.IsNullOrWhiteSpace(fetched.Description))
+            fetched.Description = existing.Description;
+
+        if (fetched.ReleasedOn == default)
+            fetched.ReleasedOn = existing.ReleasedOn;
+
+        fetched.Engine ??= existing.Engine;
+
+        if (fetched.Developers?.Any() != true)
+            fetched.Developers = existing.Developers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
+
+        if (fetched.Publishers?.Any() != true)
+            fetched.Publishers = existing.Publishers ?? new List<LANCommander.SDK.Models.Manifest.Company>();
+
+        if (fetched.Genres?.Any() != true)
+            fetched.Genres = existing.Genres ?? new List<LANCommander.SDK.Models.Manifest.Genre>();
+
+        if (fetched.Tags?.Any() != true)
+            fetched.Tags = existing.Tags ?? new List<LANCommander.SDK.Models.Manifest.Tag>();
+
+        if (fetched.MultiplayerModes?.Any() != true)
+            fetched.MultiplayerModes = existing.MultiplayerModes ?? new List<LANCommander.SDK.Models.Manifest.MultiplayerMode>();
+
+        if (fetched.SavePaths?.Any() != true)
+            fetched.SavePaths = existing.SavePaths ?? new List<LANCommander.SDK.Models.Manifest.SavePath>();
+
+        if (fetched.ExternalIds?.Any() != true)
+            fetched.ExternalIds = existing.ExternalIds ?? new List<LANCommander.SDK.Models.Manifest.GameExternalId>();
+
+        return fetched;
+    }
+
+    async Task DeleteSelectedAsync()
+    {
+        var games = Selected.ToList();
+
+        if (!await Alerts.ConfirmAsync($"Delete {games.Count:N0} {(games.Count == 1 ? "game" : "games")}, with their archives and media? This cannot be undone.", "Delete Games", "Delete", danger: true))
+            return;
+
+        var token = BeginBulk();
+        var deleted = 0;
+
+        for (var i = 0; i < games.Count && !token.IsCancellationRequested; i++)
+        {
+            _bulkStatus = $"Deleting {i + 1:N0} of {games.Count:N0}";
+            StateHasChanged();
+
+            try
+            {
+                // One at a time: GameService.DeleteAsync also removes each game's archive and media files
+                await GameService.DeleteAsync(await GameService.GetAsync(games[i].Id));
+                deleted++;
+            }
+            catch (Exception ex)
+            {
+                Logger.LogError(ex, "Could not delete {Title}", games[i].Title);
+            }
+        }
+
+        EndBulk();
+
+        if (deleted == games.Count)
+            Notifications.Success($"Deleted {deleted:N0} {(deleted == 1 ? "game" : "games")}");
+        else
+            Notifications.Error($"Deleted {deleted:N0} of {games.Count:N0} games; the rest could not be deleted");
+
+        await Table.ClearSelectionAsync();
+        await RefreshAsync();
     }
 
     async Task OpenImportDialogAsync()
@@ -185,6 +760,22 @@
             ManifestType = ManifestType.Game,
         }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
 
-        await Table.ReloadAsync();
+        await RefreshAsync();
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _bulkCancellation.Cancel();
+
+        if (_domHelper != null)
+        {
+            try
+            {
+                await _domHelper.DisposeAsync();
+            }
+            catch (JSDisconnectedException)
+            {
+            }
+        }
     }
 }

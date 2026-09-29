@@ -11,32 +11,59 @@
 @inject ArchiveService ArchiveService
 @inject ServerService ServerService
 @inject RedistributableService RedistributableService
+@inject GameService GameService
+@inject ToolService ToolService
 @inject DialogService Dialogs
+@inject AlertService Alerts
 @inject NotificationService Notifications
 @inject ILogger<ScriptEditorDialog> Logger
 
-@* Adds or edits a script of a game, redistributable, server or tool (or a system script) *@
+@*
+    Adds or edits a script of a game, redistributable, server or tool (or a system script), laid out
+    like the launcher's debugger: the scripts beside this one on the left (the owner's, the
+    redistributables its game depends on, the system's), the editor over its console in the middle,
+    the script's own fields and variables on the right, and a status bar in the footer. The server
+    runs a script and streams it; there is no stepping, so no gutter for it. Open it with
+    DialogSettings.Picker and CompactFooter.
+*@
 @if (_loading)
 {
     <Spin />
 }
 else
 {
-    <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Style="margin-bottom: 16px">
-        <Flex Gap="Gap.Small" Wrap Align="Align.Center">
-            @foreach (var group in _snippets.Select(s => s.Group).Distinct())
+    <div class="script-editor">
+        <div class="script-editor-toolbar" role="toolbar" aria-label="Script">
+            <Tooltip Title="@(CanRun ? "Save and run" : "Only packaging scripts run on the server")">
+                <Button Primary Small Icon="IconType.Play" Disabled="@(!CanRun || _runState == ConsoleRunState.Running)" OnClick="RunAsync">Run</Button>
+            </Tooltip>
+            <Button Danger Small Icon="IconType.Stop" Disabled="@(_runState != ConsoleRunState.Running)" OnClick="StopAsync">Stop</Button>
+
+            <span class="script-editor-divider" aria-hidden="true"></span>
+
+            <Button Small Icon="IconType.FloppyDisk" Disabled="@(!IsDirty && !_isNewScript)" OnClick="SaveFromEditorAsync">Save</Button>
+            <Button Text Small Disabled="!IsDirty" OnClick="DiscardAsync">Discard</Button>
+
+            <span class="script-editor-divider" aria-hidden="true"></span>
+
+            @if (_snippets.Any())
             {
                 <Dropdown>
                     <Overlay>
                         <Menu>
-                            @foreach (var snippet in _snippets.Where(s => s.Group == group))
+                            @foreach (var group in _snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
                             {
-                                <MenuItem OnClick="() => InsertSnippetAsync(snippet)">@snippet.Name</MenuItem>
+                                <MenuGroup Title="@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)">
+                                    @foreach (var snippet in group.OrderBy(s => s.Name))
+                                    {
+                                        <MenuItem OnClick="() => InsertSnippetAsync(snippet)">@snippet.Name</MenuItem>
+                                    }
+                                </MenuGroup>
                             }
                         </Menu>
                     </Overlay>
                     <ChildContent>
-                        <Button Primary>@group</Button>
+                        <Button Small>Snippets <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
                     </ChildContent>
                 </Dropdown>
             }
@@ -53,7 +80,7 @@ else
                         </Menu>
                     </Overlay>
                     <ChildContent>
-                        <Button Primary Icon="IconType.BracketsCurly">Variables</Button>
+                        <Button Small Icon="IconType.BracketsCurly">Variables <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
                     </ChildContent>
                 </Dropdown>
             }
@@ -70,50 +97,217 @@ else
                         </Menu>
                     </Overlay>
                     <ChildContent>
-                        <Button Primary Icon="IconType.SlidersHorizontal">Options</Button>
+                        <Button Small Icon="IconType.SlidersHorizontal">Options <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
                     </ChildContent>
                 </Dropdown>
             }
 
             @if (_archive != null)
             {
-                <Button Text Icon="IconType.FolderOpen" OnClick="BrowseForPathAsync">Browse</Button>
+                <Button Text Small Icon="IconType.FolderOpen" OnClick="BrowseForPathAsync">Browse archive</Button>
             }
 
-            @if (IsDebuggable && HasDebugTarget)
+            <span class="script-editor-toolbar-spacer"></span>
+
+            @if (_runState == ConsoleRunState.Running)
             {
-                <Tooltip Title="Debug">
-                    <Button Text Icon="IconType.Play" aria-label="Debug" Disabled="_debugging" OnClick="DebugAsync" />
-                </Tooltip>
+                <Tag Caps Success Class="script-editor-running" role="status">
+                    <span class="script-editor-running-dot" aria-hidden="true"></span>
+                    Running
+                    <span class="script-editor-running-time">@PowerShellConsole.FormatTimeSpan(_console?.Elapsed ?? TimeSpan.Zero)</span>
+                </Tag>
             }
-        </Flex>
+        </div>
 
-        <Checkbox @bind-Value="_script.RequiresAdmin">Requires Admin</Checkbox>
-    </Flex>
+        <div class="script-editor-body">
+            <nav class="script-editor-scripts" aria-label="Scripts">
+                <div class="script-editor-panel-header">
+                    <span class="script-editor-kicker">Scripts</span>
+                    <span class="script-editor-count">@_groups.Sum(g => g.Scripts.Count)</span>
+                </div>
 
-    <CodeInput @ref="_codeInput"
-               @bind-Value="_script.Contents"
-               Language="Languages.PowerShell"
-               OnSave="SaveFromEditorAsync"
-               ScriptType="@_script.Type.ToString()"
-               ModuleFunctions="@_moduleFunctions"
-               OnReady="OnEditorReadyAsync" />
+                <div class="script-editor-script-list">
+                    @foreach (var group in _groups)
+                    {
+                        var expanded = !_collapsedGroups.Contains(group.Key);
 
-    <PowerShellConsole @ref="_console" Id="_id" @bind-Active="_debugging" />
+                        <div class="script-editor-group" @key="group.Key">
+                            <button type="button" class="script-editor-group-header" aria-expanded="@(expanded ? "true" : "false")" @onclick="() => ToggleGroup(group.Key)">
+                                <Icon Type="IconType.CaretRight" Class="@(expanded ? "script-editor-group-caret script-editor-group-caret-open" : "script-editor-group-caret")" />
+                                <span class="script-editor-group-name">@group.Name</span>
+                                @if (group.KindLabel != null)
+                                {
+                                    <span class="script-editor-group-kind">@group.KindLabel</span>
+                                }
+                            </button>
 
-    <Form @ref="_form" Model="_script" Style="margin-top: 16px">
-        <FormItem Label="Name" Required>
-            <TextInput @bind-Value="_script.Name" />
-        </FormItem>
+                            @if (expanded)
+                            {
+                                <ul class="script-editor-group-scripts">
+                                    @foreach (var script in group.Scripts)
+                                    {
+                                        var current = IsCurrent(script);
+                                        var shown = current ? _script : script;
 
-        <FormItem Label="Description">
-            <TextArea @bind-Value="_script.Description" MaxLength="500" Counter />
-        </FormItem>
+                                        <li @key="NodeKey(script)">
+                                            <button type="button"
+                                                    class="@(current ? "script-editor-script script-editor-script-current" : "script-editor-script")"
+                                                    aria-current="@(current ? "true" : null)"
+                                                    @onclick="() => SelectScriptAsync(script)">
+                                                @if (current && _runState == ConsoleRunState.Running)
+                                                {
+                                                    <span class="script-editor-script-running" title="Running" aria-label="Running"></span>
+                                                }
+                                                <span class="script-editor-script-name">@shown.Name@(current && IsDirty ? " *" : "")@(script.Id == Guid.Empty ? " (new)" : "")</span>
+                                                @if (shown.RequiresAdmin)
+                                                {
+                                                    <Tag Caps Small Danger title="Runs elevated">Admin</Tag>
+                                                }
+                                                else if (group.Kind != ScriptOwnerKind.System)
+                                                {
+                                                    <Tag Caps Small title="@shown.Type.GetDisplayName()">@ScriptEditorGroups.TypeLabel(shown.Type)</Tag>
+                                                }
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                </div>
 
-        <FormItem Label="Platforms">
-            <RuntimePlatformSelect @bind-Value="_script.Platforms" />
-        </FormItem>
-    </Form>
+                <div class="script-editor-panel-footer">
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                @foreach (var type in AddableTypes)
+                                {
+                                    <MenuItem OnClick="() => AddScriptAsync(type)">@type.GetDisplayName()</MenuItem>
+                                }
+                            </Menu>
+                        </Overlay>
+                        <ChildContent>
+                            <Button Small Block Icon="IconType.Plus">Add script</Button>
+                        </ChildContent>
+                    </Dropdown>
+                </div>
+            </nav>
+
+            <div class="script-editor-main">
+                <div class="script-editor-code">
+                    <CodeInput @ref="_codeInput"
+                               @bind-Value="_script.Contents"
+                               Language="Languages.PowerShell"
+                               OnSave="SaveFromEditorAsync"
+                               ScriptType="@_script.Type.ToString()"
+                               ModuleFunctions="@_moduleFunctions"
+                               OnCaretMoved="caret => _caret = caret"
+                               OnProblemsChanged="count => _problems = count"
+                               OnReady="OnEditorReadyAsync" />
+                </div>
+
+                <div class="script-editor-console">
+                    <PowerShellConsole @ref="_console"
+                                       Id="_id"
+                                       @bind-Active="_debugging"
+                                       StateChanged="state => _runState = state"
+                                       OnTick="StateHasChanged"
+                                       Placeholder="@(CanRun ? "Run the script to see its output here." : "Output appears here when a packaging script runs.")" />
+                </div>
+            </div>
+
+            <aside class="script-editor-rail">
+                <section class="script-editor-card">
+                    <div class="script-editor-kicker">Script</div>
+                    <Form @ref="_form" Model="_script">
+                        <FormItem Label="Name" Required>
+                            <TextInput @bind-Value="_script.Name" Immediate />
+                        </FormItem>
+
+                        <FormItem Label="Description">
+                            <TextArea @bind-Value="_script.Description" Rows="2" MaxLength="500" Counter Immediate />
+                        </FormItem>
+
+                        <FormItem Label="Platforms">
+                            <RuntimePlatformSelect @bind-Value="_script.Platforms" />
+                        </FormItem>
+                    </Form>
+
+                    <div class="script-editor-rail-divider"></div>
+
+                    <Switch @bind-Value="_script.RequiresAdmin" Class="script-editor-admin">
+                        <span class="script-editor-admin-label">Requires admin</span>
+                        <span class="script-editor-admin-help">Runs elevated on the client.</span>
+                    </Switch>
+                </section>
+
+                @if (_variables.Any())
+                {
+                    <section class="script-editor-card script-editor-variables">
+                        <div class="script-editor-card-header">
+                            <span class="script-editor-kicker">Runs with</span>
+                            <span class="script-editor-count">@_variables.Count</span>
+                        </div>
+                        <p class="script-editor-help">The variables @(Article(_script.Type)) @_script.Type.GetDisplayName().ToLowerInvariant() script is given. Click to insert at the caret.</p>
+                        <div class="script-editor-chips">
+                            @foreach (var variable in _showAllVariables ? _variables : _variables.Take(VariablesShown))
+                            {
+                                <button type="button" class="script-editor-chip" title="@($"Insert {variable}")" @onclick="() => InsertTextAsync(variable)">@variable</button>
+                            }
+                            @if (!_showAllVariables && _variables.Count > VariablesShown)
+                            {
+                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_variables.Count - VariablesShown} more variables")" @onclick="() => _showAllVariables = true">+@(_variables.Count - VariablesShown) more</button>
+                            }
+                        </div>
+                    </section>
+                }
+
+                @if (_moduleFunctions.Any())
+                {
+                    <section class="script-editor-card script-editor-cmdlets">
+                        <div class="script-editor-card-header">
+                            <span class="script-editor-kicker">Cmdlets</span>
+                            <span class="script-editor-count">@_moduleFunctions.Count</span>
+                        </div>
+                        <p class="script-editor-help">The functions the LANCommander PowerShell modules provide. Click to insert at the caret.</p>
+                        <div class="script-editor-chips">
+                            @foreach (var function in _showAllCmdlets ? _moduleFunctions : _moduleFunctions.Take(CmdletsShown))
+                            {
+                                <button type="button" class="script-editor-chip script-editor-chip-cmdlet" title="@(String.IsNullOrWhiteSpace(function.Synopsis) ? $"Insert {function.Name}" : function.Synopsis)" @onclick="() => InsertTextAsync(function.Name)">@function.Name</button>
+                            }
+                            @if (!_showAllCmdlets && _moduleFunctions.Count > CmdletsShown)
+                            {
+                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_moduleFunctions.Count - CmdletsShown} more cmdlets")" @onclick="() => _showAllCmdlets = true">+@(_moduleFunctions.Count - CmdletsShown) more</button>
+                            }
+                        </div>
+                    </section>
+                }
+
+                @if (_snippets.Any())
+                {
+                    <section class="script-editor-card script-editor-snippets">
+                        <div class="script-editor-card-header">
+                            <span class="script-editor-kicker">Snippets</span>
+                            <span class="script-editor-count">@_snippets.Count()</span>
+                        </div>
+                        <p class="script-editor-help">Reusable blocks you can drop into the script. Click to insert at the caret.</p>
+                        @foreach (var group in _snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
+                        {
+                            <div class="script-editor-snippet-group">
+                                <span class="script-editor-snippet-group-name">@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)</span>
+                                <div class="script-editor-chips">
+                                    @foreach (var snippet in group.OrderBy(s => s.Name))
+                                    {
+                                        <button type="button" class="script-editor-chip script-editor-chip-snippet" title="@($"Insert {snippet.Name}")" @onclick="() => InsertSnippetAsync(snippet)">@snippet.Name</button>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </section>
+                }
+            </aside>
+        </div>
+    </div>
 }
 
 @code {
@@ -135,13 +329,103 @@ else
     Archive? _archive;
 
     Script _script = new();
+    ScriptSnapshot _saved = default!;
+
+    // Status bar
+    ConsoleRunState _runState = ConsoleRunState.Idle;
+    (int Line, int Column) _caret = (1, 1);
+    int _problems;
+
+    // The scripts beside this one, by owner
+    List<ScriptEditorGroup> _groups = [];
+    readonly HashSet<string> _collapsedGroups = new();
+    string? _ownerName;
+
+    // Runs with: the first few variables, the rest behind "+N more"
+    const int VariablesShown = 8;
+    bool _showAllVariables;
+
+    // Cmdlets: the first few module functions, the rest behind "+N more"
+    const int CmdletsShown = 12;
+    bool _showAllCmdlets;
+
+    // When the script was last written, for "saved 2m ago"
+    DateTime? _savedAt;
+
+    /// <summary>What the editor holds that saving writes, to tell whether anything changed.</summary>
+    sealed record ScriptSnapshot(string? Name, string? Description, string? Contents, bool RequiresAdmin, RuntimePlatform Platforms)
+    {
+        public static ScriptSnapshot Of(Script script) =>
+            new(script.Name, script.Description, script.Contents, script.RequiresAdmin, script.Platforms);
+
+        public void RestoreTo(Script script)
+        {
+            script.Name = Name!;
+            script.Description = Description;
+            script.Contents = Contents!;
+            script.RequiresAdmin = RequiresAdmin;
+            script.Platforms = Platforms;
+        }
+    }
+
+    bool IsDirty => _saved != null && ScriptSnapshot.Of(_script) != _saved;
 
     bool IsDebuggable => _script.Type == ScriptType.Package;
 
+    // The script being edited may belong to another owner than the one the editor opened for
     bool HasDebugTarget =>
-        (Options.GameId.HasValue && Options.GameId != Guid.Empty) ||
-        (Options.ToolId.HasValue && Options.ToolId != Guid.Empty) ||
-        (Options.RedistributableId.HasValue && Options.RedistributableId != Guid.Empty);
+        (_script.GameId.HasValue && _script.GameId != Guid.Empty) ||
+        (_script.ToolId.HasValue && _script.ToolId != Guid.Empty) ||
+        (_script.RedistributableId.HasValue && _script.RedistributableId != Guid.Empty);
+
+    bool CanRun => IsDebuggable && HasDebugTarget;
+
+    /// <summary>The script's type, whose it is, and whether it has unsaved changes.</summary>
+    protected override RenderFragment? TitleContent => _loading ? null : @<text>
+        <Tag Caps>@_script.Type.GetDisplayName()</Tag>
+        @if (!String.IsNullOrWhiteSpace(_ownerName))
+        {
+            <span class="lc-dialog-subtitle">@_ownerName</span>
+        }
+        @if (IsDirty)
+        {
+            <span class="script-editor-unsaved">• unsaved</span>
+        }
+    </text>;
+
+    /// <summary>State, parse errors, caret, language and when it was saved, on the row with Cancel and Save.</summary>
+    protected override RenderFragment FooterContent => @<div class="script-editor-status" role="status">
+        <span class="script-editor-status-state">@RunStateText</span>
+        @if (_problems > 0)
+        {
+            <span class="script-editor-status-problems">@(_problems == 1 ? "1 parse error" : $"{_problems} parse errors")</span>
+        }
+        <span class="script-editor-status-mono">Ln @_caret.Line, Col @_caret.Column</span>
+        <span class="script-editor-status-mono">PowerShell</span>
+        <span class="script-editor-status-save">@SavedText</span>
+    </div>;
+
+    string SavedText => _isNewScript || _savedAt == null ? "not saved yet" : $"saved {Ago(DateTime.UtcNow - _savedAt.Value)}";
+
+    static string Ago(TimeSpan span) =>
+        span.TotalMinutes < 1 ? "just now"
+        : span.TotalHours < 1 ? $"{(int)span.TotalMinutes}m ago"
+        : span.TotalDays < 1 ? $"{(int)span.TotalHours}h ago"
+        : $"{(int)span.TotalDays}d ago";
+
+    static string Article(ScriptType type) =>
+        "aeiou".Contains(char.ToLowerInvariant(type.GetDisplayName()[0])) ? "an" : "a";
+
+    IEnumerable<ScriptType> AddableTypes =>
+        Options.AllowedTypes?.Any() == true ? Options.AllowedTypes : Enum.GetValues<ScriptType>();
+
+    string RunStateText => _runState switch
+    {
+        ConsoleRunState.Running => "Running",
+        ConsoleRunState.Completed => "Completed",
+        ConsoleRunState.Stopped => "Stopped",
+        _ => "Ready",
+    };
 
     static readonly string[] ClientDisplayVariables = ["$DisplayWidth", "$DisplayHeight", "$DisplayRefreshRate", "$DisplayBitDepth", "$IPXRelayHost", "$IPXRelayPort"];
 
@@ -176,9 +460,6 @@ else
         if (Options.ScriptId != Guid.Empty)
         {
             _script = await ScriptService.GetAsync(Options.ScriptId);
-
-            if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
-                await LoadRedistributableOptionsAsync(redistributableId);
         }
         else
         {
@@ -193,43 +474,206 @@ else
             };
 
             if (Options.GameId is { } gameId && gameId != Guid.Empty)
-            {
                 _script.GameId = gameId;
-                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == gameId);
-            }
             else if (Options.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
-            {
                 _script.RedistributableId = redistributableId;
-                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == redistributableId);
-                await LoadRedistributableOptionsAsync(redistributableId);
-            }
             else if (Options.ServerId is { } serverId && serverId != Guid.Empty)
-            {
                 _script.ServerId = serverId;
-                var server = await ServerService.GetAsync(serverId);
-                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
-            }
             else if (Options.ToolId is { } toolId && toolId != Guid.Empty)
-            {
                 _script.ToolId = toolId;
-                _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == toolId);
-            }
         }
 
-        _variables = VariablesByScriptType.TryGetValue(_script.Type, out var variables) ? variables.ToList() : ["$WorkingDirectory"];
-        _snippets = ScriptService.GetSnippets();
+        await LoadArchiveAsync();
+
+        if (_script.RedistributableId is { } scriptRedistributableId && scriptRedistributableId != Guid.Empty)
+            await LoadRedistributableOptionsAsync(scriptRedistributableId);
+
+        _saved = ScriptSnapshot.Of(_script);
+        _savedAt = SavedAtOf(_script);
+        _variables = VariablesFor(_script.Type);
+        _snippets = ScriptService.GetSnippets().ToList();
+        _ownerName = await OwnerNameAsync();
 
         _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
             .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
             .ToList();
 
+        await LoadTreeAsync();
+
         _loading = false;
+    }
+
+    static DateTime? SavedAtOf(Script script) =>
+        script.Id == Guid.Empty ? null
+        : script.UpdatedOn != default ? script.UpdatedOn
+        : script.CreatedOn != default ? script.CreatedOn
+        : null;
+
+    /// <summary>The game, redistributable, server or tool the script belongs to, by name; "System" for none.</summary>
+    async Task<string?> OwnerNameAsync()
+    {
+        try
+        {
+            if (_script.GameId is { } gameId && gameId != Guid.Empty)
+                return (await GameService.GetAsync(gameId))?.Title;
+
+            if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+                return (await RedistributableService.GetAsync(redistributableId))?.Name;
+
+            if (_script.ServerId is { } serverId && serverId != Guid.Empty)
+                return (await ServerService.GetAsync(serverId))?.Name;
+
+            if (_script.ToolId is { } toolId && toolId != Guid.Empty)
+                return (await ToolService.GetAsync(toolId))?.Name;
+
+            return "System";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not name the owner of script {ScriptId}", _script.Id);
+            return null;
+        }
+    }
+
+    static List<string> VariablesFor(ScriptType type) =>
+        VariablesByScriptType.TryGetValue(type, out var variables) ? variables.ToList() : ["$WorkingDirectory"];
+
+    /// <summary>The archive the script's owner ships, for browsing to paths inside it.</summary>
+    async Task LoadArchiveAsync()
+    {
+        if (_script.GameId is { } gameId && gameId != Guid.Empty)
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == gameId);
+        else if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.RedistributableId == redistributableId);
+        else if (_script.ServerId is { } serverId && serverId != Guid.Empty)
+        {
+            var server = await ServerService.GetAsync(serverId);
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == server.GameId);
+        }
+        else if (_script.ToolId is { } toolId && toolId != Guid.Empty)
+            _archive = await ArchiveService.GetLatestArchiveAsync(a => a.ToolId == toolId);
+    }
+
+    /// <summary>
+    /// The scripts beside this one, grouped by owner: this script's owner, the redistributables its
+    /// game depends on, and the system scripts.
+    /// </summary>
+    async Task LoadTreeAsync()
+    {
+        var scripts = await ScriptService.GetEditorScriptsAsync(_script.GameId, _script.RedistributableId, _script.ServerId, _script.ToolId);
+
+        var listed = scripts.Where(s => s.Id != _script.Id || _script.Id == Guid.Empty).Append(_script).ToList();
+
+        _groups = ScriptEditorGroups.Build(listed, _script)
+            .Select(group => group.Key == ScriptEditorGroups.KeyOf(_script) && !String.IsNullOrWhiteSpace(_ownerName) && group.Kind != ScriptOwnerKind.System
+                ? group with { Name = _ownerName }
+                : group)
+            .ToList();
+    }
+
+    string NodeKey(Script script) => script.Id == Guid.Empty ? "new" : script.Id.ToString();
+
+    bool IsCurrent(Script script) => NodeKey(script) == NodeKey(_script);
+
+    void ToggleGroup(string key)
+    {
+        if (!_collapsedGroups.Add(key))
+            _collapsedGroups.Remove(key);
+    }
+
+    /// <summary>Offers to save the script's changes before leaving it; false to stay.</summary>
+    async Task<bool> LeaveCurrentAsync()
+    {
+        if (!IsDirty)
+            return true;
+
+        switch (await Alerts.ConfirmUnsavedChangesAsync($"\"{_script.Name}\" has unsaved changes."))
+        {
+            case UnsavedChangesChoice.Cancel:
+                return false;
+
+            case UnsavedChangesChoice.Save:
+                return await SaveAsync();
+
+            case UnsavedChangesChoice.Discard:
+                _saved.RestoreTo(_script);
+                return true;
+        }
+
+        return false;
+    }
+
+    /// <summary>Opens another of the listed scripts, offering to save this one first.</summary>
+    async Task SelectScriptAsync(Script script)
+    {
+        if (IsCurrent(script) || !await LeaveCurrentAsync())
+            return;
+
+        var ownerKey = ScriptEditorGroups.KeyOf(_script);
+
+        _script = await ScriptService.GetAsync(script.Id);
+        _isNewScript = false;
+        _saved = ScriptSnapshot.Of(_script);
+        _savedAt = SavedAtOf(_script);
+        _variables = VariablesFor(_script.Type);
+        _showAllVariables = false;
+        _problems = 0;
+        _caret = (1, 1);
+
+        if (ScriptEditorGroups.KeyOf(_script) != ownerKey)
+        {
+            _optionKeys = [];
+            _redistributableName = string.Empty;
+            _ownerName = await OwnerNameAsync();
+
+            await LoadArchiveAsync();
+
+            if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+                await LoadRedistributableOptionsAsync(redistributableId);
+        }
+
+        await LoadTreeAsync();
+    }
+
+    /// <summary>Starts a new script of <paramref name="type"/> for the same owner, from its template.</summary>
+    async Task AddScriptAsync(ScriptType type)
+    {
+        if (!await LeaveCurrentAsync())
+            return;
+
+        _script = new Script
+        {
+            Type = type,
+            Name = type.GetDisplayName(),
+            GameId = _script.GameId,
+            RedistributableId = _script.RedistributableId,
+            ServerId = _script.ServerId,
+            ToolId = _script.ToolId,
+        };
+
+        _isNewScript = true;
+        _saved = ScriptSnapshot.Of(_script);
+        _savedAt = null;
+        _variables = VariablesFor(type);
+        _showAllVariables = false;
+        _problems = 0;
+        _caret = (1, 1);
+
+        await LoadTreeAsync();
+
+        if (_codeInput != null && await _codeInput.InsertTemplateAsync(type.ToString()))
+            _saved = ScriptSnapshot.Of(_script);
     }
 
     async Task OnEditorReadyAsync()
     {
         if (_isNewScript && _codeInput != null && Options.ScriptType.HasValue)
+        {
             await _codeInput.InsertTemplateAsync(Options.ScriptType.Value.ToString());
+
+            // The template is where a new script starts, not a change to it
+            _saved = ScriptSnapshot.Of(_script);
+        }
     }
 
     protected override async Task<bool> OnOkAsync()
@@ -242,7 +686,7 @@ else
         return true;
     }
 
-    // Ctrl+S in the editor saves without closing
+    // Ctrl+S in the editor, and the toolbar's Save, save without closing
     async Task SaveFromEditorAsync()
     {
         try
@@ -261,16 +705,34 @@ else
         if (_form?.Validate() == false)
             return false;
 
-        _script = _script.Id == Guid.Empty
+        var wasNew = _script.Id == Guid.Empty;
+
+        _script = wasNew
             ? await ScriptService.AddAsync(_script)
             : await ScriptService.UpdateAsync(_script);
+
+        _isNewScript = false;
+        _saved = ScriptSnapshot.Of(_script);
+        _savedAt = DateTime.UtcNow;
+
+        if (wasNew)
+            await LoadTreeAsync();
 
         return true;
     }
 
-    async Task DebugAsync()
+    /// <summary>Puts the editor back to the last saved version.</summary>
+    async Task DiscardAsync()
     {
-        if (!IsDebuggable || _console == null)
+        if (!await Alerts.ConfirmAsync("Discard your changes to this script?", "Discard Changes", "Discard", danger: true))
+            return;
+
+        _saved.RestoreTo(_script);
+    }
+
+    async Task RunAsync()
+    {
+        if (!CanRun || _console == null)
             return;
 
         try
@@ -278,18 +740,20 @@ else
             if (!await SaveAsync())
                 return;
 
-            if (Options.GameId is { } gameId && gameId != Guid.Empty)
+            if (_script.GameId is { } gameId && gameId != Guid.Empty)
                 await _console.DebugPackagingScript(gameId);
-            else if (Options.ToolId is { } toolId && toolId != Guid.Empty)
+            else if (_script.ToolId is { } toolId && toolId != Guid.Empty)
                 await _console.DebugToolPackagingScript(toolId);
-            else if (Options.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
+            else if (_script.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
                 await _console.DebugRedistributablePackagingScript(redistributableId);
         }
         catch (Exception ex)
         {
-            Notifications.Error(ex, "The script could not be debugged");
+            Notifications.Error(ex, "The script could not be run");
         }
     }
+
+    Task StopAsync() => _console?.StopAsync() ?? Task.CompletedTask;
 
     async Task BrowseForPathAsync()
     {
@@ -298,17 +762,23 @@ else
             ArchiveId = _archive?.Id ?? Guid.Empty,
             Select = true,
             Multiple = false,
+            Describe = ReferenceTo,
+            Verb = "Inserting",
         }, new DialogSettings
         {
             Size = DialogSize.Full,
+            Picker = true,
             OkText = "Insert File Path",
         });
 
         var path = results?.FirstOrDefault()?.Path;
 
         if (path != null)
-            await InsertTextAsync($"$InstallDirectory\\{path.Replace('/', '\\')}");
+            await InsertTextAsync(ReferenceTo(path));
     }
+
+    /// <summary>A path inside the archive as a script refers to it once installed.</summary>
+    static string ReferenceTo(string path) => $"$InstallDirectory\\{path.Replace('/', '\\')}";
 
     async Task InsertTextAsync(string text)
     {

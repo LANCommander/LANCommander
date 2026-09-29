@@ -32,7 +32,7 @@
 
     protected override void OnInitialized()
     {
-        _info = new TableColumnInfo { Key = "__actions", Includes = TableColumnIncludes.Parse(Include) };
+        _info = new TableColumnInfo { Key = "__actions", Includes = TableColumnIncludes.Parse(Include), Pickable = false };
 
         Host?.Register(_info);
     }

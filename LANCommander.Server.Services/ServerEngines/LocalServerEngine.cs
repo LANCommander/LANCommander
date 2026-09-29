@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Diagnostics;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
@@ -34,7 +35,38 @@ public class LocalServerEngine(
     {
         public ServerProcessStatus Status { get; set; } = ServerProcessStatus.Stopped;
         public CancellationTokenSource? Cancellation { get; set; }
+
+        // Set while the server process is running
+        public ProcessExecutionContext? ExecutionContext { get; set; }
+        public Process? Process { get; set; }
+        public int? Pid { get; set; }
+        public DateTime? StartTime { get; set; }
+
+        // Previous CPU sample, for computing usage over the interval between samples
+        public readonly object SampleLock = new();
+        public DateTime? LastSampleAt { get; set; }
+        public TimeSpan LastProcessorTime { get; set; }
+        public double? LastCpuPercent { get; set; }
+
+        public void ClearProcess()
+        {
+            ExecutionContext = null;
+            Process = null;
+            Pid = null;
+            StartTime = null;
+
+            lock (SampleLock)
+            {
+                LastSampleAt = null;
+                LastProcessorTime = TimeSpan.Zero;
+                LastCpuPercent = null;
+            }
+        }
     }
+
+    // Samples closer together than this reuse the previous CPU reading rather than measuring a
+    // near-empty window (several watchers may ask at once).
+    private static readonly TimeSpan MinimumSampleInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly ConcurrentDictionary<Guid, ServerRuntimeState> _servers = new();
     private readonly Dictionary<Guid, LogFileMonitor> _logFileMonitors = new();
@@ -160,6 +192,10 @@ public class LocalServerEngine(
                     StartMonitoringLog(logFile, server);
                 }
 
+                executionContext.OutputDataReceived += (_, e) => EmitLog(serverId, e.Data);
+                executionContext.ErrorDataReceived += (_, e) => EmitLog(serverId, e.Data);
+                executionContext.ProcessStarted += (_, process) => TrackProcess(serverId, executionContext, process);
+
                 EmitStatus(server, ServerProcessStatus.Running);
 
                 await executionContext.ExecuteServerAsync(sdkMapper.ToSdk(server), cancellationTokenSource);
@@ -177,7 +213,10 @@ public class LocalServerEngine(
                 lock (_lock)
                 {
                     if (_servers.TryGetValue(serverId, out var state))
+                    {
                         state.Cancellation = null;
+                        state.ClearProcess();
+                    }
                 }
             }
         }
@@ -258,6 +297,133 @@ public class LocalServerEngine(
             : ServerProcessStatus.Stopped;
 
         return Task.FromResult(status);
+    }
+
+    public Task<ServerProcessInfo?> GetProcessInfoAsync(Guid serverId)
+    {
+        if (!_servers.TryGetValue(serverId, out var state))
+            return Task.FromResult<ServerProcessInfo?>(null);
+
+        Process? process;
+        int? pid;
+        DateTime? startTime;
+
+        lock (_lock)
+        {
+            process = state.Process;
+            pid = state.Pid;
+            startTime = state.StartTime;
+        }
+
+        if (process == null)
+            return Task.FromResult<ServerProcessInfo?>(null);
+
+        try
+        {
+            process.Refresh();
+
+            if (process.HasExited)
+                return Task.FromResult<ServerProcessInfo?>(null);
+
+            var now = DateTime.UtcNow;
+            var processorTime = process.TotalProcessorTime;
+            double? cpuPercent;
+
+            lock (state.SampleLock)
+            {
+                if (state.LastSampleAt.HasValue && now - state.LastSampleAt.Value < MinimumSampleInterval)
+                {
+                    cpuPercent = state.LastCpuPercent;
+                }
+                else
+                {
+                    // The first sample averages over the process's whole lifetime
+                    var windowStart = state.LastSampleAt ?? startTime ?? now;
+                    var previousProcessorTime = state.LastSampleAt.HasValue ? state.LastProcessorTime : TimeSpan.Zero;
+
+                    cpuPercent = ProcessCpuSampler.ComputeCpuPercent(
+                        processorTime - previousProcessorTime,
+                        now - windowStart,
+                        Environment.ProcessorCount);
+
+                    state.LastSampleAt = now;
+                    state.LastProcessorTime = processorTime;
+                    state.LastCpuPercent = cpuPercent;
+                }
+            }
+
+            return Task.FromResult<ServerProcessInfo?>(new ServerProcessInfo(pid, startTime, cpuPercent, process.WorkingSet64));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            // The process exited or was disposed between the checks above
+            return Task.FromResult<ServerProcessInfo?>(null);
+        }
+    }
+
+    public bool CanSendInput(Guid serverId)
+    {
+        ProcessExecutionContext? executionContext;
+
+        lock (_lock)
+            executionContext = _servers.TryGetValue(serverId, out var state) ? state.ExecutionContext : null;
+
+        return executionContext?.CanWriteInput ?? false;
+    }
+
+    public async Task<bool> SendInputAsync(Guid serverId, string line)
+    {
+        ProcessExecutionContext? executionContext;
+
+        lock (_lock)
+            executionContext = _servers.TryGetValue(serverId, out var state) ? state.ExecutionContext : null;
+
+        if (executionContext == null)
+            return false;
+
+        return await executionContext.WriteInputLineAsync(line);
+    }
+
+    private void TrackProcess(Guid serverId, ProcessExecutionContext executionContext, Process process)
+    {
+        int? pid = null;
+        DateTime? startTime = null;
+
+        try
+        {
+            pid = process.Id;
+            startTime = process.StartTime.ToUniversalTime();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.ComponentModel.Win32Exception or NotSupportedException)
+        {
+            // Exited immediately, or the start time isn't readable on this platform
+            startTime ??= DateTime.UtcNow;
+        }
+
+        lock (_lock)
+        {
+            var state = _servers.GetOrAdd(serverId, _ => new ServerRuntimeState());
+
+            state.ExecutionContext = executionContext;
+            state.Process = process;
+            state.Pid = pid;
+            state.StartTime = startTime;
+        }
+    }
+
+    private void EmitLog(Guid serverId, string? line)
+    {
+        if (line == null)
+            return;
+
+        try
+        {
+            OnServerLog?.Invoke(this, new ServerLogEventArgs(serverId, line));
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not publish output from server {ServerId}", serverId);
+        }
     }
 
     private void EmitStatus(Data.Models.Server server, ServerProcessStatus status, Exception ex = null)

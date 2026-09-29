@@ -2,15 +2,16 @@
     display: inline-flex;
 }
 
+// The ring and what it waits on sit side by side, as in "(ring) Fetching archives…"
 .lc-spin-indicator {
     display: inline-flex;
-    flex-direction: column;
     align-items: center;
-    gap: 0.5rem;
+    gap: 10px;
 }
 
 .lc-spin-tip {
-    color: var(--rz-text-secondary-color);
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
 }
 
 .lc-spin-container {
@@ -32,4 +33,62 @@
     justify-content: center;
     // Keep the spinner in view over tall content
     max-height: 60vh;
+}
+
+// Spinner: a 15px ring on a Raised track with an accent head. Buttons re-point the colours at their text.
+.lc-spinner {
+    --lc-spinner-size: 15px;
+    --lc-spinner-track: var(--lc-raised);
+    --lc-spinner-head: var(--lc-accent-text-color);
+
+    display: inline-block;
+    flex-shrink: 0;
+    width: var(--lc-spinner-size);
+    height: var(--lc-spinner-size);
+    border: 2px solid var(--lc-spinner-track);
+    border-top-color: var(--lc-spinner-head);
+    border-radius: 50%;
+    vertical-align: middle;
+    animation: lc-spinner-turn 0.8s linear infinite;
+}
+
+.lc-spinner-large {
+    --lc-spinner-size: 20px;
+}
+
+.lc-spinner.lc-spin-spinner-large {
+    --lc-spinner-size: 28px;
+    border-width: 3px;
+}
+
+@keyframes lc-spinner-turn {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lc-spinner {
+        animation-duration: 2.4s;
+    }
+}
+
+// Skeleton: 12px bars on Raised, standing in for lines of text
+.lc-skeleton {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.lc-skeleton-bar {
+    display: block;
+    height: 12px;
+    max-width: 100%;
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-raised);
+}
+
+// Progress on a well: the track steps up from Well to Raised so it still reads
+.lc-progress-on-well {
+    --rz-progressbar-background-color: var(--lc-raised);
 }

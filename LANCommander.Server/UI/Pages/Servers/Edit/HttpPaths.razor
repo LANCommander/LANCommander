@@ -7,8 +7,8 @@
         <Button Primary OnClick="() => _httpPathEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <Typography Secondary>HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</Typography>
-        <ServerHttpPathEditor @ref="_httpPathEditor" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" Style="margin-top: 16px" />
+        <p class="edit-form-intro">HTTP paths are a way to host static files such as maps and other assets. Engines such as Source, id Tech 3, and Unreal can utilize HTTP for faster downloads when connecting to a server.</p>
+        <ServerHttpPathEditor @ref="_httpPathEditor" ServerId="Id" WorkingDirectory="@context.WorkingDirectory" />
     </ChildContent>
 </ServerEditView>
 

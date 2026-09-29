@@ -1,7 +1,10 @@
 namespace LANCommander.Server.UI.Controls;
 
-/// <summary>One choice in a <see cref="Select{TValue}"/>, optionally with a small image beside its label.</summary>
-public sealed record SelectItem<TValue>(TValue Value, string Label, bool Disabled = false, string? Image = null);
+/// <summary>
+/// One choice in a <see cref="Select{TValue}"/>, optionally with a small image beside its label, or
+/// in a <see cref="Segmented{TValue}"/>, optionally with an icon before its label.
+/// </summary>
+public sealed record SelectItem<TValue>(TValue Value, string Label, bool Disabled = false, string? Image = null, IconType Icon = IconType.None);
 
 public static class SelectItemExtensions
 {

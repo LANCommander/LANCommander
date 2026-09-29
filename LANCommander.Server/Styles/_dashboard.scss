@@ -1,0 +1,116 @@
+// Dashboard: four statistic tiles, playtime by title beside the active sessions panel, then the
+// all-time charts. Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
+
+.dashboard {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.dashboard-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.dashboard-grid,
+.dashboard-history {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.dashboard-playtime {
+    grid-column: span 2;
+}
+
+.dashboard-history {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.dashboard-history-wide {
+    grid-column: 1 / -1;
+}
+
+// ── Active sessions ─────────────────────────────────────────
+.dashboard-session-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.dashboard-session {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 50px;
+    padding: 0 16px;
+    border-bottom: 1px solid var(--lc-divider-row-color);
+
+    &:last-child {
+        border-bottom: 0;
+    }
+}
+
+.dashboard-session-text {
+    flex: 1;
+    min-width: 0;
+}
+
+.dashboard-session-name,
+.dashboard-session-game {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.dashboard-session-name {
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+}
+
+.dashboard-session-game {
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+}
+
+.dashboard-session-duration {
+    flex-shrink: 0;
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+.dashboard-sessions-loading {
+    padding: 16px;
+}
+
+.dashboard-sessions-empty {
+    padding: 24px 16px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
+    text-align: center;
+}
+
+// ── Narrow windows ──────────────────────────────────────────
+@media (max-width: 1200px) {
+    .dashboard-stats {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .dashboard-grid,
+    .dashboard-history {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .dashboard-playtime,
+    .dashboard-history-wide {
+        grid-column: auto;
+    }
+}
+
+@media (max-width: 640px) {
+    .dashboard-stats {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}

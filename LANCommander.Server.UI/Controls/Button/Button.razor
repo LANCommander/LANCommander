@@ -50,10 +50,18 @@ else
     /// <summary>Looks like a hyperlink.</summary>
     [Parameter] public bool Link { get; set; }
 
-    /// <summary>A destructive action. Combines with <see cref="Primary"/>, <see cref="Text"/> or <see cref="Link"/>.</summary>
+    /// <summary>
+    /// A destructive action. On its own it is the secondary button with danger-coloured text (the
+    /// design has no filled danger button in page content); with <see cref="Primary"/> it is filled,
+    /// for the confirming button of a destructive dialog. Also combines with <see cref="Text"/> or <see cref="Link"/>.
+    /// </summary>
     [Parameter] public bool Danger { get; set; }
 
+    /// <summary>32px, for toolbars and dense rows.</summary>
     [Parameter] public bool Small { get; set; }
+
+    /// <summary>28px with 12px text, for bars inside other controls (bulk actions, table footers).</summary>
+    [Parameter] public bool ExtraSmall { get; set; }
 
     [Parameter] public bool Large { get; set; }
 
@@ -65,7 +73,7 @@ else
 
     [Parameter] public bool Disabled { get; set; }
 
-    /// <summary>Shows a spinner in place of the icon and blocks clicks until the work finishes.</summary>
+    /// <summary>Shows a ring spinner in place of the icon, keeps the label, and blocks clicks until the work finishes.</summary>
     [Parameter] public bool Loading { get; set; }
 
     ButtonStyle _buttonStyle;
@@ -79,7 +87,7 @@ else
     RenderFragment Content => @<text>
         @if (Loading)
         {
-            <Icon Type="IconType.CircleNotch" Spin Class="lc-button-icon" />
+            <Spinner Class="lc-button-icon lc-button-spinner" />
         }
         else if (Icon != IconType.None)
         {
@@ -100,10 +108,11 @@ else
             (true, _, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Filled),
             (_, true, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Text),
             (_, _, true) => (Danger ? ButtonStyle.Danger : ButtonStyle.Base, Variant.Text),
-            _ => (Danger ? ButtonStyle.Danger : ButtonStyle.Base, Variant.Outlined),
+            // Danger alone stays the secondary button; lc-button-danger colours its text
+            _ => (ButtonStyle.Base, Variant.Outlined),
         };
 
-        _size = Small ? ButtonSize.Small : Large ? ButtonSize.Large : ButtonSize.Medium;
+        _size = ExtraSmall ? ButtonSize.ExtraSmall : Small ? ButtonSize.Small : Large ? ButtonSize.Large : ButtonSize.Medium;
 
         _attributes = AdditionalAttributes?.ToDictionary() ?? new();
         _attributes["class"] = new ClassBuilder()
@@ -111,12 +120,14 @@ else
             .If(ChildContent == null, "rz-button-icon-only")
             .If(Link, "lc-button-link")
             .If(Block, "lc-button-block")
+            .If(Danger && !Primary && !Link && !Text, "lc-button-danger")
+            .If(Loading, "lc-button-loading")
             .Add(Class)
             .Build()!;
 
         _linkClass = new ClassBuilder()
             .Add("rz-button")
-            .Add(_size switch { ButtonSize.Small => "rz-button-sm", ButtonSize.Large => "rz-button-lg", _ => "rz-button-md" })
+            .Add(_size switch { ButtonSize.ExtraSmall => "rz-button-xs", ButtonSize.Small => "rz-button-sm", ButtonSize.Large => "rz-button-lg", _ => "rz-button-md" })
             .Add(_variant switch { Variant.Filled => "rz-variant-filled", Variant.Text => "rz-variant-text", _ => "rz-variant-outlined" })
             .Add(_buttonStyle switch { ButtonStyle.Primary => "rz-primary", ButtonStyle.Danger => "rz-danger", _ => "rz-base" })
             .Add("rz-shade-default")

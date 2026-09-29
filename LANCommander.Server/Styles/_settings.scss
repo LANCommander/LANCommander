@@ -12,7 +12,7 @@
 
 .log-viewer {
     padding: 8px;
-    background: #000;
+    background: var(--lc-well);
 }
 
 .media-tool-path {
@@ -21,13 +21,6 @@
 
 .nowrap {
     white-space: nowrap;
-}
-
-// Servers > Monitor
-.server-console {
-    min-height: 480px;
-    padding: 8px;
-    background: #000;
 }
 
 // A scrolling list of choices in a picker dialog, e.g. UI/Controls/RedistributablePickerDialog.razor

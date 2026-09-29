@@ -9,17 +9,164 @@
     box-sizing: border-box;
 }
 
-:root {
-    --lc-font-mono: ui-monospace, SFMono-Regular, Consolas, "Liberation Mono", monospace;
-    --lc-border-color: var(--rz-base-600);
-    --lc-border-subtle-color: var(--rz-base-700);
+// Archivo and Roboto Mono, the launcher's families, served from LANCommander.Server/wwwroot/fonts
+// rather than a CDN so the admin UI renders correctly on a LAN with no internet
+@mixin font-face($family, $file, $weight) {
+    @font-face {
+        font-family: $family;
+        src: url("/fonts/#{$file}.woff2") format("woff2");
+        font-weight: $weight;
+        font-style: normal;
+        font-display: swap;
+    }
+}
 
-    // Tokens for application styles (LANCommander.Server), which never reference Radzen directly
+@include font-face("Archivo", "archivo/Archivo-Regular", 400);
+@include font-face("Archivo", "archivo/Archivo-Medium", 500);
+@include font-face("Archivo", "archivo/Archivo-SemiBold", 600);
+@include font-face("Archivo", "archivo/Archivo-Bold", 700);
+@include font-face("Roboto Mono", "roboto-mono/RobotoMono-Regular", 400);
+@include font-face("Roboto Mono", "roboto-mono/RobotoMono-Medium", 500);
+
+:root {
+    // ── Radzen: the base theme, re-toned ────────────────────────────────
+    // Radzen's greys, read directly by rules across the library, moved onto the surface ramp
+    --rz-base-900: #000000;                // canvas
+    --rz-base-800: #1F1F1F;                // surface
+    --rz-base-700: #282828;                // raised: hover-on-surface, selected rows, secondary buttons
+    --rz-base-600: #303030;                // popover: menus, notifications, floating bars
+    --rz-base-500: #666666;                // text disabled
+
+    --rz-body-background-color: #000000;   // canvas: the page and the side rail
+    --rz-base-background-color: #1F1F1F;   // surface: cards, panels, tables, dialogs
+
+    --rz-text-color: #D9D9D9;
+    --rz-text-title-color: #D9D9D9;
+    --rz-text-secondary-color: #A6A6A6;
+
+    // Radzen's variant colours are literals rather than derived from the base, so each is set here.
+    // -light is the text tint, -dark/-darker the launcher's button hover/active fills
+    // (ButtonPrimaryHover/Active etc.), -lighter the fill at Radzen's own 20% alpha.
+    --rz-primary: #177DDC;
+    --rz-primary-light: #4096FF;
+    --rz-primary-lighter: rgba(23, 125, 220, 0.2);
+    --rz-primary-dark: #2585DE;
+    --rz-primary-darker: #318BE0;
+
+    --rz-success: #49AA19;
+    --rz-success-light: #73D13D;
+    --rz-success-lighter: rgba(73, 170, 25, 0.2);
+    --rz-success-dark: #54AF27;
+    --rz-success-darker: #5DB332;
+
+    --rz-warning: #D89614;
+    --rz-warning-light: #FFC53D;
+    --rz-warning-lighter: rgba(216, 150, 20, 0.2);
+    --rz-warning-dark: #DA9C22;
+    --rz-warning-darker: #DCA22E;
+
+    --rz-danger: #DC4446;
+    --rz-danger-light: #FF7875;
+    --rz-danger-lighter: rgba(220, 68, 70, 0.2);
+    --rz-danger-dark: #DE4F51;
+    --rz-danger-darker: #E0595A;
+
+    // The launcher has no separate info hue; info is the accent
+    --rz-info: var(--rz-primary);
+    --rz-info-light: var(--rz-primary-light);
+    --rz-info-lighter: var(--rz-primary-lighter);
+    --rz-info-dark: var(--rz-primary-dark);
+    --rz-info-darker: var(--rz-primary-darker);
+
+    --rz-border-radius: 4px;
+    --rz-outline-offset: 2px;
+    --rz-outline-color: var(--rz-primary-light);
+    --rz-card-shadow: none;                // tone carries elevation, not shadow
+
+    --rz-text-font-family: "Archivo", system-ui, sans-serif;
+    --rz-body-font-size: 14px;
+
+    // ── LANCommander: retargeted ────────────────────────────────────────
+    // These pointed at Radzen greys, which makes an edge a fill and a hover a solid block.
+    --lc-border-color: rgba(255, 255, 255, 0.10);
+    --lc-border-subtle-color: rgba(255, 255, 255, 0.07);
+    --lc-hover-background: rgba(255, 255, 255, 0.06);
+    --lc-shadow: none;
+    --lc-font-mono: "Roboto Mono", ui-monospace, SFMono-Regular, Consolas, monospace;
+
+    // ── LANCommander: new ───────────────────────────────────────────────
+    // The application's styles cannot name a --rz-* variable (see RadzenBoundaryTests),
+    // so anything LANCommander.Server needs is exposed here.
+    --lc-canvas: #000000;
+    --lc-well: #141414;            // inputs, table heads, log and console troughs
+    --lc-raised: #282828;
+    --lc-popover: #303030;
+
+    --lc-text-tertiary-color: #8C8C8C;
+    --lc-text-disabled-color: #666666;
+
+    --lc-border-strong-color: rgba(255, 255, 255, 0.14);   // HairlineBorderStrong: hovered edges
+    --lc-border-card-color: rgba(255, 255, 255, 0.08);     // cards, tiles and panels as drawn
+    --lc-border-overlay-color: rgba(255, 255, 255, 0.12);  // popovers, menus, toasts, chips, input rest
+    --lc-border-dialog-color: rgba(255, 255, 255, 0.14);   // the dialog window edge
+    --lc-divider-row-color: rgba(255, 255, 255, 0.06);     // between list rows
+    --lc-focus-ring: rgba(64, 150, 255, 0.22);              // accent text at 22%, outside a focused field
+
+    --lc-state-pressed: rgba(255, 255, 255, 0.11);
+    --lc-inset-highlight: inset 0 1px 0 rgba(255, 255, 255, 0.07);
+    --lc-inset-highlight-solid: inset 0 1px 0 rgba(255, 255, 255, 0.14);  // SolidHighlightShadow: on accent and status fills
+    --lc-scrim: rgba(0, 0, 0, 0.66);
+    --lc-plate: rgba(0, 0, 0, 0.62);    // controls laid over imagery, e.g. media slot actions
+    --lc-shadow-popover: 0 12px 32px rgba(0, 0, 0, 0.55);
+    --lc-shadow-dialog: 0 24px 64px rgba(0, 0, 0, 0.78);
+
+    --lc-accent-text-color: #4096FF;
+    --lc-success-text-color: #73D13D;
+    --lc-warning-text-color: #FFC53D;
+    --lc-danger-text-color: #FF7875;
+    --lc-live-color: #52C41A;          // status dots for something running right now
+    --lc-pressed-background: #3A3A3A;  // pressed secondary buttons, hovered menu items
+    --lc-disabled-background: #1A1A1A;
+    --lc-faint-text-color: #4D4D4D;    // context-only cells in pickers
+
+    --lc-radius-sm: 2px;           // tags, thumbnails, checkboxes
+    --lc-radius-md: 4px;           // buttons, inputs, menu items
+    --lc-radius-lg: 6px;           // cards, panels, dialogs
+
+    --lc-row-height: 46px;
+    --lc-row-head-height: 38px;
+    --lc-control-height: 38px;     // inputs; buttons are 36px
+    --lc-kicker-size: 11px;
+    --lc-kicker-tracking: 0.08em;
+    --lc-selection-rail: 2px;
+    --lc-selection-rail-color: #4096FF;
+
+    // Cover placeholders: the launcher's six tones (Cover.axaml.cs), light to dark at 155deg,
+    // picked per title so a game without art looks the same in both
+    --lc-cover-tone-0-light: #33383F;
+    --lc-cover-tone-0-dark: #1C1F24;
+    --lc-cover-tone-1-light: #313A34;
+    --lc-cover-tone-1-dark: #1B211D;
+    --lc-cover-tone-2-light: #363140;
+    --lc-cover-tone-2-dark: #1E1B24;
+    --lc-cover-tone-3-light: #3A352D;
+    --lc-cover-tone-3-dark: #201D18;
+    --lc-cover-tone-4-light: #3A3339;
+    --lc-cover-tone-4-dark: #201C20;
+    --lc-cover-tone-5-light: #2E363C;
+    --lc-cover-tone-5-dark: #191D21;
+
+    // Shell
+    --lc-layout-sidebar-width: 248px;
+    --lc-layout-logo-height: 60px;
+    --lc-layout-gutter: 28px;
+    --lc-layout-item-height: 36px;
+
+    // Aliases for application styles (LANCommander.Server), which never reference Radzen directly
     --lc-font-family: var(--rz-text-font-family);
     --lc-font-size: var(--rz-body-font-size);
     --lc-body-background: var(--rz-body-background-color);
     --lc-panel-background: var(--rz-base-background-color);
-    --lc-hover-background: var(--rz-base-700);
     --lc-text-color: var(--rz-text-color);
     --lc-text-title-color: var(--rz-text-title-color);
     --lc-text-secondary-color: var(--rz-text-secondary-color);
@@ -29,7 +176,188 @@
     --lc-success: var(--rz-success);
     --lc-warning: var(--rz-warning);
     --lc-border-radius: var(--rz-border-radius);
-    --lc-shadow: var(--rz-card-shadow);
+}
+
+// Radzen's per-component variables, pointed at the tokens above. Every one is declared on :root in
+// the Standard Dark stylesheet, so overriding it here reaches the component.
+:root {
+    --rz-text-tertiary-color: var(--lc-text-tertiary-color);
+    --rz-text-disabled-color: var(--lc-text-disabled-color);
+
+    // Edges are hairlines over any tone, never a lighter grey
+    --rz-border-normal: var(--rz-border-width) solid var(--lc-border-color);
+    --rz-border-base-700: var(--rz-border-width) solid var(--lc-border-subtle-color);
+    --rz-border-disabled: var(--rz-border-width) solid var(--lc-border-subtle-color);
+    --rz-border-focus: var(--rz-border-width) solid var(--rz-primary-light);
+
+    // Text on a 20% status tint takes the light text variant
+    --rz-on-primary-lighter: var(--lc-accent-text-color);
+    --rz-on-info-lighter: var(--lc-accent-text-color);
+    --rz-on-success-lighter: var(--lc-success-text-color);
+    --rz-on-warning-lighter: var(--lc-warning-text-color);
+    --rz-on-danger-lighter: var(--lc-danger-text-color);
+
+    // Buttons: 36px, secondary on Raised, primary with the lit top edge
+    --rz-button-base-background-color: var(--lc-raised);
+    --rz-button-base-color: var(--rz-text-color);
+    --rz-button-border-radius: var(--lc-radius-md);
+
+    // Inputs are wells: a hairline at rest, a stronger one on hover, accent plus a ring on focus
+    --rz-input-size-md: var(--lc-control-height);
+    --rz-input-border: var(--rz-border-width) solid var(--lc-border-overlay-color);
+    --rz-input-padding-inline: 12px;
+    --rz-input-padding-inline-md: 12px;
+    --rz-input-border-radius: var(--lc-radius-md);
+    --rz-input-background-color: var(--lc-well);
+    --rz-input-hover-background-color: var(--lc-well);
+    --rz-input-focus-background-color: var(--lc-well);
+    --rz-input-disabled-background-color: var(--rz-base-background-color);
+    --rz-input-hover-border: var(--rz-border-width) solid var(--lc-border-strong-color);
+    --rz-input-focus-border: var(--rz-border-width) solid var(--lc-accent-text-color);
+    --rz-input-focus-shadow: 0 0 0 2px var(--lc-focus-ring);
+
+    // Checkbox and radio: 16px; checked fills with the accent and carries a white mark
+    --rz-checkbox-border-radius: var(--lc-radius-sm);
+    --rz-checkbox-width: 16px;
+    --rz-checkbox-height: 16px;
+    --rz-checkbox-icon-width: 12px;
+    --rz-checkbox-icon-height: 12px;
+    --rz-checkbox-icon-font-size: 12px;
+    --rz-checkbox-tri-icon-width: 12px;
+    --rz-checkbox-tri-icon-height: 12px;
+    --rz-checkbox-tri-icon-font-size: 12px;
+    --rz-checkbox-checked-background-color: var(--rz-primary);
+    --rz-checkbox-checked-hover-background-color: var(--rz-primary);
+    --rz-checkbox-checked-icon-background-color: var(--rz-primary);
+    --rz-checkbox-checked-border: var(--rz-border-width) solid var(--rz-primary);
+    --rz-checkbox-checked-hover-border: var(--rz-border-width) solid var(--rz-primary);
+    --rz-checkbox-checked-color: #FFFFFF;
+    --rz-radio-width: 16px;
+    --rz-radio-height: 16px;
+    --rz-radio-icon-width: 6px;
+    --rz-radio-icon-height: 6px;
+    --rz-radio-checked-background-color: var(--rz-primary);
+    --rz-radio-checked-hover-background-color: var(--rz-primary);
+    --rz-radio-checked-border: var(--rz-border-width) solid var(--rz-primary);
+    --rz-radio-circle-background-color: #FFFFFF;
+    --rz-radio-circle-hover-background-color: #FFFFFF;
+
+    // Switch: 36×20 (sized in Form.scss); off is Raised with a hairline, on the accent
+    --rz-switch-background-color: var(--lc-raised);
+    --rz-switch-checked-background-color: var(--rz-primary);
+    --rz-switch-circle-background-color: var(--lc-text-tertiary-color);
+    --rz-switch-checked-circle-background-color: #FFFFFF;
+
+    // Radzen's "base" fill (chips, base-filled controls) is a literal grey; it becomes Popover
+    --rz-base: var(--lc-popover);
+    --rz-chip-border-radius: var(--lc-radius-sm);
+    --rz-switch-box-shadow: none;
+
+    // Menus, dropdowns and tooltips float on Popover
+    --rz-dropdown-open-background-color: var(--lc-popover);
+    --rz-dropdown-panel-shadow: var(--lc-shadow-popover);
+    --rz-dropdown-item-hover-background-color: var(--lc-hover-background);
+    --rz-dropdown-item-hover-color: var(--rz-text-color);
+    --rz-dropdown-item-selected-background-color: var(--lc-state-pressed);
+    --rz-dropdown-item-selected-hover-background-color: var(--lc-state-pressed);
+    --rz-dropdown-item-selected-color: var(--lc-accent-text-color);
+    --rz-dropdown-item-selected-hover-color: var(--lc-accent-text-color);
+    --rz-datepicker-panel-background-color: var(--lc-popover);
+    --rz-datepicker-panel-shadow: var(--lc-shadow-popover);
+    --rz-tooltip-background-color: var(--lc-popover);
+    --rz-tooltip-color: var(--rz-text-color);
+    --rz-tooltip-shadow: var(--lc-shadow-popover);
+    --rz-chart-tooltip-background: var(--lc-popover);
+
+    // Tables: kicker-cased head on a well, rows split by hairlines and never by fill
+    --rz-grid-header-background-color: var(--lc-well);
+    --rz-grid-header-sorted-background-color: var(--lc-well);
+    --rz-grid-header-color: var(--lc-text-tertiary-color);
+    --rz-grid-header-font-size: var(--lc-kicker-size);
+    --rz-grid-header-font-weight: 600;
+    --rz-grid-header-text-transform: uppercase;
+    --rz-grid-stripe-background-color: var(--rz-base-background-color);
+    --rz-grid-hover-background-color: var(--lc-hover-background);
+    --rz-grid-hover-color: var(--rz-text-color);
+    --rz-grid-selected-background-color: var(--lc-raised);
+    --rz-grid-selected-color: var(--rz-text-color);
+    --rz-grid-data-border-shadow: 0 1px 0 0 var(--lc-border-subtle-color), 0 -1px 0 0 var(--lc-border-subtle-color);
+    --rz-grid-foot-background-color: var(--lc-well);
+    --rz-grid-detail-template-background-color: var(--lc-well);
+    --rz-grid-filter-background-color: var(--lc-popover);
+    --rz-grid-filter-buttons-background-color: var(--lc-popover);
+    --rz-pager-numeric-button-background-color: transparent;
+    --rz-pager-numeric-button-hover-background-color: var(--lc-hover-background);
+    --rz-pager-numeric-button-selected-background-color: var(--lc-raised);
+    --rz-pager-numeric-button-selected-color: var(--lc-accent-text-color);
+    --rz-pager-back-button-background-color: transparent;
+    --rz-pager-next-button-background-color: transparent;
+
+    // Cards and panels: Surface, hairline, large radius, no shadow
+    --rz-card-border: var(--rz-border-width) solid var(--lc-border-card-color);
+    --rz-card-border-radius: var(--lc-radius-lg);
+    --rz-card-flat-background-color: var(--rz-base-background-color);
+    --rz-panel-border-radius: var(--lc-radius-lg);
+    --rz-tabs-border-radius: var(--lc-radius-lg);
+    --rz-tabs-tab-background-color: transparent;
+    --rz-tabs-tab-hover-background-color: var(--lc-hover-background);
+    --rz-panel-menu-item-active-indicator: var(--rz-primary);
+    --rz-progressbar-background-color: var(--lc-well);
+    --rz-progressbar-value-background-color: var(--lc-accent-text-color);
+    --rz-progressbar-height: 4px;
+    --rz-progressbar-border-radius: var(--lc-radius-sm);
+
+    // Dialogs: Surface behind the scrim, the one shadow that says "this floats highest"
+    --rz-dialog-border-radius: var(--lc-radius-lg);
+    --rz-dialog-shadow: var(--lc-shadow-dialog);
+    --rz-dialog-mask-background-color: var(--lc-scrim);
+    --rz-dialog-title-border: var(--rz-border-width) solid var(--lc-border-card-color);
+    --rz-dialog-title-font-size: 15px;
+    --rz-dialog-title-font-weight: 600;
+    --rz-dialog-title-letter-spacing: 0;
+    --rz-dialog-title-line-height: 20px;
+    --rz-dialog-title-padding-block: 0;
+    --rz-dialog-title-padding-inline: 20px 8px;
+    --rz-dialog-close-font-size: 14px;
+
+    // Alerts and notifications: tints and Popover, no drop shadow on alerts
+    --rz-alert-box-shadow: none;
+    --rz-notification-shadow: var(--lc-shadow-popover);
+    --rz-notification-border-radius: var(--lc-radius-lg);
+    --rz-notification-padding: 13px 14px;
+    --rz-notification-gap: 11px;
+    --rz-notification-info-background-color: var(--lc-popover);
+    --rz-notification-info-color: var(--rz-text-color);
+    --rz-notification-info-icon-color: var(--lc-accent-text-color);
+    --rz-notification-success-background-color: var(--lc-popover);
+    --rz-notification-success-color: var(--rz-text-color);
+    --rz-notification-success-icon-color: var(--lc-success-text-color);
+    --rz-notification-warning-background-color: var(--lc-popover);
+    --rz-notification-warning-color: var(--rz-text-color);
+    --rz-notification-warning-icon-color: var(--lc-warning-text-color);
+    --rz-notification-error-background-color: var(--lc-popover);
+    --rz-notification-error-color: var(--rz-text-color);
+    --rz-notification-error-icon-color: var(--lc-danger-text-color);
+
+    // Charts: axes a hairline, grid lines a divider
+    --rz-chart-axis-color: var(--lc-border-color);
+    --rz-chart-grid-line-color: rgba(255, 255, 255, 0.05);
+    --rz-chart-axis-font-size: 11px;
+    --rz-chart-axis-label-color: var(--lc-text-tertiary-color);
+    --rz-chart-marker-stroke: var(--rz-base-background-color);
+}
+
+// A plain link is the accent, no underline. :where() keeps this at zero specificity so navigation
+// items, menu entries, breadcrumbs and button-anchors — all of which carry their own classes — keep
+// their own colours, while bare <a> content (dashboard "See all", card footers, alert and
+// notification actions) reads on the dark surface instead of sitting near-invisible.
+:where(a) {
+    color: var(--lc-accent-text-color);
+    text-decoration: none;
+}
+
+:where(a:hover) {
+    color: #69B1FF;
 }
 
 .lc-visually-hidden {

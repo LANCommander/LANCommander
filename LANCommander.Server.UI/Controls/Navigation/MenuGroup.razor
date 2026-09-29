@@ -1,0 +1,28 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A titled run of items inside a Menu, e.g. the GAME / CONTENT / BEHAVIOUR groups of an edit page. The title is a kicker, not a link. *@
+<li @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (!string.IsNullOrEmpty(Title))
+    {
+        <div class="lc-menu-group-title" id="@_titleId">@Title</div>
+    }
+    <ul class="lc-menu-list lc-menu-group-list" role="group" aria-labelledby="@(string.IsNullOrEmpty(Title) ? null : _titleId)">
+        @ChildContent
+    </ul>
+</li>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The group's kicker. Written in sentence case; the style capitalises it.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    readonly string _titleId = $"lc-menu-group-{Guid.NewGuid():N}";
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-menu-group").Add(Class).Build();
+    }
+}

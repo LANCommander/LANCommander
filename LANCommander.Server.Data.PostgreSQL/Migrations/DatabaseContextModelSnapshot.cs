@@ -17,7 +17,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -568,6 +568,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<string>("OptionSchema")
                         .HasColumnType("text");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("boolean");
 
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("timestamp with time zone");

@@ -17,38 +17,53 @@
         @if (Has(FileManagerFeatures.NavigationBack))
         {
             <Tooltip Title="Back">
-                <Button Text Icon="IconType.ArrowLeft" OnClick="NavigateBackAsync" Disabled="@(_past.Count == 0)" aria-label="Back" />
+                <Button Text Icon="IconType.ArrowLeft" Class="lc-file-manager-nav-button" OnClick="NavigateBackAsync" Disabled="@(_past.Count == 0)" aria-label="Back" />
             </Tooltip>
         }
 
         @if (Has(FileManagerFeatures.NavigationForward))
         {
             <Tooltip Title="Forward">
-                <Button Text Icon="IconType.ArrowRight" OnClick="NavigateForwardAsync" Disabled="@(_future.Count == 0)" aria-label="Forward" />
+                <Button Text Icon="IconType.ArrowRight" Class="lc-file-manager-nav-button" OnClick="NavigateForwardAsync" Disabled="@(_future.Count == 0)" aria-label="Forward" />
             </Tooltip>
         }
 
         @if (Has(FileManagerFeatures.UpALevel))
         {
             <Tooltip Title="Up a Level">
-                <Button Text Icon="IconType.ArrowUp" OnClick="NavigateUpAsync" Disabled="@(_source?.GetCurrentPath()?.Parent == null)" aria-label="Up a level" />
+                <Button Text Icon="IconType.ArrowUp" Class="lc-file-manager-nav-button" OnClick="NavigateUpAsync" Disabled="@(_source?.GetCurrentPath()?.Parent == null)" aria-label="Up a level" />
             </Tooltip>
         }
 
         @if (Has(FileManagerFeatures.Refresh))
         {
             <Tooltip Title="Refresh">
-                <Button Text Icon="IconType.ArrowClockwise" OnClick="RefreshAsync" aria-label="Refresh" />
+                <Button Text Icon="IconType.ArrowClockwise" Class="lc-file-manager-nav-button" OnClick="RefreshAsync" aria-label="Refresh" />
             </Tooltip>
+        }
+
+        @if (HasNavigationButtons && Has(FileManagerFeatures.Breadcrumbs))
+        {
+            <span class="lc-file-manager-nav-divider" aria-hidden="true"></span>
         }
 
         <div class="lc-file-manager-path">
             @if (Has(FileManagerFeatures.Breadcrumbs))
             {
                 <Breadcrumb>
-                    @foreach (var directory in _breadcrumbs)
+                    @for (var i = 0; i < _breadcrumbs.Count; i++)
                     {
-                        <BreadcrumbItem OnClick="() => ChangeDirectoryAsync(directory, false)">@DirectoryName(directory)</BreadcrumbItem>
+                        var directory = _breadcrumbs[i];
+
+                        @* The folder being shown is where you are, not a link; the root is a path or a file name, so mono *@
+                        if (i == _breadcrumbs.Count - 1)
+                        {
+                            <BreadcrumbItem Mono="@(directory.Parent == null)">@DirectoryName(directory)</BreadcrumbItem>
+                        }
+                        else
+                        {
+                            <BreadcrumbItem Mono="@(directory.Parent == null)" OnClick="() => ChangeDirectoryAsync(directory, false)">@DirectoryName(directory)</BreadcrumbItem>
+                        }
                     }
                 </Breadcrumb>
             }
@@ -56,23 +71,26 @@
 
         @if (Has(FileManagerFeatures.NewFolder))
         {
-            <Tooltip Title="New Folder">
-                <Button Text Icon="IconType.FolderPlus" OnClick="NewFolderAsync" aria-label="New folder" />
-            </Tooltip>
+            <Button Small Icon="IconType.FolderPlus" Class="lc-file-manager-new-folder" OnClick="NewFolderAsync">New Folder</Button>
         }
 
         @if (Has(FileManagerFeatures.UploadFile))
         {
             <Tooltip Title="Upload Files">
-                <Button Text Icon="IconType.UploadSimple" OnClick="() => _uploading = !_uploading" aria-label="Upload files" />
+                <Button Text Icon="IconType.UploadSimple" Class="lc-file-manager-nav-button" OnClick="() => _uploading = !_uploading" aria-label="Upload files" />
             </Tooltip>
         }
 
         @if (Has(FileManagerFeatures.Delete))
         {
             <Popconfirm OnConfirm="DeleteAsync" Title="@($"Are you sure you want to delete the selected {(_selected.Count == 1 ? "entry" : "entries")}?")" OkText="Delete" Danger Disabled="_selected.Count == 0">
-                <Button Text Danger Icon="IconType.Trash" Disabled="_selected.Count == 0" aria-label="Delete" />
+                <Button Text Danger Icon="IconType.Trash" Class="lc-file-manager-nav-button" Disabled="_selected.Count == 0" aria-label="Delete" />
             </Popconfirm>
+        }
+
+        @if (Has(FileManagerFeatures.Filter))
+        {
+            <TextInput Small Icon="IconType.MagnifyingGlass" Immediate Value="@_filter" ValueChanged="FilterChanged" Placeholder="Filter this folder" Class="lc-file-manager-filter" aria-label="Filter this folder" />
         }
     </div>
 
@@ -99,11 +117,20 @@
                       Items="_directories"
                       Children="d => d.Children"
                       Key="d => d.Path"
-                      Text="d => d.Name"
-                      Icon="d => IconType.Folder"
+                      Icon="TreeIcon"
+                      IconClass="TreeIconClass"
                       Value="_currentPath"
                       ValueChanged="d => ChangeDirectoryAsync(d!, true)"
-                      OnExpand="d => _source.ExpandNode(d)" />
+                      OnExpand="d => _source.ExpandNode(d)">
+                    @if (context.Parent == null)
+                    {
+                        <span class="lc-file-manager-root">@DirectoryName(context)</span>
+                    }
+                    else
+                    {
+                        @context.Name
+                    }
+                </Tree>
             </Pane>
             <Pane Size="75%" Class="lc-file-manager-entries">
                 <Table TItem="IFileManagerEntry"
@@ -117,29 +144,41 @@
                        ValuesChanged="SelectionChangedAsync"
                        OnRowDoubleClick="OpenAsync"
                        ColumnPicker="Has(FileManagerFeatures.ColumnPicker)"
+                       RowMark="RowMark"
                        SettingsKey="file-manager"
-                       PageSize="100"
-                       Small>
+                       Frameless
+                       PageSize="100">
                     <Columns>
-                        <TemplateColumn TItem="IFileManagerEntry" Title="" Width="40px" Key="icon">
-                            <Icon Type="EntryIcon(context)" />
+                        <TemplateColumn TItem="IFileManagerEntry" Title="" Width="42px" Key="icon" CellClass="lc-file-manager-icon-cell">
+                            <Icon Type="EntryIcon(context)" Class="@EntryTone(context)" />
                         </TemplateColumn>
-                        <BoundColumn Property="e => e.Name" Title="Name" Sortable DefaultSort="ColumnSort.Ascending">
+                        <BoundColumn Property="e => e.Name" Title="Name" Sortable DefaultSort="ColumnSort.Ascending" CellClass="lc-file-manager-name">
                             @_source.GetEntryName(context)
                         </BoundColumn>
-                        <BoundColumn Property="e => e.Size" Title="Size" Sortable Width="120px">
+                        <BoundColumn Property="e => e.Size" Title="Size" Sortable Numeric Width="124px" CellClass="lc-file-manager-size">
                             @if (context is FileManagerFile)
                             {
                                 <ByteSize Value="context.Size" />
+                            }
+                            else
+                            {
+                                <span class="lc-file-manager-none" aria-label="No size">—</span>
                             }
                         </BoundColumn>
                         <BoundColumn Property="e => e.Name" Title="Type" Key="type" Hide Width="100px">
                             @(context is FileManagerFile file ? file.Extension.ToUpperInvariant() : "Folder")
                         </BoundColumn>
-                        <BoundColumn Property="e => e.ModifiedOn" Title="Modified" Sortable FormatString="MM/dd/yyyy hh:mm tt" Width="180px" />
-                        <BoundColumn Property="e => e.CreatedOn" Title="Created" Sortable FormatString="MM/dd/yyyy hh:mm tt" Hide Width="180px" />
+                        <BoundColumn Property="e => e.ModifiedOn" Title="Modified" Sortable Numeric FormatString="MM/dd/yyyy hh:mm tt" Width="184px" CellClass="lc-file-manager-modified" />
+                        <BoundColumn Property="e => e.CreatedOn" Title="Created" Sortable Numeric FormatString="MM/dd/yyyy hh:mm tt" Hide Width="184px" CellClass="lc-file-manager-modified" />
                     </Columns>
                 </Table>
+                @if (UnselectableHint != null && _entries.Any(e => !EntrySelectable(e)))
+                {
+                    <div class="lc-file-manager-hint" role="note">
+                        <Icon Type="IconType.Info" />
+                        <span>@HintText()</span>
+                    </div>
+                }
             </Pane>
         </SplitPane>
     }
@@ -174,6 +213,25 @@
     /// <summary>Which entries are listed at all.</summary>
     [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
 
+    /// <summary>
+    /// Shown under the entries whenever some of them can't be selected, saying why. <c>{n}</c> is
+    /// replaced with how many and what they are, e.g. "5 files": "This picker takes a folder, so
+    /// the {n} here are shown for context only."
+    /// </summary>
+    [Parameter] public string? UnselectableHint { get; set; }
+
+    /// <summary>What to call the top of the tree and the breadcrumbs, e.g. the archive being browsed.</summary>
+    [Parameter] public string? RootName { get; set; }
+
+    /// <summary>Called once the source is open, e.g. to read how many entries an archive holds.</summary>
+    [Parameter] public EventCallback<IFileManagerSource> OnSourceLoaded { get; set; }
+
+    /// <summary>
+    /// Drops the manager's own border and corners, for when it is the whole of its container,
+    /// e.g. a dialog, rather than a card in a card.
+    /// </summary>
+    [Parameter] public bool Borderless { get; set; }
+
     /// <summary>Where uploaded files are posted, with the destination folder as the "path" field.</summary>
     [Parameter] public string UploadAction { get; set; } = "/Upload/File";
 
@@ -187,6 +245,7 @@
     IList<IFileManagerEntry> _selected = new List<IFileManagerEntry>();
     Table<IFileManagerEntry>? _table;
     bool _uploading;
+    string? _filter;
     string? _error;
     string? _class;
 
@@ -196,6 +255,7 @@
     {
         _class = new ClassBuilder()
             .Add("lc-file-manager")
+            .If(Borderless, "lc-file-manager-borderless")
             .Add(Class)
             .Build();
     }
@@ -223,6 +283,8 @@
             }
 
             _directories = await Task.Run(() => _source.GetDirectoryTree().ToList());
+
+            await OnSourceLoaded.InvokeAsync(_source);
 
             var start = _source is FileManagerLocalDiskSource && !String.IsNullOrWhiteSpace(WorkingDirectory)
                 ? BuildDirectoryChain(WorkingDirectory)
@@ -260,7 +322,18 @@
     }
 
     void UpdateEntries() =>
-        _entries = _source!.GetEntries().Where(EntryVisible).ToList();
+        _entries = _source!.GetEntries()
+            .Where(EntryVisible)
+            .Where(e => String.IsNullOrWhiteSpace(_filter) || _source.GetEntryName(e).Contains(_filter.Trim(), StringComparison.OrdinalIgnoreCase))
+            .ToList();
+
+    void FilterChanged(string? filter)
+    {
+        _filter = filter;
+
+        if (_source != null)
+            UpdateEntries();
+    }
 
     void UpdateBreadcrumbs()
     {
@@ -270,8 +343,38 @@
             _breadcrumbs.Insert(0, directory);
     }
 
-    static string DirectoryName(FileManagerDirectory directory) =>
-        directory.Parent == null ? directory.Name : directory.Name.TrimEnd('/', '\\');
+    string DirectoryName(FileManagerDirectory directory) =>
+        directory.Parent == null ? RootName ?? directory.Name : directory.Name.TrimEnd('/', '\\');
+
+    bool HasNavigationButtons =>
+        Has(FileManagerFeatures.NavigationBack) || Has(FileManagerFeatures.NavigationForward)
+        || Has(FileManagerFeatures.UpALevel) || Has(FileManagerFeatures.Refresh);
+
+    bool IsArchive => _source is FileManagerArchiveSource;
+
+    /// <summary>The folders from the root down to the one being shown.</summary>
+    bool IsOnOpenPath(FileManagerDirectory directory) => _breadcrumbs.Any(b => b.Path == directory.Path);
+
+    IconType TreeIcon(FileManagerDirectory directory) =>
+        directory.Parent == null && IsArchive ? IconType.Archive : IconType.Folder;
+
+    string? TreeIconClass(FileManagerDirectory directory) =>
+        directory.Parent == null && IsArchive ? "lc-file-tone-root"
+        : IsOnOpenPath(directory) ? "lc-file-tone-folder"
+        : null;
+
+    /// <summary>The hint with its {n} filled in: "5 files", "2 folders", "7 entries".</summary>
+    string HintText()
+    {
+        var unselectable = _entries.Where(e => !EntrySelectable(e)).ToList();
+        var count = unselectable.Count;
+
+        var noun = unselectable.All(e => e is FileManagerFile) ? (count == 1 ? "file" : "files")
+            : unselectable.All(e => e is FileManagerDirectory) ? (count == 1 ? "folder" : "folders")
+            : (count == 1 ? "entry" : "entries");
+
+        return UnselectableHint!.Replace("{n}", $"{count:N0} {noun}");
+    }
 
     async Task SelectionChangedAsync(IList<IFileManagerEntry> selected)
     {
@@ -417,6 +520,24 @@
 
         return directory;
     }
+
+    string? RowMark(IFileManagerEntry entry) => EntrySelectable(entry) ? null : "unselectable";
+
+    /// <summary>A tint per family of file, so a folder of mixed content reads at a glance.</summary>
+    static string EntryTone(IFileManagerEntry entry) => entry switch
+    {
+        FileManagerDirectory => "lc-file-tone-folder",
+        FileManagerFile => EntryIcon(entry) switch
+        {
+            IconType.FileZip => "lc-file-tone-archive",
+            IconType.FileCode => "lc-file-tone-code",
+            IconType.FileText => "lc-file-tone-text",
+            IconType.FileImage => "lc-file-tone-image",
+            IconType.FileVideo => "lc-file-tone-video",
+            _ => "lc-file-tone-plain",
+        },
+        _ => "lc-file-tone-plain",
+    };
 
     static IconType EntryIcon(IFileManagerEntry entry) => entry switch
     {

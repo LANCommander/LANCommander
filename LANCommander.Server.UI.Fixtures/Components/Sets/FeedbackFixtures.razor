@@ -32,6 +32,37 @@
             Width = 420,
             Covers = [typeof(Spin)],
         },
+        new("Alert.Action", "An alert with a follow-up link under its message",
+            @<Alert Danger>
+                <ChildContent>IGDB credentials were rejected. Metadata lookups are disabled until they are replaced.</ChildContent>
+                <Action><a href="/Settings/Integrations">Open integration settings</a></Action>
+            </Alert>)
+        {
+            Width = 480,
+            Covers = [typeof(Alert)],
+        },
+        new("Skeleton.Loading", "Placeholder bars and a ring beside what is being waited on",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Skeleton />
+                <Skeleton Rows="2" Widths="@(new[] { "40%", "80%" })" />
+                <Flex Gap="Gap.Medium" Align="Align.Center">
+                    <Spinner />
+                    <Spinner Large Label="Loading" />
+                    <Typography Secondary>Fetching archives…</Typography>
+                </Flex>
+            </Flex>)
+        {
+            Width = 320,
+            Covers = [typeof(Skeleton), typeof(Spinner)],
+        },
+        new("Empty.Title", "An empty state with a title, a line of help and an action",
+            @<Empty Icon="IconType.GameController" Title="No games yet" Description="Add a title or import an existing manifest to get started.">
+                <Button Small Primary>Add Game</Button>
+            </Empty>)
+        {
+            Width = 340,
+            Covers = [typeof(Empty)],
+        },
         new("Empty.States", "Default and custom empty states, with an action, and the small version",
             @<Flex Vertical Gap="Gap.Medium">
                 <Empty />

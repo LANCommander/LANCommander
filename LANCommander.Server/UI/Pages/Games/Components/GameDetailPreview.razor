@@ -12,9 +12,13 @@
 @inject NotificationService Notifications
 @inject IOptions<Settings> Settings
 @inject ScriptProvider ScriptProvider
+@inject IDbContextFactory<LANCommander.Server.Data.DatabaseContext> DatabaseContextFactory
+@inject ILogger<GameDetailPreview> Logger
 
-<div class="game-detail-preview">
-    <!-- ══ Hero Section ═══════════════════════════════════════════ -->
+@* The game as the launcher shows it, doubling as the media editor. Every slot keeps its label plate
+   visible; its upload, search and remove buttons come up on hover. Media is saved as it is added. *@
+<div class="game-detail-preview" style="@ToneStyle">
+    <!-- ══ Hero: background slot, logo slot ══════════════════════════ -->
     <div class="game-detail-preview__hero">
         @{
             var bgMedia = GetMedia(MediaType.Background);
@@ -29,28 +33,25 @@
         <div class="game-detail-preview__hero-gradient-top"></div>
         <div class="game-detail-preview__hero-gradient-bottom"></div>
 
-        <!-- Background upload overlay -->
-        <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--hero">
-            <div class="game-detail-preview__media-overlay-actions">
-                @{ var bgInputId = "bg-upload-" + Guid.NewGuid(); }
-                <InputFile id="@bgInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Background)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
-                <label class="game-detail-preview__overlay-btn" for="@bgInputId" title="Upload Background">
+        <div class="game-detail-preview__slot game-detail-preview__slot--background">
+            <div class="game-detail-preview__slot-actions">
+                <InputFile id="@_bgInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Background)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
+                <label class="game-detail-preview__overlay-btn" for="@_bgInputId" title="Upload background">
                     <Icon Type="IconType.UploadSimple" />
                 </label>
-                <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Background)" title="Search Background">
+                <button type="button" class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Background)" title="Search for a background">
                     <Icon Type="IconType.MagnifyingGlass" />
                 </button>
                 @if (bgMedia != null)
                 {
-                    <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Background)" title="Remove Background">
+                    <button type="button" class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Background)" title="Remove background">
                         <Icon Type="IconType.Trash" />
                     </button>
                 }
             </div>
-            <span class="game-detail-preview__media-overlay-label">Background</span>
+            <span class="game-detail-preview__slot-label">Background</span>
         </div>
 
-        <!-- Logo (bottom-left) -->
         <div class="game-detail-preview__logo-area">
             @{
                 var logoMedia = GetMedia(MediaType.Logo);
@@ -66,89 +67,86 @@
                 <span class="game-detail-preview__title-fallback">@_game?.Title</span>
             }
 
-            <!-- Logo upload overlay -->
-            <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--logo">
-                <div class="game-detail-preview__media-overlay-actions">
-                    @{ var logoInputId = "logo-upload-" + Guid.NewGuid(); }
-                    <InputFile id="@logoInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Logo)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
-                    <label class="game-detail-preview__overlay-btn" for="@logoInputId" title="Upload Logo">
+            <div class="game-detail-preview__slot game-detail-preview__slot--logo">
+                <span class="game-detail-preview__slot-label">Logo</span>
+                <div class="game-detail-preview__slot-actions">
+                    <InputFile id="@_logoInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Logo)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" />
+                    <label class="game-detail-preview__overlay-btn" for="@_logoInputId" title="Upload logo">
                         <Icon Type="IconType.UploadSimple" />
                     </label>
-                    <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Logo)" title="Search Logo">
+                    <button type="button" class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Logo)" title="Search for a logo">
                         <Icon Type="IconType.MagnifyingGlass" />
                     </button>
                     @if (logoMedia != null)
                     {
-                        <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Logo)" title="Remove Logo">
+                        <button type="button" class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Logo)" title="Remove logo">
                             <Icon Type="IconType.Trash" />
                         </button>
                     }
                 </div>
-                <span class="game-detail-preview__media-overlay-label">Logo</span>
             </div>
         </div>
     </div>
 
-    <!-- ══ Content Grid ═══════════════════════════════════════════ -->
+    <!-- ══ Content: the page, then the launcher's cover rail ═════════ -->
     <div class="game-detail-preview__content">
-
-        <!-- Left Column -->
         <div class="game-detail-preview__left">
-            <!-- Description -->
             @if (!string.IsNullOrWhiteSpace(_game?.Description))
             {
                 <p class="game-detail-preview__description">@_game.Description</p>
             }
 
-            <!-- Screenshots & Videos Carousel -->
+            @{
+                var strip = GetMediaList(MediaType.Screenshot, MediaType.Video);
+            }
+
             <div class="game-detail-preview__media-section">
                 <div class="game-detail-preview__media-section-header">
-                    <span class="game-detail-preview__media-section-title">Media</span>
-                    <div class="game-detail-preview__media-section-actions">
-                        <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" multiple />
-                        <InputFile id="@_vidInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Video)" hidden accept=".mp4,.webm,.mkv" multiple />
+                    <span class="game-detail-preview__kicker game-detail-preview__media-kicker">@GameEditFormat.MediaKicker(strip.Count(m => m.Type == MediaType.Screenshot), strip.Count(m => m.Type == MediaType.Video))</span>
 
-                        <Dropdown>
-                            <Overlay>
-                                <Menu>
-                                    <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_ssInputId)">Upload Screenshots</MenuItem>
-                                    <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Screenshot)">Search Screenshots</MenuItem>
-                                    <MenuDivider />
-                                    <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_vidInputId)">Upload Videos</MenuItem>
-                                    <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Video)">Search Videos</MenuItem>
-                                </Menu>
-                            </Overlay>
-                            <ChildContent>
-                                <Button Text Small Icon="IconType.Plus" title="Add screenshots or videos" />
-                            </ChildContent>
-                        </Dropdown>
-                    </div>
+                    <InputFile id="@_ssInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Screenshot)" hidden accept=".jpg,.jpeg,.png,.gif,.webp" multiple />
+                    <InputFile id="@_vidInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Video)" hidden accept=".mp4,.webm,.mkv" multiple />
+
+                    <Dropdown>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_ssInputId)">Upload screenshots</MenuItem>
+                                <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Screenshot)">Search screenshots</MenuItem>
+                                <MenuDivider />
+                                <MenuItem Icon="IconType.UploadSimple" OnClick="() => ClickFileInput(_vidInputId)">Upload videos</MenuItem>
+                                <MenuItem Icon="IconType.MagnifyingGlass" OnClick="() => SearchMediaByType(MediaType.Video)">Search videos</MenuItem>
+                            </Menu>
+                        </Overlay>
+                        <ChildContent>
+                            <Button ExtraSmall Icon="IconType.Plus" title="Add screenshots or videos">Add</Button>
+                        </ChildContent>
+                    </Dropdown>
                 </div>
 
                 <div class="game-detail-preview__carousel">
-                    @foreach (var media in GetMediaList(MediaType.Screenshot, MediaType.Video))
+                    @foreach (var media in strip)
                     {
-                        <div class="game-detail-preview__carousel-item">
+                        <div class="game-detail-preview__carousel-item" @key="media.Id">
                             @if (media.Type == MediaType.Video)
                             {
                                 <video class="game-detail-preview__carousel-video" src="@GetMediaDownloadUrl(media)" muted loop></video>
-                                <div class="game-detail-preview__carousel-video-badge">
-                                    <Icon Type="IconType.PlayCircle" Fill />
-                                </div>
+                                <span class="game-detail-preview__carousel-video-badge" title="Video">
+                                    <Icon Type="IconType.Play" Fill />
+                                </span>
                             }
                             else
                             {
                                 <img class="game-detail-preview__carousel-img" src="@GetMediaDownloadUrl(media)" alt="" />
                             }
                             <div class="game-detail-preview__carousel-item-overlay">
-                                <button class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaLeft(media)" title="Move Left">
+                                <button type="button" class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaLeft(media)" title="Move left">
                                     <Icon Type="IconType.CaretLeft" />
                                 </button>
-                                <button class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaRight(media)" title="Move Right">
+                                <button type="button" class="game-detail-preview__overlay-btn" @onclick="() => MoveMediaRight(media)" title="Move right">
                                     <Icon Type="IconType.CaretRight" />
                                 </button>
                                 <Popconfirm Title="Remove this media?" OkText="Remove" Danger OnConfirm="() => RemoveMedia(media)">
-                                    <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" title="Remove">
+                                    <button type="button" class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" title="Remove">
                                         <Icon Type="IconType.Trash" />
                                     </button>
                                 </Popconfirm>
@@ -156,19 +154,67 @@
                         </div>
                     }
 
-                    @if (!GetMediaList(MediaType.Screenshot, MediaType.Video).Any())
+                    @* Files dropped here (or picked by clicking) go through the same upload as Add; videos by their type, the rest as screenshots *@
+                    <label class="@DropClass(strip.Count == 0)" title="Drop screenshots or videos here, or click to choose them">
+                        <InputFile OnChange="UploadDroppedMedia"
+                                   multiple
+                                   accept=".jpg,.jpeg,.png,.gif,.webp,.mp4,.webm,.mkv"
+                                   class="game-detail-preview__drop-input"
+                                   aria-label="Add screenshots or videos"
+                                   disabled="@_uploading"
+                                   @ondragenter="() => _dragging = true"
+                                   @ondragleave="() => _dragging = false" />
+                        @if (_uploading)
+                        {
+                            <Spinner />
+                        }
+                        else
+                        {
+                            <Icon Type="IconType.ArrowUp" />
+                        }
+                        <span>@(strip.Count == 0 ? "Drop screenshots or videos" : "Drop")</span>
+                    </label>
+                </div>
+            </div>
+
+            @{
+                var players = PlayerBadges().ToList();
+                var runsWith = RunsWithBadges().ToList();
+            }
+
+            @if (players.Any() || runsWith.Any())
+            {
+                <div class="game-detail-preview__facts">
+                    @if (players.Any())
                     {
-                        <div class="game-detail-preview__carousel-empty">
-                            <Empty Small Description="No screenshots or videos" />
+                        <div class="game-detail-preview__badge-section">
+                            <span class="game-detail-preview__kicker">Players</span>
+                            <div class="game-detail-preview__badge-wrap">
+                                @foreach (var badge in players)
+                                {
+                                    <span class="game-detail-preview__badge">@badge</span>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (runsWith.Any())
+                    {
+                        <div class="game-detail-preview__badge-section">
+                            <span class="game-detail-preview__kicker">Runs with</span>
+                            <div class="game-detail-preview__badge-wrap">
+                                @foreach (var badge in runsWith)
+                                {
+                                    <span class="game-detail-preview__badge">@badge</span>
+                                }
+                            </div>
                         </div>
                     }
                 </div>
-            </div>
+            }
         </div>
 
-        <!-- Right Column -->
         <div class="game-detail-preview__right">
-            <!-- Cover Image -->
             <div class="game-detail-preview__cover-wrapper">
                 @{
                     var coverMedia = GetMedia(MediaType.Cover);
@@ -190,102 +236,34 @@
                     </div>
                 }
 
-                <!-- Cover upload overlay -->
-                <div class="game-detail-preview__media-overlay game-detail-preview__media-overlay--cover">
-                    <div class="game-detail-preview__media-overlay-actions">
-                        @{ var coverInputId = "cover-upload-" + Guid.NewGuid(); }
-                        <InputFile id="@coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.apng,.mp4,.webm,.mkv" />
-                        <label class="game-detail-preview__overlay-btn" for="@coverInputId" title="Upload Cover">
+                <div class="game-detail-preview__cover-scrim">
+                    <div class="game-detail-preview__slot-actions">
+                        <InputFile id="@_coverInputId" OnChange="(e) => UploadMediaByType(e, MediaType.Cover)" hidden accept=".jpg,.jpeg,.png,.gif,.webp,.apng,.mp4,.webm,.mkv" />
+                        <label class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--large" for="@_coverInputId" title="Upload cover">
                             <Icon Type="IconType.UploadSimple" />
                         </label>
-                        <button class="game-detail-preview__overlay-btn" @onclick="() => SearchMediaByType(MediaType.Cover)" title="Search Cover">
+                        <button type="button" class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--large" @onclick="() => SearchMediaByType(MediaType.Cover)" title="Search for a cover">
                             <Icon Type="IconType.MagnifyingGlass" />
                         </button>
                         @if (coverMedia != null)
                         {
-                            <button class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Cover)" title="Remove Cover">
+                            <button type="button" class="game-detail-preview__overlay-btn game-detail-preview__overlay-btn--large game-detail-preview__overlay-btn--danger" @onclick="() => RemoveMediaByType(MediaType.Cover)" title="Remove cover">
                                 <Icon Type="IconType.Trash" />
                             </button>
                         }
                     </div>
-                    <span class="game-detail-preview__media-overlay-label">Cover</span>
+                    <span class="game-detail-preview__slot-label">@CoverLabel</span>
                 </div>
             </div>
 
-            <!-- Metadata Badges -->
-            @if (_game?.Singleplayer == true || (_game?.MultiplayerModes?.Any() ?? false))
+            @foreach (var (title, names) in RailSections())
             {
                 <div class="game-detail-preview__badge-section">
-                    <span class="game-detail-preview__badge-header">Players</span>
+                    <span class="game-detail-preview__kicker">@title</span>
                     <div class="game-detail-preview__badge-wrap">
-                        @if (_game.Singleplayer)
+                        @foreach (var name in names)
                         {
-                            <span class="game-detail-preview__badge">Singleplayer</span>
-                        }
-                        @if (_game.MultiplayerModes != null)
-                        {
-                            @foreach (var mode in _game.MultiplayerModes)
-                            {
-                                <span class="game-detail-preview__badge">
-                                    @mode.Type.GetDisplayName()
-                                    @if (mode.MinPlayers > 0 && mode.MaxPlayers > 0)
-                                    {
-                                        <text> &middot; @mode.MinPlayers–@mode.MaxPlayers players</text>
-                                    }
-                                </span>
-                            }
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (_game?.Developers?.Any() == true)
-            {
-                <div class="game-detail-preview__badge-section">
-                    <span class="game-detail-preview__badge-header">Developers</span>
-                    <div class="game-detail-preview__badge-wrap">
-                        @foreach (var dev in _game.Developers)
-                        {
-                            <span class="game-detail-preview__badge">@dev.Name</span>
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (_game?.Publishers?.Any() == true)
-            {
-                <div class="game-detail-preview__badge-section">
-                    <span class="game-detail-preview__badge-header">Publishers</span>
-                    <div class="game-detail-preview__badge-wrap">
-                        @foreach (var pub in _game.Publishers)
-                        {
-                            <span class="game-detail-preview__badge">@pub.Name</span>
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (_game?.Genres?.Any() == true)
-            {
-                <div class="game-detail-preview__badge-section">
-                    <span class="game-detail-preview__badge-header">Genres</span>
-                    <div class="game-detail-preview__badge-wrap">
-                        @foreach (var genre in _game.Genres)
-                        {
-                            <span class="game-detail-preview__badge">@genre.Name</span>
-                        }
-                    </div>
-                </div>
-            }
-
-            @if (_game?.Tags?.Any() == true)
-            {
-                <div class="game-detail-preview__badge-section">
-                    <span class="game-detail-preview__badge-header">Tags</span>
-                    <div class="game-detail-preview__badge-wrap">
-                        @foreach (var tag in _game.Tags)
-                        {
-                            <span class="game-detail-preview__badge">@tag.Name</span>
+                            <span class="game-detail-preview__badge">@name</span>
                         }
                     </div>
                 </div>
@@ -297,8 +275,19 @@
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    string _ssInputId = "ss-upload-" + Guid.NewGuid();
-    string _vidInputId = "vid-upload-" + Guid.NewGuid();
+    readonly string _ssInputId = "ss-upload-" + Guid.NewGuid();
+    readonly string _vidInputId = "vid-upload-" + Guid.NewGuid();
+    readonly string _bgInputId = "bg-upload-" + Guid.NewGuid();
+    readonly string _logoInputId = "logo-upload-" + Guid.NewGuid();
+    readonly string _coverInputId = "cover-upload-" + Guid.NewGuid();
+
+    bool _dragging;
+    bool _uploading;
+
+    /// <summary>What the game runs with beyond itself, for the RUNS WITH badges.</summary>
+    record RunsWith(string? Engine, int Scripts, int Redistributables);
+
+    RunsWith? _runsWith;
 
     string[] ValidImageMimeTypes = [
         MediaTypeNames.Image.Png,
@@ -345,6 +334,115 @@
             .GetAsync(GameId);
 
         _media = _game.Media?.ToList() ?? new();
+
+        await LoadRunsWithAsync();
+    }
+
+    async Task LoadRunsWithAsync()
+    {
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            _runsWith = await context.Set<Game>()
+                .Where(g => g.Id == GameId)
+                .Select(g => new RunsWith(
+                    g.Engine != null ? g.Engine.Name : null,
+                    g.Scripts!.Count(),
+                    g.Redistributables!.Count()))
+                .FirstOrDefaultAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not count what game {GameId} runs with", GameId);
+            _runsWith = null;
+        }
+    }
+
+    /// <summary>The launcher's tone for a game without art, on the hero and the cover placeholder.</summary>
+    string ToneStyle
+    {
+        get
+        {
+            var tone = GameTile.ToneOf(_game?.Title);
+
+            return $"--preview-tone-light: var(--lc-cover-tone-{tone}-light); --preview-tone-dark: var(--lc-cover-tone-{tone}-dark)";
+        }
+    }
+
+    /// <summary>"Cover · 600×900": the slot and the size covers are scaled to.</summary>
+    string CoverLabel
+    {
+        get
+        {
+            var size = Settings.Value.Server.Media.GetMediaTypeConfig(MediaType.Cover)?.Thumbnails?.MaxSize;
+
+            return size is { Width: > 0, Height: > 0 } ? $"Cover · {size.Width}×{size.Height}" : "Cover";
+        }
+    }
+
+    string DropClass(bool empty) => new ClassBuilder()
+        .Add("game-detail-preview__drop")
+        .If(empty, "game-detail-preview__drop--wide")
+        .If(_dragging, "game-detail-preview__drop--over")
+        .If(_uploading, "game-detail-preview__drop--busy")
+        .Build()!;
+
+    /// <summary>Singleplayer, then each multiplayer mode: "LAN · 2–24 players".</summary>
+    IEnumerable<string> PlayerBadges()
+    {
+        if (_game == null)
+            yield break;
+
+        if (_game.Singleplayer)
+            yield return "Singleplayer";
+
+        foreach (var mode in _game.MultiplayerModes ?? [])
+        {
+            yield return mode.MinPlayers > 0 && mode.MaxPlayers > 0
+                ? $"{mode.Type.GetDisplayName()} · {mode.MinPlayers}–{mode.MaxPlayers} players"
+                : mode.Type.GetDisplayName();
+        }
+    }
+
+    /// <summary>The engine, then how many scripts and redistributables; kinds there are none of are left out.</summary>
+    IEnumerable<string> RunsWithBadges()
+    {
+        if (_runsWith == null)
+            yield break;
+
+        if (!string.IsNullOrWhiteSpace(_runsWith.Engine))
+            yield return _runsWith.Engine;
+
+        if (_runsWith.Scripts > 0)
+            yield return GameEditFormat.Count(_runsWith.Scripts, "script");
+
+        if (_runsWith.Redistributables > 0)
+            yield return GameEditFormat.Count(_runsWith.Redistributables, "redistributable");
+    }
+
+    /// <summary>The rail under the cover as drawn: genres, then developers; publishers and tags follow in the same style.</summary>
+    IEnumerable<(string Title, List<string> Names)> RailSections()
+    {
+        if (_game == null)
+            yield break;
+
+        (string Singular, string Plural, IEnumerable<string>? Names)[] sections =
+        [
+            ("Genre", "Genres", _game.Genres?.Select(g => g.Name)),
+            ("Developer", "Developers", _game.Developers?.Select(d => d.Name)),
+            ("Publisher", "Publishers", _game.Publishers?.Select(p => p.Name)),
+            ("Tag", "Tags", _game.Tags?.Select(t => t.Name)),
+        ];
+
+        foreach (var (singular, plural, names) in sections)
+        {
+            var list = names?.Where(n => !string.IsNullOrWhiteSpace(n)).ToList() ?? [];
+
+            // Genres always read as a list, as in the launcher; a lone company reads as one
+            if (list.Count > 0)
+                yield return (list.Count == 1 && singular != "Genre" ? singular : plural, list);
+        }
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -375,7 +473,48 @@
               .OrderBy(m => m.SortOrder)
               .ToList();
 
-    async Task UploadMediaByType(InputFileChangeEventArgs e, MediaType type)
+    Task UploadMediaByType(InputFileChangeEventArgs e, MediaType type) =>
+        UploadFilesAsync(e.GetMultipleFiles(maximumFileCount: 50).Select(f => (f, type)).ToList());
+
+    /// <summary>Files dropped on the strip: videos by their type, anything else as screenshots.</summary>
+    Task UploadDroppedMedia(InputFileChangeEventArgs e)
+    {
+        _dragging = false;
+
+        return UploadFilesAsync(e.GetMultipleFiles(maximumFileCount: 50)
+            .Select(f => (f, f.ContentType.StartsWith("video/", StringComparison.OrdinalIgnoreCase) ? MediaType.Video : MediaType.Screenshot))
+            .ToList());
+    }
+
+    async Task UploadFilesAsync(IReadOnlyList<(IBrowserFile File, MediaType Type)> files)
+    {
+        var uploaded = new List<MediaType>();
+
+        _uploading = true;
+        await InvokeAsync(StateHasChanged);
+
+        try
+        {
+            foreach (var (file, type) in files)
+            {
+                if (await UploadFileAsync(file, type))
+                    uploaded.Add(type);
+            }
+        }
+        finally
+        {
+            _uploading = false;
+        }
+
+        await RefreshMedia();
+
+        if (uploaded.Count == 1)
+            Notifications.Success($"{uploaded[0]} uploaded!");
+        else if (uploaded.Count > 1)
+            Notifications.Success($"{uploaded.Count} files uploaded!");
+    }
+
+    async Task<bool> UploadFileAsync(IBrowserFile file, MediaType type)
     {
         var validTypes = type switch
         {
@@ -386,38 +525,35 @@
         var config = Settings.Value.Server.Media.GetMediaTypeConfig(type);
         var isSingular = type != MediaType.Screenshot && type != MediaType.Video;
 
-        foreach (var file in e.GetMultipleFiles(maximumFileCount: 50))
+        if (!validTypes.Contains(file.ContentType))
         {
-            if (!validTypes.Contains(file.ContentType))
-            {
-                Notifications.Error($"Unsupported file type: {file.Name}");
-                continue;
-            }
+            Notifications.Error($"Unsupported file type: {file.Name}");
+            return false;
+        }
 
-            if (file.Size > config.MaxFileSize)
-            {
-                Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}: {file.Name}");
-                continue;
-            }
+        if (file.Size > config.MaxFileSize)
+        {
+            Notifications.Error($"File size must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}: {file.Name}");
+            return false;
+        }
 
+        try
+        {
             // For singular types (Background, Logo, Cover), replace existing
             var existing = isSingular ? GetMedia(type) : null;
 
-            Media media;
-
             if (existing != null)
             {
-                media = existing;
-                media.MimeType = file.ContentType;
-                media.SourceUrl = "";
+                existing.MimeType = file.ContentType;
+                existing.SourceUrl = "";
 
-                MediaService.DeleteLocalMediaFile(media);
-                media = await MediaService.WriteToFileAsync(media, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+                MediaService.DeleteLocalMediaFile(existing);
+                var media = await MediaService.WriteToFileAsync(existing, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
                 await MediaService.UpdateAsync(media);
             }
             else
             {
-                media = new Media
+                var media = await MediaService.WriteToFileAsync(new Media
                 {
                     GameId = GameId,
                     Type = type,
@@ -426,14 +562,19 @@
                     StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
                     Crc32 = string.Empty,
                     SortOrder = GetNextSortOrder(type)
-                };
+                }, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
 
-                media = await MediaService.WriteToFileAsync(media, file.OpenReadStream(maxAllowedSize: config.MaxFileSize));
+                // So the next file of a batch sorts after this one
+                _media.Add(media);
             }
-        }
 
-        await RefreshMedia();
-        Notifications.Success($"{type} uploaded!");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{file.Name} could not be uploaded");
+            return false;
+        }
     }
 
     async Task SearchMediaByType(MediaType type)
@@ -448,7 +589,9 @@
         }, new DialogSettings
         {
             Size = DialogSize.Full,
+            Picker = true,
             OkText = "Select",
+            Subtitle = _game?.Title,
         });
 
         if (downloadResult == null)

@@ -70,8 +70,16 @@
 
     Expression<Func<Script, bool>> GetQueryExpression()
     {
-        if (GameId.HasValue)
-            return s => s.GameVersionId == _gameVersionId;
+        if (GameId is { } gameId && gameId != Guid.Empty)
+        {
+            // A game's scripts belong to its latest version. Scripts with no version yet (legacy
+            // rows, or ones imported before the game's versions existed) are still the game's, so
+            // include them too — matching ScriptService.GetEditorScriptsAsync, which the editor
+            // dialog's own list uses. Filtering on version alone dropped these entirely.
+            var versionId = _gameVersionId;
+
+            return s => s.GameId == gameId && (s.GameVersionId == null || s.GameVersionId == versionId);
+        }
 
         if (RedistributableId.HasValue)
             return s => s.RedistributableId == RedistributableId;
@@ -101,6 +109,8 @@
     static DialogSettings EditorSettings => new()
     {
         Size = DialogSize.Full,
+        Picker = true,
+        CompactFooter = true,
         OkText = "Save",
     };
 

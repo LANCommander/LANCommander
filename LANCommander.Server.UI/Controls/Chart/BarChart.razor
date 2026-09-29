@@ -31,12 +31,16 @@
                     <RadzenAxisTitle Text="@ValueTitle" />
                 }
             </RadzenValueAxis>
-            <RadzenCategoryAxis>
+            <RadzenCategoryAxis Formatter="FormatCategory">
                 @if (CategoryTitle != null)
                 {
                     <RadzenAxisTitle Text="@CategoryTitle" />
                 }
             </RadzenCategoryAxis>
+            @if (!Horizontal && (BarRadius != null || MaxBarWidth != null))
+            {
+                <RadzenColumnOptions Radius="BarRadius ?? 0" MaxWidth="MaxBarWidth" />
+            }
             <RadzenLegend Visible="false" />
         </RadzenChart>
     }
@@ -66,6 +70,18 @@
     /// <summary>Every bar in the primary colour instead of one colour per item.</summary>
     [Parameter] public bool SingleColor { get; set; }
 
+    /// <summary>
+    /// Columns only: rounds the top corners to this radius in pixels, as in the dashboard's
+    /// "Playtime by title" (2).
+    /// </summary>
+    [Parameter] public double? BarRadius { get; set; }
+
+    /// <summary>Columns only: the widest a column may grow in pixels, so a few items don't turn into slabs.</summary>
+    [Parameter] public double? MaxBarWidth { get; set; }
+
+    /// <summary>How category labels read on the axis, e.g. shortened so long titles don't collide.</summary>
+    [Parameter] public Func<string, string>? CategoryFormat { get; set; }
+
     /// <summary>Height in pixels.</summary>
     [Parameter] public int Height { get; set; } = 300;
 
@@ -84,6 +100,9 @@
         _fills = SingleColor ? Enumerable.Repeat(ChartPalette.Colors[0], _points.Count) : ChartPalette.For(_points.Count);
         _class = new ClassBuilder().Add("lc-chart").Add(Class).Build();
     }
+
+    string FormatCategory(object value) =>
+        CategoryFormat != null ? CategoryFormat(value?.ToString() ?? "") : value?.ToString() ?? "";
 
     string FormatValue(object value) =>
         ValueFormat != null && value is IConvertible convertible

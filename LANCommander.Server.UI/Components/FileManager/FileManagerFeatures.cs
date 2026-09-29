@@ -13,5 +13,7 @@ namespace LANCommander.Server.UI.Components
         UploadFile = 64,
         Delete = 128,
         ColumnPicker = 256,
+        /// <summary>A field in the nav row that narrows the current folder's entries by name.</summary>
+        Filter = 512,
     }
 }

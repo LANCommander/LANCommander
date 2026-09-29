@@ -56,13 +56,22 @@
             Covers = [typeof(Row), typeof(Column)],
         },
         new("SideLayout.EditPage", "A section menu beside the page it switches between, as on the game editor",
-            @<SideLayout SideWidth="180" Style="height: 260px">
+            @<SideLayout Style="height: 360px">
                 <Side>
-                    <Menu>
-                        <MenuItem Icon="IconType.Info">General</MenuItem>
-                        <MenuItem Icon="IconType.Play">Actions</MenuItem>
-                        <MenuItem Icon="IconType.Archive">Archives</MenuItem>
-                        <MenuItem Icon="IconType.Code">Scripts</MenuItem>
+                    <Menu Variant="MenuVariant.Section">
+                        <MenuGroup Title="Game">
+                            <MenuItem Href="/_fixtures/SideLayout.EditPage">General</MenuItem>
+                            <MenuItem>Preview</MenuItem>
+                            <MenuItem Count="12">Media</MenuItem>
+                        </MenuGroup>
+                        <MenuGroup Title="Content">
+                            <MenuItem Count="3">Archives</MenuItem>
+                            <MenuItem Count="0">Expansions</MenuItem>
+                        </MenuGroup>
+                        <MenuGroup Title="Behaviour">
+                            <MenuItem>Actions</MenuItem>
+                            <MenuItem Count="4">Scripts</MenuItem>
+                        </MenuGroup>
                     </Menu>
                 </Side>
                 <ChildContent>
@@ -72,7 +81,7 @@
             </SideLayout>)
         {
             Width = 640,
-            Covers = [typeof(SideLayout)],
+            Covers = [typeof(SideLayout), typeof(MenuGroup)],
         },
     ];
 }

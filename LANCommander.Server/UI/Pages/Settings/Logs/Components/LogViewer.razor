@@ -11,11 +11,7 @@
     Terminal? _terminal;
     HubConnection? _hubConnection;
 
-    TerminalOptions _options = new()
-    {
-        CursorBlink = true,
-        CursorStyle = CursorStyle.Bar,
-    };
+    TerminalOptions _options = ConsolePalette.CreateOptions();
 
     async Task OnFirstRender()
     {

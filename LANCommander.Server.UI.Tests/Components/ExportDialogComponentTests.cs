@@ -145,4 +145,97 @@ public class ExportDialogComponentTests : BUnitTestContext
         Group().Click();
         Assert.Equal(5, cut.Instance.SelectedIds.Count);
     }
+
+    /// <summary>
+    /// Seeds a game with one archive, one media item and one script — the mix a real game carries —
+    /// and returns its id. Each backing file is written so the exporters can read a size.
+    /// </summary>
+    private async Task<Guid> AddGameWithContentAsync()
+    {
+        using var scope = Fixture.Factory.RealServices.CreateScope();
+
+        var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+        var storageLocationService = scope.ServiceProvider.GetRequiredService<StorageLocationService>();
+        var archiveService = scope.ServiceProvider.GetRequiredService<ArchiveService>();
+        var scriptService = scope.ServiceProvider.GetRequiredService<ScriptService>();
+        var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
+
+        var game = await gameService.AddAsync(new Game { Title = $"Content {Guid.NewGuid():N}" });
+
+        var archiveLocation = (await storageLocationService.GetAsync(l => l.Type == StorageLocationType.Archive)).First();
+        var mediaLocation = (await storageLocationService.GetAsync(l => l.Type == StorageLocationType.Media)).First();
+
+        var archive = await archiveService.AddAsync(new Archive
+        {
+            GameId = game.Id,
+            ObjectKey = Guid.NewGuid().ToString(),
+            Version = "1.0.0",
+            StorageLocationId = archiveLocation.Id,
+        });
+        await File.WriteAllTextAsync(Path.Combine(archiveLocation.Path, archive.ObjectKey), "archive");
+
+        await scriptService.AddAsync(new Script { GameId = game.Id, Name = "Install", Contents = "x", Type = ScriptType.Install });
+
+        var media = await mediaService.AddAsync(new Media
+        {
+            GameId = game.Id,
+            FileId = Guid.NewGuid(),
+            Type = MediaType.Cover,
+            Crc32 = "00000000",
+            MimeType = "image/png",
+            StorageLocationId = mediaLocation.Id,
+        });
+        await File.WriteAllTextAsync(Path.Combine(mediaLocation.Path, media.FileId.ToString()), "img");
+
+        return game.Id;
+    }
+
+    // A game's archive, media and script each become a checked group in the tree. Regression guard for
+    // the reworked Dialog/Tree: the export dialog must keep listing what a game can export.
+    [Fact]
+    public async Task GameExportListsEveryContentTypeChecked()
+    {
+        var gameId = await AddGameWithContentAsync();
+
+        var cut = Render<ExportDialog>(parameters => parameters
+            .Add(p => p.Options, new ExportDialogOptions
+            {
+                RecordId = gameId,
+                RecordType = ImportExportRecordType.Game,
+            }));
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".lc-tree-checkbox")));
+
+        var labels = cut.FindAll(".lc-tree-node").Select(n => n.TextContent).ToList();
+
+        Assert.Contains(labels, l => l.Contains("Archives (1)"));
+        Assert.Contains(labels, l => l.Contains("Media (1)"));
+        Assert.Contains(labels, l => l.Contains("Scripts (1)"));
+
+        // Everything is checked by default, so OK exports all three
+        Assert.Equal(3, cut.Instance.SelectedIds.Count);
+        Assert.DoesNotContain("nothing to export", cut.Markup);
+    }
+
+    // Opened the way the Game edit header opens it (DialogService -> DialogFrame -> ExportDialog), the
+    // tree renders inside the frame's body slot. Guards against a dialog content-slot regression.
+    [Fact]
+    public async Task GameExportRendersInsideTheDialogFrame()
+    {
+        var gameId = await AddGameWithContentAsync();
+
+        var host = Render<ComponentHost>();
+        var page = Render<LANCommander.Server.UI.Pages.Games.Edit.General>(parameters => parameters.Add(p => p.Id, gameId));
+
+        page.WaitForAssertion(() => Assert.NotEmpty(page.FindAll(".game-general-form")), TimeSpan.FromSeconds(10));
+
+        page.FindAll("button").First(b => b.TextContent.Trim() == "Export").Click();
+
+        // The dialog is rendered by the Radzen dialog host, not the page, so assert against the host
+        host.WaitForAssertion(() =>
+        {
+            Assert.NotEmpty(host.FindAll(".lc-dialog-body .lc-tree-checkbox"));
+            Assert.DoesNotContain("nothing to export", host.Markup);
+        }, TimeSpan.FromSeconds(10));
+    }
 }

@@ -1,0 +1,87 @@
+// The game editor as drawn: a header across the section menu and the section ("Games › {title}",
+// the title, its status and a mono summary, then "Unsaved changes", Discard and Save), and the
+// General form at 900px with 18px between rows and 14px between the fields of a pair.
+// The form, switch, link and "Unsaved changes" styles are shared with the server editor (_edit-form.scss).
+
+@use 'edit-form';
+
+// ── Header ──────────────────────────────────────────────────────
+.game-edit-header {
+    padding: 18px var(--lc-layout-gutter) 16px;
+
+    .lc-page-header-title-row {
+        gap: 14px;
+    }
+
+    .lc-page-header-tags {
+        gap: 14px;
+    }
+
+    .lc-page-header-extra {
+        gap: 14px;
+    }
+}
+
+// A section below the game (Preview, Archives...): a step lighter, with the game in the breadcrumb
+.game-edit-header-section {
+    padding: 16px var(--lc-layout-gutter) 14px;
+
+    .lc-page-header-breadcrumb {
+        margin-bottom: 8px;
+    }
+
+    .lc-page-header-title {
+        font-size: 21px;
+    }
+}
+
+.game-edit-header-summary {
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.game-edit-unsaved {
+    @include edit-form.unsaved;
+}
+
+.game-edit-unsaved-dot {
+    @include edit-form.unsaved-dot;
+}
+
+// A section that draws its own surface edge to edge, e.g. Preview
+.game-edit-content-bleed {
+    padding: 0;
+}
+
+// ── General ─────────────────────────────────────────────────────
+.game-general-content {
+    @include edit-form.content;
+}
+
+.game-general-form {
+    // Overrides the 24px pair gap in _games.scss
+    @include edit-form.form('.game-form-pair', '.game-general-divider');
+
+    .game-general-date input {
+        font-family: var(--lc-font-mono);
+    }
+
+    .game-general-description {
+        height: 96px;
+        min-height: 96px;
+        padding: 10px 12px;
+        font-size: 14px;
+        line-height: 1.55;
+        resize: vertical;
+    }
+}
+
+.game-general-link {
+    @include edit-form.link;
+}
+
+.game-general-switch {
+    @include edit-form.switch('.game-general-switch-title', '.game-general-switch-help');
+}

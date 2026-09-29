@@ -1,0 +1,18 @@
+// CodeInput's chrome beyond what a Monaco theme can say (EditorPalette has the colours): a hairline
+// down the gutter, and an accent edge on the current line.
+
+.lc-code-input .monaco-editor {
+    .margin {
+        box-shadow: inset -1px 0 0 rgba(255, 255, 255, 0.07);
+    }
+
+    // The theme fills the line; the border is only settable as all four sides, so it is drawn here
+    .view-overlays .current-line {
+        border: 0;
+        border-inline-start: 2px solid rgba(64, 150, 255, 0.55);
+    }
+
+    .margin-view-overlays .current-line-margin {
+        border: 0;
+    }
+}

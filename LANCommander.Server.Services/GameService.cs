@@ -242,6 +242,26 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
+        /// <summary>
+        /// Ids of games hidden from launcher users (<see cref="Game.Published"/> is false).
+        /// Cached under the "Games" tag, so any game change invalidates it.
+        /// </summary>
+        public async Task<IReadOnlySet<Guid>> GetUnpublishedGameIdsAsync()
+        {
+            var ids = await cache.GetOrSetAsync<List<Guid>>("Games/Unpublished", async _ =>
+            {
+                using var context = await contextFactory.CreateDbContextAsync();
+
+                return await context.Set<Game>()
+                    .AsNoTracking()
+                    .Where(g => !g.Published)
+                    .Select(g => g.Id)
+                    .ToListAsync();
+            }, TimeSpan.MaxValue, tags: ["Games"]);
+
+            return ids.ToHashSet();
+        }
+
         public async Task<string> GetRedistributableOptionsAsync(Guid gameId, Guid redistributableId)
         {
             using var context = await contextFactory.CreateDbContextAsync();

@@ -26,6 +26,9 @@ namespace LANCommander.Server.UI.Components
             ZipArchiveEntries = task.Result;
         }
 
+        /// <summary>How many entries, files and folders, the archive holds.</summary>
+        public int EntryCount => ZipArchiveEntries.Count();
+
         public FileManagerDirectory CreateDirectory(string name)
         {
             throw new NotImplementedException();

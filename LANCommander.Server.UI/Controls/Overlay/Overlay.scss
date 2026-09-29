@@ -9,10 +9,10 @@
     gap: 12px;
     max-width: 280px;
     padding: 12px;
-    border: 1px solid var(--lc-border-subtle-color);
-    border-radius: var(--rz-border-radius);
-    background: var(--rz-panel-background-color);
-    box-shadow: var(--rz-card-shadow);
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-popover);
+    box-shadow: var(--lc-shadow-popover);
 
     .lc-popconfirm-message {
         display: flex;
@@ -23,7 +23,7 @@
         flex-shrink: 0;
         margin-top: 0.15em;
         font-size: 1.15em;
-        color: var(--rz-warning);
+        color: var(--lc-warning-text-color);
     }
 
     .lc-popconfirm-title {
@@ -49,10 +49,10 @@
 
 .lc-popover,
 .lc-dropdown {
-    border: 1px solid var(--lc-border-subtle-color);
-    border-radius: var(--rz-border-radius);
-    background: var(--rz-panel-background-color);
-    box-shadow: var(--rz-card-shadow);
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-popover);
+    box-shadow: var(--lc-shadow-popover);
 }
 
 .lc-popover {
@@ -65,11 +65,64 @@
     }
 }
 
+// Dropdown menus: 32px items in secondary text on Popover; hover is a solid Pressed fill that
+// brightens the text, and dividers inset 8px. Scoped here so the sidebar's metrics don't leak in.
 .lc-dropdown {
     min-width: 180px;
-    padding: 4px;
+    padding: 5px;
+
+    .lc-menu-list {
+        display: flex;
+        flex-direction: column;
+    }
 
     .lc-menu-item-content {
-        padding: 6px 12px;
+        gap: 10px;
+        height: 32px;
+        padding: 0 10px;
+        border-radius: var(--lc-radius-sm);
+        box-shadow: none;
+        color: var(--rz-text-secondary-color);
+        font-size: 13px;
+        font-weight: 400;
+
+        &:hover {
+            background: var(--lc-pressed-background);
+            color: var(--rz-text-title-color);
+        }
+    }
+
+    .lc-menu-item-icon {
+        font-size: 15px;
+    }
+
+    .lc-menu-item-active,
+    .lc-menu-item-active:hover {
+        background: var(--lc-pressed-background);
+        box-shadow: none;
+        color: var(--rz-text-title-color);
+    }
+
+    .lc-menu-item-danger .lc-menu-item-content {
+        color: var(--lc-danger-text-color);
+
+        &:hover {
+            color: var(--lc-danger-text-color);
+        }
+    }
+
+    .lc-menu-item-disabled .lc-menu-item-content {
+        color: var(--lc-text-disabled-color);
+
+        &:hover {
+            background: transparent;
+            color: var(--lc-text-disabled-color);
+        }
+    }
+
+    .lc-menu-divider {
+        height: 1px;
+        margin: 5px 8px;
+        background: var(--lc-border-color);
     }
 }

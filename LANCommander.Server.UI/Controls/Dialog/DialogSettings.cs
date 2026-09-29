@@ -1,3 +1,5 @@
+using Microsoft.AspNetCore.Components;
+
 namespace LANCommander.Server.UI.Controls;
 
 public enum DialogSize
@@ -35,7 +37,35 @@ public sealed record DialogSettings
     /// <summary>Prevents closing through the close button or Escape, for work that must finish.</summary>
     public bool NotClosable { get; init; }
 
-    internal string Width => Size switch
+    /// <summary>
+    /// Rendered in the title bar after the title: chips (<c>&lt;Tag Caps&gt;Cover&lt;/Tag&gt;</c>), a
+    /// name, a status. Content that follows the dialog's own state belongs in its
+    /// <see cref="Dialog{TOptions,TResult}.TitleContent"/> instead, which re-renders with it.
+    /// </summary>
+    public RenderFragment? TitleContent { get; init; }
+
+    /// <summary>Muted text at the end of the title, e.g. the game the dialog edits.</summary>
+    public string? Subtitle { get; init; }
+
+    /// <summary>Sets <see cref="Subtitle"/> in 12px mono, for paths, sizes and counts.</summary>
+    public bool MonoSubtitle { get; init; }
+
+    /// <summary>A 12px note at the start of the footer, beside the buttons, e.g. what OK will do.</summary>
+    public string? FooterNote { get; init; }
+
+    /// <summary>
+    /// A full-screen picker or editor (media, files, scripts): the window is inset 20px from the
+    /// viewport whatever <see cref="Size"/> says, the body has no padding so the dialog's own
+    /// toolbars run edge to edge, and the footer is a 56px well with 34px buttons.
+    /// </summary>
+    public bool Picker { get; init; }
+
+    /// <summary>With <see cref="Picker"/>: a 48px footer, for editors whose status bar shares it.</summary>
+    public bool CompactFooter { get; init; }
+
+    internal string? Height => Picker ? "calc(100vh - 40px)" : null;
+
+    internal string Width => Picker ? "calc(100vw - 40px)" : Size switch
     {
         DialogSize.Small => "400px",
         DialogSize.Large => "800px",

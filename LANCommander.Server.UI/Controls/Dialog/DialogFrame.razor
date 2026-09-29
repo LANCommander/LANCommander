@@ -21,6 +21,11 @@
     @if (!Settings.NoFooter)
     {
         <div class="lc-dialog-footer">
+            @if (!String.IsNullOrEmpty(Settings.FooterNote))
+            {
+                <span class="lc-dialog-footer-note">@Settings.FooterNote</span>
+            }
+            <DialogFooterSlot @ref="_footerSlot" Content="() => Dialog?.FooterContentInternal" />
             @if (!Settings.NoCancel)
             {
                 <Button Disabled="_busy" OnClick="CancelAsync">@Settings.CancelText</Button>
@@ -38,7 +43,11 @@
     /// <summary>Opened as a side drawer rather than a centred window.</summary>
     [Parameter] public bool Drawer { get; set; }
 
+    /// <summary>The title bar's link back to this frame, when the service rendered one.</summary>
+    [Parameter] public DialogTitleState? TitleState { get; set; }
+
     DynamicComponent? _content;
+    DialogFooterSlot? _footerSlot;
     Dictionary<string, object?> _parameters = new();
     string? _error;
     bool _busy;
@@ -49,6 +58,9 @@
     protected override void OnParametersSet()
     {
         _parameters = new Dictionary<string, object?> { [nameof(Dialog<TOptions, TResult>.Options)] = Options };
+
+        if (TitleState != null)
+            TitleState.DialogContent = () => Dialog?.TitleContentInternal;
     }
 
     public async Task ConfirmAsync()
@@ -89,6 +101,10 @@
 
     public void ContentRendered()
     {
+        // The slots re-render alone, so this never loops back into the content
+        _footerSlot?.Refresh();
+        TitleState?.Refresh?.Invoke();
+
         var canConfirm = Dialog?.CanConfirmInternal ?? true;
 
         // Only re-render on change: re-rendering the frame re-renders the content, which calls back here

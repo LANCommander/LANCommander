@@ -516,6 +516,15 @@ export function getScriptTemplate(scriptType: string): string | null {
 
 const allKnownVarNames = new Set(variables.map((v) => v.name));
 
+/** Errors the validator marked across the open PowerShell models, for a status bar. */
+export function getProblemCount(): number {
+    if (typeof monaco === "undefined") return 0;
+
+    return monaco.editor.getModelMarkers({ owner: "LANCommander" })
+        .filter((m: any) => m.severity === monaco.MarkerSeverity.Error)
+        .length;
+}
+
 export function validateScript(): void {
     if (typeof monaco === "undefined") return;
 

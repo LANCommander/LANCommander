@@ -56,7 +56,13 @@ public static class LibraryEndpoints
                     TimeSpan.MaxValue,
                     tags: ["Games"]);
 
-                var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+                // The "Games" cache entry is shared with /api/Games and holds every game, so hidden
+                // (unpublished) games are filtered out here rather than in the factory.
+                var unpublishedIds = await gameService.GetUnpublishedGameIdsAsync();
+
+                var ordered = games
+                    .Where(g => !unpublishedIds.Contains(g.Id))
+                    .OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
                 return TypedResults.Ok(ordered.Select(sdkMapper.ToEntityReference));
             }
@@ -81,7 +87,7 @@ public static class LibraryEndpoints
                     var games = await databaseContext.Games
                         .AsNoTracking()
                         .AsSplitQuery()
-                        .Where(g => libraryGameIds.Contains(g.Id))
+                        .Where(g => libraryGameIds.Contains(g.Id) && g.Published)
                         .ToListAsync();
 
                     var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
@@ -187,9 +193,10 @@ public static class LibraryEndpoints
             .AsNoTracking()
             .AsSplitQuery();
 
+        // Unpublished games are hidden from launcher users, even when already in their library.
         var games = libraryGameIds is null
-            ? await query.GetAsync()
-            : await query.GetAsync(g => libraryGameIds.Contains(g.Id));
+            ? await query.GetAsync(g => g.Published)
+            : await query.GetAsync(g => g.Published && libraryGameIds.Contains(g.Id));
 
         return games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
     }

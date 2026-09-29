@@ -30,27 +30,40 @@ public partial class Terminal : Xterm
         await base.OnAfterRenderAsync(firstRender);
         
         if (firstRender)
+        {
+            await ApplyLineHeightAsync();
             await FitAsync();
+        }
     }
 
     /// <summary>
-    /// Write a line to the terminal with a specified log level
+    /// The consoles' 19px lines on 12px text. xterm takes the line height as a multiple, which
+    /// XtermBlazor types as a whole number, so it is set through the module instead.
     /// </summary>
-    /// <param name="message">Message to send</param>
-    /// <param name="level">LogLevel to write</param>
-    public async Task WriteLine(string message, LogLevel level = LogLevel.Information)
+    async Task ApplyLineHeightAsync()
     {
-        var code = level switch
+        if (_interop == null)
+            return;
+
+        try
         {
-            LogLevel.Error => 31,
-            LogLevel.Warning => 33,
-            LogLevel.Debug => 37,
-            LogLevel.Trace => 36,
-            LogLevel.Information => 37,
-            _ => 37,
-        };
-        
-        await base.WriteLine($"\x1b[0;{code}m{message}");
+            await _interop.InvokeVoidAsync("SetOption", Id, "lineHeight", ConsolePalette.LineHeight);
+        }
+        catch (JSException)
+        {
+            // A stale bundle without SetOption keeps xterm's own line height
+        }
+    }
+
+    /// <summary>Writes a line coloured for its log level; see <see cref="ConsolePalette"/>.</summary>
+    public Task WriteLine(string message, LogLevel level = LogLevel.Information) =>
+        WriteLine(message, ConsolePalette.KindOf(level));
+
+    /// <summary>Writes a line coloured for what it is, e.g. a warning, or the runner's own messages.</summary>
+    public async Task WriteLine(string message, ConsoleLineKind kind)
+    {
+        foreach (var line in ConsolePalette.Format(message, kind))
+            await base.WriteLine(line);
     }
 
     /// <summary>

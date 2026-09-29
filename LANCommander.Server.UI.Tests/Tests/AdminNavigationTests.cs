@@ -42,10 +42,12 @@ public class AdminNavigationTests : IAsyncLifetime
         var dashboard = new AdminDashboardPage(_page);
         Assert.True(await dashboard.IsDisplayedAsync());
 
-        // Dashboard should show playtime charts
-        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Player)")).ToBeVisibleAsync();
-        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Game)")).ToBeVisibleAsync();
-        await Assertions.Expect(_page.GetByText("Top Average Session Length (By Game)")).ToBeVisibleAsync();
+        // Dashboard should show the range chart, the sessions panel and the all-time playtime charts
+        await Assertions.Expect(_page.GetByText("Playtime by title", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Active sessions", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Playtime by player", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Share of playtime", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Average session length", new() { Exact = true })).ToBeVisibleAsync();
     }
 
     [Fact]

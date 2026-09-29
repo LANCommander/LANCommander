@@ -49,5 +49,40 @@ namespace LANCommander.Server.Services.Abstractions
             MediaType type, string keywords, string? grabberName, string? subProvider, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
             => SearchStreamAsync(type, keywords, page, cancellationToken);
+
+        /// <summary>The grabbers a search for <paramref name="type"/> asks, known before any answers.</summary>
+        IEnumerable<string> GetGrabberNames(MediaType type) =>
+            SupportedMediaTypes.Contains(type) ? [Name] : [];
+
+        /// <summary>
+        /// Like <see cref="SearchStreamAsync(MediaType,string,string?,string?,int,CancellationToken)"/>,
+        /// but each grabber searched answers exactly once, as it finishes, even with no results or an
+        /// error; so a caller can show which grabbers are still searching.
+        /// </summary>
+        async IAsyncEnumerable<MediaGrabberBatch> SearchBatchesAsync(
+            MediaType type, string keywords, string? grabberName, string? subProvider, int page,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
+            if (!SupportedMediaTypes.Contains(type) || (!string.IsNullOrEmpty(grabberName) && grabberName != Name))
+                yield break;
+
+            MediaGrabberBatch batch;
+
+            try
+            {
+                var results = (await SearchAsync(type, keywords, subProvider, page)).ToList();
+
+                foreach (var result in results)
+                    result.GrabberName = Name;
+
+                batch = new MediaGrabberBatch { GrabberName = Name, Results = results };
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                batch = new MediaGrabberBatch { GrabberName = Name, Error = ex.Message };
+            }
+
+            yield return batch;
+        }
     }
 }

@@ -2,3 +2,48 @@
 
 @* Emits the script the Controls depend on. Place at the end of <body>, after blazor.web.js. *@
 <script src="_content/Radzen.Blazor/Radzen.Blazor.js?v=@Uri.EscapeDataString(UIAssets.Version)"></script>
+<script>
+    // Radzen positions a popup from a rect it measures *before* moving the element to <body>. A menu
+    // nested in a table row (a Dropdown/context menu) can be measured narrower than it ends up, so
+    // Radzen's own edge clamp misses it and the panel spills off the right or bottom of the viewport.
+    // Re-clamp smart-positioned popups (position-less: menus, dropdowns, selects, column pickers) once
+    // they are placed. Tooltips and explicitly-placed popups pass a position and keep their placement.
+    (function () {
+        function clamp(id) {
+            var popup = document.getElementById(id);
+            if (!popup || popup.style.display === 'none' || !popup.classList.contains('rz-open')) return;
+            var scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft || 0;
+            var scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
+            var rect = popup.getBoundingClientRect();
+            if (rect.width < window.innerWidth) {
+                if (rect.right > window.innerWidth)
+                    popup.style.left = Math.max(0, window.innerWidth - rect.width) + scrollLeft + 'px';
+                else if (rect.left < 0)
+                    popup.style.left = scrollLeft + 'px';
+            }
+            if (rect.height < window.innerHeight) {
+                if (rect.bottom > window.innerHeight)
+                    popup.style.top = Math.max(0, window.innerHeight - rect.height) + scrollTop + 'px';
+                else if (rect.top < 0)
+                    popup.style.top = scrollTop + 'px';
+            }
+        }
+        function patch() {
+            var R = window.Radzen;
+            if (!R || typeof R.openPopup !== 'function' || R.__lcClampPatched) return !!(R && R.__lcClampPatched);
+            var original = R.openPopup;
+            R.openPopup = function (parent, id, syncWidth, position) {
+                var result = original.apply(this, arguments);
+                if (!position) { try { clamp(id); } catch (e) { } }
+                return result;
+            };
+            R.__lcClampPatched = true;
+            return true;
+        }
+        // Radzen.Blazor.js is a synchronous script above, so it has usually run already; guard anyway.
+        if (!patch()) {
+            var tries = 0;
+            var iv = setInterval(function () { if (patch() || ++tries > 100) clearInterval(iv); }, 30);
+        }
+    })();
+</script>

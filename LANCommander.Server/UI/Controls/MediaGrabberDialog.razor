@@ -10,127 +10,161 @@
 @*
     Searches the media grabbers for art or videos of a game, grouped by where they came from, and
     downloads the one (or, with MultiSelect, several) the user picks. Double-clicking picks at once.
+    Every grabber searched answers once, so each shows as searching until its batch lands.
+    Open it with DialogSettings.Picker; the chips in the title come from the options.
 *@
 <div class="media-grabber">
-    <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Gap="Gap.Medium" Wrap Class="media-grabber-toolbar">
-        <Flex Gap="Gap.Small" Wrap>
-            <TextInput @bind-Value="_search" Icon="IconType.MagnifyingGlass" OnEnter="() => GetResultsAsync()" Style="min-width: 240px" />
-            <Select TValue="string" Items="_providerItems" Value="_selectedProvider" ValueChanged="OnProviderChangedAsync" Style="min-width: 180px" />
-            @if (_subProviderItems.Any())
-            {
-                <Select TValue="string" Items="_subProviderItems" Value="_selectedSubProvider" ValueChanged="OnSubProviderChangedAsync" Style="min-width: 180px" />
-            }
-        </Flex>
+    <div class="media-grabber-toolbar">
+        <span class="media-grabber-search">
+            <TextInput @bind-Value="_search" Small Icon="IconType.MagnifyingGlass" OnEnter="() => GetResultsAsync()" Placeholder="Search" aria-label="Search media" />
+            <kbd class="media-grabber-search-key" title="Press Enter to search">↵</kbd>
+        </span>
 
-        <Flex Align="Align.Center" Gap="Gap.Small" Style="min-width: 200px">
-            <Icon Type="IconType.MagnifyingGlassMinus" />
-            <Slider TValue="double" @bind-Value="_size" Min="50" Max="400" aria-label="Thumbnail size" />
-            <Icon Type="IconType.MagnifyingGlassPlus" />
-        </Flex>
-    </Flex>
+        <span class="media-grabber-select media-grabber-select-icon">
+            <Icon Type="@(_selectedProvider == AllProviders ? IconType.ListBullets : IconType.Cube)" Class="media-grabber-select-glyph" />
+            <Select TValue="string" Items="_providerItems" Value="_selectedProvider" ValueChanged="OnProviderChangedAsync" aria-label="Provider" />
+        </span>
 
-    @if (_preview != null)
-    {
-        <div class="media-grabber-preview">
-            <div class="media-grabber-preview__player">
-                @if (IsYouTubeUrl(_preview.SourceUrl))
+        @if (_subProviderItems.Any())
+        {
+            <span class="media-grabber-select media-grabber-select-sub">
+                <Select TValue="string" Items="_subProviderItems" Value="_selectedSubProvider" ValueChanged="OnSubProviderChangedAsync" aria-label="Source" />
+            </span>
+        }
+
+        <span class="media-grabber-toolbar-spacer"></span>
+
+        <Icon Type="IconType.MagnifyingGlassMinus" Class="media-grabber-size-icon" />
+        <Slider TValue="double" @bind-Value="_size" Min="80" Max="400" Class="media-grabber-size" aria-label="Thumbnail size" />
+        <Icon Type="IconType.MagnifyingGlassPlus" Class="media-grabber-size-icon" />
+        <span class="media-grabber-size-value">@($"{_size:0}px")</span>
+    </div>
+
+    <div class="media-grabber-results">
+        @if (_preview != null)
+        {
+            <div class="media-grabber-preview">
+                <div class="media-grabber-preview__player">
+                    @if (IsYouTubeUrl(_preview.SourceUrl))
+                    {
+                        <iframe src="@GetYouTubeEmbedUrl(_preview.SourceUrl)"
+                                title="@(_preview.Name ?? "Video preview")"
+                                frameborder="0"
+                                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                                allowfullscreen></iframe>
+                    }
+                    else
+                    {
+                        <video src="@_preview.SourceUrl" controls autoplay></video>
+                        @if (!String.IsNullOrWhiteSpace(_preview.Name))
+                        {
+                            <span class="media-grabber-preview__title">@_preview.Name</span>
+                        }
+                    }
+                </div>
+                <button type="button" class="media-grabber-preview__close" aria-label="Close preview" @onclick="() => _preview = null"><Icon Type="IconType.X" /></button>
+            </div>
+        }
+
+        @foreach (var group in _groupedResults)
+        {
+            var groupId = GroupId(group);
+            var selectedCount = group.Results.Count(IsSelected);
+
+            <section class="media-grabber-group" aria-label="@($"{group.Group} via {group.GrabberName}")">
+                <div class="media-grabber-group-header">
+                    <h2>@group.Group</h2>
+                    <span class="media-grabber-group-source">via @Via(group.GrabberName)</span>
+                    <span class="media-grabber-group-spacer"></span>
+                    @if (_loadingGroupId == groupId)
+                    {
+                        <span class="media-grabber-searching"><Spinner />Searching @group.GrabberName</span>
+                    }
+                    else
+                    {
+                        <span class="media-grabber-group-count">@(_multiSelect ? $"{selectedCount} of {group.Results.Count}" : group.Results.Count.ToString())</span>
+                        @if (_multiSelect && group.Results.Any())
+                        {
+                            <Button ExtraSmall OnClick="() => ToggleSelectAll(group)">@(AllSelected(group) ? "Deselect all" : "Select all")</Button>
+                        }
+                        @if (CanLoadMore(group))
+                        {
+                            <Button ExtraSmall Disabled="@(_loadingGroupId != null)" OnClick="() => LoadMoreAsync(group)">Load more</Button>
+                        }
+                    }
+                </div>
+
+                @if (_type == MediaType.Video)
                 {
-                    <iframe src="@GetYouTubeEmbedUrl(_preview.SourceUrl)"
-                            frameborder="0"
-                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                            allowfullscreen></iframe>
+                    <div class="media-picker">
+                        <div class="media-picker-items">
+                            @foreach (var result in group.Results)
+                            {
+                                var id = InputId(result);
+                                var selected = IsSelected(result);
+
+                                <div class="@(selected ? "media-picker-result media-picker-result-selected" : "media-picker-result")" @key="result.UniqueKey">
+                                    <div class="media-picker-item" data-type="video" style="width: @(_size)px">
+                                        @if (_multiSelect)
+                                        {
+                                            <input type="checkbox" id="@id" checked="@selected" aria-label="@(result.Name ?? result.Id)" @onchange="() => Select(result)" />
+                                        }
+                                        else
+                                        {
+                                            <input type="radio" id="@id" checked="@selected" name="media-grabber-result" aria-label="@(result.Name ?? result.Id)" @onchange="() => Select(result)" />
+                                        }
+                                        <label for="@id" @ondblclick="() => PickAsync(result)"></label>
+                                        <img src="@result.ThumbnailUrl" alt="" loading="lazy" />
+                                        <span class="@(_multiSelect ? "media-picker-check media-picker-check-box" : "media-picker-check")" aria-hidden="true"><Icon Type="IconType.Check" Bold /></span>
+                                        <button type="button" class="media-picker-play" title="Preview" aria-label="Preview" @onclick="() => PreviewVideo(result)" @onclick:stopPropagation="true"><Icon Type="IconType.Play" Fill /></button>
+                                        @if (result.Duration is { } duration)
+                                        {
+                                            <span class="media-picker-duration">@FormatDuration(duration)</span>
+                                        }
+                                    </div>
+                                    <div class="media-picker-caption" style="width: @(_size)px">
+                                        <span class="media-picker-name" title="@result.Name">@(result.Name ?? result.Id)</span>
+                                        <span class="media-picker-mime">@VideoMeta(result)</span>
+                                    </div>
+                                </div>
+                            }
+                        </div>
+                    </div>
                 }
                 else
                 {
-                    <video src="@_preview.SourceUrl" controls autoplay></video>
+                    <ImagePicker Size="_size"
+                                 Aspect="@ImageAspect(_type)"
+                                 Contain="@(_type is MediaType.Logo or MediaType.Icon)"
+                                 MultiSelect="_multiSelect"
+                                 Value="@_selected?.UniqueKey"
+                                 SelectedValues="_selectedKeys"
+                                 SelectedValuesChanged="keys => _selectedKeys = keys"
+                                 Images="@group.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)"
+                                 ValueChanged="key => _selected = Find(key)"
+                                 OnPicked="key => PickAsync(Find(key))" />
                 }
-            </div>
-            <Button Text Icon="IconType.X" Class="media-grabber-preview__close" aria-label="Close preview" OnClick="() => _preview = null" />
-        </div>
-    }
+            </section>
+        }
 
-    @if (_loading && !_groupedResults.Any())
-    {
-        <div class="media-grabber-loading"><Spin Tip="Searching" /></div>
-    }
-
-    @foreach (var group in _groupedResults)
-    {
-        <div class="media-grabber-group">
-            <div class="media-grabber-group-header">
-                <div class="media-grabber-group-title">
-                    <h2>@group.Group</h2>
-                    <span class="media-grabber-group-source">via @group.GrabberName</span>
+        @* Grabbers still searching get their own header, so a slow one is never mistaken for an empty one *@
+        @foreach (var provider in PendingProviders)
+        {
+            <section class="media-grabber-group media-grabber-group-pending" aria-busy="true">
+                <div class="media-grabber-group-header">
+                    <h2>@_searchedFor</h2>
+                    <span class="media-grabber-group-source">via @Via(provider)</span>
+                    <span class="media-grabber-group-spacer"></span>
+                    <span class="media-grabber-searching" role="status"><Spinner />Searching @provider</span>
                 </div>
-                @if (_multiSelect && group.Results.Any())
-                {
-                    <Button Small OnClick="() => ToggleSelectAll(group)">@(AllSelected(group) ? "Deselect all" : "Select all")</Button>
-                }
-            </div>
+            </section>
+        }
 
-            @if (_type == MediaType.Video)
-            {
-                <div class="media-picker">
-                    <div class="media-picker-items">
-                        @foreach (var result in group.Results)
-                        {
-                            var id = result.UniqueKey.GetHashCode();
-
-                            <div class="media-picker-item" data-type="video" style="width: @(_size)px">
-                                @if (_multiSelect)
-                                {
-                                    <input type="checkbox" id="media-picker-item-@id" checked="@(_selectedKeys.Contains(result.UniqueKey))" @onchange="() => Select(result)" />
-                                }
-                                else
-                                {
-                                    <input type="radio" id="media-picker-item-@id" checked="@(_selected == result)" name="SelectedResult" @onchange="() => Select(result)" />
-                                }
-                                <label for="media-picker-item-@id" @ondblclick="() => PickAsync(result)"></label>
-                                <img src="@result.ThumbnailUrl" alt="" />
-                                <button type="button" class="media-picker-play" title="Preview" @onclick="() => PreviewVideo(result)" @onclick:stopPropagation="true"></button>
-                            </div>
-                        }
-                    </div>
-                </div>
-            }
-            else
-            {
-                <ImagePicker Size="_size"
-                             MultiSelect="_multiSelect"
-                             SelectedValues="_selectedKeys"
-                             SelectedValuesChanged="keys => _selectedKeys = keys"
-                             Images="@group.Results.ToDictionary(r => r.UniqueKey, r => r.ThumbnailUrl)"
-                             ValueChanged="key => _selected = Find(key)"
-                             OnPicked="key => PickAsync(Find(key))" />
-            }
-
-            @if (CanLoadMore(group))
-            {
-                <div class="media-grabber-load-more">
-                    <Button Small Loading="@(_loadingGroupId == GroupId(group))" Disabled="@(_loadingGroupId != null)" OnClick="() => LoadMoreAsync(group)">Load more</Button>
-                </div>
-            }
-        </div>
-    }
-
-    @if (_loading && _groupedResults.Any())
-    {
-        <div class="media-grabber-loading-more"><Spin Small /></div>
-    }
-
-    @if (!_groupedResults.Any() && !_loading)
-    {
-        <Empty Description="@($"No results for \"{_search}\"")" />
-    }
-
-    @if (_downloading)
-    {
-        <div class="media-grabber-downloading">
-            <Spin />
-            <span>@_downloadStatus</span>
-            <Progress Small Value="_downloadPercent" Style="width: 60%" />
-        </div>
-    }
+        @if (!_groupedResults.Any() && !PendingProviders.Any() && !_loading)
+        {
+            <Empty Title="No results" Description="@(String.IsNullOrWhiteSpace(_search) ? "Type a title to search for." : $"None of the providers found anything for \"{_search}\".")" Icon="IconType.MagnifyingGlass" />
+        }
+    </div>
 </div>
 
 @code {
@@ -143,17 +177,88 @@
 
     MediaType _type;
     string? _search;
+    string? _searchedFor;
     bool _multiSelect;
 
     MediaGrabberResult? _selected;
     MediaGrabberResult? _preview;
     HashSet<string> _selectedKeys = new();
 
-    double _size = 200;
+    double _size = 160;
     bool _loading = true;
     bool _downloading;
     double _downloadPercent;
-    string _downloadStatus = "Downloading...";
+    long _bytesTransferred;
+    long? _totalBytes;
+    string _downloadStatus = "Downloading";
+
+    // The grabbers the current search asked, and which of them have answered
+    List<string> _providers = [];
+    readonly HashSet<string> _answered = new();
+
+    IEnumerable<string> PendingProviders => _providers.Where(p => !_answered.Contains(p));
+
+    /// <summary>The type of media and, when several can be picked, that too.</summary>
+    protected override RenderFragment TitleContent => @<text>
+        <Tag Caps>@Options.Type.ToString()</Tag>
+        @if (Options.MultiSelect)
+        {
+            <Tag Caps Primary>Multi-select</Tag>
+        }
+    </text>;
+
+    /// <summary>
+    /// While downloading: what, how far, and how much, so the picks stay visible above. Otherwise
+    /// what is picked, how the search went, and that a double-click picks.
+    /// </summary>
+    protected override RenderFragment FooterContent => _downloading
+        ? @<div class="media-grabber-footer" role="status">
+              <Spinner />
+              <span class="media-grabber-footer-status">@_downloadStatus</span>
+              <Progress Small NoValue OnWell Value="_downloadPercent" Class="media-grabber-footer-progress" />
+              <span class="media-grabber-footer-bytes">@DownloadText()</span>
+              <span class="media-grabber-footer-spacer"></span>
+              <span class="media-grabber-footer-selected">@SelectedCount selected</span>
+          </div>
+        : @<div class="media-grabber-footer">
+              <span class="media-grabber-footer-selected">@SelectedCount selected</span>
+              <span class="media-grabber-footer-summary">@_allResults.Count @(_allResults.Count == 1 ? "result" : "results") · @_answered.Count(_providers.Contains) of @_providers.Count @(_providers.Count == 1 ? "provider" : "providers") answered</span>
+              <span class="media-grabber-footer-hint">Double-click a thumbnail to pick it straight away</span>
+          </div>;
+
+    int SelectedCount => _multiSelect ? _selectedKeys.Count : _selected != null ? 1 : 0;
+
+    string DownloadText()
+    {
+        var percent = $"{_downloadPercent:0}%";
+
+        // yt-dlp reports a percentage as bytes of 100; there are no real sizes to show
+        if (_totalBytes is null or <= 100)
+            return percent;
+
+        return $"{percent} · {ByteSizeLib.ByteSize.FromBytes(_bytesTransferred).ToString("0.0")} of {ByteSizeLib.ByteSize.FromBytes(_totalBytes.Value).ToString("0.0")}";
+    }
+
+    static string FormatDuration(TimeSpan duration) =>
+        duration.TotalHours >= 1 ? duration.ToString(@"h\:mm\:ss") : duration.ToString(@"m\:ss");
+
+    /// <summary>The container and, where the grabber knows it, the resolution: "mp4 · 1080p".</summary>
+    static string VideoMeta(MediaGrabberResult result)
+    {
+        var container = result.MimeType?.Split('/').LastOrDefault();
+
+        return String.Join(" · ", new[] { container, result.Resolution }.Where(s => !String.IsNullOrWhiteSpace(s)));
+    }
+
+    /// <summary>How each kind of art is cropped in its tile, as a CSS aspect ratio.</summary>
+    static string ImageAspect(MediaType type) => type switch
+    {
+        MediaType.Cover => "2 / 3",
+        MediaType.Icon => "1 / 1",
+        MediaType.Grid => "460 / 215",
+        MediaType.Manual => "3 / 4",
+        _ => "16 / 9",
+    };
 
     CancellationTokenSource? _searchCts;
     readonly List<MediaGrabberResult> _allResults = new();
@@ -179,8 +284,14 @@
         _type = Options.Type;
         _search = Options.Search;
         _multiSelect = Options.MultiSelect;
+        _size = _type == MediaType.Video ? 240 : 160;
 
-        _providerItems = new[] { AllProviders }.Concat(MediaGrabberService.GetGrabberNames()).ToSelectItems(p => p, p => p).ToList();
+        var providers = MediaGrabberService.GetGrabberNames(_type).ToList();
+
+        _providerItems = new[] { new SelectItem<string>(AllProviders, "All providers") }
+            .Concat(providers.Select(p => new SelectItem<string>(p, p)))
+            .ToList();
+
         _pagingProviders = MediaGrabberService.GetPagingGrabberNames().ToHashSet();
     }
 
@@ -195,6 +306,21 @@
     }
 
     MediaGrabberResult? Find(string key) => _allResults.FirstOrDefault(r => r.UniqueKey == key);
+
+    bool IsSelected(MediaGrabberResult result) =>
+        _multiSelect ? _selectedKeys.Contains(result.UniqueKey) : _selected?.UniqueKey == result.UniqueKey;
+
+    string InputId(MediaGrabberResult result) => $"media-grabber-result-{_allResults.IndexOf(result)}";
+
+    /// <summary>Where a group came from, with the source inside the provider when one is chosen.</summary>
+    string Via(string grabberName)
+    {
+        var sub = grabberName == _selectedProvider && _selectedSubProvider != null
+            ? _subProviderItems.FirstOrDefault(i => i.Value == _selectedSubProvider)?.Label
+            : null;
+
+        return sub == null ? grabberName : $"{grabberName} · {sub}";
+    }
 
     async Task OnProviderChangedAsync(string? provider)
     {
@@ -235,7 +361,16 @@
         _selectedKeys.Clear();
         _groupPages.Clear();
         _exhaustedGroups.Clear();
+        _answered.Clear();
         _loadingGroupId = null;
+        _searchedFor = _search?.Trim();
+
+        _providers = String.IsNullOrWhiteSpace(_search)
+            ? []
+            : MediaGrabberService.GetGrabberNames(_type)
+                .Where(p => _selectedProvider == AllProviders || p == _selectedProvider)
+                .ToList();
+
         StateHasChanged();
 
         try
@@ -251,6 +386,10 @@
         {
             Notifications.Error(ex, "An unknown error occurred when trying to get media results");
         }
+
+        // Whatever never answered has nothing to show
+        if (!token.IsCancellationRequested)
+            _answered.UnionWith(_providers);
 
         _loading = false;
         StateHasChanged();
@@ -300,12 +439,14 @@
     {
         var added = 0;
 
-        await foreach (var batch in MediaGrabberService.SearchStreamAsync(_type, search, grabberName, _selectedSubProvider, page, token))
+        await foreach (var batch in MediaGrabberService.SearchBatchesAsync(_type, search, grabberName, _selectedSubProvider, page, token))
         {
             if (token.IsCancellationRequested)
                 break;
 
-            foreach (var result in batch)
+            _answered.Add(batch.GrabberName);
+
+            foreach (var result in batch.Results)
             {
                 if (onlyGroup != null && result.Group != onlyGroup)
                     continue;
@@ -319,6 +460,7 @@
                 added++;
             }
 
+            // Groups keep the order their grabbers answered in
             _groupedResults = _allResults
                 .GroupBy(r => new { r.GrabberName, r.Group })
                 .Select(g => new GroupedResults
@@ -393,7 +535,6 @@
         if (!chosen.Any())
             return false;
 
-        _preview = null;
         _downloading = true;
 
         try
@@ -402,16 +543,17 @@
 
             for (var i = 0; i < chosen.Count; i++)
             {
-                _downloadStatus = chosen.Count > 1 ? $"Downloading {i + 1} of {chosen.Count}..." : "Downloading...";
+                _downloadStatus = chosen.Count > 1 ? $"Downloading {i + 1} of {chosen.Count}" : "Downloading";
                 _downloadPercent = 0;
+                _bytesTransferred = 0;
+                _totalBytes = null;
                 StateHasChanged();
 
                 var progress = new Progress<MediaDownloadProgress>(p =>
                 {
                     _downloadPercent = p.Percent ?? 0;
-
-                    if (chosen.Count == 1 && p.Status != null)
-                        _downloadStatus = p.Status;
+                    _bytesTransferred = p.BytesTransferred;
+                    _totalBytes = p.TotalBytes;
 
                     _ = InvokeAsync(StateHasChanged);
                 });

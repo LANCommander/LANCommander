@@ -12,4 +12,12 @@ export class Terminal {
             "addon-fit": new FitAddon(),
         });
     }
+
+    /** Sets an xterm option XtermBlazor's typed options can't carry, e.g. a fractional line height. */
+    public SetOption(id: string, name: string, value: any): void {
+        const terminal = (<any>window).XtermBlazor?.getTerminalById?.(id);
+
+        if (terminal)
+            terminal.options[name] = value;
+    }
 }

@@ -31,6 +31,17 @@
             Width = 320,
             Covers = [typeof(Button)],
         },
+        new("Button.ExtraSmall", "28px buttons in 12px text, as in bulk-action bars",
+            @<div style="display: flex; gap: 8px; align-items: center">
+                <Button ExtraSmall Primary Icon="IconType.DownloadSimple">Download art</Button>
+                <Button ExtraSmall>Collection</Button>
+                <Button ExtraSmall Danger>Delete</Button>
+                <Button ExtraSmall Icon="IconType.DotsThree" title="More" />
+            </div>)
+        {
+            Width = 380,
+            Covers = [typeof(Button)],
+        },
         new("Button.IconOnly", "Icon-only buttons as used in table rows and toolbars",
             @<div style="display: flex; gap: 8px; align-items: center">
                 <Button Text Icon="IconType.PencilSimple" title="Edit" />

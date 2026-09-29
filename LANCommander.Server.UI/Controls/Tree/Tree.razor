@@ -35,6 +35,9 @@
     /// <summary>An icon for each item, e.g. a folder or a file.</summary>
     [Parameter] public Func<TItem, IconType>? Icon { get; set; }
 
+    /// <summary>A class for an item's <see cref="Icon"/>, to tint it, e.g. the folders on the open path.</summary>
+    [Parameter] public Func<TItem, string?>? IconClass { get; set; }
+
     /// <summary>The selected item.</summary>
     [Parameter] public TItem? Value { get; set; }
 
@@ -167,7 +170,7 @@
 
         <li class="lc-tree-item" role="treeitem" aria-level="@level" aria-selected="@(IsSelected(item) ? "true" : "false")" aria-expanded="@(children.Count > 0 ? (expanded ? "true" : "false") : null)">
             <div class="@nodeClass"
-                 style="padding-inline-start: @((level - 1) * 20 + 4)px"
+                 style="padding-inline-start: @((level - 1) * 14 + 8)px"
                  draggable="@(Draggable ? "true" : null)"
                  @onclick="() => SelectAsync(item)"
                  @ondragstart="() => StartDrag(item)"
@@ -204,7 +207,7 @@
                 }
                 @if (Icon != null)
                 {
-                    <Icon Type="@Icon(item)" Class="lc-tree-icon" />
+                    <Icon Type="@Icon(item)" Class="@(IconClass?.Invoke(item) is { } iconClass ? $"lc-tree-icon {iconClass}" : "lc-tree-icon")" />
                 }
                 <span class="lc-tree-label">
                     @if (ChildContent != null)

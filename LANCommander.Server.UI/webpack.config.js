@@ -2,6 +2,9 @@
 const MiniCssExtractPlugin = require('mini-css-extract-plugin');
 const CopyWebpackPlugin = require('copy-webpack-plugin');
 
+// Root-relative url()s (e.g. /fonts/…) are served by LANCommander.Server's wwwroot, not bundled
+const cssLoaderOptions = { sourceMap: true, url: { filter: url => !url.startsWith('/') } };
+
 module.exports = {
     entry: ['./_Imports.razor.ts'], // Adjust the path if your index.js is located elsewhere
     module: {
@@ -17,7 +20,7 @@ module.exports = {
                     MiniCssExtractPlugin.loader,
                     {
                         loader: 'css-loader',
-                        options: { sourceMap: true }
+                        options: cssLoaderOptions
                     }
                 ],
             },
@@ -27,7 +30,7 @@ module.exports = {
                         MiniCssExtractPlugin.loader,
                         {
                             loader: 'css-loader',
-                            options: { sourceMap: true }
+                            options: cssLoaderOptions
                         },
                         {
                             loader: 'sass-loader',

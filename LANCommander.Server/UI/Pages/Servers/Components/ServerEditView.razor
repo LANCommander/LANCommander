@@ -1,67 +1,109 @@
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.Enums
 @using Microsoft.EntityFrameworkCore
 @inject ServerService ServerService
+@inject ServerManager ServerManager
 @inject NavigationManager NavigationManager
+@inject ILogger<ServerEditView> Logger
+@implements IDisposable
 
 <SideLayout>
     <Side>
-        <Menu>
-            <MenuItem Icon="IconType.Info" Href="@(Id == Guid.Empty ? "/Servers/Add" : $"/Servers/{Id}/General")" Exact>General</MenuItem>
+        @* Restyled like the game editor's sections: kicker groups, text items, no icons *@
+        <Menu Variant="MenuVariant.Section">
+            <MenuGroup Title="Server">
+                <MenuItem Href="@(Id == Guid.Empty ? "/Servers/Add" : $"/Servers/{Id}/General")" Exact>General</MenuItem>
+
+                @if (Id != Guid.Empty)
+                {
+                    <MenuItem Href="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
+                    <MenuItem Href="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
+                }
+            </MenuGroup>
 
             @if (Id != Guid.Empty)
             {
-                <MenuItem Icon="IconType.Play" Href="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
-                <MenuItem Icon="IconType.Power" Href="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
-                <MenuItem Icon="IconType.Globe" Href="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
-                <MenuItem Icon="IconType.TerminalWindow" Href="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
+                <MenuGroup Title="Console">
+                    <MenuItem Href="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
 
-                @if (LogConsoles.Any())
-                {
-                    <SubMenu Icon="IconType.Monitor" Title="Monitor">
-                        <MenuItem Href="@($"/Servers/{Id}/Monitor/Console")">Process Output</MenuItem>
-                        @foreach (var console in LogConsoles)
-                        {
-                            <MenuItem Href="@($"/Servers/{Id}/Monitor/{console.Id}")">@console.Name</MenuItem>
-                        }
-                    </SubMenu>
-                }
-                else
-                {
-                    <MenuItem Icon="IconType.Monitor" Href="@($"/Servers/{Id}/Monitor")">Monitor</MenuItem>
-                }
+                    @if (LogConsoles.Any())
+                    {
+                        <SubMenu Title="Monitor">
+                            <MenuItem Href="@($"/Servers/{Id}/Monitor/Console")">Process output</MenuItem>
+                            @foreach (var console in LogConsoles)
+                            {
+                                <MenuItem Href="@($"/Servers/{Id}/Monitor/{console.Id}")">@console.Name</MenuItem>
+                            }
+                        </SubMenu>
+                    }
+                    else
+                    {
+                        <MenuItem Href="@($"/Servers/{Id}/Monitor")">Monitor</MenuItem>
+                    }
+                </MenuGroup>
 
-                <MenuItem Icon="IconType.Code" Href="@($"/Servers/{Id}/Scripts")">Scripts</MenuItem>
+                <MenuGroup Title="Behaviour">
+                    <MenuItem Href="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
+                    <MenuItem Href="@($"/Servers/{Id}/Scripts")" Count="@(Server.Scripts?.Count)">Scripts</MenuItem>
+                </MenuGroup>
             }
         </Menu>
     </Side>
 
     <ChildContent>
-        <PageHeader>
+        <PageHeader Class="server-header">
+            <Breadcrumb>
+                <Breadcrumb>
+                    <BreadcrumbItem Href="/Servers">Servers</BreadcrumbItem>
+                    <BreadcrumbItem>@(IsNew ? "Add server" : Server.Name)</BreadcrumbItem>
+                </Breadcrumb>
+            </Breadcrumb>
             <TitleTemplate>
-                @if (TitleTemplate != null)
+                @if (IsNew)
                 {
-                    @TitleTemplate(Server)
+                    @if (TitleTemplate != null)
+                    {
+                        @TitleTemplate(Server)
+                    }
+                    else
+                    {
+                        @Title
+                    }
                 }
                 else
                 {
-                    @Title
+                    @Server.Name
                 }
             </TitleTemplate>
-            <Extra>
-                @if (ShowControl && Server.Id != Guid.Empty)
+            <Tags>
+                @if (!IsNew && !_loading)
                 {
-                    <ServerControl ServerId="Server.Id" />
+                    @StatusTag
+                    <span class="server-header-meta">@Meta</span>
+                }
+            </Tags>
+            <Extra>
+                @if (!_loading && !IsNew)
+                {
+                    <ServerSwitcher @key="Server.Id" Current="Server" />
+
+                    @if (ShowControl)
+                    {
+                        <ServerControl ServerId="Server.Id" Header CurrentStatus="_live.Status" CurrentStatusChanged="SetStatus" />
+                    }
                 }
                 @TitleExtraTemplate?.Invoke(Server)
             </Extra>
         </PageHeader>
 
         @* PageContent catches errors, so a failing section leaves the menu and header usable *@
-        <PageContent Loading="_loading">
+        <PageContent Loading="_loading" Class="@ContentClass">
             @if (!_loading && Server.Id == Id)
             {
                 <CascadingValue Value="Server.Id" Name="ServerId">
-                    @ChildContent?.Invoke(Server)
+                    <CascadingValue Value="_feed" Name="ServerLiveFeed" IsFixed="true">
+                        @ChildContent?.Invoke(Server)
+                    </CascadingValue>
                 </CascadingValue>
             }
         </PageContent>
@@ -75,12 +117,111 @@
     [Parameter] public RenderFragment<Server>? TitleExtraTemplate { get; set; }
     [Parameter] public RenderFragment<Server>? ChildContent { get; set; }
 
-    /// <summary>Shows the server's status and start/stop button in the header.</summary>
+    /// <summary>A class for the section's body, e.g. <c>edit-form-content</c> for a form's padding.</summary>
+    [Parameter] public string? ContentClass { get; set; }
+
+    /// <summary>Called when the server has been loaded (again), with the instance the section edits.</summary>
+    [Parameter] public EventCallback<Server> OnLoaded { get; set; }
+
+    /// <summary>Shows the server's Restart/Stop (or Start) buttons in the header.</summary>
     [Parameter] public bool ShowControl { get; set; } = true;
+
+    /// <summary>
+    /// What the header's mono line leads with, e.g. the console being followed. Defaults to the
+    /// server's executable.
+    /// </summary>
+    [Parameter] public string? Console { get; set; }
 
     Server Server { get; set; } = new();
     Guid? _id;
     bool _loading = true;
+
+    // Sampled every two seconds; the header only re-renders when what it shows changes, while the
+    // Monitor's process card listens to the feed for every sample
+    readonly ServerLiveFeed _feed = new();
+    ServerLiveState _live = ServerLiveState.Unknown;
+    string? _shown;
+    Timer? _poll;
+
+    bool IsNew => Id == Guid.Empty;
+
+    /// <summary>"ns2_veil · pid 4812 · up 2h 41m"</summary>
+    string Meta
+    {
+        get
+        {
+            var parts = new List<string>();
+            var lead = !String.IsNullOrWhiteSpace(Console) ? Console
+                : !String.IsNullOrWhiteSpace(Server.Path) ? System.IO.Path.GetFileNameWithoutExtension(Server.Path)
+                : Server.Engine.GetDisplayName();
+
+            if (!String.IsNullOrWhiteSpace(lead))
+                parts.Add(lead);
+
+            if (_live.Process?.Pid is { } pid)
+                parts.Add($"pid {pid}");
+
+            if (_live.Status == ServerProcessStatus.Running && _live.Uptime(DateTime.UtcNow) is { } uptime)
+                parts.Add($"up {uptime}");
+
+            return String.Join(" · ", parts);
+        }
+    }
+
+    RenderFragment StatusTag => _live.Status switch
+    {
+        ServerProcessStatus.Running => @<Tag Success Class="server-status-tag server-status-running"><span class="server-status-dot" aria-hidden="true"></span>Running</Tag>,
+        ServerProcessStatus.Starting => @<Tag Info Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Starting</Tag>,
+        ServerProcessStatus.Stopping => @<Tag Warning Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Stopping</Tag>,
+        ServerProcessStatus.Error => @<Tag Danger Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Crashed</Tag>,
+        ServerProcessStatus.Stopped => @<Tag Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Stopped</Tag>,
+        _ => @<text></text>,
+    };
+
+    protected override void OnInitialized()
+    {
+        // Status and process samples for the header and the Monitor's process card. The server
+        // manager caches CPU samples, so this shares them with anyone else watching.
+        _poll = new Timer(_ => InvokeAsync(RefreshLiveAsync), null, TimeSpan.Zero, TimeSpan.FromSeconds(2));
+    }
+
+    async Task RefreshLiveAsync()
+    {
+        if (IsNew || _loading || Server.Id == Guid.Empty)
+            return;
+
+        try
+        {
+            var status = await ServerManager.GetStatusAsync(Server.Id);
+            var process = status is ServerProcessStatus.Running or ServerProcessStatus.Starting
+                ? await ServerManager.GetProcessInfoAsync(Server.Id)
+                : null;
+
+            _live = new ServerLiveState(status, process);
+            _feed.Publish(_live);
+
+            // Status, pid and uptime (to the minute) are all the header shows of it
+            var shown = $"{_live.Status}|{Meta}";
+
+            if (shown != _shown)
+            {
+                _shown = shown;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not sample server {ServerId}", Server.Id);
+        }
+    }
+
+    void SetStatus(ServerProcessStatus status)
+    {
+        _live = _live with { Status = status };
+        _feed.Publish(_live);
+    }
+
+    public void Dispose() => _poll?.Dispose();
 
     IEnumerable<ServerConsole> LogConsoles => Server.ServerConsoles?.Where(c => c.Type == ServerConsoleType.LogFile) ?? [];
 
@@ -89,8 +230,24 @@
         if (_id == Id)
             return;
 
+        await LoadAsync();
+    }
+
+    /// <summary>Loads the server again from the database, e.g. to discard unsaved edits.</summary>
+    public async Task ReloadAsync()
+    {
+        await LoadAsync();
+
+        StateHasChanged();
+    }
+
+    async Task LoadAsync()
+    {
         _id = Id;
         _loading = true;
+        _live = ServerLiveState.Unknown;
+        _shown = null;
+        _feed.Publish(_live);
 
         if (Id != Guid.Empty)
         {
@@ -116,5 +273,9 @@
             Server = new Server();
 
         _loading = false;
+
+        await OnLoaded.InvokeAsync(Server);
+
+        await RefreshLiveAsync();
     }
 }

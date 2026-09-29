@@ -1,14 +1,22 @@
 @namespace LANCommander.Server.UI.Controls
 @inherits ControlBase
 
-@* A status dot with an optional label, e.g. a server's running state *@
-<span @attributes="AdditionalAttributes" class="@_class" style="@Style">
-    <span class="lc-badge-dot"></span>
-    @if (ChildContent != null)
-    {
-        <span class="lc-badge-text">@ChildContent</span>
-    }
-</span>
+@if (Count != null)
+{
+    @* A count pill, e.g. unread items or the rows in a panel *@
+    <span @attributes="AdditionalAttributes" class="@_class" style="@Style">@Count</span>
+}
+else
+{
+    @* A status dot with an optional label, e.g. a server's running state *@
+    <span @attributes="AdditionalAttributes" class="@_class" style="@Style">
+        <span class="lc-badge-dot"></span>
+        @if (ChildContent != null)
+        {
+            <span class="lc-badge-text">@ChildContent</span>
+        }
+    </span>
+}
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -24,10 +32,30 @@
     /// <summary>Pulses, for states that are in progress (starting, stopping, syncing).</summary>
     [Parameter] public bool Processing { get; set; }
 
+    /// <summary>
+    /// Shows this figure in a pill instead of the dot, e.g. <c>Count="@@sessions.Count"</c> or
+    /// <c>Count="@@($"{players} / {max}")"</c>. The pill is the accent fill unless <see cref="Neutral"/>.
+    /// </summary>
+    [Parameter] public object? Count { get; set; }
+
+    /// <summary>With <see cref="Count"/>: a quiet Raised chip in mono secondary text, as in a panel header.</summary>
+    [Parameter] public bool Neutral { get; set; }
+
     string? _class;
 
     protected override void OnParametersSet()
     {
+        if (Count != null)
+        {
+            _class = new ClassBuilder()
+                .Add("lc-badge-count")
+                .If(Neutral, "lc-badge-count-neutral")
+                .Add(Class)
+                .Build();
+
+            return;
+        }
+
         var status = StatusResolver.Resolve(success: Success, info: Info || Processing, warning: Warning, danger: Danger);
 
         _class = new ClassBuilder()

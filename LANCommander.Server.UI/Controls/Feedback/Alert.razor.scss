@@ -1,16 +1,46 @@
-.lc-alert {
+// Alerts: a 14% tint of the status fill with a 32% edge from the text tint. Only the 16px icon
+// takes the status colour; the message stays secondary text so a page of alerts reads calmly.
+// Radzen sets its alert variables per style and shade, so each is re-pointed at that specificity.
+.lc-alert.rz-alert {
+    --lc-alert-fill: var(--rz-primary);
+    --lc-alert-tint: var(--lc-accent-text-color);
+
     margin: 0 0 1rem;
+    padding: 11px 13px;
+    border-radius: var(--lc-radius-md);
+    box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--lc-alert-tint) 32%, transparent);
+    font-size: 13px;
+    line-height: 1.5;
+
+    &.rz-success { --lc-alert-fill: var(--rz-success); --lc-alert-tint: var(--lc-success-text-color); }
+    &.rz-warning { --lc-alert-fill: var(--rz-warning); --lc-alert-tint: var(--lc-warning-text-color); }
+    &.rz-danger { --lc-alert-fill: var(--rz-danger); --lc-alert-tint: var(--lc-danger-text-color); }
+
+    &.rz-info,
+    &.rz-success,
+    &.rz-warning,
+    &.rz-danger {
+        &.rz-shade-lighter {
+            --rz-alert-background-color: color-mix(in srgb, var(--lc-alert-fill) 14%, transparent);
+            --rz-alert-color: var(--rz-text-secondary-color);
+            --rz-alert-title-color: var(--rz-text-title-color);
+            --rz-alert-icon-color: var(--lc-alert-tint);
+        }
+    }
 
     .lc-alert-body {
         display: flex;
+        flex: 1;
         align-items: flex-start;
-        gap: 0.75rem;
+        gap: 11px;
+        min-width: 0;
     }
 
     .lc-alert-icon {
         flex-shrink: 0;
-        margin-top: 0.1em;
-        font-size: 1.25em;
+        margin-top: 2px;
+        color: var(--lc-alert-tint);
+        font-size: 16px;
     }
 
     .lc-alert-content {
@@ -19,7 +49,14 @@
     }
 
     .lc-alert-title {
-        margin-bottom: 0.25rem;
+        margin-bottom: 2px;
+        color: var(--rz-text-title-color);
         font-weight: 600;
+    }
+
+    .lc-alert-action {
+        margin-top: 7px;
+        font-size: 12px;
+        font-weight: 500;
     }
 }

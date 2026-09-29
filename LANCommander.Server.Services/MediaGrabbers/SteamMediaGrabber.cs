@@ -222,7 +222,9 @@ namespace LANCommander.Server.Services.MediaGrabbers
                         SourceUrl = sourceUrl,
                         ThumbnailUrl = movie.Thumbnail,
                         Group = appIdResult.Name,
-                        MimeType = "video/mp4"
+                        MimeType = "video/mp4",
+                        // Steam names only its 480p rendition; "max" is whatever the trailer was cut at
+                        Resolution = movie.Mp4?.Max == null ? "480p" : null,
                     });
                 }
             }

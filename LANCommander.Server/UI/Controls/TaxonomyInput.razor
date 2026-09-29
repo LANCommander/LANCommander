@@ -1,12 +1,15 @@
 @typeparam TTaxonomy where TTaxonomy : BaseTaxonomyModel
 
 @* Picks genres, tags, companies and the like; typing a new name creates it *@
-<TagsInput TItem="TTaxonomy" Items="_entities" Values="Values" ValuesChanged="ChangedAsync" Text="t => t.Name" OnCreate="AddAsync" />
+<TagsInput TItem="TTaxonomy" Items="_entities" Values="Values" ValuesChanged="ChangedAsync" Text="t => t.Name" OnCreate="AddAsync" Placeholder="@Placeholder" />
 
 @code {
     [Parameter, EditorRequired] public BaseDatabaseService<TTaxonomy> DataService { get; set; } = default!;
     [Parameter] public ICollection<TTaxonomy>? Values { get; set; }
     [Parameter] public EventCallback<ICollection<TTaxonomy>> ValuesChanged { get; set; }
+
+    /// <summary>The prompt after the chips, e.g. "Add a developer…".</summary>
+    [Parameter] public string? Placeholder { get; set; } = "Type to add";
 
     ICollection<TTaxonomy> _entities = new List<TTaxonomy>();
 

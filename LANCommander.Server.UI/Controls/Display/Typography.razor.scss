@@ -2,14 +2,14 @@
 .lc-typography-strong { font-weight: 600; }
 .lc-typography-italic { font-style: italic; }
 .lc-typography-small { font-size: var(--rz-text-caption-font-size); }
-.lc-typography-success { color: var(--rz-success); }
-.lc-typography-warning { color: var(--rz-warning); }
-.lc-typography-danger { color: var(--rz-danger); }
+.lc-typography-success { color: var(--lc-success-text-color); }
+.lc-typography-warning { color: var(--lc-warning-text-color); }
+.lc-typography-danger { color: var(--lc-danger-text-color); }
 
 .lc-typography-code {
     padding: 0.125em 0.375em;
-    border-radius: var(--rz-border-radius);
-    background: var(--rz-base-700);
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-raised);
     font-family: var(--lc-font-mono);
     font-size: 0.9em;
 }

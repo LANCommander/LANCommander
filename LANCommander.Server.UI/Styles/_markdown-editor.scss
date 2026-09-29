@@ -1,42 +1,161 @@
-﻿.editor-toolbar {
-    border-color: #434343;
-    border-radius: 0;
-}
+// The description/notes editor is EasyMDE (CodeMirror), a third-party control loaded before ui.css,
+// so it ships a light theme we re-tone here. The editing surface is a well like every other input;
+// the toolbar is a compact row of square ghost icon buttons.
 
-.editor-preview {
-    background: none;
+.EasyMDEContainer {
+    // Editing area: a well with a hairline and an input-like focus ring, in the mono family
+    .CodeMirror {
+        border: 1px solid var(--lc-border-overlay-color);
+        border-top: none;
+        border-radius: 0 0 var(--lc-radius-md) var(--lc-radius-md);
+        padding: 10px 12px;
+        background: var(--lc-well);
+        color: var(--rz-text-color);
+        font-family: var(--lc-font-mono);
+    }
 
-    pre {
-        background: none;
+    .CodeMirror-focused {
+        border-color: var(--lc-accent-text-color);
+        box-shadow: 0 0 0 2px var(--lc-focus-ring);
+    }
+
+    .CodeMirror-placeholder {
+        color: var(--lc-text-disabled-color);
+        opacity: 1;
+    }
+
+    .CodeMirror-gutters {
+        border: none;
+        background: var(--lc-well);
+    }
+
+    // Side-by-side preview shares the well and hairline
+    .editor-preview-side {
+        border-color: var(--lc-border-overlay-color);
+        background: var(--lc-well);
+        color: var(--rz-text-color);
     }
 }
 
-.CodeMirror {
-    background: none;
-    color: inherit;
-}
-
-.EasyMDEContainer .CodeMirror,
-.editor-preview-side {
-    border-color: #434343;
-}
-
+// Selection and caret in the theme's own accent and title colours
 .CodeMirror-cursor,
 .CodeMirror div.CodeMirror-secondarycursor {
-    border-color: #dcdcdc;
+    border-left-color: var(--lc-text-title-color);
 }
 
 .CodeMirror-selected,
 .EasyMDEContainer .CodeMirror-focused .CodeMirror-selected {
-    color: #fff;
-    background: #177ddc;
+    background: rgba(64, 150, 255, 0.25);
 }
 
-.CodeMirror .cm-spell-error:not(.cm-url):not(.cm-comment):not(.cm-tag):not(.cm-word){
+.CodeMirror .cm-spell-error:not(.cm-url):not(.cm-comment):not(.cm-tag):not(.cm-word) {
     background: none;
-    border-bottom: 1px dotted #ff000000;
+    border-bottom: 1px dotted transparent;
 }
 
+// Markdown source tokens, recoloured for the dark surface
+.cm-s-easymde {
+    .cm-header { color: var(--lc-text-title-color); }
+    .cm-quote { color: var(--lc-text-secondary-color); }
+    .cm-link { color: var(--lc-accent-text-color); }
+    .cm-url { color: var(--lc-text-tertiary-color); }
+    .cm-string { color: var(--lc-success-text-color); }
+    .cm-tag { color: var(--lc-success-text-color); }
+    .cm-attribute { color: var(--lc-warning-text-color); }
+    .cm-variable-2 { color: var(--lc-accent-text-color); }
+    .cm-comment {
+        color: var(--lc-text-tertiary-color);
+        background: rgba(255, 255, 255, 0.05);
+        border-radius: var(--lc-radius-sm);
+    }
+}
+
+// Toolbar: a compact well strip with a hairline seam onto the editor
+.editor-toolbar {
+    padding: 6px 8px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-bottom: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-md) var(--lc-radius-md) 0 0;
+    background: var(--lc-well);
+
+    // Ghost icon buttons: secondary text, square, Raised on hover, Popover when toggled/pressed
+    button,
+    .easymde-dropdown {
+        height: 28px;
+        min-width: 28px;
+        padding: 0;
+        border: 1px solid transparent;
+        border-radius: var(--lc-radius-sm);
+        background: transparent;
+        background-image: none;
+        color: var(--lc-text-secondary-color);
+    }
+
+    button {
+        width: 28px;
+    }
+
+    button:hover {
+        border-color: transparent;
+        background: var(--lc-raised);
+        color: var(--lc-text-title-color);
+    }
+
+    button.active,
+    button:active {
+        border-color: transparent;
+        background: var(--lc-popover);
+        color: var(--lc-text-title-color);
+    }
+
+    // Toolbar separators draw in the stylesheet's own white; a hairline like every other edge
+    i.separator {
+        margin: 0 4px;
+        border-left-color: var(--lc-border-color);
+        border-right-color: transparent;
+    }
+}
+
+// Preview (full and inline): a well with mono, well-lit code blocks
+.editor-preview,
+.editor-preview-full {
+    background: var(--lc-well);
+    color: var(--rz-text-color);
+}
+
+.editor-preview .editor-preview-active,
 .CodeMirror .editor-preview-active {
-    background: #141414;
+    background: var(--lc-well);
+}
+
+.editor-preview,
+.editor-preview-side {
+    pre,
+    code {
+        font-family: var(--lc-font-mono);
+        color: var(--rz-text-color);
+    }
+
+    code {
+        padding: 1px 5px;
+        border-radius: var(--lc-radius-sm);
+        background: var(--lc-canvas);
+    }
+
+    pre {
+        padding: 10px 12px;
+        border-radius: var(--lc-radius-md);
+        background: var(--lc-canvas);
+
+        code {
+            padding: 0;
+            background: none;
+        }
+    }
+}
+
+// Status bar (line/word/character counts) in tertiary text
+.editor-statusbar {
+    padding: 6px 10px;
+    color: var(--lc-text-tertiary-color);
 }

@@ -43,6 +43,35 @@
             Width = 460,
             Covers = [typeof(Tag)],
         },
+        new("Tag.Variants", "Filter chips (plain, warning and accent) and the caps labels beside dialog titles",
+            @<Flex Vertical Gap="Gap.Small">
+                <div>
+                    <Tag Chip OnClose="() => { }">Collection: LAN Party</Tag>
+                    <Tag Chip Warning OnClose="() => { }">Has archive</Tag>
+                    <Tag Chip Primary>View: Missing art</Tag>
+                </div>
+                <div>
+                    <Tag Caps>Cover</Tag>
+                    <Tag Caps Icon="IconType.Archive">Archive</Tag>
+                    <Tag Caps Warning>Folders only</Tag>
+                    <Tag Caps Primary>Multi-select</Tag>
+                    <Tag Caps Small>Install</Tag>
+                </div>
+            </Flex>)
+        {
+            Width = 460,
+            Covers = [typeof(Tag)],
+        },
+        new("Badge.Counts", "A count pill and the neutral count chip from panel headers",
+            @<Flex Gap="Gap.Medium" Align="Align.Center">
+                <Badge Count="12" />
+                <Badge Count="14" Neutral />
+                <Badge Count="@("9 / 24")" Neutral />
+            </Flex>)
+        {
+            Width = 220,
+            Covers = [typeof(Badge)],
+        },
         new("Badge.States", "Status dots for server and issue states",
             @<Flex Vertical Gap="Gap.Small">
                 <Badge Success>Running</Badge>
@@ -80,6 +109,27 @@
             </Flex>)
         {
             Width = 420,
+            Covers = [typeof(Card)],
+        },
+        new("Card.Panel", "A panel card: kicker title, count chip, flush list and a footer link; and a titled card with a note",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Card Panel Title="Active sessions" Count="2">
+                    <ChildContent>
+                        <div style="height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 16px; border-bottom: 1px solid var(--lc-divider-row-color)">
+                            <Avatar Name="Marcus Reyes" ColorKey="1" Small />
+                            <span style="flex: 1">Marcus Reyes</span>
+                        </div>
+                        <div style="height: 50px; display: flex; align-items: center; gap: 10px; padding: 0 16px">
+                            <Avatar Name="Priya Shah" ColorKey="2" Small />
+                            <span style="flex: 1">Priya Shah</span>
+                        </div>
+                    </ChildContent>
+                    <Footer><a href="/Sessions">See all sessions</a></Footer>
+                </Card>
+                <Card Title="Playtime by title" Subtitle="last 7 days"><Typography Secondary>Chart</Typography></Card>
+            </Flex>)
+        {
+            Width = 380,
             Covers = [typeof(Card)],
         },
         new("Avatar.Variants", "Initials, an icon, sizes, square corners and a group",

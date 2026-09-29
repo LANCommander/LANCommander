@@ -104,6 +104,56 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(script);
         }
         
+        /// <summary>
+        /// The scripts a script editor lists beside the one it edits, with their owners loaded: the
+        /// owner's own (a game's from its latest version), then for a game the scripts of the
+        /// redistributables it depends on, then the system scripts (those with no owner at all).
+        /// With no owner, only the system scripts.
+        /// </summary>
+        public async Task<ICollection<Script>> GetEditorScriptsAsync(Guid? gameId, Guid? redistributableId, Guid? serverId, Guid? toolId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            gameId = gameId == Guid.Empty ? null : gameId;
+            redistributableId = redistributableId == Guid.Empty ? null : redistributableId;
+            serverId = serverId == Guid.Empty ? null : serverId;
+            toolId = toolId == Guid.Empty ? null : toolId;
+
+            Guid? gameVersionId = null;
+            List<Guid> redistributableIds = [];
+
+            if (gameId is { } game)
+            {
+                gameVersionId = await gameVersionService.GetLatestIdAsync(game);
+
+                redistributableIds = await context.Games
+                    .Where(g => g.Id == game)
+                    .SelectMany(g => g.Redistributables!.Select(r => r.Id))
+                    .ToListAsync();
+            }
+
+            if (redistributableId is { } redistributable)
+                redistributableIds.Add(redistributable);
+
+            return await context.Set<Script>()
+                .AsNoTracking()
+                .Include(s => s.Game)
+                .Include(s => s.Redistributable)
+                .Include(s => s.Server)
+                .Include(s => s.Tool)
+                .Where(s =>
+                    (gameId != null && s.GameId == gameId && (s.GameVersionId == null || s.GameVersionId == gameVersionId))
+                    || (s.RedistributableId != null && redistributableIds.Contains(s.RedistributableId.Value))
+                    || (serverId != null && s.ServerId == serverId)
+                    || (toolId != null && s.ToolId == toolId)
+                    || ((s.GameId == null || s.GameId == Guid.Empty)
+                        && (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
+                        && (s.ServerId == null || s.ServerId == Guid.Empty)
+                        && (s.ToolId == null || s.ToolId == Guid.Empty)))
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+        }
+
         public IEnumerable<Snippet> GetSnippets()
         {
             var storagePath = GetSnippetsStoragePath();

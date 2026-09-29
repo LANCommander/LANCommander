@@ -1,17 +1,25 @@
+// Tags: a 20% tint of the status fill, an edge drawn from the text tint at about 40%, and a lighter
+// text colour again. Each status sets the three; with none the tag is neutral on Popover.
 .lc-tag {
-    --lc-tag-color: var(--rz-text-secondary-color);
+    --lc-tag-color: var(--lc-popover);                       // the fill, at 20%
+    --lc-tag-tint: var(--rz-text-secondary-color);           // the edge, at 39%
+    --lc-tag-text-color: var(--rz-text-secondary-color);
+    --lc-tag-background: color-mix(in srgb, var(--lc-tag-color) 20%, transparent);
+    --lc-tag-border: color-mix(in srgb, var(--lc-tag-tint) 39%, transparent);
 
     display: inline-flex;
     align-items: center;
-    gap: 0.25em;
+    gap: 5px;
+    height: 24px;
     margin-inline-end: 0.5em;
-    padding: 0 0.5em;
-    border: 1px solid color-mix(in srgb, var(--lc-tag-color) 45%, transparent);
-    border-radius: var(--rz-border-radius);
-    background: color-mix(in srgb, var(--lc-tag-color) 15%, transparent);
-    color: var(--lc-tag-color);
-    font-size: var(--rz-text-caption-font-size);
-    line-height: 1.5rem;
+    padding: 0 9px;
+    border: 1px solid var(--lc-tag-border);
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-tag-background);
+    color: var(--lc-tag-text-color);
+    font-size: 12px;
+    font-weight: 500;
+    line-height: 22px;
     white-space: nowrap;
     max-width: 100%;
     vertical-align: middle;
@@ -24,21 +32,138 @@
     }
 }
 
-// User-chosen colours can be dark, so lighten the text against the tinted background
-.lc-tag-custom {
-    color: color-mix(in srgb, var(--lc-tag-color) 60%, white);
+// Neutral: solid Popover, a plain hairline and regular weight
+.lc-tag:not(.lc-tag-primary, .lc-tag-success, .lc-tag-info, .lc-tag-warning, .lc-tag-danger, .lc-tag-custom) {
+    --lc-tag-background: var(--lc-popover);
+    --lc-tag-border: var(--lc-border-color);
+
+    font-weight: 400;
 }
 
-.lc-tag-primary { --lc-tag-color: var(--rz-primary); }
-.lc-tag-success { --lc-tag-color: var(--rz-success); }
-.lc-tag-info { --lc-tag-color: var(--rz-info); }
-.lc-tag-warning { --lc-tag-color: var(--rz-warning); }
-.lc-tag-danger { --lc-tag-color: var(--rz-danger); }
+// User-chosen colours can be dark, so lighten the text against the tinted background
+.lc-tag-custom {
+    --lc-tag-tint: color-mix(in srgb, var(--lc-tag-color) 60%, white);
+    --lc-tag-text-color: color-mix(in srgb, var(--lc-tag-color) 60%, white);
+}
+
+// Primary and info are "processing" (#69B1FF); success is "published" (#95DE64)
+.lc-tag-primary,
+.lc-tag-info { --lc-tag-color: var(--rz-primary); --lc-tag-tint: var(--lc-accent-text-color); --lc-tag-text-color: #69B1FF; }
+.lc-tag-success { --lc-tag-color: var(--rz-success); --lc-tag-tint: var(--lc-success-text-color); --lc-tag-text-color: #95DE64; }
+.lc-tag-warning { --lc-tag-color: var(--rz-warning); --lc-tag-tint: var(--lc-warning-text-color); --lc-tag-text-color: var(--lc-warning-text-color); }
+.lc-tag-danger { --lc-tag-color: var(--rz-danger); --lc-tag-tint: var(--lc-danger-text-color); --lc-tag-text-color: var(--lc-danger-text-color); }
+
+// Chip: an active filter. 26px on Raised, full-strength text; the close button sits in the padding.
+.lc-tag.lc-tag-chip {
+    gap: 7px;
+    height: 26px;
+    padding: 0 7px 0 10px;
+    border-radius: var(--lc-radius-md);
+    line-height: 24px;
+
+    &:not(.lc-tag-primary, .lc-tag-info, .lc-tag-warning, .lc-tag-success, .lc-tag-danger, .lc-tag-custom) {
+        --lc-tag-background: var(--lc-raised);
+        --lc-tag-border: var(--lc-border-overlay-color);
+        --lc-tag-text-color: var(--rz-text-color);
+    }
+
+    // The status chips are a shade quieter than tags: 16-18% fill, 34-38% edge
+    &.lc-tag-warning {
+        --lc-tag-background: color-mix(in srgb, var(--lc-tag-color) 16%, transparent);
+        --lc-tag-border: color-mix(in srgb, var(--lc-tag-tint) 34%, transparent);
+    }
+
+    &.lc-tag-primary,
+    &.lc-tag-info {
+        --lc-tag-background: color-mix(in srgb, var(--lc-tag-color) 18%, transparent);
+        --lc-tag-border: color-mix(in srgb, var(--lc-tag-tint) 38%, transparent);
+    }
+
+    .lc-tag-close {
+        margin-inline-end: 0;
+        color: var(--lc-text-tertiary-color);
+        font-size: 11px;
+    }
+
+    &.lc-tag-primary .lc-tag-close,
+    &.lc-tag-info .lc-tag-close,
+    &.lc-tag-warning .lc-tag-close {
+        color: inherit;
+    }
+}
+
+// Caps: the label beside a dialog title, 20px, uppercase and tracked, with an optional 11px icon
+.lc-tag.lc-tag-caps {
+    gap: 6px;
+    height: 20px;
+    margin-inline-end: 0;
+    padding: 0 7px;
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    line-height: 18px;
+    text-transform: uppercase;
+
+    &:not(.lc-tag-primary, .lc-tag-info, .lc-tag-warning, .lc-tag-success, .lc-tag-danger, .lc-tag-custom) {
+        --lc-tag-border: var(--lc-border-overlay-color);
+    }
+
+    &.lc-tag-warning {
+        --lc-tag-background: color-mix(in srgb, var(--lc-tag-color) 16%, transparent);
+        --lc-tag-border: color-mix(in srgb, var(--lc-tag-tint) 34%, transparent);
+    }
+
+    &.lc-tag-primary,
+    &.lc-tag-info {
+        --lc-tag-border: color-mix(in srgb, var(--lc-tag-tint) 38%, transparent);
+    }
+
+    .lc-icon {
+        font-size: 11px;
+    }
+}
+
+.lc-tag.lc-tag-caps-small {
+    gap: 4px;
+    height: 18px;
+    padding: 0 6px;
+    font-size: 10px;
+    line-height: 16px;
+
+    .lc-icon {
+        font-size: 10px;
+    }
+}
+
+.lc-tag-close {
+    display: inline-flex;
+    align-items: center;
+    margin-inline-end: -0.25em;
+    padding: 2px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    background: none;
+    color: inherit;
+    font-size: 0.9em;
+    cursor: pointer;
+    opacity: 0.7;
+
+    &:hover {
+        background: var(--lc-hover-background);
+        opacity: 1;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-accent-text-color);
+        outline-offset: -2px;
+    }
+}
 
 .lc-tag-clickable {
     cursor: pointer;
 
+    // One rule for every tone: the tint, edge and text all brighten a step
     &:hover {
-        background: color-mix(in srgb, var(--lc-tag-color) 25%, transparent);
+        filter: brightness(1.2);
     }
 }

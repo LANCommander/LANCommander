@@ -1,9 +1,91 @@
 // Dialog windows opened through DialogService, and the frame around their content
 
+// The window: Surface with the strongest hairline, since it floats over a scrim
 .lc-dialog-window {
+    border: 1px solid var(--lc-border-dialog-color);
+
     .rz-dialog-content {
         padding: 0;
     }
+
+    // A 54px title bar: the title, then chips and a subtitle (DialogTitleSlot), then a 34px close
+    .rz-dialog-titlebar,
+    .rz-dialog-side-titlebar {
+        flex-shrink: 0;
+        align-items: center;
+        gap: 12px;
+        min-height: 54px;
+    }
+
+    .rz-dialog-title,
+    .rz-dialog-side-title {
+        min-width: 0;
+    }
+
+    .rz-dialog-titlebar-close,
+    .rz-dialog-side-titlebar-close {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 34px;
+        height: 34px;
+        border-radius: var(--lc-radius-md);
+        color: var(--lc-text-tertiary-color);
+
+        &:hover {
+            background: var(--lc-hover-background);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--lc-accent-text-color);
+            outline-offset: -2px;
+        }
+
+        // Radzen's Material glyph swapped for the drawn 14px cross
+        .rzi-times::before {
+            content: "";
+            display: block;
+            width: 14px;
+            height: 14px;
+            background: currentColor;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.5 5.5l13 13M18.5 5.5l-13 13' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
+    }
+}
+
+// Radzen fades its mask to half opacity in the rule itself, which would halve the scrim token
+.rz-dialog-mask {
+    opacity: 1;
+}
+
+.lc-dialog-title {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+}
+
+.lc-dialog-title-text {
+    flex-shrink: 0;
+    color: var(--rz-text-title-color);
+    font-size: 15px;
+    font-weight: 600;
+}
+
+.lc-dialog-subtitle {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
+    font-weight: 400;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-dialog-subtitle-mono {
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
 }
 
 .lc-dialog {
@@ -21,25 +103,100 @@
     flex: 1;
     min-height: 0;
     overflow: auto;
-    padding: 1rem 1.25rem;
+    padding: 18px 20px;
 }
 
+// The footer sits on Surface below a card hairline; buttons are 38px and at least 90 wide
 .lc-dialog-footer {
     display: flex;
+    flex-shrink: 0;
+    align-items: center;
     justify-content: flex-end;
     gap: 8px;
-    padding: 0.75rem 1.25rem;
-    border-top: 1px solid var(--lc-border-subtle-color);
+    padding: 14px 20px;
+    border-top: 1px solid var(--lc-border-card-color);
+
+    > .lc-button.rz-button-md {
+        min-width: 90px;
+        height: 38px;
+    }
+}
+
+.lc-dialog-footer-note {
+    flex: 1;
+    min-width: 0;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.lc-dialog-footer-extra {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    margin-inline-end: auto;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.lc-dialog-footer-note + .lc-dialog-footer-extra {
+    flex: 0 1 auto;
+}
+
+// Pickers and editors fill the viewport less a 20px inset (set by DialogService), run their own
+// toolbars edge to edge, and end in a 56px well footer with 34px buttons (48px beside a status bar)
+.lc-dialog-window.lc-dialog-picker {
+    .rz-dialog-titlebar {
+        min-height: 52px;
+    }
+
+    .rz-dialog-content {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .lc-dialog {
+        flex: 1;
+        min-height: 0;
+        max-height: none;
+    }
+
+    .lc-dialog-body {
+        display: flex;
+        flex-direction: column;
+        padding: 0;
+    }
+
+    .lc-dialog-footer {
+        gap: 12px;
+        height: 56px;
+        padding: 0 14px;
+        border-top-color: var(--lc-border-color);
+        background: var(--lc-well);
+
+        > .lc-button.rz-button-md {
+            min-width: 88px;
+            height: 34px;
+            padding: 0 16px;
+        }
+    }
+}
+
+.lc-dialog-window.lc-dialog-picker-compact .lc-dialog-footer {
+    height: 48px;
 }
 
 .lc-confirm {
     .lc-confirm-icon {
         font-size: 1.75rem;
-        color: var(--rz-info);
+        color: var(--lc-accent-text-color);
     }
 
     .lc-confirm-icon-danger {
-        color: var(--rz-danger);
+        color: var(--lc-danger-text-color);
     }
 
     .lc-confirm-message {
@@ -48,33 +205,126 @@
     }
 }
 
-// Notifications: Radzen draws a Material Symbols glyph per severity; ours goes in the summary instead
+.lc-confirm-icon-warning {
+    color: var(--lc-warning-text-color) !important;
+}
+
+// A footer rendered by the dialog itself (NoFooter dialogs with their own buttons)
+.lc-dialog-footer-inline {
+    margin: 18px -20px -18px;
+}
+
+// Notifications: a 340px stack 24px from the top right, 10px apart. Each is Popover with an overlay
+// hairline: an 18px status icon in its own column, a 13/600 title, a 12px body, then an optional
+// action link and a mono meta line, and a 22px dismiss button. Radzen positions and sizes the stack
+// in rules no variable reaches, so they are set here.
+.rz-notification {
+    inset-block-start: 24px;
+    inset-inline-end: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.rz-notification-item-wrapper {
+    width: 340px;
+    min-width: 0;
+    margin: 0;
+}
+
 .rz-notification-item {
+    border: 1px solid var(--lc-border-overlay-color);
+
+    // Radzen's Material glyph; ours goes in the summary, in the column the padding makes for it
     > .rzi,
     .rz-notification-icon {
         display: none;
     }
 
-    .lc-notification-summary {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
+    .rz-notification-message-wrapper {
+        min-width: 0;
+    }
+
+    .rz-notification-message {
+        position: relative;
+        min-width: 0;
+        padding-inline-start: 29px;
+    }
+
+    .rz-notification-title {
+        color: var(--rz-text-title-color);
+        font-size: 13px;
+        font-weight: 600;
+        line-height: 18px;
+    }
+
+    .rz-notification-content {
+        margin-top: 2px;
+        color: var(--rz-text-secondary-color);
+        font-size: 12px;
+        line-height: 1.45;
     }
 
     .lc-notification-icon {
-        font-size: 1.25em;
+        position: absolute;
+        inset-block-start: 0;
+        inset-inline-start: 0;
+        font-size: 18px;
+    }
+
+    .rz-notification-close {
+        display: inline-flex;
+        flex-shrink: 0;
+        align-items: center;
+        justify-content: center;
+        width: 22px;
+        height: 22px;
+        border-radius: var(--lc-radius-md);
+        color: var(--lc-text-tertiary-color);
+        opacity: 1;
+
+        &:hover {
+            background: var(--lc-hover-background);
+            color: var(--rz-text-title-color);
+        }
+
+        &::before {
+            content: "";
+            width: 12px;
+            height: 12px;
+            background: currentColor;
+            mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M5.5 5.5l13 13M18.5 5.5l-13 13' stroke='black' stroke-width='2' stroke-linecap='round'/%3E%3C/svg%3E") center / contain no-repeat;
+        }
     }
 }
 
-.lc-confirm-icon-warning {
-    color: var(--rz-warning) !important;
-}
-
-// A footer rendered by the dialog itself (NoFooter dialogs with their own buttons)
-.lc-dialog-footer-inline {
-    margin: 16px -20px -16px;
-}
+.rz-notification-success .lc-notification-icon { color: var(--lc-success-text-color); }
+.rz-notification-info .lc-notification-icon { color: var(--lc-accent-text-color); }
+.rz-notification-warn .lc-notification-icon { color: var(--lc-warning-text-color); }
+.rz-notification-error .lc-notification-icon { color: var(--lc-danger-text-color); }
 
 .lc-notification-action {
-    margin-top: 8px;
+    display: inline-block;
+    margin-top: 7px;
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lc-accent-text-color);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 500;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+        color: #69B1FF;
+        text-decoration: none;
+    }
+}
+
+.lc-notification-meta {
+    margin-top: 7px;
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
 }

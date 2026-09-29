@@ -51,11 +51,7 @@
     bool _hasErrors;
     string? _errorMessage;
 
-    readonly TerminalOptions _terminalOptions = new()
-    {
-        CursorBlink = false,
-        CursorStyle = CursorStyle.Bar,
-    };
+    readonly TerminalOptions _terminalOptions = ConsolePalette.CreateOptions();
 
     protected override void OnInitialized()
     {

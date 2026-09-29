@@ -1,33 +1,200 @@
 @page "/"
 @page "/Dashboard"
 @attribute [Authorize]
+@inject DashboardService DashboardService
 
-<PageHeader Title="Dashboard" />
+<PageHeader Title="Dashboard" Subtitle="@_subtitle">
+    <Extra>
+        <Segmented TValue="TimeSpan" Items="Ranges" Value="_range" ValueChanged="OnRangeChangedAsync" aria-label="Range" />
+    </Extra>
+</PageHeader>
 
 <PageContent>
-    <Row Gap="Gap.Medium" VerticalGap="Gap.Medium">
-        <Column Xs="24" Md="12">
-            <Card Title="Top 10 Total Playtime (By Player)">
+    <div class="dashboard">
+        <div class="dashboard-stats">
+            <Card>
+                <Statistic Title="Players online"
+                           Value="@(_stats?.PlayersOnline.ToString("N0") ?? "–")"
+                           Delta="@(_stats != null ? DashboardFormat.Delta(_stats.PlayersOnlineDelta, RangeAgo) : null)"
+                           Success="@(_stats?.PlayersOnlineDelta > 0)" />
+            </Card>
+            <Card>
+                <Statistic Title="@SessionsTitle"
+                           Value="@(_stats?.Sessions.ToString("N0") ?? "–")"
+                           Delta="@(_playtime != null ? DashboardFormat.HoursPlayed(_totalPlaytime) : null)" />
+            </Card>
+            <Card>
+                <Statistic Title="Game servers"
+                           Value="@(_stats != null ? $"{_stats.ServersRunning}/{_stats.ServersTotal}" : "–")"
+                           Delta="@ServersNote"
+                           Warning="@(_stats != null && _stats.ServersRunning < _stats.ServersTotal)" />
+            </Card>
+            <Card>
+                <Statistic Title="Archive storage"
+                           Value="@(_storage.Value ?? "–")"
+                           Delta="@_storage.Note"
+                           Usage="@(_stats?.Storage.UsedFraction * 100)" />
+            </Card>
+        </div>
+
+        <div class="dashboard-grid">
+            <Card Title="Playtime by title" Subtitle="@($"last {RangeLabel}")" Class="dashboard-playtime">
+                <ErrorHandler Inline>
+                    @if (_playtime == null)
+                    {
+                        <Skeleton />
+                    }
+                    else
+                    {
+                        <BarChart Items="_playtime.Take(TopTitles)"
+                                  Label="t => t.Title"
+                                  Value="t => t.Playtime.TotalSeconds"
+                                  ValueFormat="Playtime.Format"
+                                  ValueTitle="Playtime"
+                                  CategoryFormat="t => DashboardFormat.Abbreviate(t)"
+                                  SingleColor
+                                  BarRadius="2"
+                                  MaxBarWidth="54"
+                                  Height="ChartHeight"
+                                  EmptyText="@($"No games played in the last {RangeLabel}")" />
+                    }
+                </ErrorHandler>
+            </Card>
+
+            <Card Panel Title="Active sessions" Count="@(_sessions?.Count ?? 0)" Class="dashboard-sessions" Footer="@(_isAdministrator ? SeeAllSessions : null)">
+                <ChildContent>
+                    @if (_sessions == null)
+                    {
+                        <div class="dashboard-sessions-loading"><Skeleton /></div>
+                    }
+                    else if (_sessions.Count == 0)
+                    {
+                        <div class="dashboard-sessions-empty">Nobody is playing right now</div>
+                    }
+                    else
+                    {
+                        <ul class="dashboard-session-list">
+                            @foreach (var session in _sessions.Take(VisibleSessions))
+                            {
+                                <li class="dashboard-session">
+                                    <Avatar Name="@session.DisplayName" ColorKey="@session.UserId.ToString()" Small />
+                                    <div class="dashboard-session-text">
+                                        <div class="dashboard-session-name">@session.DisplayName</div>
+                                        <div class="dashboard-session-game">@(session.GameTitle ?? "Unknown game")</div>
+                                    </div>
+                                    <span class="dashboard-session-duration">@DashboardFormat.Duration(session.Duration)</span>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </ChildContent>
+            </Card>
+        </div>
+
+        <div class="dashboard-history">
+            <Card Title="Playtime by player" Subtitle="all time · top 10">
                 <ErrorHandler Inline>
                     <TopPlayersPlaytime />
                 </ErrorHandler>
             </Card>
-        </Column>
 
-        <Column Xs="24" Md="12">
-            <Card Title="Top 10 Total Playtime (By Game)">
+            <Card Title="Share of playtime" Subtitle="all time · top 10 titles">
                 <ErrorHandler Inline>
                     <TopGamesPlaytime />
                 </ErrorHandler>
             </Card>
-        </Column>
 
-        <Column Xs="24">
-            <Card Title="Top Average Session Length (By Game)">
+            <Card Title="Average session length" Subtitle="all time · by title" Class="dashboard-history-wide">
                 <ErrorHandler Inline>
                     <TopGamesAverageSessionPlaytime />
                 </ErrorHandler>
             </Card>
-        </Column>
-    </Row>
+        </div>
+    </div>
 </PageContent>
+
+@code {
+    [CascadingParameter] Task<AuthenticationState>? AuthenticationState { get; set; }
+
+    const int TopTitles = 8;
+    const int VisibleSessions = 6;
+    // Six 50px session rows, so the chart card and the sessions panel line up
+    const int ChartHeight = 300;
+
+    static readonly TimeSpan Day = TimeSpan.FromDays(1);
+    static readonly TimeSpan Week = TimeSpan.FromDays(7);
+    static readonly TimeSpan Month = TimeSpan.FromDays(30);
+
+    static readonly SelectItem<TimeSpan>[] Ranges =
+    [
+        new(Day, "24h"),
+        new(Week, "7d"),
+        new(Month, "30d"),
+    ];
+
+    // The full list is an administrator tool
+    static readonly RenderFragment SeeAllSessions = @<a href="/Settings/Tools/ActiveSessions">See all sessions</a>;
+
+    TimeSpan _range = Week;
+    DashboardStats? _stats;
+    IReadOnlyList<DashboardTitlePlaytime>? _playtime;
+    TimeSpan _totalPlaytime;
+    IReadOnlyList<DashboardActiveSession>? _sessions;
+    (string? Value, string? Note) _storage;
+    string? _subtitle;
+    bool _isAdministrator;
+
+    string RangeLabel => _range == Day ? "24 hours" : _range == Week ? "7 days" : "30 days";
+
+    string RangeAgo => _range == Day ? "24h ago" : _range == Week ? "7d ago" : "30d ago";
+
+    // The ranges are rolling windows; these read as the design writes them
+    string SessionsTitle => _range == Day ? "Sessions today" : _range == Week ? "Sessions this week" : "Sessions this month";
+
+    string? ServersNote
+    {
+        get
+        {
+            if (_stats == null)
+                return null;
+
+            if (_stats.ServersTotal == 0)
+                return "none set up";
+
+            var stopped = _stats.ServersTotal - _stats.ServersRunning;
+
+            return stopped > 0 ? $"{stopped} stopped" : "all running";
+        }
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (AuthenticationState != null)
+        {
+            var state = await AuthenticationState;
+
+            _isAdministrator = state.User.IsInRole(RoleService.AdministratorRoleName);
+        }
+
+        _sessions = await DashboardService.GetActiveSessionsAsync();
+
+        await LoadRangeAsync();
+    }
+
+    async Task OnRangeChangedAsync(TimeSpan range)
+    {
+        _range = range;
+
+        await LoadRangeAsync();
+    }
+
+    async Task LoadRangeAsync()
+    {
+        _stats = await DashboardService.GetStatsAsync(_range);
+        // Every title, so the sessions tile can total the range; the chart shows the top few
+        _playtime = await DashboardService.GetPlaytimeByTitleAsync(_range, Int32.MaxValue);
+        _totalPlaytime = _playtime.Aggregate(TimeSpan.Zero, (total, t) => total + t.Playtime);
+        _storage = DashboardFormat.Storage(_stats.Storage.UsedBytes, _stats.Storage.CapacityBytes);
+        _subtitle = $"{_stats.HostName.ToLowerInvariant()} · up {DashboardFormat.Uptime(_stats.ServerUptime)}";
+    }
+}

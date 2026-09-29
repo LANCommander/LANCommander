@@ -1,0 +1,176 @@
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.Server.Data
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@implements IDisposable
+
+@*
+    Beside a server's console: what the process is using and what it is, and who is playing its
+    game right now. Ping isn't known for anyone (nothing queries the game servers), so each player's
+    row shows how long their session has run instead.
+*@
+<aside class="server-monitor-rail">
+    <section class="server-monitor-pane" aria-label="Process">
+        <h2 class="server-monitor-heading">Process</h2>
+
+        @if (Feed?.State.Process is { } process && (process.CpuPercent != null || process.MemoryBytes != null))
+        {
+            <div class="server-monitor-meters">
+                @if (process.CpuPercent is { } cpu)
+                {
+                    <div class="server-monitor-meter">
+                        <span class="server-monitor-meter-label">CPU</span>
+                        <span class="server-monitor-meter-value">@($"{cpu:0}%")</span>
+                    </div>
+                    <Progress Small NoValue Value="Math.Clamp(cpu, 0, 100)" aria-label="CPU" />
+                }
+
+                @if (process.MemoryBytes is { } memory)
+                {
+                    <div class="server-monitor-meter">
+                        <span class="server-monitor-meter-label">Memory</span>
+                        <span class="server-monitor-meter-value">@MemoryText(memory)</span>
+                    </div>
+                    <Progress Small NoValue Value="MemoryPercent(memory)" aria-label="Memory" />
+                }
+            </div>
+        }
+
+        <dl class="server-monitor-facts">
+            <dt>Engine</dt>
+            <dd>@Server.Engine.GetDisplayName()</dd>
+
+            @if (!string.IsNullOrWhiteSpace(Server.Path))
+            {
+                <dt>Executable</dt>
+                <dd class="server-monitor-mono" title="@Server.Path">@Server.Path</dd>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Server.Arguments))
+            {
+                <dt>Arguments</dt>
+                <dd class="server-monitor-mono">@Server.Arguments</dd>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(Server.WorkingDirectory))
+            {
+                <dt>Directory</dt>
+                <dd class="server-monitor-mono" title="@Server.WorkingDirectory">@Server.WorkingDirectory</dd>
+            }
+
+            @if (Server.Port > 0)
+            {
+                <dt>Address</dt>
+                <dd class="server-monitor-mono">@(string.IsNullOrWhiteSpace(Server.Host) ? "*" : Server.Host):@Server.Port</dd>
+            }
+
+            <dt>Autostart</dt>
+            <dd>@(Server.Autostart ? Server.AutostartMethod.GetDisplayName() : "Off")</dd>
+        </dl>
+    </section>
+
+    <Card Panel Title="Players" Count="@PlayerCount" Class="server-monitor-players-card">
+        @if (_players.Any())
+        {
+            <ul class="server-monitor-players">
+                @foreach (var player in _players)
+                {
+                    <li>
+                        <Avatar ExtraSmall Square Name="@player.Name" ColorKey="@player.UserId.ToString()" />
+                        <span class="server-monitor-player-name">@player.Name</span>
+                        <span class="server-monitor-since" title="Session length">@Since(player.Start)</span>
+                    </li>
+                }
+            </ul>
+        }
+        else
+        {
+            <Empty Small Description="@(Server.GameId == null ? "This server has no game to count players of" : "Nobody is playing")" />
+        }
+    </Card>
+</aside>
+
+@code {
+    [Parameter, EditorRequired] public Server Server { get; set; } = default!;
+
+    /// <summary>The header's samples of the process, every two seconds.</summary>
+    [CascadingParameter(Name = "ServerLiveFeed")] public ServerLiveFeed? Feed { get; set; }
+
+    sealed record Player(Guid UserId, string Name, DateTime? Start);
+
+    List<Player> _players = [];
+    int? _maxPlayers;
+    Timer? _refresh;
+
+    // The memory bar is out of what this machine (or container) has
+    static readonly long TotalMemory = GC.GetGCMemoryInfo().TotalAvailableMemoryBytes;
+
+    string PlayerCount => _maxPlayers is > 0 ? $"{_players.Count:N0} / {_maxPlayers:N0}" : _players.Count.ToString("N0");
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (Feed != null)
+            Feed.Changed += OnLiveChanged;
+
+        await LoadPlayersAsync();
+
+        // Sessions open and close while the page is up
+        _refresh = new Timer(_ => InvokeAsync(async () =>
+        {
+            await LoadPlayersAsync();
+            StateHasChanged();
+        }), null, TimeSpan.FromSeconds(30), TimeSpan.FromSeconds(30));
+    }
+
+    /// <summary>The open play sessions of the server's game: who is in it, as autostop counts them.</summary>
+    async Task LoadPlayersAsync()
+    {
+        if (Server.GameId is not { } gameId)
+            return;
+
+        await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+        _players = await context.Set<PlaySession>().AsNoTracking()
+            .Where(p => p.GameId == gameId && p.End == null)
+            .OrderBy(p => p.Start)
+            .Select(p => new Player(p.UserId, p.User != null ? (p.User.Alias ?? p.User.UserName ?? "") : "", p.Start))
+            .ToListAsync();
+
+        // The most any of the game's multiplayer modes allows
+        _maxPlayers = await context.Set<MultiplayerMode>().AsNoTracking()
+            .Where(m => m.GameId == gameId && m.MaxPlayers > 0)
+            .MaxAsync(m => (int?)m.MaxPlayers);
+    }
+
+    static double MemoryPercent(long bytes) =>
+        TotalMemory > 0 ? Math.Clamp(bytes * 100d / TotalMemory, 0, 100) : 0;
+
+    /// <summary>"2.1 / 8 GB", or "512 MB / 8 GB" under a gigabyte.</summary>
+    static string MemoryText(long bytes)
+    {
+        const double GB = 1024d * 1024 * 1024;
+
+        var used = bytes >= GB ? $"{bytes / GB:0.#}" : $"{bytes / (1024d * 1024):0} MB";
+
+        return TotalMemory > 0 ? $"{used} / {TotalMemory / GB:0.#} GB" : bytes >= GB ? $"{used} GB" : used;
+    }
+
+    static string Since(DateTime? start)
+    {
+        if (start is not { } started)
+            return "";
+
+        var elapsed = DateTime.UtcNow - started.ToUniversalTime();
+
+        return elapsed.TotalHours >= 1 ? $"{(int)elapsed.TotalHours}h {elapsed.Minutes:D2}m" : $"{Math.Max(0, elapsed.Minutes)}m";
+    }
+
+    void OnLiveChanged(ServerLiveState state) => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        if (Feed != null)
+            Feed.Changed -= OnLiveChanged;
+
+        _refresh?.Dispose();
+    }
+}

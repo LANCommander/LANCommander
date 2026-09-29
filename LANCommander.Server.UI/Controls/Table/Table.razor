@@ -7,26 +7,74 @@
 @inject IJSRuntime JS
 @inject NavigationManager Navigation
 @inject ILogger<Table<TItem>> Logger
+@inject LANCommander.Server.UI.Providers.ScriptProvider ScriptProvider
+@using System.Linq.Expressions
 
 @*
     A paged, sortable table. Rows come from Items (in memory) or Provider (e.g. a database query);
     either way sorting uses the columns' expressions and paging happens in LoadDataAsync. Page size,
     sort and hidden columns are remembered per page in local storage.
 *@
-<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
-    @if (Searchable || LeftToolbar != null || RightToolbar != null)
+<div @attributes="AdditionalAttributes" class="@RootClass" style="@Style">
+    @if (Searchable || LeftToolbar != null || RightToolbar != null || Tile != null || ColumnPicker || ShowTotal)
     {
         <div class="lc-table-toolbar">
             <div class="lc-table-toolbar-start">
                 @if (Searchable)
                 {
-                    <TextInput Icon="IconType.MagnifyingGlass" Immediate Value="@_search" ValueChanged="SearchChanged" Placeholder="@SearchPlaceholder" Class="lc-table-search" />
+                    <div class="lc-table-search-box" @ref="_searchBox">
+                        <TextInput Icon="IconType.MagnifyingGlass" Immediate Value="@_search" ValueChanged="SearchChanged" Placeholder="@SearchPlaceholder" Class="lc-table-search" aria-label="@SearchPlaceholder" />
+                        @if (SearchShortcut)
+                        {
+                            <kbd class="lc-table-search-key" title="Press / to search">/</kbd>
+                        }
+                    </div>
                 }
                 @LeftToolbar
             </div>
             <div class="lc-table-toolbar-end">
                 @RightToolbar
+                @if (ShowTotal && _ready)
+                {
+                    <span class="lc-table-total" role="status">@_total.ToString("N0") @(_total == 1 ? "result" : "results")</span>
+                }
+                @if (Tile != null)
+                {
+                    <div class="lc-table-view" role="group" aria-label="View">
+                        <button type="button" class="@ToggleClass(_view == TableView.Rows)" aria-pressed="@(_view == TableView.Rows ? "true" : "false")" @onclick="() => SetViewAsync(TableView.Rows)"><Icon Type="IconType.Rows" /><span>Table</span></button>
+                        <button type="button" class="@ToggleClass(_view == TableView.Tiles)" aria-pressed="@(_view == TableView.Tiles ? "true" : "false")" @onclick="() => SetViewAsync(TableView.Tiles)"><Icon Type="IconType.SquaresFour" /><span>Grid</span></button>
+                    </div>
+                    @if (_view == TableView.Tiles)
+                    {
+                        <div class="lc-table-view lc-table-tile-sizes" role="group" aria-label="Tile size">
+                            @foreach (var size in Enum.GetValues<TableTileSize>())
+                            {
+                                <button type="button" class="@ToggleClass(_tileSize == size)" aria-pressed="@(_tileSize == size ? "true" : "false")" aria-label="@($"{size} tiles")" title="@($"{size} tiles")" @onclick="() => SetTileSizeAsync(size)">@size.ToString()[..1]</button>
+                            }
+                        </div>
+                    }
+                }
+                @if (ColumnPicker)
+                {
+                    <Popover Content="ColumnPickerContent" MaxWidth="280" Class="lc-table-columns">
+                        <Button Small Icon="IconType.Columns">Columns</Button>
+                    </Popover>
+                }
             </div>
+        </div>
+    }
+
+    @if (FilterBar != null || (ShowSortSummary && _sortTitle != null))
+    {
+        <div class="lc-table-filterbar">
+            @FilterBar
+            @if (ShowSortSummary && _sortTitle != null)
+            {
+                <span class="lc-table-sorted">
+                    <span class="lc-table-sorted-label">Sorted by</span>
+                    <span class="lc-table-sorted-value">@_sortTitle <Icon Type="@(_sortDescending ? IconType.ArrowDown : IconType.ArrowUp)" Title="@(_sortDescending ? "descending" : "ascending")" /></span>
+                </span>
+            }
         </div>
     }
 
@@ -44,60 +92,116 @@
     }
     else
     {
-        <CascadingValue Value="(ITableHost)this" IsFixed>
-            <RadzenDataGrid @ref="_grid"
-                            TItem="TItem"
-                            Data="_rows"
-                            Count="_total"
-                            LoadData="LoadDataAsync"
-                            IsLoading="_loading"
-                            AllowSorting="true"
-                            AllowPaging="!NoPaging"
-                            PageSize="_pageSize"
-                            PageSizeOptions="PageSizeOptions"
-                            PageSizeChanged="PageSizeChangedAsync"
-                            ShowPagingSummary="true"
-                            PagingSummaryFormat="{2} rows"
-                            PagerHorizontalAlign="HorizontalAlign.Right"
-                            PagerAlwaysVisible="false"
-                            AllowColumnPicking="ColumnPicker"
-                            PickedColumnsChanged="PickedColumnsChangedAsync"
-                            AllowColumnResize="true"
-                            Density="@(Small ? Density.Compact : Density.Default)"
-                            GridLines="DataGridGridLines.Horizontal"
-                            SelectionMode="DataGridSelectionMode.Multiple"
-                            AllowRowSelectOnRowClick="false"
-                            Value="_selected"
-                            KeyProperty="@_keyProperty"
-                            RowDoubleClick="RowDoubleClickAsync"
-                            RowClick="RowClickAsync"
-                            RowRender="RowRender"
-                            LoadChildData="@(Children != null || Expandable ? EventCallback.Factory.Create<DataGridLoadChildDataEventArgs<TItem>>(this, LoadChildData) : default)"
-                            EmptyTemplate="EmptyContent"
-                            Class="lc-table-grid">
-                <Columns>
-                    @if (Selectable)
+        <div class="@(_view == TableView.Tiles ? "lc-table-frame lc-table-frame-tiles" : "lc-table-frame")">
+            @* In the tile view the grid stays mounted but hidden: it still owns sorting and loading *@
+            <CascadingValue Value="(ITableHost)this" IsFixed>
+                <div class="@(_view == TableView.Tiles ? "lc-table-rows lc-table-rows-hidden" : "lc-table-rows")">
+                <RadzenDataGrid @ref="_grid"
+                                TItem="TItem"
+                                Data="_rows"
+                                LoadData="LoadDataAsync"
+                                IsLoading="_loading"
+                                AllowSorting="true"
+                                AllowPaging="false"
+                                Groups="_groups"
+                                GroupHeaderTemplate="GroupHeader"
+                                ShowGroupExpandColumn="false"
+                                AllowColumnPicking="false"
+                                AllowColumnResize="true"
+                                Density="@(Small ? Density.Compact : Density.Default)"
+                                GridLines="DataGridGridLines.Horizontal"
+                                SelectionMode="DataGridSelectionMode.Multiple"
+                                AllowRowSelectOnRowClick="false"
+                                Value="_selected"
+                                KeyProperty="@_keyProperty"
+                                RowDoubleClick="RowDoubleClickAsync"
+                                RowClick="RowClickAsync"
+                                RowRender="RowRender"
+                                LoadChildData="@(Children != null || Expandable ? EventCallback.Factory.Create<DataGridLoadChildDataEventArgs<TItem>>(this, LoadChildData) : default)"
+                                EmptyTemplate="EmptyContent"
+                                Class="lc-table-grid">
+                    <Columns>
+                        @if (Selectable)
+                        {
+                            @* The grid's own expand toggle shares the first column, so it needs room for both, unless a column carries the toggle itself *@
+                            <RadzenDataGridColumn TItem="TItem" Width="@(HasChildRows && !InlineExpander ? "88px" : "48px")" Sortable="false" Pickable="false" Resizable="false" CssClass="lc-table-select" HeaderCssClass="lc-table-select">
+                                <HeaderTemplate>
+                                    @if (!Single)
+                                    {
+                                        <RadzenCheckBox TValue="bool?" Value="PageSelectionState" ValueChanged="SelectPageAsync" AriaLabel="Select all rows on this page" />
+                                    }
+                                </HeaderTemplate>
+                                <Template Context="item">
+                                    @if (RowSelectable?.Invoke(item) ?? true)
+                                    {
+                                        <RadzenCheckBox TValue="bool" Value="IsSelected(item)" ValueChanged="@(selected => SetSelectedAsync(item, selected))" AriaLabel="Select row" />
+                                    }
+                                </Template>
+                            </RadzenDataGridColumn>
+                        }
+                        @Columns
+                    </Columns>
+                </RadzenDataGrid>
+                </div>
+            </CascadingValue>
+
+            @if (_view == TableView.Tiles && Tile != null)
+            {
+                <div class="@TilesClass" aria-busy="@(_loading ? "true" : "false")">
+                    @if (_rows is { Count: 0 })
                     {
-                        @* Expandable rows put their toggle in the first column too, so it needs room for both *@
-                        <RadzenDataGridColumn TItem="TItem" Width="@(HasChildRows ? "88px" : "48px")" Sortable="false" Pickable="false" Resizable="false" CssClass="lc-table-select" HeaderCssClass="lc-table-select">
-                            <HeaderTemplate>
-                                @if (!Single)
-                                {
-                                    <RadzenCheckBox TValue="bool?" Value="PageSelectionState" ValueChanged="SelectPageAsync" AriaLabel="Select all rows on this page" />
-                                }
-                            </HeaderTemplate>
-                            <Template Context="item">
-                                @if (RowSelectable?.Invoke(item) ?? true)
-                                {
-                                    <RadzenCheckBox TValue="bool" Value="IsSelected(item)" ValueChanged="@(selected => SetSelectedAsync(item, selected))" AriaLabel="Select row" />
-                                }
-                            </Template>
-                        </RadzenDataGridColumn>
+                        @EmptyContent
                     }
-                    @Columns
-                </Columns>
-            </RadzenDataGrid>
-        </CascadingValue>
+                    @foreach (var item in _rows ?? [])
+                    {
+                        var selected = IsSelected(item);
+
+                        <div @key="_keyOf(item)" class="@(selected ? "lc-table-tile lc-table-tile-selected" : "lc-table-tile")"
+                             @ondblclick="() => OnRowDoubleClick.InvokeAsync(item)">
+                            @Tile(item)
+                            @if (Selectable && (RowSelectable?.Invoke(item) ?? true))
+                            {
+                                <span class="lc-table-tile-select">
+                                    <RadzenCheckBox TValue="bool" Value="selected" ValueChanged="@(value => SetSelectedAsync(item, value))" AriaLabel="Select" />
+                                </span>
+                            }
+                        </div>
+                    }
+                </div>
+            }
+
+            @if (!NoPaging && _total > 0)
+            {
+                <div class="lc-table-footer">
+                    <span class="lc-table-range">@RangeText</span>
+                    <div class="lc-table-pager">
+                        <span class="lc-table-pager-label">Rows</span>
+                        <Select TValue="int" Items="_pageSizeItems" Value="_pageSize" ValueChanged="PageSizeChangedAsync" Class="lc-table-page-size" Style="width: 72px" aria-label="Rows per page" />
+                        @if (PageCount > 1)
+                        {
+                            <span class="lc-table-pager-divider" aria-hidden="true"></span>
+                            <nav class="lc-table-pages" aria-label="Pages">
+                                <button type="button" class="lc-table-page lc-table-page-step" disabled="@(_page == 0)" aria-label="Previous page" @onclick="() => GoToPageAsync(_page - 1)"><Icon Type="IconType.CaretLeft" /></button>
+                                @foreach (var page in PageWindow(_page, PageCount))
+                                {
+                                    if (page < 0)
+                                    {
+                                        <span class="lc-table-page-gap" aria-hidden="true">…</span>
+                                    }
+                                    else
+                                    {
+                                        var number = page;
+
+                                        <button type="button" class="@(number == _page ? "lc-table-page lc-table-page-active" : "lc-table-page")" aria-current="@(number == _page ? "page" : null)" aria-label="@($"Page {number + 1:N0}")" @onclick="() => GoToPageAsync(number)">@((number + 1).ToString("N0"))</button>
+                                    }
+                                }
+                                <button type="button" class="lc-table-page lc-table-page-step" disabled="@(_page >= PageCount - 1)" aria-label="Next page" @onclick="() => GoToPageAsync(_page + 1)"><Icon Type="IconType.CaretRight" /></button>
+                            </nav>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
     }
 </div>
 
@@ -132,7 +236,22 @@
 
     [Parameter] public string SearchPlaceholder { get; set; } = "Search";
 
-    /// <summary>Lets the user choose which columns are shown.</summary>
+    /// <summary>With <see cref="Searchable"/>: pressing "/" anywhere outside a text field focuses the search box.</summary>
+    [Parameter] public bool SearchShortcut { get; set; } = true;
+
+    /// <summary>Shows the number of matching rows in the toolbar, e.g. "128 results".</summary>
+    [Parameter] public bool ShowTotal { get; set; }
+
+    /// <summary>
+    /// A row beneath the toolbar, e.g. the active filters as removable chips. With
+    /// <see cref="ShowSortSummary"/> it ends with the current sort.
+    /// </summary>
+    [Parameter] public RenderFragment? FilterBar { get; set; }
+
+    /// <summary>Ends the filter bar with the current order, e.g. "Sorted by Title" and an arrow.</summary>
+    [Parameter] public bool ShowSortSummary { get; set; }
+
+    /// <summary>Adds a Columns button to the toolbar, listing the columns to show or hide.</summary>
     [Parameter] public bool ColumnPicker { get; set; }
 
     /// <summary>Adds a checkbox column; the checked rows are bound through <see cref="Values"/>.</summary>
@@ -148,18 +267,55 @@
     /// <summary>With <see cref="Selectable"/>: which rows can be checked; others get no checkbox.</summary>
     [Parameter] public Func<TItem, bool>? RowSelectable { get; set; }
 
+    /// <summary>
+    /// A mark for a row, rendered as its <c>data-lc-mark</c> attribute so styles can pick it out,
+    /// e.g. "unselectable". (The row's class belongs to the grid.)
+    /// </summary>
+    [Parameter] public Func<TItem, string?>? RowMark { get; set; }
+
     /// <summary>Identifies a row across reloads, for selection. Defaults to an Id property, else the row itself.</summary>
     [Parameter] public Func<TItem, object?>? Key { get; set; }
 
     /// <summary>Tighter rows, for dense lists.</summary>
     [Parameter] public bool Small { get; set; }
 
+    /// <summary>
+    /// Leaves out the card around the rows and footer, for a table inside a panel that already
+    /// draws one, e.g. a file manager's listing.
+    /// </summary>
+    [Parameter] public bool Frameless { get; set; }
+
     /// <summary>Shows every row on one page.</summary>
     [Parameter] public bool NoPaging { get; set; }
 
-    [Parameter] public int PageSize { get; set; } = 25;
+    [Parameter] public int PageSize { get; set; } = 50;
 
     [Parameter] public IEnumerable<int> PageSizeOptions { get; set; } = [25, 50, 100, 200];
+
+    /// <summary>
+    /// Groups the rows under a header per value of this property, e.g. <c>g =&gt; g.TitleInitial</c>.
+    /// The header's count comes from <see cref="TableResult{TItem}.GroupCounts"/> when the provider
+    /// supplies it, so it covers every page, not just the one shown.
+    /// </summary>
+    [Parameter] public Expression<Func<TItem, object?>>? Group { get; set; }
+
+    /// <summary>
+    /// With <see cref="Group"/>: the key of the column the grouping follows. Groups show only while
+    /// the rows are sorted by it (or not sorted at all), since any other order would scatter them.
+    /// </summary>
+    [Parameter] public string? GroupColumn { get; set; }
+
+    /// <summary>Offers a grid of tiles as well as rows, each tile drawn by this template.</summary>
+    [Parameter] public RenderFragment<TItem>? Tile { get; set; }
+
+    /// <summary>With <see cref="Tile"/>: raised when the rows or tiles are shown, including the remembered choice on load.</summary>
+    [Parameter] public EventCallback<TableView> ViewChanged { get; set; }
+
+    /// <summary>
+    /// With a column marked <c>Expander</c>: text after an expandable row's title about its children,
+    /// e.g. <c>children =&gt; $"{children.Count} expansions"</c>.
+    /// </summary>
+    [Parameter] public Func<IReadOnlyList<TItem>, string?>? ChildSummary { get; set; }
 
     /// <summary>The total number of rows, after searching and filtering.</summary>
     [Parameter] public int Total { get; set; }
@@ -185,26 +341,56 @@
     IReadOnlyDictionary<TItem, IReadOnlyList<TItem>> _children = new Dictionary<TItem, IReadOnlyList<TItem>>();
     IList<TItem> _selected = new List<TItem>();
     int _total;
+    int _page;
     int _pageSize;
+    string? _sortSignature;
+    IReadOnlyDictionary<string, int>? _groupCounts;
+    readonly System.Collections.ObjectModel.ObservableCollection<GroupDescriptor> _groups = [];
+    TableView _view;
+    TableTileSize _tileSize = TableTileSize.Medium;
+    IReadOnlyList<SelectItem<int>> _pageSizeItems = [];
     bool _loading;
     bool _ready;
     Exception? _error;
     string? _search;
-    string? _class;
     string? _keyProperty;
     Func<TItem, object?> _keyOf = item => item;
     TableSettings _settings = new();
     CancellationTokenSource? _searchDebounce;
+    ElementReference _searchBox;
+    IJSObjectReference? _domHelper;
+    string? _sortTitle;
+    bool _sortDescending;
+    // Keys of the rows on the page itself, so rows that aren't are known to be children
+    HashSet<object?> _topLevelKeys = [];
 
     bool ITableHost.Small => Small;
 
     bool HasChildRows => Children != null || Expandable;
+
+    bool InlineExpander => _columns.Any(c => c.Expander);
+
+    // Built at render: whether a column carries the expander is known only once the columns have registered
+    string RootClass => new ClassBuilder()
+        .Add("lc-table")
+        .If(Small, "lc-table-small")
+        .If(Frameless, "lc-table-frameless")
+        .If(InlineExpander, "lc-table-inline-expander")
+        .Add(Class)
+        .Build()!;
+
+    string TilesClass => new ClassBuilder()
+        .Add("lc-table-tiles")
+        .Add($"lc-table-tiles-{_tileSize.ToString().ToLowerInvariant()}")
+        .If(_selected.Count > 0, "lc-table-tiles-selecting")
+        .Build()!;
 
     string StorageKey => $"lc-table:{SettingsKey ?? new Uri(Navigation.Uri).AbsolutePath}";
 
     protected override void OnInitialized()
     {
         _pageSize = PageSize;
+        _pageSizeItems = PageSizeOptions.Select(size => new SelectItem<int>(size, size.ToString())).ToList();
 
         var idProperty = typeof(TItem).GetProperty("Id");
 
@@ -219,8 +405,6 @@
 
     protected override void OnParametersSet()
     {
-        _class = new ClassBuilder().Add("lc-table").If(Small, "lc-table-small").Add(Class).Build();
-
         if (Values != null && !ReferenceEquals(Values, _selected))
             _selected = Values;
     }
@@ -258,9 +442,32 @@
         if (_settings.PageSize is > 0)
             _pageSize = _settings.PageSize.Value;
 
+        if (Tile != null)
+        {
+            _view = _settings.View ?? TableView.Rows;
+            _tileSize = _settings.TileSize ?? TableTileSize.Medium;
+
+            if (_view != TableView.Rows)
+                await ViewChanged.InvokeAsync(_view);
+        }
+
         _lastItems = Items;
         _ready = true;
         StateHasChanged();
+
+        if (Searchable && SearchShortcut)
+        {
+            try
+            {
+                _domHelper = await ScriptProvider.ImportModuleAsync("DomHelper");
+
+                await _domHelper.InvokeVoidAsync("BindSearchShortcut", _searchBox);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not bind the search shortcut");
+            }
+        }
     }
 
     async Task LoadDataAsync(LoadDataArgs args)
@@ -276,14 +483,44 @@
                 .Select(s => new TableSort(s.Column!.SortExpression!, s.SortOrder == SortOrder.Descending))
                 .ToList() ?? [];
 
-            var query = new TableQuery(args.Skip ?? 0, NoPaging ? int.MaxValue : args.Top ?? _pageSize, sorts, _search,
-                _columns.SelectMany(c => c.Includes).Distinct().ToList());
+            // Radzen adds a sort of its own for the group; only sorts on our columns count
+            var columnSorts = args.Sorts?.Where(s => s.SortOrder != null && _columns.Any(c => c.Key == s.Property)).ToList() ?? [];
+
+            // A new order starts from the first page
+            var signature = string.Join(",", columnSorts.Select(s => $"{s.Property}:{s.SortOrder}"));
+
+            if (_sortSignature != null && signature != _sortSignature)
+                _page = 0;
+
+            _sortSignature = signature;
+
+            var grouped = UpdateGrouping(columnSorts);
+
+            var firstSort = columnSorts.FirstOrDefault();
+            _sortTitle = firstSort == null ? null : _columns.FirstOrDefault(c => c.Key == firstSort.Property)?.Title;
+            _sortDescending = firstSort?.SortOrder == SortOrder.Descending;
+
+            var query = new TableQuery(NoPaging ? 0 : _page * _pageSize, NoPaging ? int.MaxValue : _pageSize, sorts, _search,
+                _columns.SelectMany(c => c.Includes).Distinct().ToList())
+            {
+                Grouped = grouped,
+            };
 
             var result = Provider != null ? await Provider(query) : QueryItems(query);
 
             _rows = result.Items.ToList();
+            _topLevelKeys = _rows.Select(_keyOf).ToHashSet();
             _children = result.Children ?? new Dictionary<TItem, IReadOnlyList<TItem>>();
+            _groupCounts = result.GroupCounts;
             _total = result.Total;
+
+            // Rows were removed from under the last page: step back to the new last page
+            if (_page > 0 && _rows.Count == 0 && _total > 0)
+            {
+                _page = PageCount - 1;
+                await LoadDataAsync(args);
+                return;
+            }
 
             if (_total != Total)
             {
@@ -316,8 +553,13 @@
         var total = rows.Count();
         var page = query.Apply(rows).ToList();
 
+        var groupKey = query.Grouped ? Group?.Compile() : null;
+
         return new TableResult<TItem>(page, total)
         {
+            GroupCounts = groupKey == null
+                ? null
+                : rows.AsEnumerable().GroupBy(item => groupKey(item)?.ToString() ?? "").ToDictionary(g => g.Key, g => g.Count()),
             Children = Children == null
                 ? null
                 : page.ToDictionary(item => item, item => (IReadOnlyList<TItem>)Children(item).ToList()),
@@ -331,6 +573,122 @@
 
         if (_grid != null)
             await _grid.Reload();
+    }
+
+    /// <summary>Loads the first page again, e.g. after the rows' filter changed.</summary>
+    public async Task FirstPageAsync()
+    {
+        _page = 0;
+
+        await ReloadAsync();
+    }
+
+    // Paging
+
+    int PageCount => _pageSize <= 0 ? 1 : Math.Max(1, (int)Math.Ceiling(_total / (double)_pageSize));
+
+    string RangeText
+    {
+        get
+        {
+            var first = _page * _pageSize + 1;
+            var last = Math.Min(_total, first + (_rows?.Count ?? 0) - 1);
+
+            return $"{first:N0}–{last:N0} of {_total:N0}";
+        }
+    }
+
+    /// <summary>
+    /// The page numbers to offer, zero-based, with -1 for a gap: every page when there are few,
+    /// otherwise the first, the last and those around <paramref name="page"/>, always seven entries.
+    /// </summary>
+    internal static IReadOnlyList<int> PageWindow(int page, int count)
+    {
+        const int slots = 7;
+
+        if (count <= slots)
+            return Enumerable.Range(0, count).ToList();
+
+        if (page < 4)
+            return [0, 1, 2, 3, 4, -1, count - 1];
+
+        if (page > count - 5)
+            return [0, -1, count - 5, count - 4, count - 3, count - 2, count - 1];
+
+        return [0, -1, page - 1, page, page + 1, -1, count - 1];
+    }
+
+    async Task GoToPageAsync(int page)
+    {
+        page = Math.Clamp(page, 0, PageCount - 1);
+
+        if (page == _page)
+            return;
+
+        _page = page;
+
+        await ReloadAsync();
+    }
+
+    // Grouping
+
+    /// <summary>Turns grouping on or off for the given order; true while it is on.</summary>
+    bool UpdateGrouping(IEnumerable<SortDescriptor>? sorts)
+    {
+        var property = Group == null ? null : MemberPath(Group.Body);
+        var first = sorts?.FirstOrDefault(s => s.SortOrder != null);
+        var active = property != null && (first == null || first.Property == GroupColumn);
+        var order = first?.SortOrder ?? SortOrder.Ascending;
+
+        if (active && _groups.Count == 0)
+            _groups.Add(new GroupDescriptor { Property = property, SortOrder = order });
+        else if (active && _groups[0].SortOrder != order)
+            _groups[0] = new GroupDescriptor { Property = property, SortOrder = order };
+        else if (!active && _groups.Count > 0)
+            _groups.Clear();
+
+        return active;
+    }
+
+    static string? MemberPath(Expression expression) => expression switch
+    {
+        UnaryExpression { NodeType: ExpressionType.Convert } convert => MemberPath(convert.Operand),
+        MemberExpression { Expression: ParameterExpression } member => member.Member.Name,
+        MemberExpression member when member.Expression != null && MemberPath(member.Expression) is { } parent => $"{parent}.{member.Member.Name}",
+        _ => null,
+    };
+
+    RenderFragment<Radzen.Group> GroupHeader => group =>
+        @<span class="lc-table-group">
+            <span class="lc-table-group-title">@GroupKey(group)</span>
+            <span class="lc-table-group-count">@GroupCount(group).ToString("N0")</span>
+        </span>;
+
+    static string GroupKey(Radzen.Group group) => group.Data.Key?.ToString() ?? "";
+
+    int GroupCount(Radzen.Group group) =>
+        _groupCounts != null && _groupCounts.TryGetValue(GroupKey(group), out var total) ? total : group.Data.Count;
+
+    // Tiles
+
+    static string ToggleClass(bool active) => active ? "lc-table-view-option lc-table-view-option-active" : "lc-table-view-option";
+
+    async Task SetViewAsync(TableView view)
+    {
+        if (view == _view)
+            return;
+
+        _view = view;
+
+        await ViewChanged.InvokeAsync(view);
+        await SaveSettingsAsync();
+    }
+
+    async Task SetTileSizeAsync(TableTileSize size)
+    {
+        _tileSize = size;
+
+        await SaveSettingsAsync();
     }
 
     async Task SearchChanged(string? search)
@@ -350,13 +708,60 @@
             return;
         }
 
-        if (_grid != null)
-            await _grid.FirstPage(true);
+        await FirstPageAsync();
     }
 
     void RowRender(RowRenderEventArgs<TItem> args)
     {
         args.Expandable = _children.TryGetValue(args.Data, out var children) && children.Count > 0;
+
+        if (RowMark?.Invoke(args.Data) is { } mark)
+            args.Attributes["data-lc-mark"] = mark;
+
+        if (IsChildRow(args.Data))
+            args.Attributes["data-lc-child"] = "true";
+    }
+
+    /// <summary>A row shown beneath another when that one is expanded.</summary>
+    bool IsChildRow(TItem item) => HasChildRows && _rows != null && !_topLevelKeys.Contains(_keyOf(item));
+
+    RenderFragment ITableHost.ExpandableCell(object? item, RenderFragment content)
+    {
+        if (item is not TItem row)
+            return content;
+
+        if (IsChildRow(row))
+            return @<span class="lc-table-expandable lc-table-expandable-child">@content</span>;
+
+        if (!_children.TryGetValue(row, out var children) || children.Count == 0)
+            return content;
+
+        var expanded = _grid?.IsRowExpanded(row) ?? false;
+        var summary = ChildSummary?.Invoke(children);
+
+        return @<span class="lc-table-expandable">
+            <button type="button" class="@(expanded ? "lc-table-expander lc-table-expander-open" : "lc-table-expander")"
+                    aria-expanded="@(expanded ? "true" : "false")" aria-label="@(expanded ? "Collapse" : "Expand")"
+                    @onclick="() => ToggleRowAsync(row)" @onclick:stopPropagation>
+                <Icon Type="IconType.CaretRight" />
+            </button>
+            <span class="lc-table-expandable-content">@content</span>
+            @if (!string.IsNullOrEmpty(summary))
+            {
+                <span class="lc-table-child-summary">@summary</span>
+            }
+        </span>;
+    }
+
+    async Task ToggleRowAsync(TItem row)
+    {
+        if (_grid == null)
+            return;
+
+        // Expands a collapsed row and collapses an expanded one
+        await _grid.ExpandRow(row);
+
+        StateHasChanged();
     }
 
     void LoadChildData(DataGridLoadChildDataEventArgs<TItem> args)
@@ -426,8 +831,34 @@
 
     void ITableHost.Unregister(TableColumnInfo column) => _columns.Remove(column);
 
-    bool ITableHost.IsVisible(TableColumnInfo column, bool hiddenByDefault) =>
-        _settings.HiddenColumns?.Contains(column.Key) ?? !hiddenByDefault;
+    bool ITableHost.IsVisible(TableColumnInfo column, bool hiddenByDefault) => IsColumnVisible(column.Key, hiddenByDefault);
+
+    bool IsColumnVisible(string key, bool hiddenByDefault) =>
+        _settings.HiddenColumns?.Contains(key) != true && (_settings.ShownColumns?.Contains(key) == true || !hiddenByDefault);
+
+    RenderFragment ColumnPickerContent => @<div class="lc-table-column-picker" role="group" aria-label="Columns">
+        @foreach (var column in _columns.Where(c => c.Pickable && !string.IsNullOrEmpty(c.Title)))
+        {
+            var key = column.Key;
+
+            <Checkbox Value="IsColumnVisible(key, column.HiddenByDefault)" ValueChanged="visible => SetColumnVisibleAsync(key, visible)" Class="lc-table-column-option">@column.Title</Checkbox>
+        }
+    </div>;
+
+    /// <summary>Shows or hides a column, remembering the choice.</summary>
+    async Task SetColumnVisibleAsync(string key, bool visible)
+    {
+        var hidden = (_settings.HiddenColumns ?? []).Where(k => k != key).ToList();
+        var shown = (_settings.ShownColumns ?? []).Where(k => k != key).ToList();
+
+        (visible ? shown : hidden).Add(key);
+
+        _settings.HiddenColumns = hidden;
+        _settings.ShownColumns = shown;
+
+        await SaveSettingsAsync();
+        StateHasChanged();
+    }
 
     SortOrder? ITableHost.InitialSortOrder(TableColumnInfo column, ColumnSort defaultSort)
     {
@@ -450,22 +881,14 @@
 
     async Task PageSizeChangedAsync(int pageSize)
     {
+        if (pageSize <= 0 || pageSize == _pageSize)
+            return;
+
         _pageSize = pageSize;
+        _page = 0;
 
         await SaveSettingsAsync();
-    }
-
-    async Task PickedColumnsChangedAsync(DataGridPickedColumnsChangedEventArgs<TItem> args)
-    {
-        // Picked columns are matched by title: template columns have no property to identify them by
-        var shown = args.Columns.Select(c => c.Title).ToHashSet();
-
-        _settings.HiddenColumns = _columns
-            .Where(c => c.Title != null && !shown.Contains(c.Title))
-            .Select(c => c.Key)
-            .ToList();
-
-        await SaveSettingsAsync();
+        await ReloadAsync();
     }
 
     async Task SaveSettingsAsync(IEnumerable<SortDescriptor>? sorts = null)
@@ -474,6 +897,12 @@
             return;
 
         _settings.PageSize = _pageSize;
+
+        if (Tile != null)
+        {
+            _settings.View = _view;
+            _settings.TileSize = _tileSize;
+        }
 
         if (sorts != null)
             _settings.Sorts = sorts.Where(s => s.SortOrder != null)
@@ -490,7 +919,26 @@
         }
     }
 
-    public void Dispose() => _searchDebounce?.Cancel();
+    public void Dispose()
+    {
+        _searchDebounce?.Cancel();
+
+        // The search shortcut unbinds itself once the box leaves the page; only the module is let go
+        _ = DisposeModuleAsync(_domHelper);
+    }
+
+    static async Task DisposeModuleAsync(IJSObjectReference? module)
+    {
+        try
+        {
+            if (module != null)
+                await module.DisposeAsync();
+        }
+        catch (Exception)
+        {
+            // The circuit may already be gone
+        }
+    }
 
     sealed class TableSettings
     {
@@ -499,6 +947,13 @@
         public List<Sort>? Sorts { get; set; }
 
         public List<string>? HiddenColumns { get; set; }
+
+        /// <summary>Columns hidden by default that were shown through the picker.</summary>
+        public List<string>? ShownColumns { get; set; }
+
+        public TableView? View { get; set; }
+
+        public TableTileSize? TileSize { get; set; }
 
         public sealed record Sort(string Key, bool Descending);
     }

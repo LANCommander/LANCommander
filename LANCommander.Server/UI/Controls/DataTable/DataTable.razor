@@ -15,12 +15,22 @@
        RightToolbar="RightToolbar"
        Searchable="@(SearchProperty != null)"
        SearchPlaceholder="@SearchPlaceholder"
+       SearchShortcut="SearchShortcut"
+       ShowTotal="ShowTotal"
+       FilterBar="FilterBar"
+       ShowSortSummary="ShowSortSummary"
        ColumnPicker="ColumnPicker"
        Selectable="Selectable"
        Values="Values"
        ValuesChanged="ValuesChanged"
+       RowSelectable="RowSelectable"
+       RowMark="RowMark"
        Small="Small"
+       Frameless="Frameless"
        NoPaging="NoPaging"
+       PageSize="PageSize"
+       PageSizeOptions="PageSizeOptions"
+       ChildSummary="ChildSummary"
        Total="Total"
        TotalChanged="TotalChanged"
        OnRowClick="OnRowClick"
@@ -28,6 +38,10 @@
        EmptyText="@EmptyText"
        EmptyTemplate="EmptyTemplate"
        SettingsKey="@SettingsKey"
+       Group="Group"
+       GroupColumn="@GroupColumn"
+       Tile="Tile"
+       ViewChanged="ViewChanged"
        Class="@Class"
        Style="@Style" />
 
@@ -49,6 +63,18 @@
 
     [Parameter] public string SearchPlaceholder { get; set; } = "Search";
 
+    /// <summary>Pressing "/" focuses the search box; see <see cref="Table{TItem}.SearchShortcut"/>.</summary>
+    [Parameter] public bool SearchShortcut { get; set; } = true;
+
+    /// <summary>Shows the number of matching rows in the toolbar.</summary>
+    [Parameter] public bool ShowTotal { get; set; }
+
+    /// <summary>A row beneath the toolbar, e.g. active filters; see <see cref="Table{TItem}.FilterBar"/>.</summary>
+    [Parameter] public RenderFragment? FilterBar { get; set; }
+
+    /// <summary>Ends the filter bar with the current order.</summary>
+    [Parameter] public bool ShowSortSummary { get; set; }
+
     /// <summary>
     /// Which rows are children of which, e.g. <c>(game, dlc) =&gt; dlc.BaseGameId == game.Id</c>.
     /// Rows with children can be expanded to show them.
@@ -63,9 +89,25 @@
 
     [Parameter] public EventCallback<IList<TItem>> ValuesChanged { get; set; }
 
+    /// <summary>Which rows can be checked; see <see cref="Table{TItem}.RowSelectable"/>.</summary>
+    [Parameter] public Func<TItem, bool>? RowSelectable { get; set; }
+
+    /// <summary>A mark for a row, rendered as its <c>data-lc-mark</c> attribute; see <see cref="Table{TItem}.RowMark"/>.</summary>
+    [Parameter] public Func<TItem, string?>? RowMark { get; set; }
+
     [Parameter] public bool Small { get; set; }
 
+    /// <summary>Leaves out the card around the rows; see <see cref="Table{TItem}.Frameless"/>.</summary>
+    [Parameter] public bool Frameless { get; set; }
+
     [Parameter] public bool NoPaging { get; set; }
+
+    [Parameter] public int PageSize { get; set; } = 50;
+
+    [Parameter] public IEnumerable<int> PageSizeOptions { get; set; } = [25, 50, 100, 200];
+
+    /// <summary>Text after an expandable row's title about its children; see <see cref="Table{TItem}.ChildSummary"/>.</summary>
+    [Parameter] public Func<IReadOnlyList<TItem>, string?>? ChildSummary { get; set; }
 
     [Parameter] public int Total { get; set; }
 
@@ -81,31 +123,85 @@
 
     [Parameter] public string? SettingsKey { get; set; }
 
+    /// <summary>Groups the rows under a header per value of this property; see <see cref="Table{TItem}.Group"/>.</summary>
+    [Parameter] public Expression<Func<TItem, object?>>? Group { get; set; }
+
+    [Parameter] public string? GroupColumn { get; set; }
+
+    /// <summary>
+    /// With <see cref="Group"/>: counts the matching rows per group, as a query, so each header's
+    /// count covers every page. Receives the filtered rows.
+    /// </summary>
+    [Parameter] public Func<IQueryable<TItem>, Task<IReadOnlyDictionary<string, int>>>? GroupCounts { get; set; }
+
+    /// <summary>Offers a grid of tiles as well as rows; see <see cref="Table{TItem}.Tile"/>.</summary>
+    [Parameter] public RenderFragment<TItem>? Tile { get; set; }
+
+    /// <summary>Raised when the rows or tiles are shown; see <see cref="Table{TItem}.ViewChanged"/>.</summary>
+    [Parameter] public EventCallback<TableView> ViewChanged { get; set; }
+
     [Parameter] public string? Class { get; set; }
 
     [Parameter] public string? Style { get; set; }
 
     Table<TItem>? _table;
+    Expression<Func<TItem, bool>>? _query;
+    string? _search;
 
     /// <summary>Queries the current page again, e.g. after rows were added or deleted.</summary>
     public Task ReloadAsync() => _table?.ReloadAsync() ?? Task.CompletedTask;
 
     public Task ClearSelectionAsync() => _table?.ClearSelectionAsync() ?? Task.CompletedTask;
 
+    protected override async Task OnParametersSetAsync()
+    {
+        // A new filter shows its first page; the selection is kept, since it is keyed and survives paging
+        if (!ReferenceEquals(Query, _query))
+        {
+            var changed = _query != null || Query == null;
+
+            _query = Query;
+
+            if (changed && _table != null)
+                await _table.FirstPageAsync();
+        }
+    }
+
+    /// <summary>Selects every row the current filter and search match, across all pages.</summary>
+    public async Task SelectAllMatchingAsync()
+    {
+        await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+        var all = await Filtered(context.Set<TItem>().AsNoTracking(), _search).ToListAsync();
+
+        await ValuesChanged.InvokeAsync(all);
+    }
+
+    IQueryable<TItem> Filtered(IQueryable<TItem> rows, string? search)
+    {
+        if (Query != null)
+            rows = rows.Where(Query);
+
+        if (!string.IsNullOrWhiteSpace(search) && SearchProperty != null)
+            rows = rows.Where(SearchPredicate(SearchProperty, search));
+
+        return rows;
+    }
+
     async Task<TableResult<TItem>> FetchAsync(TableQuery query)
     {
         await using var context = await DatabaseContextFactory.CreateDbContextAsync();
 
-        var rows = WithIncludes(context, query.Includes);
+        _search = query.Search;
 
-        if (Query != null)
-            rows = rows.Where(Query);
-
-        if (!string.IsNullOrWhiteSpace(query.Search) && SearchProperty != null)
-            rows = rows.Where(SearchPredicate(SearchProperty, query.Search));
+        var rows = Filtered(WithIncludes(context, query.Includes), query.Search);
 
         var total = await rows.CountAsync();
         var page = await query.Apply(rows, page: !NoPaging).ToListAsync();
+
+        var groupCounts = query.Grouped && GroupCounts != null
+            ? await GroupCounts(Filtered(context.Set<TItem>().AsNoTracking(), query.Search))
+            : null;
 
         Dictionary<TItem, IReadOnlyList<TItem>>? children = null;
 
@@ -124,7 +220,7 @@
             }
         }
 
-        return new TableResult<TItem>(page, total) { Children = children };
+        return new TableResult<TItem>(page, total) { Children = children, GroupCounts = groupCounts };
     }
 
     static IQueryable<TItem> WithIncludes(DatabaseContext context, IEnumerable<string> includes)

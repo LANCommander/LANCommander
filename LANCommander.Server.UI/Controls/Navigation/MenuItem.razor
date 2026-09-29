@@ -30,6 +30,12 @@
 
     [Parameter] public IconType Icon { get; set; }
 
+    /// <summary>A count or status shown at the end of the item, e.g. the number of records behind it.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    /// <summary>A figure shown at the end of the item in mono, e.g. how many records the page lists. Null shows nothing; zero shows "0".</summary>
+    [Parameter] public int? Count { get; set; }
+
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
 
     [Parameter] public bool Disabled { get; set; }
@@ -79,6 +85,14 @@
             <Icon Type="Icon" Class="lc-menu-item-icon" />
         }
         <span class="lc-menu-item-text">@ChildContent</span>
+        @if (Count.HasValue)
+        {
+            <span class="lc-menu-item-extra lc-menu-item-count">@Count.Value.ToString("N0")</span>
+        }
+        @if (Extra != null)
+        {
+            <span class="lc-menu-item-extra">@Extra</span>
+        }
     </text>;
 
     async Task ClickAsync(MouseEventArgs args)

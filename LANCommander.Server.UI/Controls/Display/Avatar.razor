@@ -1,7 +1,7 @@
 @namespace LANCommander.Server.UI.Controls
 @inherits ControlBase
 
-@* A person's picture, or their initial (or an icon) when there is no picture or it fails to load *@
+@* A person's picture, or their initials on their own colour (or an icon) when there is no picture or it fails to load *@
 <span @attributes="AdditionalAttributes" class="@_class" style="@Style" title="@Name" role="img" aria-label="@(Name ?? "Avatar")">
     @if (!String.IsNullOrWhiteSpace(Src))
     {
@@ -19,13 +19,23 @@
     /// <summary>The picture; the fallback shows while it is missing or broken.</summary>
     [Parameter] public string? Src { get; set; }
 
-    /// <summary>Whose avatar it is; the fallback shows its first letter.</summary>
+    /// <summary>Whose avatar it is; the fallback shows its initials ("Alex Mercer" is "AM").</summary>
     [Parameter] public string? Name { get; set; }
+
+    /// <summary>
+    /// What picks the person's colour, usually their user id, so it stays the same when their name
+    /// changes. Falls back to <see cref="Name"/>.
+    /// </summary>
+    [Parameter] public string? ColorKey { get; set; }
 
     /// <summary>Shown when there is neither a picture nor a name, e.g. a group icon.</summary>
     [Parameter] public IconType Icon { get; set; } = IconType.User;
 
+    /// <summary>24px.</summary>
     [Parameter] public bool Small { get; set; }
+
+    /// <summary>22px, e.g. in a list of players.</summary>
+    [Parameter] public bool ExtraSmall { get; set; }
 
     [Parameter] public bool Large { get; set; }
 
@@ -38,7 +48,7 @@
     {
         if (!String.IsNullOrWhiteSpace(Name))
         {
-            <span class="lc-avatar-initial">@Name.Trim()[..1].ToUpperInvariant()</span>
+            <span class="lc-avatar-initial">@Initials(Name)</span>
         }
         else
         {
@@ -51,9 +61,35 @@
         _class = new ClassBuilder()
             .Add("lc-avatar")
             .If(Small, "lc-avatar-small")
+            .If(ExtraSmall, "lc-avatar-xs")
+            .Add(Tone(ColorKey ?? Name))
             .If(Large, "lc-avatar-large")
             .If(Square, "lc-avatar-square")
             .Add(Class)
             .Build();
+    }
+
+    static string Initials(string name)
+    {
+        var words = name.Split(' ', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+
+        var initials = words.Length > 1 ? $"{words[0][0]}{words[^1][0]}" : words[0][..1];
+
+        return initials.ToUpperInvariant();
+    }
+
+    // One of the design's four avatar tones. FNV-1a rather than GetHashCode, which differs between
+    // runs, so a person keeps their colour across restarts and on every page.
+    static string? Tone(string? key)
+    {
+        if (String.IsNullOrWhiteSpace(key))
+            return null;
+
+        var hash = 2166136261u;
+
+        foreach (var c in key)
+            hash = (hash ^ c) * 16777619u;
+
+        return $"lc-avatar-tone-{hash % 4}";
     }
 }

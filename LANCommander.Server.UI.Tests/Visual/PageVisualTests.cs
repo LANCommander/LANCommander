@@ -59,6 +59,7 @@ public class PageVisualTests(VisualServerFixture fixture)
         { "Games.List", "/Games", ".rz-data-row" },
         { "Games.Add", "/Games/Add", ".lc-form" },
         { "Games.General", $"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/General", ".lc-page-content" },
+        { "Games.Preview", $"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/Preview", ".game-detail-preview" },
         { "Games.Actions", $"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/Actions", ".lc-page-content" },
         { "Games.Archives", $"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/Archives", ".lc-page-content" },
         { "Games.CustomFields", $"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/CustomFields", ".lc-page-content" },
@@ -90,6 +91,7 @@ public class PageVisualTests(VisualServerFixture fixture)
         { "Servers.Actions", $"/Servers/{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}/Actions", ".lc-page-content" },
         { "Servers.Consoles", $"/Servers/{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}/Consoles", ".lc-page-content" },
         { "Servers.HTTP", $"/Servers/{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}/HTTP", ".lc-page-content" },
+        { "Servers.Monitor", $"/Servers/{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}/Monitor", ".server-monitor-rail" },
         { "Servers.Autostart", $"/Servers/{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}/Autostart", ".lc-page-content" },
         { "Chat", "/Chat", ".chat" },
     };
@@ -106,11 +108,7 @@ public class PageVisualTests(VisualServerFixture fixture)
             await page.Locator(readySelector).First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
 
             // Tables and cards load their data after the first render; wait for spinners to clear
-            await page.Locator(".lc-spin, .rz-datatable-loading").WaitForAsync(new LocatorWaitForOptions
-            {
-                State = WaitForSelectorState.Detached,
-                Timeout = 15000,
-            });
+            await WaitForSpinnersAsync(page);
 
             await VisualAssert.MatchesBaselineAsync(page, $"Pages.{name}");
         }
@@ -119,6 +117,94 @@ public class PageVisualTests(VisualServerFixture fixture)
             await page.Context.DisposeAsync();
         }
     }
+
+    /// <summary>
+    /// The Games list narrowed the way a large library is triaged: a view and a facet from the rail,
+    /// the chips that explain the count, and a selection carried across every matching game.
+    /// </summary>
+    [Fact]
+    public async Task GamesTriage_MatchesBaseline()
+    {
+        var page = await fixture.NewAdminPageAsync();
+
+        try
+        {
+            await page.GotoAsync("/Games");
+            await page.Locator(".rz-data-row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            await page.Locator(".games-rail-view", new PageLocatorOptions { HasText = "Missing art" }).ClickAsync();
+
+            // Genre starts collapsed; open it, then pick its first entry
+            var genre = page.Locator(".games-rail-group", new PageLocatorOptions { HasText = "Genre" });
+            await genre.Locator(".games-rail-group-toggle").ClickAsync();
+            await genre.Locator(".games-rail-facet").First.ClickAsync();
+            await page.Locator(".games-chips").WaitForAsync();
+
+            await page.Locator("tbody .lc-table-select .rz-chkbox-box").First.ClickAsync();
+            await page.Locator(".games-bulkbar button", new PageLocatorOptions { HasText = "matching" }).ClickAsync();
+            await page.Locator(".games-bulkbar button", new PageLocatorOptions { HasText = "matching" }).WaitForAsync(new LocatorWaitForOptions { State = WaitForSelectorState.Detached });
+
+            await WaitForSpinnersAsync(page);
+
+            await VisualAssert.MatchesBaselineAsync(page, "Pages.Games.Triage");
+        }
+        finally
+        {
+            await page.Context.DisposeAsync();
+        }
+    }
+
+    /// <summary>The Games list as cover tiles, where games without art show the launcher's placeholder.</summary>
+    [Fact]
+    public async Task GamesGrid_MatchesBaseline()
+    {
+        var page = await fixture.NewAdminPageAsync();
+
+        try
+        {
+            await page.GotoAsync("/Games");
+            await page.Locator(".rz-data-row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            await page.GetByRole(AriaRole.Button, new PageGetByRoleOptions { Name = "Grid", Exact = true }).ClickAsync();
+            await page.Locator(".games-tile").First.WaitForAsync();
+
+            await VisualAssert.MatchesBaselineAsync(page, "Pages.Games.Grid");
+        }
+        finally
+        {
+            await page.Context.DisposeAsync();
+        }
+    }
+
+    /// <summary>The script editor: scripts, the editor over its console, the script's fields, and the status bar.</summary>
+    [Fact]
+    public async Task ScriptEditor_MatchesBaseline()
+    {
+        var page = await fixture.NewAdminPageAsync();
+
+        try
+        {
+            await page.GotoAsync($"/Games/{FixtureData.Games.Id(FixtureData.Games.ArenaBlitz)}/Scripts");
+            await page.Locator(".rz-data-row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            await page.Locator(".rz-data-row button[title='Edit']").First.ClickAsync();
+            await page.Locator(".script-editor .monaco-editor").WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            await VisualAssert.MatchesBaselineAsync(page, "Pages.Games.ScriptEditor");
+        }
+        finally
+        {
+            await page.Context.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// Waits until no spinner is left. A page can show many at once (an image per row of a large
+    /// list), so this waits for none rather than for the one.
+    /// </summary>
+    static Task WaitForSpinnersAsync(IPage page) =>
+        Assertions.Expect(page.Locator(".lc-spin, .rz-datatable-loading"))
+            .ToHaveCountAsync(0, new LocatorAssertionsToHaveCountOptions { Timeout = 15000 });
 
     /// <summary>Pages seen before logging in.</summary>
     public static TheoryData<string, string, string> AnonymousPages() => new()

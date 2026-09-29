@@ -1,15 +1,25 @@
-.game-detail-preview {
-    background: #000;
-    border-radius: 8px;
-    overflow: hidden;
-    color: #fff;
+// The game as the launcher shows it, doubling as the media editor, full-bleed under the page header
+// as drawn: a 244px hero with background and logo slots, the description and media strip, then the
+// 300px cover rail. Slot labels stay on their plates; the slot's buttons come up on hover.
+// Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
 
-    // ── Hero Section ─────────────────────────────────────────────
+$preview-rail-width: 300px;
+
+// Controls laid over imagery: 0.62 plates with brighter hairlines than on the canvas
+$overlay-border: rgba(255, 255, 255, 0.18);
+$overlay-label-border: rgba(255, 255, 255, 0.14);
+$overlay-danger-border: rgba(255, 120, 117, 0.42);
+
+.game-detail-preview {
+    color: var(--lc-text-title-color);
+
+    // ── Hero ─────────────────────────────────────────────────────
     &__hero {
         position: relative;
-        height: 340px;
-        background: #111;
+        height: 244px;
         overflow: hidden;
+        // The launcher's placeholder tone, lit from the top right, until a background is set
+        background: radial-gradient(120% 120% at 72% 6%, var(--preview-tone-light, var(--lc-raised)) 0%, var(--preview-tone-dark, var(--lc-well)) 40%, #080D11 100%);
     }
 
     &__hero-bg {
@@ -23,331 +33,445 @@
     &__hero-gradient-top {
         position: absolute;
         top: 0;
-        left: 0;
         right: 0;
-        height: 120px;
-        background: linear-gradient(to bottom, rgba(0,0,0,0.33), transparent);
+        left: 0;
+        height: 70px;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0.62) 0%, rgba(0, 0, 0, 0) 100%);
         pointer-events: none;
     }
 
     &__hero-gradient-bottom {
         position: absolute;
+        right: 0;
         bottom: 0;
         left: 0;
-        right: 0;
-        height: 128px;
-        background: linear-gradient(to bottom, transparent, #000);
+        height: 130px;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 0.88) 100%);
         pointer-events: none;
     }
 
     &__logo-area {
         position: absolute;
-        bottom: 48px;
-        left: 48px;
-        max-width: 33%;
-        max-height: 50%;
+        bottom: 26px;
+        left: 28px;
+        display: flex;
+        align-items: flex-end;
+        gap: 12px;
+        max-width: calc(100% - 56px);
     }
 
     &__logo-img {
-        max-width: 100%;
-        max-height: 160px;
+        max-width: 420px;
+        max-height: 140px;
         object-fit: contain;
     }
 
     &__title-fallback {
-        font-size: 32px;
-        font-weight: 700;
-        color: #fff;
-        text-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        color: #FFFFFF;
+        font-size: 38px;
+        font-weight: 800;
+        letter-spacing: -0.035em;
+        line-height: 1;
+        text-shadow: 0 2px 18px rgba(0, 0, 0, 0.55);
     }
 
-    // ── Content Grid ─────────────────────────────────────────────
-    &__content {
-        display: grid;
-        grid-template-columns: 1fr 280px;
-        gap: 16px;
-        padding: 24px;
-    }
-
-    &__left {
-        display: flex;
-        flex-direction: column;
-        gap: 24px;
-        min-width: 0;
-    }
-
-    &__right {
-        display: flex;
-        flex-direction: column;
-        gap: 16px;
-        margin-top: -100px;
-        z-index: 1;
-    }
-
-    &__description {
-        line-height: 1.6;
-        opacity: 0.85;
-        margin: 0;
-        white-space: pre-wrap;
-    }
-
-    // ── Cover ────────────────────────────────────────────────────
-    &__cover-wrapper {
-        position: relative;
-        aspect-ratio: 2 / 3;
-        border-radius: 8px;
-        overflow: hidden;
-        background: linear-gradient(135deg, #3D1A6B, #0F3460);
-    }
-
-    &__cover-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    &__cover-placeholder {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        width: 100%;
-        height: 100%;
-        padding: 16px;
-        text-align: center;
-        font-size: 18px;
-        font-weight: 600;
-        opacity: 0.7;
-    }
-
-    // ── Badge sections ───────────────────────────────────────────
-    &__badge-section {
-        display: flex;
-        flex-direction: column;
-        gap: 8px;
-    }
-
-    &__badge-header {
-        font-size: 12px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        opacity: 0.5;
-    }
-
-    &__badge-wrap {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 6px;
-    }
-
-    &__badge {
-        display: inline-block;
-        padding: 4px 10px;
-        border-radius: 4px;
-        background: rgba(255,255,255,0.13);
-        font-size: 12px;
-        line-height: 1.4;
-    }
-
-    // ── Media overlay (hover-to-edit) ────────────────────────────
-    &__media-overlay {
-        position: absolute;
-        inset: 0;
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        gap: 8px;
-        background: rgba(0,0,0,0.55);
-        opacity: 0;
-        transition: opacity 0.2s ease;
+    // ── Slots: a label plate that always shows, and buttons that come up on hover ──
+    &__slot {
         z-index: 2;
-
-        &:hover {
-            opacity: 1;
-        }
-    }
-
-    &__media-overlay--hero {
-        // Only show in top-right corner to avoid blocking logo
-        inset: auto;
-        top: 12px;
-        right: 12px;
-        width: auto;
-        border-radius: 6px;
-        padding: 8px 12px;
-        background: rgba(0,0,0,0.7);
-        flex-direction: row;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-
-        .game-detail-preview__hero:hover & {
-            opacity: 1;
-        }
-    }
-
-    &__media-overlay--logo {
-        border-radius: 6px;
-        background: rgba(0,0,0,0.65);
-        padding: 6px 10px;
-        flex-direction: row;
-        position: absolute;
-        inset: auto;
-        bottom: -36px;
-        left: 0;
-        width: auto;
-
-        .game-detail-preview__logo-area:hover & {
-            opacity: 1;
-        }
-    }
-
-    &__media-overlay--cover {
-        border-radius: 8px;
-
-        .game-detail-preview__cover-wrapper:hover & {
-            opacity: 1;
-        }
-    }
-
-    &__media-overlay-actions {
         display: flex;
-        gap: 4px;
+        align-items: center;
+        gap: 8px;
     }
 
-    &__media-overlay-label {
-        font-size: 11px;
+    &__slot--background {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+    }
+
+    &__slot--logo {
+        flex-shrink: 0;
+        margin-bottom: 6px;
+    }
+
+    &__slot-actions {
+        display: flex;
+        gap: 8px;
+    }
+
+    &__slot--background &__slot-actions,
+    &__slot--logo &__slot-actions {
+        opacity: 0;
+        transition: opacity 0.15s ease;
+
+        &:focus-within {
+            opacity: 1;
+        }
+    }
+
+    &__hero:hover &__slot--background &__slot-actions,
+    &__logo-area:hover &__slot--logo &__slot-actions {
+        opacity: 1;
+    }
+
+    &__slot-label {
+        display: inline-flex;
+        align-items: center;
+        height: 20px;
+        padding: 0 7px;
+        border: 1px solid $overlay-label-border;
+        border-radius: var(--lc-radius-sm);
+        background: var(--lc-plate);
+        color: var(--lc-text-title-color);
+        font-size: 10px;
         font-weight: 600;
+        letter-spacing: 0.06em;
         text-transform: uppercase;
-        letter-spacing: 0.05em;
-        opacity: 0.8;
+        white-space: nowrap;
     }
 
     &__overlay-btn {
         display: inline-flex;
         align-items: center;
         justify-content: center;
-        width: 32px;
-        height: 32px;
-        border-radius: 4px;
-        border: 1px solid rgba(255,255,255,0.25);
-        background: rgba(255,255,255,0.1);
-        color: #fff;
+        width: 26px;
+        height: 26px;
+        padding: 0;
+        border: 1px solid $overlay-border;
+        border-radius: var(--lc-radius-md);
+        background: var(--lc-plate);
+        color: var(--lc-text-title-color);
+        font-size: 13px;
         cursor: pointer;
-        transition: background 0.15s ease;
-        font-size: 14px;
+        transition: background 0.15s ease, border-color 0.15s ease;
 
         &:hover {
-            background: rgba(255,255,255,0.25);
+            border-color: rgba(255, 255, 255, 0.30);
+            background: rgba(0, 0, 0, 0.78);
+        }
+
+        &:focus-visible {
+            outline: 2px solid var(--lc-selection-rail-color);
+            outline-offset: 1px;
+        }
+
+        &--large {
+            width: 30px;
+            height: 30px;
+            font-size: 14px;
         }
 
         &--danger {
-            border-color: rgba(255,77,79,0.5);
-            color: #ff4d4f;
+            border-color: $overlay-danger-border;
+            color: var(--lc-danger-text-color);
 
             &:hover {
-                background: rgba(255,77,79,0.25);
+                border-color: var(--lc-danger-text-color);
             }
         }
     }
 
-    // ── Screenshots / Videos carousel ────────────────────────────
-    &__media-section {
+    // ── Content: the page on the left, the launcher's cover rail on the right ──
+    &__content {
         display: flex;
-        flex-direction: column;
-        gap: 12px;
+        gap: 24px;
+        padding: 22px var(--lc-layout-gutter);
     }
 
+    &__left {
+        flex: 1;
+        min-width: 0;
+    }
+
+    &__right {
+        display: flex;
+        flex: 0 0 $preview-rail-width;
+        flex-direction: column;
+        gap: 18px;
+        width: $preview-rail-width;
+    }
+
+    &__description {
+        max-width: 72ch;
+        margin: 0 0 20px;
+        color: var(--lc-text-secondary-color);
+        font-size: 14px;
+        line-height: 1.62;
+        white-space: pre-wrap;
+    }
+
+    &__kicker {
+        color: var(--lc-text-tertiary-color);
+        font-size: var(--lc-kicker-size);
+        font-weight: 600;
+        letter-spacing: var(--lc-kicker-tracking);
+        text-transform: uppercase;
+    }
+
+    // ── Cover: 300 × 400, the launcher's placeholder tone when there is no art ──
+    &__cover-wrapper {
+        position: relative;
+        width: $preview-rail-width;
+        height: 400px;
+        overflow: hidden;
+        border: 1px solid var(--lc-border-color);
+        border-radius: var(--lc-radius-lg);
+        background: radial-gradient(110% 80% at 30% 14%, var(--preview-tone-light, var(--lc-raised)) 0%, var(--preview-tone-dark, var(--lc-well)) 48%, #060C11 100%);
+    }
+
+    &__cover-img {
+        display: block;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &__cover-placeholder {
+        position: relative;
+        display: flex;
+        align-items: flex-end;
+        width: 100%;
+        height: 100%;
+        padding: 18px;
+        background: linear-gradient(180deg, rgba(0, 0, 0, 0) 48%, rgba(0, 0, 0, 0.80) 100%);
+        color: #FFFFFF;
+        font-size: 22px;
+        font-weight: 800;
+        letter-spacing: -0.03em;
+        line-height: 1.05;
+        text-transform: uppercase;
+    }
+
+    // Hovered: a scrim over the whole cover, the buttons and the slot's label centred on it
+    &__cover-scrim {
+        position: absolute;
+        inset: 0;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        background: rgba(0, 0, 0, 0.46);
+        opacity: 0;
+        transition: opacity 0.15s ease;
+
+        &:focus-within {
+            opacity: 1;
+        }
+    }
+
+    &__cover-wrapper:hover &__cover-scrim {
+        opacity: 1;
+    }
+
+    // ── Badges: players, what it runs with, genres, companies ──
+    &__badge-section {
+        display: flex;
+        flex-direction: column;
+        gap: 9px;
+    }
+
+    &__badge-wrap {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 7px;
+    }
+
+    &__badge {
+        display: inline-flex;
+        align-items: center;
+        height: 24px;
+        padding: 0 9px;
+        border: 1px solid var(--lc-border-overlay-color);
+        border-radius: var(--lc-radius-sm);
+        background: var(--lc-popover);
+        color: var(--lc-text-title-color);
+        font-size: 12px;
+        white-space: nowrap;
+    }
+
+    // Below the media, after a hairline: PLAYERS and RUNS WITH side by side
+    &__facts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 18px 40px;
+        margin-top: 22px;
+        padding-top: 18px;
+        border-top: 1px solid var(--lc-border-subtle-color);
+    }
+
+    // ── Screenshots and videos ──
     &__media-section-header {
         display: flex;
         align-items: center;
-        justify-content: space-between;
+        gap: 10px;
+        margin-bottom: 10px;
     }
 
-    &__media-section-title {
-        font-size: 14px;
-        font-weight: 600;
-        opacity: 0.7;
-    }
-
-    &__media-section-actions {
-        display: flex;
-        gap: 4px;
+    &__media-kicker {
+        flex: 1;
+        min-width: 0;
     }
 
     &__carousel {
         display: flex;
         gap: 12px;
+        padding-bottom: 4px;
         overflow-x: auto;
-        padding-bottom: 8px;
 
-        // Scrollbar styling
         &::-webkit-scrollbar {
             height: 6px;
         }
 
         &::-webkit-scrollbar-track {
-            background: rgba(255,255,255,0.05);
-            border-radius: 3px;
+            border-radius: var(--lc-radius-sm);
+            background: var(--lc-hover-background);
         }
 
         &::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 3px;
+            border-radius: var(--lc-radius-sm);
+            background: var(--lc-border-strong-color);
         }
     }
 
     &__carousel-item {
         position: relative;
-        flex: 0 0 384px;
-        height: 216px;
-        border-radius: 4px;
+        flex: 0 0 196px;
+        height: 110px;
         overflow: hidden;
-        background: #111;
+        border: 1px solid var(--lc-border-color);
+        border-radius: var(--lc-radius-md);
+        background: var(--lc-well);
     }
 
-    &__carousel-img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
+    &__carousel-img,
     &__carousel-video {
+        display: block;
         width: 100%;
         height: 100%;
         object-fit: cover;
     }
 
+    // A round plate with a play glyph, bottom right
     &__carousel-video-badge {
         position: absolute;
+        right: 8px;
         bottom: 8px;
-        left: 8px;
-        background: rgba(0,0,0,0.7);
-        border-radius: 4px;
-        padding: 2px 6px;
-        font-size: 16px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 999px;
+        background: var(--lc-plate);
+        color: var(--lc-text-title-color);
+        font-size: 12px;
         pointer-events: none;
     }
 
+    // Hovered: a scrim over the whole thumbnail with the buttons centred
     &__carousel-item-overlay {
         position: absolute;
-        top: 8px;
-        right: 8px;
+        inset: 0;
         display: flex;
-        gap: 4px;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        background: rgba(0, 0, 0, 0.42);
         opacity: 0;
-        transition: opacity 0.2s ease;
+        transition: opacity 0.15s ease;
 
-        .game-detail-preview__carousel-item:hover & {
+        &:focus-within {
             opacity: 1;
         }
     }
 
-    &__carousel-empty {
-        flex: 1;
+    &__carousel-item:hover &__carousel-item-overlay {
+        opacity: 1;
+    }
+
+    // The drop tile: a dashed slot after the thumbnails. The file input covers it, so a drop or a
+    // click lands on the input and goes through the same upload as Add.
+    &__drop {
+        position: relative;
         display: flex;
+        flex: 0 0 68px;
+        flex-direction: column;
         align-items: center;
         justify-content: center;
-        min-height: 120px;
+        gap: 6px;
+        height: 110px;
+        border: 1px dashed var(--lc-border-strong-color);
+        border-radius: var(--lc-radius-md);
+        color: var(--lc-text-disabled-color);
+        font-size: 10px;
+        cursor: pointer;
+        transition: border-color 0.15s ease, color 0.15s ease, background 0.15s ease;
+
+        .lc-icon {
+            font-size: 16px;
+        }
+
+        &:hover,
+        &:focus-within {
+            border-color: rgba(255, 255, 255, 0.28);
+            color: var(--lc-text-secondary-color);
+        }
+
+        &:has(:focus-visible) {
+            outline: 2px solid var(--lc-selection-rail-color);
+            outline-offset: 2px;
+        }
+
+        &--wide {
+            flex: 1 1 auto;
+            min-width: 196px;
+            font-size: 12px;
+        }
+
+        &--over {
+            border-color: var(--lc-selection-rail-color);
+            background: rgba(64, 150, 255, 0.08);
+            color: var(--lc-accent-text-color);
+        }
+
+        &--busy {
+            cursor: progress;
+        }
+    }
+
+    &__drop-input {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        opacity: 0;
+        cursor: pointer;
+    }
+}
+
+// The Preview header's note beside "Edit details"
+.game-preview-saves {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    white-space: nowrap;
+
+    .lc-icon {
+        color: var(--lc-success-text-color);
+        font-size: 14px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .game-detail-preview__content {
+        flex-direction: column;
+    }
+
+    .game-detail-preview__right {
+        flex-basis: auto;
     }
 }

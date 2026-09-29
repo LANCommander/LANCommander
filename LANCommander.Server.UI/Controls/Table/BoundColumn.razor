@@ -13,17 +13,19 @@
                       Sortable="Sortable"
                       SortOrder="@Host?.InitialSortOrder(_info, DefaultSort)"
                       Visible="@(Host?.IsVisible(_info, Hide) ?? !Hide)"
-                      Pickable="true"
+                      Pickable="false"
                       Width="@Width"
-                      TextAlign="@(AlignEnd ? TextAlign.Right : TextAlign.Left)">
+                      CssClass="@_cellClass"
+                      HeaderCssClass="@(Numeric ? "lc-table-numeric" : null)"
+                      TextAlign="@(AlignEnd || Numeric ? TextAlign.Right : TextAlign.Left)">
     <Template Context="item">
-        @if (ChildContent != null)
+        @if (Expander && Host != null)
         {
-            @ChildContent(item)
+            @Host.ExpandableCell(item, Content(item))
         }
         else
         {
-            @Format(item)
+            @Content(item)
         }
     </Template>
 </RadzenDataGridColumn>
@@ -57,13 +59,34 @@
     /// <summary>Right-align the column, e.g. for numbers.</summary>
     [Parameter] public bool AlignEnd { get; set; }
 
+    /// <summary>Figures: set in mono and right-aligned, so they line up down the column.</summary>
+    [Parameter] public bool Numeric { get; set; }
+
     /// <summary>Identifies the column in remembered settings. Defaults to the property path or title.</summary>
     [Parameter] public string? Key { get; set; }
+
+    /// <summary>
+    /// Puts the expand toggle for rows with children in this column's cells, before the content and
+    /// followed by the table's <c>ChildSummary</c>; child rows are indented to line up under it.
+    /// Usually set on the title column.
+    /// </summary>
+    [Parameter] public bool Expander { get; set; }
+
+    /// <summary>Extra classes for the column's cells, e.g. to mute them.</summary>
+    [Parameter] public string? CellClass { get; set; }
 
     [CascadingParameter] internal ITableHost? Host { get; set; }
 
     TableColumnInfo _info = default!;
     Func<TItem, TProp>? _getValue;
+    string? _cellClass;
+
+    RenderFragment Content(TItem item) => ChildContent != null ? ChildContent(item) : builder => builder.AddContent(0, Format(item));
+
+    protected override void OnParametersSet()
+    {
+        _cellClass = new ClassBuilder().If(Numeric, "lc-table-numeric").Add(CellClass).Build();
+    }
 
     protected override void OnInitialized()
     {
@@ -75,6 +98,8 @@
             Title = Title ?? DisplayName(Property.Body),
             SortExpression = Property,
             Includes = TableColumnIncludes.Parse(Include),
+            HiddenByDefault = Hide,
+            Expander = Expander,
         };
 
         _getValue = Property.Compile();

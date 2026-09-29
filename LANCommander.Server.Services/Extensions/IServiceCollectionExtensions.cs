@@ -145,7 +145,11 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<RemoteServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
 
+        services.AddSingleton<RconService>();
+        services.AddSingleton<IRconCommandSender>(provider => provider.GetRequiredService<RconService>());
+
         services.AddSingleton<ServerManager>();
+        services.AddScoped<DashboardService>();
 
         services.AddSingleton<PlaySessionKeepAliveTracker>();
         services.AddHostedService<PlaySessionSweepService>();

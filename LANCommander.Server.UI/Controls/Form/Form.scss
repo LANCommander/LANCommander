@@ -4,11 +4,13 @@
     margin-bottom: 16px;
 }
 
+// Labels 13/500 in secondary text, 7px above the control; help and errors 12px, 6px below it
 .lc-form-item-label {
     display: inline-block;
-    margin-bottom: 6px;
-    color: var(--rz-text-title-color);
-    font-weight: 600;
+    margin-bottom: 7px;
+    color: var(--rz-text-secondary-color);
+    font-size: 13px;
+    font-weight: 500;
 }
 
 .lc-form-item-required {
@@ -17,15 +19,17 @@
 }
 
 .lc-form-item-help {
-    margin-top: 4px;
-    color: var(--rz-text-secondary-color);
-    font-size: var(--rz-text-caption-font-size);
+    margin-top: 6px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 .lc-form-item-error {
-    margin-top: 4px;
-    color: var(--rz-danger);
-    font-size: var(--rz-text-caption-font-size);
+    margin-top: 6px;
+    color: var(--lc-danger-text-color);
+    font-size: 12px;
+    line-height: 1.5;
 }
 
 // Horizontal forms put labels in a fixed-width column beside the control
@@ -56,10 +60,13 @@
     }
 }
 
+// Invalid is the danger edge alone, focused or not; no ring
 .lc-input-invalid,
-.lc-input-invalid.rz-state-focused {
+.lc-input-invalid.rz-state-focused,
+.lc-input-invalid:focus,
+.lc-input-invalid:focus-within {
     border-color: var(--rz-danger) !important;
-    box-shadow: 0 0 0 1px var(--rz-danger-lighter);
+    box-shadow: none !important;
 }
 
 .lc-input-affix {
@@ -96,13 +103,64 @@
 .lc-checkbox {
     display: inline-flex;
     align-items: center;
-    gap: 8px;
+    gap: 9px;
+}
+
+.lc-switch {
+    gap: 12px;
 }
 
 .lc-switch-label,
 .lc-checkbox-label {
+    color: var(--rz-text-color);
+    font-size: 13px;
     cursor: pointer;
     user-select: none;
+}
+
+// Switch: 36x20 with a 16px knob inset 2px. Radzen sizes it in rem and moves the knob 1.2rem in
+// rules no variable reaches, so the metrics are set on its classes here. Off is Raised with a hairline.
+.rz-switch {
+    width: 36px;
+    min-width: 36px;
+    height: 20px;
+    border-radius: 999px;
+
+    .rz-switch-circle {
+        border-radius: 999px;
+        box-shadow: inset 0 0 0 1px var(--lc-border-overlay-color);
+
+        &::before {
+            width: 16px;
+            height: 16px;
+            inset-inline-start: 2px;
+            margin-block-start: -8px;
+            border-radius: 50%;
+        }
+    }
+
+    &.rz-switch-checked .rz-switch-circle {
+        box-shadow: none;
+
+        &::before {
+            transform: translateX(16px);
+        }
+    }
+}
+
+[dir=rtl] .rz-switch.rz-switch-checked .rz-switch-circle::before {
+    transform: translateX(-16px);
+}
+
+// Checkbox: unchecked is an empty square with a stronger edge than an input's, so it reads at 16px.
+// Radzen draws the edge from --rz-input-border-block-end, which inputs share, so it is set here.
+.rz-chkbox-box:not(.rz-state-active):not(.rz-state-disabled) {
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    background-color: transparent;
+
+    &:hover {
+        border: 1px solid rgba(255, 255, 255, 0.40);
+    }
 }
 
 .lc-input-affix.lc-input-invalid .rz-textbox {
@@ -152,8 +210,8 @@
         align-items: center;
         padding: 0 10px;
         border: 1px solid var(--lc-border-color);
-        border-radius: var(--rz-border-radius);
-        background: var(--rz-base-700);
+        border-radius: var(--lc-radius-md);
+        background: var(--lc-raised);
         color: var(--rz-text-secondary-color);
         white-space: nowrap;
     }
@@ -186,20 +244,26 @@
     font-weight: 600;
 }
 
-// TagsInput: tags and a search input inside one input-like box
+// TagsInput: tags and a search input inside one input-like box, as the game editor draws it:
+// 6px 8px inside, 6px between 24px chips, the prompt in disabled text after them
 .lc-tags-input {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
-    gap: 4px;
-    min-height: 36px;
-    padding: 2px 6px;
+    gap: 6px;
+    min-height: var(--lc-control-height);
+    padding: 6px 8px;
     border: var(--rz-input-border);
-    border-radius: var(--rz-input-border-radius, var(--rz-border-radius));
+    border-radius: var(--lc-radius-md);
     background: var(--rz-input-background-color);
 
+    &:hover {
+        border: var(--rz-input-hover-border);
+    }
+
     &:focus-within {
-        border-color: var(--rz-primary);
+        border: var(--rz-input-focus-border);
+        box-shadow: var(--rz-input-focus-shadow);
     }
 
     &.lc-tags-input-disabled {
@@ -214,9 +278,16 @@
         box-shadow: none;
 
         input {
+            height: 24px;
+            padding: 0 0 0 4px;
             border: none;
             background: transparent;
             box-shadow: none;
+            font-size: 13px;
+
+            &::placeholder {
+                color: var(--lc-text-disabled-color);
+            }
         }
     }
 }
@@ -224,12 +295,15 @@
 .lc-tags-input-tag {
     display: inline-flex;
     align-items: center;
-    gap: 2px;
+    gap: 5px;
     max-width: 100%;
-    padding: 1px 4px 1px 8px;
-    border-radius: var(--rz-border-radius);
-    background: var(--rz-base-700);
-    font-size: var(--rz-text-caption-font-size, 12px);
+    height: 24px;
+    padding: 0 4px 0 9px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-popover);
+    color: var(--lc-text-title-color);
+    font-size: 12px;
 }
 
 .lc-tags-input-tag-text {
@@ -242,16 +316,111 @@
     display: inline-flex;
     padding: 2px;
     border: 0;
-    border-radius: var(--rz-border-radius);
+    border-radius: var(--lc-radius-sm);
     background: none;
-    color: var(--rz-text-secondary-color);
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
     cursor: pointer;
 
     &:hover {
-        color: var(--rz-danger);
+        color: var(--lc-danger-text-color);
     }
 }
 
 .lc-date-picker {
     width: 100%;
+}
+
+// Segmented: the launcher's segment track, a well with the chosen option Raised
+.lc-segmented {
+    display: inline-flex;
+    gap: 2px;
+    width: max-content;
+    max-width: 100%;
+    padding: 2px;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-well);
+}
+
+.lc-segmented-block {
+    display: flex;
+    width: auto;
+
+    .lc-segmented-option {
+        flex: 1;
+    }
+}
+
+.lc-segmented-option {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    height: 28px;
+    padding: 0 14px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    background: transparent;
+    color: var(--lc-text-tertiary-color);
+    font: inherit;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-accent-text-color);
+        outline-offset: -2px;
+    }
+
+    &:disabled {
+        color: var(--lc-text-disabled-color);
+        cursor: not-allowed;
+    }
+}
+
+.lc-segmented-icon {
+    font-size: 13px;
+}
+
+// Chosen: plain Raised, no edge
+.lc-segmented-option-selected {
+    background: var(--lc-raised);
+    color: var(--lc-text-title-color);
+
+    &:hover:not(:disabled) {
+        background: var(--lc-raised);
+    }
+}
+
+.lc-segmented-small .lc-segmented-option {
+    height: 24px;
+    padding: 0 10px;
+    font-size: 12px;
+}
+
+// In a dialog: a 34px track, 26px options in 12px text, the chosen one on Popover with the lit edge
+.lc-segmented-dialog {
+    height: 34px;
+    padding: 3px;
+
+    .lc-segmented-option {
+        height: 26px;
+        font-size: 12px;
+    }
+
+    .lc-segmented-option-selected {
+        background: var(--lc-popover);
+        box-shadow: var(--lc-inset-highlight);
+
+        &:hover:not(:disabled) {
+            background: var(--lc-popover);
+        }
+    }
 }

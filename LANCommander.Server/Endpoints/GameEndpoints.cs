@@ -65,6 +65,15 @@ public static class GameEndpoints
             return games.Select(sdkMapper.ToSdk).ToList();
         }, TimeSpan.MaxValue, tags: ["Games"]);
 
+        // Unpublished games are hidden from launcher users; administrators still see everything.
+        if (!userPrincipal.IsInRole(RoleService.AdministratorRoleName))
+        {
+            var unpublishedIds = await gameService.GetUnpublishedGameIdsAsync();
+
+            if (unpublishedIds.Count > 0)
+                mappedGames = mappedGames.Where(g => !unpublishedIds.Contains(g.Id)).ToList();
+        }
+
         foreach (var mappedGame in mappedGames)
         {
             if (userLibrary.Games != null)

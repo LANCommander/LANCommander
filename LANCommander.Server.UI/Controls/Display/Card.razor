@@ -2,7 +2,7 @@
 @inherits ControlBase
 
 <RadzenCard Attributes="_attributes" Style="@Style" Variant="@(Borderless ? Variant.Flat : Variant.Outlined)">
-    @if (Title != null || TitleTemplate != null || Extra != null)
+    @if (Title != null || TitleTemplate != null || Extra != null || Count != null)
     {
         <div class="lc-card-header">
             <div class="lc-card-title">
@@ -15,6 +15,14 @@
                     @Title
                 }
             </div>
+            @if (!String.IsNullOrEmpty(Subtitle))
+            {
+                <span class="lc-card-subtitle">@Subtitle</span>
+            }
+            @if (Count != null)
+            {
+                <Badge Count="Count" Neutral Class="lc-card-count" />
+            }
             @if (Extra != null)
             {
                 <div class="lc-card-extra">@Extra</div>
@@ -26,6 +34,10 @@
             @ChildContent
         </Spin>
     </div>
+    @if (Footer != null)
+    {
+        <div class="lc-card-footer">@Footer</div>
+    }
 </RadzenCard>
 
 @code {
@@ -38,6 +50,21 @@
 
     /// <summary>Content at the end of the header, typically actions.</summary>
     [Parameter] public RenderFragment? Extra { get; set; }
+
+    /// <summary>12px tertiary text on the title's baseline, e.g. "last 7 days".</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>
+    /// A panel: the title becomes a kicker (11px uppercase), a hairline divides the header from the
+    /// body, and the body has no padding so lists run edge to edge. As in "ACTIVE SESSIONS (14)".
+    /// </summary>
+    [Parameter] public bool Panel { get; set; }
+
+    /// <summary>A figure in a neutral chip at the end of the header, e.g. how many rows the panel lists.</summary>
+    [Parameter] public object? Count { get; set; }
+
+    /// <summary>A strip under the body behind a hairline, e.g. a "See all sessions" link.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
 
     /// <summary>Tighter padding.</summary>
     [Parameter] public bool Small { get; set; }
@@ -56,6 +83,7 @@
         _attributes["class"] = new ClassBuilder()
             .Add("lc-card")
             .If(Small, "lc-card-small")
+            .If(Panel, "lc-card-panel")
             .Add(Class)
             .Build()!;
     }

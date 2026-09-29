@@ -201,7 +201,9 @@
         }, new DialogSettings
         {
             Size = DialogSize.Full,
+            Picker = true,
             OkText = "Select",
+            Subtitle = _game?.Title,
         });
 
         if (downloadResult?.Download == null)

@@ -30,6 +30,12 @@ namespace LANCommander.Server.Data.Models
 
         public bool Singleplayer { get; set; } = false;
 
+        /// <summary>
+        /// Whether the game is visible to launcher users (depot, library). Hidden games are
+        /// still fully manageable by administrators.
+        /// </summary>
+        public bool Published { get; set; } = true;
+
         public Guid? EngineId { get; set; }
         [ForeignKey(nameof(EngineId))]
         public virtual Engine Engine { get; set; }
@@ -66,6 +72,13 @@ namespace LANCommander.Server.Data.Models
         
         [NotMapped]
         public bool IsAddon => AddonTypes.Contains(Type);
+
+        /// <summary>The letter a title is filed under in an A–Z list; "#" for digits and symbols.</summary>
+        [NotMapped]
+        public string TitleInitial => InitialOf(Title);
+
+        public static string InitialOf(string? title) =>
+            !string.IsNullOrEmpty(title) && char.IsLetter(title[0]) ? char.ToUpperInvariant(title[0]).ToString() : "#";
 
         [NotMapped]
         public GameType[] AddonTypes =

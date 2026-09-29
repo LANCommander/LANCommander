@@ -1,114 +1,348 @@
+@using System.Collections.Concurrent
 @using LANCommander.SDK.Enums
-@using Microsoft.AspNetCore.SignalR.Client
-@using XtermBlazor
+@using LANCommander.Server.Services.Enums
+@using LANCommander.Server.UI.Providers
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject ServerManager ServerManager
 @inject ServerConsoleService ServerConsoleService
-@inject NavigationManager NavigationManager
-@inject NotificationService Notifications
+@inject ScriptProvider ScriptProvider
+@inject TimeProvider TimeProvider
+@inject ILogger<Console> Logger
 @implements IAsyncDisposable
 
-@* Follows a server's process output, or one of its log file consoles, as it is written *@
-@if (_serverConsole?.Type == ServerConsoleType.RCON)
-{
-    <Alert Info>Sending commands to RCON consoles isn't available yet.</Alert>
-}
-else
-{
-    <div class="server-console">
-        <Xterm @ref="_terminal" Options="_options" AddonIds="_addons" />
+@*
+    Follows a server's process output, or one of its log file consoles, as it is written, with a bar
+    underneath for sending it commands. Lines arrive from ServerManager already timestamped and
+    classified; log files are read back whole and classified here. RCON consoles show only the
+    commands sent and their responses.
+*@
+<div class="server-console">
+    <div class="server-console-toolbar">
+        @if (_following)
+        {
+            <span class="server-console-follow">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                Following output
+            </span>
+        }
+        else
+        {
+            <button type="button" class="server-console-follow server-console-follow-paused" @onclick="ResumeAsync">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                Paused, jump to the end
+            </button>
+        }
+
+        <Button Small OnClick="Clear">Clear</Button>
     </div>
-}
+
+    <div class="server-console-panel">
+        <div class="server-log" @ref="_scroller" role="list" aria-label="Server output">
+            @if (_lines.Count == 0)
+            {
+                <div class="server-log-empty">@_emptyText</div>
+            }
+
+            <Virtualize Items="_lines" ItemSize="21" OverscanCount="30" Context="line">
+                <ServerLogRow Line="line" TimeZone="TimeProvider.LocalTimeZone" />
+            </Virtualize>
+        </div>
+
+        <ServerCommandBar Enabled="_canSend" DisabledReason="@_cannotSendReason" OnSend="SendAsync" />
+    </div>
+</div>
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
 
-    /// <summary>A log file console to follow instead of the process's own output.</summary>
+    /// <summary>A log file or RCON console to follow instead of the process's own output.</summary>
     [Parameter] public Guid ServerConsoleId { get; set; }
 
-    Xterm? _terminal;
-    HubConnection? _hub;
+    /// <summary>The server, with its consoles, when the page already has it; saves a lookup.</summary>
+    [Parameter] public Server? Server { get; set; }
+
+    /// <summary>Oldest lines are dropped past this, so a chatty server can't grow the page without end.</summary>
+    const int MaxLines = 5000;
+
+    readonly List<ServerConsoleLine> _lines = [];
+    readonly ConcurrentQueue<ServerConsoleLine> _incoming = new();
+    int _flushQueued;
+
+    // Lines up to this time were in the recent-output snapshot, so pushes for them are repeats
+    DateTime? _snapshotUntil;
+
     ServerConsole? _serverConsole;
+    ElementReference _scroller;
+    IJSObjectReference? _domHelper;
+    IJSObjectReference? _follow;
+    DotNetObjectReference<Console>? _self;
+    bool _following = true;
 
-    readonly TerminalOptions _options = new()
-    {
-        CursorBlink = true,
-        CursorStyle = CursorStyle.Block,
-    };
+    string _emptyText = "No output yet.";
 
-    readonly string[] _addons = ["xterm-addon-fit"];
+    // Commands go to the process's input, or over RCON: the console's own when it is one, otherwise
+    // the server's first RCON console when the process has no input to write to
+    Guid? _commandConsoleId;
+    bool _canSend;
+    string? _cannotSendReason;
+    Timer? _poll;
+
+    bool IsRcon => _serverConsole?.Type == ServerConsoleType.RCON;
 
     protected override async Task OnInitializedAsync()
     {
+        if (ServerConsoleId != Guid.Empty)
+        {
+            _serverConsole = Server?.ServerConsoles?.FirstOrDefault(c => c.Id == ServerConsoleId)
+                ?? await ServerConsoleService.AsNoTracking().GetAsync(ServerConsoleId);
+        }
+
+        // Subscribed before reading what's already there, so nothing is missed in between
+        if (!IsRcon)
+            ServerManager.OnServerLog += OnServerLog;
+
+        if (IsRcon)
+        {
+            _emptyText = "Responses to the commands you send appear here.";
+        }
+        else if (_serverConsole == null)
+        {
+            var recent = ServerManager.GetRecentLog(ServerId);
+
+            _lines.AddRange(recent.Select(ServerConsoleLine.From));
+            _snapshotUntil = recent.Count > 0 ? recent[^1].Timestamp : null;
+        }
+        else
+        {
+            await ReadLogFileAsync();
+        }
+
+        await RefreshCommandTargetAsync();
+
+        // The process's input comes and goes as the server starts and stops
+        _poll = new Timer(_ => InvokeAsync(async () =>
+        {
+            var canSend = _canSend;
+            var reason = _cannotSendReason;
+
+            await RefreshCommandTargetAsync();
+
+            if (canSend != _canSend || reason != _cannotSendReason)
+                StateHasChanged();
+        }), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    async Task ReadLogFileAsync()
+    {
         try
         {
-            if (ServerConsoleId != Guid.Empty)
-                _serverConsole = await ServerConsoleService.GetAsync(ServerConsoleId);
+            var lines = await ServerConsoleService.ReadLogAsync(ServerConsoleId);
 
-            if (_serverConsole?.Type == ServerConsoleType.RCON)
-                return;
+            _lines.AddRange(lines.TakeLast(MaxLines).Select(line => ServerConsoleLine.Classified(line)));
 
-            _hub = new HubConnectionBuilder()
-                .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
-                .WithAutomaticReconnect()
-                .Build();
-
-            if (_serverConsole == null)
-            {
-                _hub.On<Guid, string>("Log", (serverId, message) =>
-                {
-                    if (serverId == ServerId)
-                        _ = WriteAsync(message);
-                });
-            }
-            else
-            {
-                _hub.On<Guid, Guid, string>("Log", (serverId, logId, message) =>
-                {
-                    if (serverId == ServerId && logId == ServerConsoleId)
-                        _ = WriteAsync(message);
-                });
-            }
-
-            await _hub.StartAsync();
+            _emptyText = "The log file is empty.";
         }
         catch (Exception ex)
         {
-            Notifications.Error(ex, "Could not connect to the server's output");
+            Logger.LogDebug(ex, "Could not read log file console {ConsoleId}", ServerConsoleId);
+
+            _emptyText = $"The log file could not be read: {ex.Message}";
         }
+    }
+
+    async Task RefreshCommandTargetAsync()
+    {
+        try
+        {
+            if (IsRcon)
+            {
+                _commandConsoleId = ServerConsoleId;
+                _canSend = await ServerManager.CanSendCommandAsync(ServerId, ServerConsoleId);
+                _cannotSendReason = "This RCON console has no host or port set";
+
+                return;
+            }
+
+            if (await ServerManager.CanSendCommandAsync(ServerId))
+            {
+                _commandConsoleId = null;
+                _canSend = true;
+
+                return;
+            }
+
+            var rcon = Server?.ServerConsoles?.FirstOrDefault(c => c.Type == ServerConsoleType.RCON && !String.IsNullOrWhiteSpace(c.Host) && c.Port > 0);
+
+            if (rcon != null)
+            {
+                _commandConsoleId = rcon.Id;
+                _canSend = true;
+
+                return;
+            }
+
+            _commandConsoleId = null;
+            _canSend = false;
+            _cannotSendReason = await ServerManager.GetStatusAsync(ServerId) == ServerProcessStatus.Running
+                ? "This server was started with shell execute, so it has no input to send commands to. Add an RCON console to send them over RCON."
+                : "Start the server to send it commands";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not tell whether server {ServerId} takes commands", ServerId);
+
+            _canSend = false;
+            _cannotSendReason = "Commands can't be sent to this server right now";
+        }
+    }
+
+    void OnServerLog(object? sender, ServerLogEventArgs args)
+    {
+        if (args.ServerId != ServerId)
+            return;
+
+        if (_serverConsole == null ? args.Log != null : args.Log?.Id != ServerConsoleId)
+            return;
+
+        _incoming.Enqueue(new ServerConsoleLine(args.Timestamp, args.Level, args.Line));
+
+        // One render for a burst of lines rather than one each
+        if (Interlocked.Exchange(ref _flushQueued, 1) == 0)
+            _ = InvokeAsync(Flush);
+    }
+
+    void Flush()
+    {
+        Interlocked.Exchange(ref _flushQueued, 0);
+
+        while (_incoming.TryDequeue(out var line))
+        {
+            if (_snapshotUntil is { } until && line.Timestamp <= until)
+                continue;
+
+            Append(line);
+        }
+
+        StateHasChanged();
+    }
+
+    void Append(ServerConsoleLine line)
+    {
+        _lines.Add(line);
+
+        // Trim in chunks so a steady stream doesn't shift the whole list on every line
+        if (_lines.Count > MaxLines + MaxLines / 10)
+            _lines.RemoveRange(0, _lines.Count - MaxLines);
+    }
+
+    async Task SendAsync(string command)
+    {
+        Append(ServerConsoleLine.Echo(command));
+        StateHasChanged();
+
+        ServerCommandResult result;
+
+        try
+        {
+            result = await ServerManager.SendCommandAsync(ServerId, _commandConsoleId, command);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not send a command to server {ServerId}", ServerId);
+
+            result = new ServerCommandResult(false, Error: ex.Message);
+        }
+
+        if (!result.Sent)
+        {
+            Append(new ServerConsoleLine(DateTime.UtcNow, ServerLogLevel.Error, result.Error ?? "The command could not be sent"));
+        }
+        else if (!String.IsNullOrEmpty(result.Response))
+        {
+            // RCON answers directly; commands written to the process's input answer in its output
+            var received = DateTime.UtcNow;
+
+            foreach (var line in result.Response.Split('\n'))
+                Append(ServerConsoleLine.Classified(line.TrimEnd('\r'), received));
+        }
+    }
+
+    void Clear()
+    {
+        _lines.Clear();
+        _incoming.Clear();
+        _snapshotUntil = null;
+
+        // The file stays as it is; only the process's buffered output is forgotten
+        if (_serverConsole == null)
+            ServerManager.ClearRecentLog(ServerId);
     }
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
-        if (!firstRender || _terminal == null)
+        if (!firstRender)
             return;
-
-        // Let the terminal lay out before fitting it to its container
-        await Task.Delay(100);
 
         try
         {
-            await _terminal.Addon("xterm-addon-fit").InvokeVoidAsync("fit");
+            _self = DotNetObjectReference.Create(this);
+            _domHelper = await ScriptProvider.ImportModuleAsync("DomHelper");
 
-            if (_serverConsole != null)
-            {
-                foreach (var line in await ServerConsoleService.ReadLogAsync(ServerConsoleId))
-                    await _terminal.WriteLine(line);
-            }
+            if (_domHelper != null)
+                _follow = await _domHelper.InvokeAsync<IJSObjectReference>("FollowOutput", _scroller, _self);
         }
         catch (Exception ex)
         {
-            Notifications.Error(ex, "The log could not be read");
+            Logger.LogDebug(ex, "Could not follow the server console's output");
         }
     }
 
-    Task WriteAsync(string message) => InvokeAsync(async () =>
+    /// <summary>Called from DomHelper.FollowOutput as the reader scrolls away from, or back to, the end.</summary>
+    [JSInvokable]
+    public Task FollowChanged(bool following) => InvokeAsync(() =>
     {
-        if (_terminal != null)
-            await _terminal.WriteLine(message);
+        _following = following;
+        StateHasChanged();
     });
+
+    async Task ResumeAsync()
+    {
+        _following = true;
+
+        try
+        {
+            if (_follow != null)
+                await _follow.InvokeVoidAsync("Resume");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not scroll the server console to its end");
+        }
+    }
 
     public async ValueTask DisposeAsync()
     {
-        if (_hub is not null)
-            await _hub.DisposeAsync();
+        ServerManager.OnServerLog -= OnServerLog;
+
+        if (_poll != null)
+            await _poll.DisposeAsync();
+
+        try
+        {
+            if (_follow != null)
+            {
+                await _follow.InvokeVoidAsync("Dispose");
+                await _follow.DisposeAsync();
+            }
+
+            if (_domHelper != null)
+                await _domHelper.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, and the page with it
+        }
+
+        _self?.Dispose();
     }
 }

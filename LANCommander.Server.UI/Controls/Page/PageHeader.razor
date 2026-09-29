@@ -3,17 +3,31 @@
 
 <header @attributes="AdditionalAttributes" class="@_class" style="@Style">
     <div class="lc-page-header-heading">
-        <h1 class="lc-page-header-title">
-            @if (TitleTemplate != null)
+        @if (Breadcrumb != null)
+        {
+            <div class="lc-page-header-breadcrumb">@Breadcrumb</div>
+        }
+        <div class="lc-page-header-title-row">
+            <h1 class="lc-page-header-title">
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate
+                }
+                else
+                {
+                    @Title
+                }
+            </h1>
+            @if (Tags != null)
             {
-                @TitleTemplate
+                <div class="lc-page-header-tags">@Tags</div>
             }
-            else
-            {
-                @Title
-            }
-        </h1>
-        @if (!string.IsNullOrEmpty(Subtitle))
+        </div>
+        @if (SubtitleTemplate != null)
+        {
+            <div class="lc-page-header-subtitle">@SubtitleTemplate</div>
+        }
+        else if (!string.IsNullOrEmpty(Subtitle))
         {
             <span class="lc-page-header-subtitle">@Subtitle</span>
         }
@@ -27,11 +41,20 @@
 @code {
     [Parameter] public string? Title { get; set; }
 
-    /// <summary>Muted text beside the title, e.g. a count or version.</summary>
+    /// <summary>A line under the title in 12px mono, e.g. "2,417 titles · 4.61 TB" or a host and uptime.</summary>
     [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Rich subtitle content; replaces <see cref="Subtitle"/>.</summary>
+    [Parameter] public RenderFragment? SubtitleTemplate { get; set; }
 
     /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
     [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    /// <summary>A Breadcrumb above the title, for pages under another ("Games › Arena Blitz").</summary>
+    [Parameter] public RenderFragment? Breadcrumb { get; set; }
+
+    /// <summary>Status beside the title, e.g. a Published tag.</summary>
+    [Parameter] public RenderFragment? Tags { get; set; }
 
     /// <summary>Page-level actions shown at the end of the header, typically buttons.</summary>
     [Parameter] public RenderFragment? Extra { get; set; }

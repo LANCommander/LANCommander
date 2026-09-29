@@ -1,14 +1,71 @@
 .lc-button {
     white-space: nowrap;
     flex-shrink: 0;
+    // Labels are 13/500; the filled (primary) button carries 600
+    font-size: 13px;
+    font-weight: 500;
+
+    .rz-button-box {
+        gap: 8px;
+    }
 
     .lc-button-icon {
-        font-size: 1.25em;
+        font-size: 15px;
+    }
+}
+
+.lc-button.rz-variant-filled {
+    font-weight: 600;
+}
+
+// Sizes as drawn: md 36px, sm 32px, xs 28px with 12px text. Radzen's own sizes (36/28/20) set
+// min-height through variables, so re-point them on the button and pad each size by hand.
+// Radzen draws .rz-button as display:inline-block with the .rz-button-box at vertical-align:top,
+// so once we zero the vertical padding the label sits at the top of the line box. Center it by
+// making the button itself the flex box (align-items governs, vertical-align is then ignored) and
+// normalising the line-height, for every size and variant including the <a>-rendered button.
+.lc-button.rz-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+    --rz-button-size-md: 36px;
+    --rz-button-size-sm: 32px;
+    --rz-button-size-xs: 28px;
+}
+
+.lc-button.rz-button-md {
+    height: 36px;
+    padding: 0 18px;
+}
+
+.lc-button.rz-button-sm {
+    height: 32px;
+    padding: 0 14px;
+    font-size: 13px;
+}
+
+.lc-button.rz-button-xs {
+    height: 28px;
+    padding: 0 10px;
+    font-size: 12px;
+
+    .rz-button-box {
+        gap: 6px;
     }
 
-    .lc-button-icon + .lc-button-text {
-        margin-inline-start: 0.125rem;
+    .lc-button-icon {
+        font-size: 13px;
     }
+}
+
+// Icon-only buttons are square at every size, with the glyph centred by the flex box above
+.lc-button.rz-button-icon-only {
+    &.rz-button-md { width: 36px; padding: 0; }
+    &.rz-button-sm { width: 32px; padding: 0; }
+    &.rz-button-xs { width: 28px; padding: 0; }
+    // Large has no bespoke height, so square it off its Radzen min size (3.25rem)
+    &.rz-button-lg { width: var(--rz-button-size-lg); min-width: var(--rz-button-size-lg); padding: 0; }
 }
 
 .lc-button-link {
@@ -20,8 +77,9 @@
     }
 }
 
-.lc-button-block {
-    display: block;
+// Full-width button: stays a flex box so the label and icon remain centred
+.lc-button.lc-button-block {
+    display: flex;
     width: 100%;
 }
 
@@ -34,6 +92,100 @@ a.lc-button {
 
     &.rz-state-disabled {
         pointer-events: none;
-        opacity: 0.6;
     }
+}
+
+// The default (Radzen's outlined base) is the secondary button: Raised, with a hairline and the lit
+// top edge. Radzen draws it transparent with a grey ring, hovers with a gradient and presses to a
+// base grey, all in selectors no variable reaches, so the wrapper sets each state as drawn.
+.lc-button.rz-button.rz-variant-outlined.rz-base {
+    background-color: var(--lc-raised);
+    background-image: none;
+    box-shadow: inset 0 0 0 1px var(--lc-border-color), var(--lc-inset-highlight);
+    color: var(--rz-text-color);
+
+    &:not(.rz-state-disabled):hover {
+        background-color: var(--lc-popover);
+        background-image: none;
+        box-shadow: inset 0 0 0 1px var(--lc-border-strong-color), var(--lc-inset-highlight);
+    }
+
+    &:not(.rz-state-disabled):active {
+        background-color: var(--lc-pressed-background);
+        background-image: none;
+        box-shadow: inset 0 0 0 1px var(--lc-border-color), var(--lc-inset-highlight);
+        color: var(--rz-text-color);
+    }
+}
+
+// Danger on its own is the secondary button with danger text (Stop, Delete, Unlink)
+.lc-button.rz-button.lc-button-danger {
+    &,
+    &:not(.rz-state-disabled):hover,
+    &:not(.rz-state-disabled):active {
+        color: var(--lc-danger-text-color);
+    }
+}
+
+// Solid fills (primary, danger) get only the lit top edge, brighter since it sits on colour
+.lc-button.rz-variant-filled {
+    --rz-button-shadow: var(--lc-inset-highlight-solid);
+    --rz-button-hover-shadow: var(--lc-inset-highlight-solid);
+    --rz-button-focus-shadow: var(--lc-inset-highlight-solid);
+}
+
+// Text buttons rest in secondary text and light up on hover
+.lc-button.rz-button.rz-variant-text {
+    &.rz-button-md { padding: 0 14px; }
+
+    &.rz-base {
+        color: var(--rz-text-secondary-color);
+
+        &:not(.rz-state-disabled):hover {
+            background-color: var(--lc-hover-background);
+            background-image: none;
+            color: var(--rz-text-title-color);
+        }
+
+        &:not(.rz-state-disabled):active {
+            background-color: var(--lc-state-pressed);
+            color: var(--rz-text-title-color);
+        }
+    }
+
+    &.rz-danger,
+    &.rz-danger:not(.rz-state-disabled):hover {
+        color: var(--lc-danger-text-color);
+    }
+}
+
+// Disabled is drawn, not faded: a darker fill, a fainter edge and disabled text. A loading button is
+// also disabled but keeps its look, since the spinner says why it can't be pressed.
+.lc-button.rz-button.rz-state-disabled:not(.lc-button-loading),
+.lc-button.rz-button:disabled:not(.lc-button-loading) {
+    opacity: 1;
+    background-image: none;
+    color: var(--lc-text-disabled-color);
+    cursor: not-allowed;
+
+    &:not(.rz-variant-text) {
+        background-color: var(--lc-disabled-background);
+        box-shadow: inset 0 0 0 1px var(--lc-divider-row-color);
+    }
+}
+
+.lc-button.rz-button.lc-button-loading {
+    opacity: 1;
+    cursor: progress;
+}
+
+// The busy ring takes the button's own text colour: white on primary, grey on secondary
+.lc-button .lc-button-spinner {
+    --lc-spinner-size: 13px;
+    --lc-spinner-track: color-mix(in srgb, currentColor 35%, transparent);
+    --lc-spinner-head: currentColor;
+}
+
+.lc-button.rz-button-xs .lc-button-spinner {
+    --lc-spinner-size: 11px;
 }

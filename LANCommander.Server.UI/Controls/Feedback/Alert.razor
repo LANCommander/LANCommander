@@ -12,7 +12,7 @@
     <div class="lc-alert-body">
         @if (!NoIcon)
         {
-            <Icon Type="@(Icon == IconType.None ? _status.Icon() : Icon)" Fill Class="lc-alert-icon" />
+            <Icon Type="@(Icon == IconType.None ? _status.Icon() : Icon)" Class="lc-alert-icon" />
         }
         <div class="lc-alert-content">
             @if (Title != null)
@@ -20,6 +20,10 @@
                 <div class="lc-alert-title">@Title</div>
             }
             @ChildContent
+            @if (Action != null)
+            {
+                <div class="lc-alert-action">@Action</div>
+            }
         </div>
     </div>
 </RadzenAlert>
@@ -37,6 +41,9 @@
     [Parameter] public bool Warning { get; set; }
 
     [Parameter] public bool Danger { get; set; }
+
+    /// <summary>A follow-up under the message, usually a link ("Open integration settings").</summary>
+    [Parameter] public RenderFragment? Action { get; set; }
 
     /// <summary>Replaces the status's usual icon.</summary>
     [Parameter] public IconType Icon { get; set; }

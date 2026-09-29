@@ -12,6 +12,12 @@
         <Icon Type="Icon" />
     }
     <span class="lc-tag-text">@ChildContent</span>
+    @if (OnClose.HasDelegate)
+    {
+        <button type="button" class="lc-tag-close" aria-label="@CloseLabel" @onclick="OnClose" @onclick:stopPropagation="true">
+            <Icon Type="IconType.X" />
+        </button>
+    }
 </span>
 
 @code {
@@ -22,6 +28,12 @@
     /// <summary>Makes the tag clickable.</summary>
     [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
 
+    /// <summary>Adds a close button, e.g. to remove an active filter.</summary>
+    [Parameter] public EventCallback OnClose { get; set; }
+
+    /// <summary>The close button's accessible name.</summary>
+    [Parameter] public string CloseLabel { get; set; } = "Remove";
+
     [Parameter] public bool Primary { get; set; }
 
     [Parameter] public bool Success { get; set; }
@@ -31,6 +43,22 @@
     [Parameter] public bool Warning { get; set; }
 
     [Parameter] public bool Danger { get; set; }
+
+    /// <summary>
+    /// A filter chip: 26px on Raised with a hairline and full-strength text, as in the row of active
+    /// filters above a table. With <see cref="Warning"/> or <see cref="Primary"/> it becomes the
+    /// warning or accent (saved view) chip.
+    /// </summary>
+    [Parameter] public bool Chip { get; set; }
+
+    /// <summary>
+    /// A 20px uppercase label (11/500, tracked), as beside a dialog title ("COVER", "ARCHIVE"). Takes
+    /// an optional <see cref="Icon"/> and the status flags; with <see cref="Small"/> it is 18px.
+    /// </summary>
+    [Parameter] public bool Caps { get; set; }
+
+    /// <summary>With <see cref="Caps"/>: 18px with 10px text, for labels inside list rows.</summary>
+    [Parameter] public bool Small { get; set; }
 
     /// <summary>A custom colour (any CSS colour) for user-defined tags. Overrides the status flags.</summary>
     [Parameter] public string? Color { get; set; }
@@ -46,6 +74,9 @@
             .Add("lc-tag")
             .If(Color == null && status != Status.None, $"lc-tag-{status.ClassSuffix()}")
             .If(Color != null, "lc-tag-custom")
+            .If(Chip, "lc-tag-chip")
+            .If(Caps, "lc-tag-caps")
+            .If(Caps && Small, "lc-tag-caps-small")
             .If(OnClick.HasDelegate, "lc-tag-clickable")
             .Add(Class)
             .Build();

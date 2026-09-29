@@ -10,6 +10,8 @@
         Dialog,
         Confirm,
         Notifications,
+        DialogTitle,
+        NotificationActions,
     }
 
     [Parameter] public Overlay What { get; set; }
@@ -29,6 +31,23 @@
             case Overlay.Confirm:
                 _ = Alerts.ConfirmAsync("Arena Blitz and its 2 archives will be deleted. This cannot be undone.",
                     "Delete game?", okText: "Delete", danger: true);
+                break;
+
+            case Overlay.DialogTitle:
+                _ = Dialogs.OpenAsync<SampleDialog, SampleDialog.SampleOptions, string>("Download Cover",
+                    new SampleDialog.SampleOptions("Arena Blitz"), new DialogSettings
+                    {
+                        OkText = "Select",
+                        TitleContent = @<Tag Caps>Cover</Tag>,
+                        Subtitle = "Arena Blitz",
+                        FooterNote = "Entering manually opens a blank entry.",
+                    });
+                break;
+
+            case Overlay.NotificationActions:
+                Notifications.Success("Archive uploaded", "Arena Blitz 1.2 is ready to install.");
+                Notifications.Warning("Metadata partly missing", "Arena Blitz has no logo artwork.", new NotificationAction("Open media editor", Href: "/Games"));
+                Notifications.Error("Repack failed", "Checksum mismatch on pak0.pk3.", meta: "job 4f21c8 · 21:12");
                 break;
 
             case Overlay.Notifications:

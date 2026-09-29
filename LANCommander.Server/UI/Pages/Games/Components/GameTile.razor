@@ -1,0 +1,99 @@
+@*
+    A game as a cover tile: the cover, then the title and a mono line with the archive's size, or with
+    how a bulk action on it went. Without cover art it takes the launcher's placeholder: a tone picked
+    from the title, and the title.
+*@
+<div class="@_class">
+    <div class="games-tile-cover lc-table-tile-cover games-tile-tone-@ToneOf(Game.Title)">
+        @if (State == GameTileState.NotFound)
+        {
+            <span class="games-tile-nomatch" role="status">
+                <Icon Type="IconType.ImageBroken" />
+                <span>No match</span>
+            </span>
+        }
+        else
+        {
+            <span class="games-tile-placeholder">@Game.Title</span>
+            @if (_cover != null)
+            {
+                @* A cover whose file is missing falls back to the placeholder beneath it *@
+                <img src="@($"/api/Media/{_cover.Id}/Thumbnail?fileId={_cover.FileId}")" alt="" loading="lazy" onerror="this.remove()" />
+            }
+        }
+        @if (State == GameTileState.Working)
+        {
+            <span class="games-tile-progress" role="progressbar" aria-label="@(WorkingText ?? "Working")"></span>
+        }
+        else if (State == GameTileState.Done)
+        {
+            <span class="games-tile-done" aria-hidden="true"><Icon Type="IconType.Check" Bold /></span>
+        }
+    </div>
+    <div class="games-tile-caption" title="@Game.Title">@Game.Title</div>
+    <div class="@($"games-tile-sub games-tile-sub-{SubTone}")" role="@(State == null ? null : "status")">@SubText</div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Game Game { get; set; } = default!;
+
+    /// <summary>Progress of a bulk action on this game, drawn on the cover and in the caption.</summary>
+    [Parameter] public GameTileState? State { get; set; }
+
+    /// <summary>The caption while <see cref="State"/> is Working, e.g. "searching IGDB…".</summary>
+    [Parameter] public string? WorkingText { get; set; }
+
+    /// <summary>The caption once <see cref="State"/> is Done, e.g. "cover added".</summary>
+    [Parameter] public string? DoneText { get; set; }
+
+    Media? _cover;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _cover = Game.Media?.FirstOrDefault(m => m.Type == MediaType.Cover);
+        _class = State == GameTileState.NotFound ? "games-tile games-tile-nomatch-state" : "games-tile";
+    }
+
+    string SubText => State switch
+    {
+        GameTileState.Queued => "queued",
+        GameTileState.Working => WorkingText ?? "working…",
+        GameTileState.Done => DoneText ?? "done",
+        GameTileState.NotFound => "pick by hand",
+        GameTileState.Failed => "failed",
+        _ => GameListFormat.ArchiveSize(Game) is { } size
+            ? GameListFormat.Size(size)
+            : Game.Archives != null ? "no archive" : Game.ReleasedOn?.Year.ToString() ?? "",
+    };
+
+    string SubTone => State switch
+    {
+        GameTileState.Working => "accent",
+        GameTileState.Done => "success",
+        GameTileState.NotFound => "warning",
+        GameTileState.Failed => "danger",
+        null when Game.Archives is { Count: 0 } => "danger",
+        _ => "muted",
+    };
+
+    /// <summary>
+    /// The launcher's placeholder tone for a title (Cover.axaml.cs): FNV-1a over its UTF-16 code
+    /// units, modulo the six tones, so a game looks the same in both.
+    /// </summary>
+    public static int ToneOf(string? title)
+    {
+        if (string.IsNullOrEmpty(title))
+            return 0;
+
+        var hash = 2166136261u;
+
+        foreach (var c in title)
+        {
+            hash ^= c;
+            hash *= 16777619u;
+        }
+
+        return (int)(hash % 6u);
+    }
+}

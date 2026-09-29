@@ -53,11 +53,13 @@
             Multiple = false,
             EntrySelectable = EntrySelectable,
             EntryVisible = EntryVisible,
+            Describe = path => Prefix + path,
         };
 
         var results = await Dialogs.OpenAsync<FilePickerDialog, FilePickerOptions, IEnumerable<IFileManagerEntry>>(Title, options, new DialogSettings
         {
             Size = DialogSize.Full,
+            Picker = true,
             OkText = OkText,
         });
 

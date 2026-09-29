@@ -5,26 +5,42 @@
 @inject ServerService ServerService
 @inject NotificationService Notifications
 
-<ServerEditView Id="Id" Title="Autostart">
+<ServerEditView @ref="_view" Id="Id" Title="Autostart" OnLoaded="OnServerLoaded" ContentClass="edit-form-content">
     <TitleExtraTemplate>
-        <Button Primary OnClick="() => SaveAsync(context)">Save</Button>
+        @if (IsDirty(context))
+        {
+            <span class="edit-unsaved" role="status">
+                <span class="edit-unsaved-dot" aria-hidden="true"></span>
+                Unsaved changes
+            </span>
+        }
+
+        <Button Disabled="@(!IsDirty(context) || _saving)" OnClick="DiscardAsync">Discard</Button>
+        <Button Primary Loading="_saving" OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <Form Model="context" OnSubmit="() => SaveAsync(context)">
-            <FormItem Label="Enable">
-                <Switch @bind-Value="context.Autostart" />
-            </FormItem>
+        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)" Class="edit-form">
+            <Switch @bind-Value="context.Autostart" Class="edit-form-switch">
+                <span class="edit-form-switch-title">Autostart</span>
+                <span class="edit-form-switch-help">Start this server automatically instead of by hand.</span>
+            </Switch>
 
-            <FormItem Label="Method">
-                <EnumSelect TEnum="ServerAutostartMethod" @bind-Value="context.AutostartMethod" />
-            </FormItem>
+            @if (context.Autostart)
+            {
+                <Divider Class="edit-form-divider" />
 
-            <FormItem Label="Delay">
-                <InputGroup>
-                    <NumberInput @bind-Value="context.AutostartDelay" Min="0" Placeholder="0" />
-                    <InputAddon>seconds</InputAddon>
-                </InputGroup>
-            </FormItem>
+                <div class="edit-form-pair">
+                    <FormItem Label="Method">
+                        <EnumSelect TEnum="ServerAutostartMethod" @bind-Value="context.AutostartMethod" />
+                    </FormItem>
+                    <FormItem Label="Delay">
+                        <InputGroup>
+                            <NumberInput @bind-Value="context.AutostartDelay" Min="0" Placeholder="0" />
+                            <InputAddon>seconds</InputAddon>
+                        </InputGroup>
+                    </FormItem>
+                </div>
+            }
         </Form>
     </ChildContent>
 </ServerEditView>
@@ -32,17 +48,50 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
+    bool _saving;
+
+    ServerEditView? _view;
+    Form? _form;
+
+    /// <summary>The fields as loaded or last saved; the header's "Unsaved changes" compares against it.</summary>
+    ServerEditSnapshot? _saved;
+
+    void OnServerLoaded(Server server)
+    {
+        _saved = ServerEditSnapshot.Of(server);
+        _form?.MarkAsUnmodified();
+    }
+
+    bool IsDirty(Server server) => _saved != null && ServerEditSnapshot.Of(server) != _saved;
+
+    async Task DiscardAsync()
+    {
+        _saved = null;
+
+        if (_view != null)
+            await _view.ReloadAsync();
+    }
+
     async Task SaveAsync(Server server)
     {
+        _saving = true;
+
         try
         {
             await ServerService.UpdateAsync(server);
+
+            _saved = ServerEditSnapshot.Of(server);
+            _form?.MarkAsUnmodified();
 
             Notifications.Success("Autostart configuration updated!");
         }
         catch (Exception ex)
         {
             Notifications.Error(ex, "Could not save!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 }

@@ -31,7 +31,7 @@ else
 
     [Parameter] public bool Loading { get; set; } = true;
 
-    /// <summary>Text under the spinner, e.g. what is being waited on.</summary>
+    /// <summary>Text beside the spinner, e.g. what is being waited on ("Fetching archives…").</summary>
     [Parameter] public string? Tip { get; set; }
 
     [Parameter] public bool Small { get; set; }
@@ -49,9 +49,7 @@ else
     }
 
     RenderFragment Indicator => @<span class="lc-spin-indicator">
-        <RadzenProgressBarCircular Mode="ProgressBarMode.Indeterminate"
-                                   ShowValue="false"
-                                   Size="@(Small ? ProgressBarCircularSize.ExtraSmall : Large ? ProgressBarCircularSize.Large : ProgressBarCircularSize.Small)" />
+        <Spinner Large="!Small" Class="@(Large ? "lc-spin-spinner-large" : null)" />
         @if (Tip != null)
         {
             <span class="lc-spin-tip">@Tip</span>

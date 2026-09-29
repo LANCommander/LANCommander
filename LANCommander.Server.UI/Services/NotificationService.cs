@@ -15,6 +15,12 @@ public enum NotificationLevel
 }
 
 /// <summary>
+/// A link under a notification's message, e.g. "Open media editor". Give it an <paramref name="Href"/>
+/// to navigate, or an <paramref name="OnClick"/> to run; either way the notification closes.
+/// </summary>
+public sealed record NotificationAction(string Text, string? Href = null, Func<Task>? OnClick = null);
+
+/// <summary>
 /// Toast notifications in the corner of the screen: short confirmations ("Game saved") and errors
 /// that don't warrant interrupting the user with a dialog.
 /// </summary>
@@ -23,13 +29,17 @@ public sealed class NotificationService(Radzen.NotificationService notifications
     private static readonly TimeSpan DefaultDuration = TimeSpan.FromSeconds(4);
     private static readonly TimeSpan ErrorDuration = TimeSpan.FromSeconds(8);
 
-    public void Success(string message, string? detail = null) => Show(NotificationLevel.Success, message, detail);
+    public void Success(string message, string? detail = null, NotificationAction? action = null, string? meta = null) =>
+        Show(NotificationLevel.Success, message, detail, action, meta);
 
-    public void Info(string message, string? detail = null) => Show(NotificationLevel.Info, message, detail);
+    public void Info(string message, string? detail = null, NotificationAction? action = null, string? meta = null) =>
+        Show(NotificationLevel.Info, message, detail, action, meta);
 
-    public void Warning(string message, string? detail = null) => Show(NotificationLevel.Warning, message, detail);
+    public void Warning(string message, string? detail = null, NotificationAction? action = null, string? meta = null) =>
+        Show(NotificationLevel.Warning, message, detail, action, meta);
 
-    public void Error(string message, string? detail = null) => Show(NotificationLevel.Error, message, detail);
+    public void Error(string message, string? detail = null, NotificationAction? action = null, string? meta = null) =>
+        Show(NotificationLevel.Error, message, detail, action, meta);
 
     /// <summary>
     /// Logs <paramref name="exception"/> and tells the user <paramref name="message"/>, with the
@@ -42,8 +52,29 @@ public sealed class NotificationService(Radzen.NotificationService notifications
         Show(NotificationLevel.Error, message, exception.Message);
     }
 
-    public void Show(NotificationLevel level, string message, string? detail = null) =>
-        notifications.Notify(Create(level, message, detail, level == NotificationLevel.Error ? ErrorDuration : DefaultDuration));
+    /// <summary>
+    /// Shows a notification: <paramref name="message"/> as its title, <paramref name="detail"/> under
+    /// it, then an optional <paramref name="action"/> link and a <paramref name="meta"/> line in mono
+    /// (a job id, a time). One with an action stays twice as long, so there is time to use it.
+    /// </summary>
+    public void Show(NotificationLevel level, string message, string? detail = null, NotificationAction? action = null, string? meta = null)
+    {
+        var duration = level == NotificationLevel.Error ? ErrorDuration : DefaultDuration;
+
+        if (action != null)
+            duration *= 2;
+
+        var notification = Create(level, message, detail, duration);
+
+        if (action != null || meta != null)
+        {
+            // Clicking the body would close it before the action's own click lands
+            notification.CloseOnClick = action == null;
+            notification.DetailContent = _ => Detail(detail, action, meta, () => notifications.Messages.Remove(notification));
+        }
+
+        notifications.Notify(notification);
+    }
 
     /// <summary>
     /// Shows a notification that stays until closed through the returned handle, for work in
@@ -66,38 +97,70 @@ public sealed class NotificationService(Radzen.NotificationService notifications
     {
         var handle = new NotificationHandle(notifications, level, message, detail);
 
-        handle.Message.DetailContent = _ => builder =>
+        handle.Message.DetailContent = _ => Detail(detail, new NotificationAction(actionText, OnClick: async () =>
         {
-            builder.OpenElement(0, "div");
-            builder.AddAttribute(1, "class", "lc-notification-detail");
-            builder.AddContent(2, detail);
-            builder.CloseElement();
-
-            builder.OpenComponent<Button>(3);
-            builder.AddComponentParameter(4, nameof(Button.Primary), true);
-            builder.AddComponentParameter(5, nameof(Button.Small), true);
-            builder.AddComponentParameter(6, nameof(Button.Class), "lc-notification-action");
-            builder.AddComponentParameter(7, nameof(Button.OnClick), EventCallback.Factory.Create<MouseEventArgs>(handle, async () =>
+            try
             {
-                handle.Close();
-
-                try
-                {
-                    await action();
-                }
-                catch (Exception ex)
-                {
-                    Error(ex, $"{actionText} failed");
-                }
-            }));
-            builder.AddComponentParameter(8, nameof(Button.ChildContent), (RenderFragment)(b => b.AddContent(0, actionText)));
-            builder.CloseComponent();
-        };
+                await action();
+            }
+            catch (Exception ex)
+            {
+                Error(ex, $"{actionText} failed");
+            }
+        }), meta: null, handle.Close);
 
         notifications.Notify(handle.Message);
 
         return handle;
     }
+
+    // The body under the title: the detail text, then the action as a 12/500 link, then the meta line
+    private static RenderFragment Detail(string? detail, NotificationAction? action, string? meta, Action close) => builder =>
+    {
+        if (!String.IsNullOrEmpty(detail))
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "lc-notification-detail");
+            builder.AddContent(2, detail);
+            builder.CloseElement();
+        }
+
+        if (action != null)
+        {
+            if (action.Href != null)
+            {
+                builder.OpenElement(3, "a");
+                builder.AddAttribute(4, "class", "lc-notification-action");
+                builder.AddAttribute(5, "href", action.Href);
+                builder.AddAttribute(6, "onclick", EventCallback.Factory.Create<MouseEventArgs>(action, close));
+            }
+            else
+            {
+                builder.OpenElement(3, "button");
+                builder.AddAttribute(4, "class", "lc-notification-action");
+                builder.AddAttribute(5, "type", "button");
+                builder.AddAttribute(6, "onclick", EventCallback.Factory.Create<MouseEventArgs>(action, async () =>
+                {
+                    close();
+
+                    if (action.OnClick != null)
+                        await action.OnClick();
+                }));
+            }
+
+            builder.AddEventStopPropagationAttribute(7, "onclick", true);
+            builder.AddContent(8, action.Text);
+            builder.CloseElement();
+        }
+
+        if (!String.IsNullOrEmpty(meta))
+        {
+            builder.OpenElement(9, "div");
+            builder.AddAttribute(10, "class", "lc-notification-meta");
+            builder.AddContent(11, meta);
+            builder.CloseElement();
+        }
+    };
 
     internal static NotificationMessage Create(NotificationLevel level, string message, string? detail, TimeSpan? duration)
     {

@@ -1,0 +1,19 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework Condition="'$(MSBuildProjectName)' != 'LANCommander.SDK' and '$(MSBuildProjectName)' != 'LANCommander.SDK.SourceGenerators' and '$(MSBuildProjectName)' != 'LANCommander.Steam'">net10.0</TargetFramework>
+
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+
+    <Version>1.1.0</Version>
+    <AssemblyVersion>1.1.0.0</AssemblyVersion>
+
+    <Authors>pathartl</Authors>
+    <Company>LANCommander</Company>
+    <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>lancommander</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+</Project>

@@ -1,7 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <OutputType>WinExe</OutputType>
-    <TargetFrameworks>net10.0;net10.0-windows10.0.19041.0</TargetFrameworks>
+    <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
     <ApplicationManifest>app.manifest</ApplicationManifest>
@@ -72,14 +72,6 @@
     <PackageReference Include="VideoLAN.LibVLC.Mac" Condition="$(RuntimeIdentifier.StartsWith('osx')) OR ($([MSBuild]::IsOSPlatform('OSX')) AND '$(RuntimeIdentifier)' == '')" />
     <PackageReference Include="ppy.SDL3-CS" />
     <PackageReference Include="Tmds.DBus.Protocol" />
-  </ItemGroup>
-
-  <!-- On the Windows-desktop TFM, LibVLCSharp drags in Microsoft.WindowsAppSDK (for its unused WinUI
-       integration; we use LibVLCSharp.Avalonia). Its buildTransitive targets force a legacy UWP
-       RuntimeIdentifiers list that breaks framework-pack resolution (NETSDK1082/1083). Reference it
-       directly with all assets excluded so those targets aren't imported. -->
-  <ItemGroup Condition="'$(TargetFramework)' == 'net10.0-windows10.0.19041.0'">
-    <PackageReference Include="Microsoft.WindowsAppSDK" VersionOverride="1.1.1" ExcludeAssets="all" />
   </ItemGroup>
 
   <ItemGroup>
@@ -155,10 +147,8 @@
 
     <Message Importance="high" Text="Publishing packaging workers to $(PackagingWorkersStagingDir)" />
 
-    <!-- TargetFramework must be set explicitly. The MSBuild task passes the calling project's
-         global properties through, and this launcher is multi-targeted, so its
-         net10.0-windows inner build would otherwise ask the worker — which only targets
-         net10.0 — to build for a framework it does not have (NETSDK1005). -->
+    <!-- TargetFramework is set explicitly because the MSBuild task passes the calling project's
+         global properties through; pinning it keeps the worker on the framework it targets. -->
     <MSBuild Projects="$(PackagingWorkerProject)"
              Targets="Publish"
              Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=win-x64;SelfContained=true;PublishSingleFile=false;PublishDir=$(PackagingWorkersStagingDir)win-x64\" />

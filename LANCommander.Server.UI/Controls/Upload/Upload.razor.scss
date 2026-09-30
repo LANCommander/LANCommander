@@ -1,0 +1,96 @@
+.lc-upload-drop {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 24px 16px;
+    border: 1px dashed var(--lc-border-strong-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-well);
+    color: var(--rz-text-color);
+    text-align: center;
+    cursor: pointer;
+    transition: border-color .2s, background-color .2s;
+
+    &:hover,
+    &:focus-within,
+    &.lc-upload-drop-active {
+        border-color: var(--rz-primary);
+    }
+
+    &.lc-upload-drop-active {
+        background: var(--rz-primary-lighter);
+    }
+
+    &.lc-upload-drop-disabled {
+        cursor: not-allowed;
+        opacity: .5;
+    }
+}
+
+.lc-upload-icon {
+    font-size: 40px;
+    color: var(--rz-primary);
+}
+
+.lc-upload-hint {
+    font-size: var(--rz-text-caption-font-size);
+    color: var(--rz-text-secondary-color);
+}
+
+.lc-upload-list {
+    list-style: none;
+    margin: 8px 0 0;
+    padding: 0;
+}
+
+.lc-upload-file {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 4px 0;
+
+    .lc-progress {
+        flex: 0 0 120px;
+    }
+}
+
+.lc-upload-file-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-upload-file-done > svg:first-child {
+    color: var(--lc-success-text-color);
+}
+
+.lc-upload-file-failed {
+    color: var(--lc-danger-text-color);
+}
+
+// ChunkUploader: a file input laid over the drop area takes clicks and drops
+.lc-chunk-uploader .lc-upload-drop {
+    position: relative;
+    min-height: 160px;
+}
+
+.lc-chunk-uploader-input {
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+}
+
+.lc-chunk-uploader-busy .lc-chunk-uploader-input {
+    pointer-events: none;
+}
+
+.lc-chunk-uploader > .lc-upload-file {
+    margin-top: 8px;
+}

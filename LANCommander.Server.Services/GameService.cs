@@ -186,12 +186,12 @@ namespace LANCommander.Server.Services
             if (game == null)
                 return null;
 
-            // Resolve version-scoped config (Version, Scripts, Actions, SavePaths) from the
-            // newest GameVersion so the manifest reflects that version's config snapshot rather
-            // than the union of all historical (dual-written) config rows hanging off the game.
-            var latestVersion = await gameVersionService.GetLatestAsync(game.Id);
+            // Resolve version-scoped config (Version, Scripts, Actions, SavePaths...) from the version
+            // launchers are offered so the manifest reflects that version's config snapshot rather than
+            // the union of all historical (dual-written) config rows hanging off the game.
+            var currentVersion = await gameVersionService.GetCurrentAsync(game.Id);
 
-            return await BuildManifestAsync(game, latestVersion);
+            return await BuildManifestAsync(game, currentVersion);
         }
 
         private async Task<SDK.Models.Manifest.Game> BuildManifestAsync(Game game, GameVersion version)
@@ -217,6 +217,12 @@ namespace LANCommander.Server.Services
                 manifest.SavePaths = version.SavePaths != null
                     ? version.SavePaths.Select(manifestMapper.ToManifest).ToList()
                     : new List<SDK.Models.Manifest.SavePath>();
+
+                manifest.VersionId = version.Id;
+                manifest.OptionSchema = version.OptionSchema;
+                manifest.Redistributables = await GetVersionRedistributableManifestsAsync(version.Id);
+
+                return manifest;
             }
 
             if (game.Redistributables is not { Count: > 0 })
@@ -242,6 +248,35 @@ namespace LANCommander.Server.Services
             return manifest;
         }
 
+        /// <summary>A version's redistributables as manifests, each carrying that version's option values.</summary>
+        private async Task<List<SDK.Models.Manifest.Redistributable>> GetVersionRedistributableManifestsAsync(Guid versionId)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            var rows = await context.GameVersionRedistributables
+                .AsNoTracking()
+                .AsSplitQuery()
+                .Include(r => r.Redistributable)
+                    .ThenInclude(r => r.Scripts)
+                .Include(r => r.Redistributable)
+                    .ThenInclude(r => r.Archives)
+                .Where(r => r.GameVersionId == versionId)
+                .ToListAsync();
+
+            return rows
+                .Where(r => r.Redistributable != null)
+                .Select(r =>
+                {
+                    var redistributable = manifestMapper.ToManifest(r.Redistributable);
+
+                    if (!string.IsNullOrWhiteSpace(r.Options))
+                        redistributable.Options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(r.Options) ?? [];
+
+                    return redistributable;
+                })
+                .ToList();
+        }
+
         /// <summary>
         /// Ids of games hidden from launcher users (<see cref="Game.Published"/> is false).
         /// Cached under the "Games" tag, so any game change invalidates it.
@@ -262,35 +297,23 @@ namespace LANCommander.Server.Services
             return ids.ToHashSet();
         }
 
+        /// <summary>The latest version's values for a redistributable's options.</summary>
         public async Task<string> GetRedistributableOptionsAsync(Guid gameId, Guid redistributableId)
         {
-            using var context = await contextFactory.CreateDbContextAsync();
+            var versionId = await gameVersionService.GetLatestIdAsync(gameId);
 
-            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
-                .FirstOrDefaultAsync(e =>
-                    EF.Property<Guid>(e, "GameId") == gameId &&
-                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
+            if (versionId == null)
+                return null;
 
-            if (joinEntry != null && joinEntry.TryGetValue("Options", out var options) && options is string optionsJson)
-                return optionsJson;
-
-            return null;
+            return await gameVersionService.GetRedistributableOptionsAsync(versionId.Value, redistributableId);
         }
 
+        /// <summary>Sets the latest version's values for a redistributable's options.</summary>
         public async Task SetRedistributableOptionsAsync(Guid gameId, Guid redistributableId, string optionsJson)
         {
-            using var context = await contextFactory.CreateDbContextAsync();
+            var versionId = await gameVersionService.GetOrCreateLatestIdAsync(gameId);
 
-            var joinEntry = await context.Set<Dictionary<string, object>>("GameRedistributable")
-                .FirstOrDefaultAsync(e =>
-                    EF.Property<Guid>(e, "GameId") == gameId &&
-                    EF.Property<Guid>(e, "RedistributableId") == redistributableId);
-
-            if (joinEntry != null)
-            {
-                joinEntry["Options"] = optionsJson;
-                await context.SaveChangesAsync();
-            }
+            await gameVersionService.SetRedistributableOptionsAsync(versionId, redistributableId, optionsJson);
         }
 
         public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)
@@ -333,10 +356,19 @@ namespace LANCommander.Server.Services
 
         public async Task<Archive> GetLatestArchiveAsync(Guid id)
         {
-            var latestVersion = await gameVersionService.GetLatestAsync(id);
+            // The files of the version launchers are offered: its archive, or the newest one below it
+            var versions = (await gameVersionService.GetAllAsync(id)).ToList();
+            var current = versions.FirstOrDefault(v => v.Published) ?? versions.FirstOrDefault();
 
-            if (latestVersion?.Archive != null)
-                return latestVersion.Archive;
+            if (current != null)
+            {
+                var archive = versions
+                    .SkipWhile(v => v.Id != current.Id)
+                    .FirstOrDefault(v => v.Archive != null)?.Archive;
+
+                if (archive != null)
+                    return archive;
+            }
 
             // Fallback for games not yet backfilled into the versioning model.
             var game = await AsNoTracking()
@@ -349,7 +381,7 @@ namespace LANCommander.Server.Services
 
         public async Task<string> GetVersionAsync(Guid id)
         {
-            var latestVersion = await gameVersionService.GetLatestAsync(id);
+            var latestVersion = await gameVersionService.GetCurrentAsync(id);
 
             if (latestVersion != null && !String.IsNullOrWhiteSpace(latestVersion.Version))
                 return latestVersion.Version;
@@ -359,14 +391,38 @@ namespace LANCommander.Server.Services
             return latestArchive?.Version ?? String.Empty;
         }
 
-        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version, Guid? versionId = null)
         {
-            var newerVersions = await gameVersionService.GetNewerThanAsync(gameId, version);
+            var newerVersions = await gameVersionService.GetNewerThanAsync(gameId, versionId, version);
 
             return newerVersions
                 .Where(v => v.Archive != null)
                 .Select(v => v.Archive)
                 .ToList();
+        }
+
+        /// <summary>
+        /// Whether the version launchers are offered (the newest published one) is newer than the installed
+        /// one (resolved by id, then by version string). Versions without an archive count: they're
+        /// config-only updates. When the installed version can't be resolved, an update is available if the
+        /// offered version is labelled differently from what the client reported.
+        /// </summary>
+        public async Task<bool> HasUpdateAsync(Guid gameId, Guid? versionId, string? version)
+        {
+            var installed = await gameVersionService.ResolveInstalledAsync(gameId, versionId, version);
+            var versions = (await gameVersionService.GetAllAsync(gameId)).ToList();
+
+            // Launchers are offered the newest published version; newer drafts aren't updates. A newer
+            // version is an update even without an archive of its own: it changes the config.
+            var current = versions.FirstOrDefault(v => v.Published) ?? versions.FirstOrDefault();
+
+            if (current == null)
+                return false;
+
+            if (installed == null)
+                return current.Version != (version ?? string.Empty);
+
+            return current.SortOrder > installed.SortOrder;
         }
 
         public async Task PackageAsync(Guid id)
@@ -424,6 +480,8 @@ namespace LANCommander.Server.Services
                     ZipFile.CreateFromDirectory(package.Path, destination);
 
                     await archiveService.RecalculateFileSizeArchiveAsync(archive);
+
+                    await gameVersionService.LinkArchiveAsync(archive.Id, changelog: package.Changelog);
 
                     logger.LogInformation("Successfully packaged {GameTitle} and created new archive with version number {GameVersion}", game.Title, archive.Version);
                 }

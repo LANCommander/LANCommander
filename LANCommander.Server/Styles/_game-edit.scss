@@ -35,6 +35,12 @@
     }
 }
 
+// The version picker beside the title: a small select in mono, like the header's summary
+.game-edit-version-picker {
+    max-width: 240px;
+    font-family: var(--lc-font-mono);
+}
+
 .game-edit-header-summary {
     color: var(--lc-text-tertiary-color);
     font-family: var(--lc-font-mono);

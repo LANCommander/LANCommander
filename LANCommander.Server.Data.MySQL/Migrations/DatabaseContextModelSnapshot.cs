@@ -766,6 +766,12 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("char(36)");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("longtext");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
 
@@ -788,6 +794,24 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("GameVersions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.Property<Guid>("GameVersionId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid>("RedistributableId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("longtext");
+
+                    b.HasKey("GameVersionId", "RedistributableId");
+
+                    b.HasIndex("RedistributableId");
+
+                    b.ToTable("GameVersionRedistributables");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -2634,6 +2658,25 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Redistributables")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Redistributable", "Redistributable")
+                        .WithMany()
+                        .HasForeignKey("RedistributableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameVersion");
+
+                    b.Navigation("Redistributable");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3377,6 +3420,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Actions");
 
                     b.Navigation("Archive");
+
+                    b.Navigation("Redistributables");
 
                     b.Navigation("SavePaths");
 

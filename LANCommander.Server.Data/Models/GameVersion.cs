@@ -15,6 +15,12 @@ namespace LANCommander.Server.Data.Models
         [Display(Name = "Sort Order")]
         public int SortOrder { get; set; }
 
+        /// <summary>
+        /// Whether launchers are offered this version. New versions are drafts until published; creating
+        /// a newer version publishes the current one.
+        /// </summary>
+        public bool Published { get; set; }
+
         public Guid GameId { get; set; }
         [JsonIgnore]
         [ForeignKey(nameof(GameId))]
@@ -25,5 +31,12 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Script>? Scripts { get; set; }
         public ICollection<Action>? Actions { get; set; }
         public ICollection<SavePath>? SavePaths { get; set; }
+
+        /// <summary>The game's option schema (YAML) as of this version.</summary>
+        [Display(Name = "Option Schema")]
+        public string? OptionSchema { get; set; }
+
+        /// <summary>The redistributables this version needs, with its option values for each.</summary>
+        public ICollection<GameVersionRedistributable>? Redistributables { get; set; }
     }
 }

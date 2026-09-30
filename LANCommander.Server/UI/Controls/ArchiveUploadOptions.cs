@@ -8,6 +8,9 @@ public sealed class ArchiveUploadOptions
 
     public Guid? GameId { get; init; }
 
+    /// <summary>Preselects this version of the game as the one the upload belongs to.</summary>
+    public Guid? GameVersionId { get; init; }
+
     public Guid? RedistributableId { get; init; }
 
     public Guid? ToolId { get; init; }

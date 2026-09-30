@@ -128,8 +128,27 @@ public static class GameEndpoints
                 .AsNoTracking()
                 .AsSplitQuery()
                 .GetAsync(id);
-                
-            return manifestMapper.ToManifest(result);
+
+            if (result == null)
+                return null;
+
+            var manifest = manifestMapper.ToManifest(result);
+
+            // Actions, scripts, redistributables and the option schema belong to versions; the game's
+            // own rows span every version, so describe the latest version's config instead
+            var latest = await gameService.GetManifestAsync(id);
+
+            if (latest != null)
+            {
+                manifest.VersionId = latest.VersionId;
+                manifest.Actions = latest.Actions;
+                manifest.Scripts = latest.Scripts;
+                manifest.SavePaths = latest.SavePaths;
+                manifest.Redistributables = latest.Redistributables;
+                manifest.OptionSchema = latest.OptionSchema;
+            }
+
+            return manifest;
         }, TimeSpan.MaxValue, tags: ["Games", $"Games/{id}"]);
 
         if (game != null)
@@ -161,9 +180,27 @@ public static class GameEndpoints
     {
         var versions = await cache.GetOrSetAsync($"Games/{id}/Versions", async _ =>
         {
-            var results = await gameVersionService.GetAllAsync(id);
+            var results = (await gameVersionService.GetAllAsync(id)).ToList();
 
-            return results.Select(sdkMapper.ToSdk).ToList();
+            var mapped = results.Select(sdkMapper.ToSdk).ToList();
+
+            // A version without its own archive uses the files of the newest archive at or below it
+            Guid? effectiveArchiveId = null;
+
+            foreach (var version in mapped.OrderBy(v => v.SortOrder).ThenBy(v => v.CreatedOn))
+            {
+                if (version.ArchiveId is Guid archiveId && archiveId != Guid.Empty)
+                    effectiveArchiveId = archiveId;
+
+                version.EffectiveArchiveId = effectiveArchiveId;
+            }
+
+            // Launchers see published versions, plus the one they're offered when none is published yet
+            var current = results.FirstOrDefault(v => v.Published) ?? results.FirstOrDefault();
+
+            return mapped
+                .Where(v => results.Any(r => r.Id == v.Id && (r.Published || r.Id == current?.Id)))
+                .ToList();
         }, tags: ["Games", $"Games/{id}"]);
 
         return TypedResults.Ok(versions);
@@ -216,10 +253,24 @@ public static class GameEndpoints
         [FromServices] IFusionCache cache,
         [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
+        [FromServices] GameVersionService gameVersionService,
         ClaimsPrincipal userPrincipal,
-        Guid id)
+        Guid id,
+        string? versionIds)
     {
-        var actions = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Action>>($"Games/{id}/Actions", async _ =>
+        // The versions the client has installed, for the game and any addons; others use their latest
+        var requestedVersionIds = (versionIds ?? string.Empty)
+            .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(v => Guid.TryParse(v, out var parsed) ? parsed : Guid.Empty)
+            .Where(v => v != Guid.Empty)
+            .OrderBy(v => v)
+            .ToList();
+
+        var cacheKey = requestedVersionIds.Count > 0
+            ? $"Games/{id}/Actions/{String.Join(',', requestedVersionIds)}"
+            : $"Games/{id}/Actions";
+
+        var actions = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Action>>(cacheKey, async _ =>
         {
             var game = await gameService
                 .Query(q =>
@@ -235,10 +286,26 @@ public static class GameEndpoints
                 .AsSplitQuery()
                 .GetAsync(id);
 
+            // Each game's actions are those of one version: the requested one when it belongs to the
+            // game, else the one launchers are offered. Rows not yet assigned to a version always apply.
+            async Task<IEnumerable<Data.Models.Action>> VersionActionsAsync(Game owner)
+            {
+                var ownerVersions = (await gameVersionService.GetAllAsync(owner.Id)).ToList();
+
+                var versionId = ownerVersions.FirstOrDefault(v => requestedVersionIds.Contains(v.Id))?.Id
+                    ?? (ownerVersions.FirstOrDefault(v => v.Published) ?? ownerVersions.FirstOrDefault())?.Id;
+
+                return owner.Actions
+                    .Where(a => a.GameVersionId == null || versionId == null || a.GameVersionId == versionId)
+                    .OrderBy(a => a.SortOrder);
+            }
+
             var dataActions = new List<Data.Models.Action>();
 
-            dataActions.AddRange(game.Actions.OrderBy(a => a.SortOrder));
-            dataActions.AddRange(game.Addons.OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle).SelectMany(dg => dg.Actions.OrderBy(a => a.SortOrder)));
+            dataActions.AddRange(await VersionActionsAsync(game));
+
+            foreach (var addon in game.Addons.OrderBy(dg => String.IsNullOrWhiteSpace(dg.SortTitle) ? dg.Title : dg.SortTitle))
+                dataActions.AddRange(await VersionActionsAsync(addon));
 
             var mappedActions = dataActions.Select(sdkMapper.ToSdk).ToList();
 
@@ -441,11 +508,12 @@ public static class GameEndpoints
         [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
         Guid id,
-        string version)
+        string? version,
+        Guid? versionId)
     {
         try
         {
-            var archives = await gameService.GetUpdatesAsync(id, version);
+            var archives = await gameService.GetUpdatesAsync(id, version ?? string.Empty, versionId);
             var mapped = archives.Select(sdkMapper.ToSdk).ToList();
 
             return TypedResults.Ok(mapped);
@@ -461,13 +529,12 @@ public static class GameEndpoints
         [FromServices] GameService gameService,
         [FromServices] ILogger<Game> logger,
         Guid id,
-        string version)
+        string? version,
+        Guid? versionId)
     {
         try
         {
-            var currentVersion = await gameService.GetVersionAsync(id);
-
-            return TypedResults.Ok(version != currentVersion);
+            return TypedResults.Ok(await gameService.HasUpdateAsync(id, versionId, version));
         }
         catch (Exception ex)
         {
@@ -568,46 +635,20 @@ public static class GameEndpoints
 
     internal static async Task<IResult> UploadArchiveAsync(
         [FromServices] ArchiveService archiveService,
-        [FromServices] StorageLocationService storageLocationService,
+        [FromServices] GameVersionService gameVersionService,
         [FromServices] ILogger<Game> logger,
         SDK.Models.UploadArchiveRequest request)
     {
         try
         {
-            var storageLocation =
-                await storageLocationService.GetOrDefaultAsync(request.StorageLocationId, StorageLocationType.Archive);
-            
-            var existingArchive = await archiveService.FirstOrDefaultAsync(a => a.GameId == request.Id && a.Version == request.Version);
-            var existingArchivePath = await archiveService.GetArchiveFileLocationAsync(existingArchive);
+            var (archive, targetVersionId) = await archiveService.CompleteUploadAsync(
+                request.ObjectKey,
+                request.StorageLocationId,
+                request.Version,
+                a => a.GameId = request.Id,
+                a => a.GameId == request.Id && a.Version == request.Version);
 
-            if (existingArchive == null)
-            {
-                existingArchive.ObjectKey = request.ObjectKey.ToString();
-                existingArchive.StorageLocation = storageLocation;
-                
-                var uploadedArchivePath = await archiveService.GetArchiveFileLocationAsync(existingArchive);
-                
-                existingArchive.CompressedSize = new FileInfo(uploadedArchivePath).Length;
-
-                await archiveService.UpdateAsync(existingArchive);
-                
-                File.Delete(existingArchivePath);
-            }
-            else
-            {
-                var archive = new Archive
-                {
-                    ObjectKey = request.ObjectKey.ToString(),
-                    GameId = request.Id,
-                    StorageLocation = storageLocation
-                };
-                
-                var uploadedArchivePath = await archiveService.GetArchiveFileLocationAsync(archive);
-
-                archive.CompressedSize = new FileInfo(uploadedArchivePath).Length;
-
-                await archiveService.AddAsync(archive);
-            }
+            await gameVersionService.LinkArchiveAsync(archive.Id, targetVersionId, request.Changelog);
 
             return TypedResults.Ok();
         }

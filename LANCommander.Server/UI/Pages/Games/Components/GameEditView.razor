@@ -6,6 +6,9 @@
 @inject GameVersionService GameVersionService
 @inject ArchiveService ArchiveService
 @inject NavigationManager NavigationManager
+@inject AlertService Alerts
+@inject DialogService Dialogs
+@inject NotificationService Notifications
 
 @* The header spans the section menu and the section, as drawn: "Games › {title}" above the title *@
 <PageHeader Class="@_headerClass">
@@ -42,13 +45,30 @@
         }
     </TitleTemplate>
     <Tags>
+        @* Beside the title: the version everything version-bound in the game editor works on, carried between sections *@
+        @if (Id != Guid.Empty && !_loading)
+        {
+            <Select TValue="Guid" Items="_versionItems" Value="_versionId" ValueChanged="VersionChangedAsync" aria-label="Game version" Small Class="game-edit-version-picker" />
+
+            @* Whether the version being edited is offered to launchers, and the way to change that *@
+            @if (SelectedVersion != null)
+            {
+                @if (SelectedVersion.Published)
+                {
+                    <Tag Success>Published</Tag>
+                    <Button Text Small OnClick="() => SetPublishedAsync(false)">Unpublish</Button>
+                }
+                else
+                {
+                    <Tag title="Launchers aren't offered this version until it's published">Draft</Tag>
+                    <Button Text Small Icon="IconType.PaperPlaneTilt" OnClick="() => SetPublishedAsync(true)">Publish</Button>
+                }
+            }
+        }
+
         @if (!IsSection && Id != Guid.Empty && !_loading)
         {
-            @if (Game.Published)
-            {
-                <Tag Success>Published</Tag>
-            }
-            else
+            @if (!Game.Published)
             {
                 <Tag title="Hidden from the launcher's depot and libraries">Hidden</Tag>
             }
@@ -73,44 +93,44 @@
         @* Sections grouped as drawn: GAME, CONTENT, BEHAVIOUR. Text only; counts in mono *@
         <Menu Variant="MenuVariant.Section">
             <MenuGroup Title="Game">
-                <MenuItem Href="@(Id == Guid.Empty ? "/Games/Add" : $"/Games/{Id}/General")" Exact>General</MenuItem>
+                <MenuItem Href="@(Id == Guid.Empty ? "/Games/Add" : SectionHref("General"))" Exact>General</MenuItem>
 
                 @if (Id != Guid.Empty)
                 {
-                    <MenuItem Href="@($"/Games/{Id}/Preview")">Preview</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Media")" Count="_counts?.Media">Media</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Multiplayer")">Multiplayer</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/CustomFields")">Custom fields</MenuItem>
+                    <MenuItem Href="@SectionHref("Preview")">Preview</MenuItem>
+                    <MenuItem Href="@SectionHref("Media")"Count="_counts?.Media">Media</MenuItem>
+                    <MenuItem Href="@SectionHref("Multiplayer")">Multiplayer</MenuItem>
+                    <MenuItem Href="@SectionHref("CustomFields")">Custom fields</MenuItem>
                 }
             </MenuGroup>
 
             @if (Id != Guid.Empty)
             {
                 <MenuGroup Title="Content">
-                    <MenuItem Href="@($"/Games/{Id}/Archives")" Count="_counts?.Archives">Archives</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Versions")" Count="_counts?.Versions">Versions</MenuItem>
+                    <MenuItem Href="@SectionHref("Archives")"Count="_counts?.Archives">Archives</MenuItem>
+                    <MenuItem Href="@SectionHref("Versions")"Count="_counts?.Versions">Versions</MenuItem>
 
                     @if (Game.DependentGames?.Any(g => g.Type == GameType.Expansion) == true)
                     {
-                        <MenuItem Href="@($"/Games/{Id}/Expansions")" Count="@Game.DependentGames.Count(g => g.Type == GameType.Expansion)">Expansions</MenuItem>
+                        <MenuItem Href="@SectionHref("Expansions")"Count="@Game.DependentGames.Count(g => g.Type == GameType.Expansion)">Expansions</MenuItem>
                     }
 
                     @if (Game.DependentGames?.Any(g => g.Type == GameType.Mod) == true)
                     {
-                        <MenuItem Href="@($"/Games/{Id}/Mods")" Count="@Game.DependentGames.Count(g => g.Type == GameType.Mod)">Mods</MenuItem>
+                        <MenuItem Href="@SectionHref("Mods")"Count="@Game.DependentGames.Count(g => g.Type == GameType.Mod)">Mods</MenuItem>
                     }
 
-                    <MenuItem Href="@($"/Games/{Id}/Keys")" Count="_counts?.Keys">Keys</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Saves")">Saves</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/PlaySessions")">Play sessions</MenuItem>
+                    <MenuItem Href="@SectionHref("Keys")"Count="_counts?.Keys">Keys</MenuItem>
+                    <MenuItem Href="@SectionHref("Saves")">Saves</MenuItem>
+                    <MenuItem Href="@SectionHref("PlaySessions")">Play sessions</MenuItem>
                 </MenuGroup>
 
                 <MenuGroup Title="Behaviour">
-                    <MenuItem Href="@($"/Games/{Id}/Actions")">Actions</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Scripts")" Count="_counts?.Scripts">Scripts</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/SavePaths")">Save paths</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Redistributables")">Redistributables</MenuItem>
-                    <MenuItem Href="@($"/Games/{Id}/Options")">Options</MenuItem>
+                    <MenuItem Href="@SectionHref("Actions")">Actions</MenuItem>
+                    <MenuItem Href="@SectionHref("Scripts")"Count="_counts?.Scripts">Scripts</MenuItem>
+                    <MenuItem Href="@SectionHref("SavePaths")">Save paths</MenuItem>
+                    <MenuItem Href="@SectionHref("Redistributables")">Redistributables</MenuItem>
+                    <MenuItem Href="@SectionHref("Options")">Options</MenuItem>
                 </MenuGroup>
             }
         </Menu>
@@ -121,8 +141,20 @@
         <PageContent Loading="_loading" Class="@ContentClass">
             @if (!_loading && Game.Id == Id)
             {
+                @if (Versioned && !IsLatestVersion)
+                {
+                    <Alert Warning Title="@($"Editing version {VersionLabel(SelectedVersion)}, an older version")">
+                        Launchers on this version pick up these changes. Newer versions aren't affected.
+                    </Alert>
+                }
+
                 <CascadingValue Value="Game.Id" Name="GameId">
-                    @ChildContent?.Invoke(Game)
+                    @* Re-created per version so each editor loads the chosen version's config *@
+                    <CascadingValue Value="_versionId" Name="GameVersionId" @key="_versionId">
+                        <CascadingValue Value="IsLatestVersion" Name="IsLatestVersion">
+                            @ChildContent?.Invoke(Game)
+                        </CascadingValue>
+                    </CascadingValue>
                 </CascadingValue>
             }
         </PageContent>
@@ -155,16 +187,155 @@
     /// <summary>Also loads the game's related records, for sections that edit them.</summary>
     [Parameter] public bool LoadRelationships { get; set; }
 
+    /// <summary>
+    /// The section edits config that belongs to the version picked in the header (actions, scripts,
+    /// save paths, redistributables, options): the game gets a version if it has none yet, and editing
+    /// an older version shows a warning.
+    /// </summary>
+    [Parameter] public bool Versioned { get; set; }
+
+    /// <summary>The version to start on, from the "version" query string; the latest when absent.</summary>
+    [SupplyParameterFromQuery(Name = "version")] public Guid? RequestedVersionId { get; set; }
+
     Game Game { get; set; } = new();
     Guid? _id;
     bool _loading = true;
-    string _latestVersionNumber = string.Empty;
     long? _latestArchiveSize;
     string? _summary;
     SectionCounts? _counts;
     string? _headerClass;
 
     bool IsSection => !string.IsNullOrEmpty(Title);
+
+    List<GameVersion> _versions = new();
+    IEnumerable<SelectItem<Guid>> _versionItems = [];
+    Guid _versionId;
+
+    // The picker's "New version…" entry
+    static readonly Guid NewVersionItem = Guid.AllBitsSet;
+
+    GameVersion? SelectedVersion => _versions.FirstOrDefault(v => v.Id == _versionId);
+    bool IsLatestVersion => _versions.Count == 0 || _versions[0].Id == _versionId;
+
+    static string VersionLabel(GameVersion? version) =>
+        String.IsNullOrWhiteSpace(version?.Version) ? "(unversioned)" : version.Version;
+
+    /// <summary>A section's link, keeping an older version selected while moving between sections.</summary>
+    string SectionHref(string section) =>
+        !IsLatestVersion && _versionId != Guid.Empty
+            ? $"/Games/{Id}/{section}?version={_versionId}"
+            : $"/Games/{Id}/{section}";
+
+    async Task LoadVersionsAsync()
+    {
+        _versions = Id != Guid.Empty
+            ? (await GameVersionService.GetAllAsync(Id)).ToList()
+            : new List<GameVersion>();
+
+        // Sections that edit versioned config need a version to attach to
+        if (Versioned && _versions.Count == 0 && Id != Guid.Empty)
+        {
+            await GameVersionService.GetOrCreateLatestAsync(Id);
+            _versions = (await GameVersionService.GetAllAsync(Id)).ToList();
+        }
+
+        _versionItems = _versions
+            .Select((v, i) => new SelectItem<Guid>(v.Id, i == 0 ? $"{VersionLabel(v)} (latest)" : VersionLabel(v)))
+            .Append(new SelectItem<Guid>(NewVersionItem, "New version…", Icon: IconType.Plus))
+            .ToList();
+
+        _versionId = _versions.FirstOrDefault(v => v.Id == (RequestedVersionId ?? _versionId))?.Id
+            ?? _versions.FirstOrDefault()?.Id
+            ?? Guid.Empty;
+    }
+
+    /// <summary>
+    /// Asks for a version number and changelog, creates the version (a copy of the latest version's
+    /// config) and switches the editor to it.
+    /// </summary>
+    public async Task CreateVersionAsync()
+    {
+        var version = await Dialogs.OpenAsync<CreateVersionDialog, Guid, GameVersion>("New Version", Id, new DialogSettings { OkText = "Create" });
+
+        if (version == null)
+        {
+            // Put the picker back on the version being edited
+            StateHasChanged();
+            return;
+        }
+
+        _versionId = version.Id;
+        RequestedVersionId = null;
+
+        await LoadVersionsAsync();
+        await RefreshVersionAsync();
+
+        // The new version is the latest, so the address needs no version
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("version", (Guid?)null), replace: true);
+    }
+
+    /// <summary>Publishes or unpublishes the version being edited, after saying what that changes for launchers.</summary>
+    async Task SetPublishedAsync(bool published)
+    {
+        var version = SelectedVersion;
+
+        if (version == null)
+            return;
+
+        var confirmed = published
+            ? await Alerts.ConfirmAsync(
+                $"Launchers will be offered version {VersionLabel(version)} to install and update to, once it's the newest published version.",
+                $"Publish version {VersionLabel(version)}?",
+                "Publish")
+            : await Alerts.ConfirmAsync(
+                $"Launchers will no longer be offered version {VersionLabel(version)}; they'll be offered the newest published version before it instead. Installs already on it keep it.",
+                $"Unpublish version {VersionLabel(version)}?",
+                "Unpublish",
+                danger: true);
+
+        if (!confirmed)
+            return;
+
+        try
+        {
+            await GameVersionService.SetPublishedAsync(version.Id, published);
+
+            await LoadVersionsAsync();
+
+            Notifications.Success(published ? "Version published!" : "Version unpublished.");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, published ? "The version could not be published." : "The version could not be unpublished.");
+        }
+
+        StateHasChanged();
+    }
+
+    async Task VersionChangedAsync(Guid versionId)
+    {
+        if (versionId == NewVersionItem)
+        {
+            await CreateVersionAsync();
+            return;
+        }
+
+        var index = _versions.FindIndex(v => v.Id == versionId);
+
+        if (index > 0 && !await Alerts.ConfirmAsync(
+                $"Version {VersionLabel(_versions[index])} is older than the latest. Changes to it apply to launchers on that version and don't carry over to newer versions.",
+                "Edit an older version?",
+                "Edit"))
+        {
+            // Put the picker back on the version still being edited
+            StateHasChanged();
+            return;
+        }
+
+        _versionId = versionId;
+
+        NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("version", index > 0 ? versionId : (Guid?)null), replace: true);
+    }
 
     /// <summary>The figures beside the section menu's items.</summary>
     record SectionCounts(int Media, int Archives, int Versions, int Keys, int Scripts);
@@ -238,22 +409,21 @@
 
         await RefreshVersionAsync();
 
+        if (Id != Guid.Empty)
+            await LoadVersionsAsync();
+
         _loading = false;
 
         await OnLoaded.InvokeAsync(Game);
     }
 
-    /// <summary>Shows the latest version number again, e.g. after a new version is added.</summary>
+    /// <summary>Refreshes the section counts and the header's size summary, e.g. after a new version is added.</summary>
     public async Task RefreshVersionAsync()
     {
-        _latestVersionNumber = Id != Guid.Empty
-            ? await GameVersionService.GetLatestVersionNumberAsync(Id) ?? string.Empty
-            : string.Empty;
-
         await RefreshCountsAsync();
         await RefreshArchiveSizeAsync();
 
-        _summary = GameEditFormat.Summary(_latestVersionNumber, _latestArchiveSize);
+        _summary = GameEditFormat.Summary(_latestArchiveSize);
 
         await InvokeAsync(StateHasChanged);
     }

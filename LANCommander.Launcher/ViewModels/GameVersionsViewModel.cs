@@ -17,7 +17,23 @@ public partial class GameVersionsViewModel : ViewModelBase
     private string _dialogTitle = string.Empty;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasVersions))]
     private ObservableCollection<GameVersionItemViewModel> _versions = new();
+
+    public bool HasVersions => Versions.Count > 0;
+
+    /// <summary>Whether the game takes updates as soon as they're found. Off keeps it on its current version.</summary>
+    [ObservableProperty]
+    private bool _automaticallyUpdate;
+
+    /// <summary>Invoked when the user toggles <see cref="AutomaticallyUpdate"/>. Set by the host dialog.</summary>
+    public Func<bool, Task>? AutomaticallyUpdateChangedAsync { get; set; }
+
+    partial void OnAutomaticallyUpdateChanged(bool value)
+    {
+        if (AutomaticallyUpdateChangedAsync is not null)
+            _ = AutomaticallyUpdateChangedAsync(value);
+    }
 }
 
 public partial class GameVersionItemViewModel : ViewModelBase
@@ -40,10 +56,13 @@ public partial class GameVersionItemViewModel : ViewModelBase
     /// <summary>True when this version matches the game's currently installed version.</summary>
     public bool IsInstalled { get; }
 
-    /// <summary>Only versions that carry an archive and aren't already installed can be switched to.</summary>
+    /// <summary>
+    /// Versions that aren't installed can be switched to when they have files: their own archive, or for a
+    /// config-only version the newest archive below it.
+    /// </summary>
     public bool IsInstallable => !IsInstalled
-        && Version.ArchiveId.HasValue
-        && Version.ArchiveId.Value != Guid.Empty;
+        && (Version.EffectiveArchiveId ?? Version.ArchiveId) is Guid archiveId
+        && archiveId != Guid.Empty;
 
     /// <summary>Label for the action button: "Update" for a newer version, "Roll Back" for an older one.</summary>
     public string ButtonText { get; }

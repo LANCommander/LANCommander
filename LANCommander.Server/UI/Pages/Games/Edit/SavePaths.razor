@@ -1,7 +1,7 @@
 @page "/Games/{id:guid}/SavePaths"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<GameEditView Id="Id" Title="Save Paths">
+<GameEditView Id="Id" Title="Save Paths" Versioned>
     <TitleExtraTemplate>
         <Button Primary OnClick="() => _savePathEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>

@@ -474,7 +474,10 @@ else
             };
 
             if (Options.GameId is { } gameId && gameId != Guid.Empty)
+            {
                 _script.GameId = gameId;
+                _script.GameVersionId = Options.GameVersionId;
+            }
             else if (Options.RedistributableId is { } redistributableId && redistributableId != Guid.Empty)
                 _script.RedistributableId = redistributableId;
             else if (Options.ServerId is { } serverId && serverId != Guid.Empty)
@@ -560,7 +563,7 @@ else
     /// </summary>
     async Task LoadTreeAsync()
     {
-        var scripts = await ScriptService.GetEditorScriptsAsync(_script.GameId, _script.RedistributableId, _script.ServerId, _script.ToolId);
+        var scripts = await ScriptService.GetEditorScriptsAsync(_script.GameId, _script.RedistributableId, _script.ServerId, _script.ToolId, _script.GameVersionId ?? Options.GameVersionId);
 
         var listed = scripts.Where(s => s.Id != _script.Id || _script.Id == Guid.Empty).Append(_script).ToList();
 
@@ -646,6 +649,7 @@ else
             Type = type,
             Name = type.GetDisplayName(),
             GameId = _script.GameId,
+            GameVersionId = _script.GameVersionId,
             RedistributableId = _script.RedistributableId,
             ServerId = _script.ServerId,
             ToolId = _script.ToolId,

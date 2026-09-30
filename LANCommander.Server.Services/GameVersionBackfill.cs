@@ -9,7 +9,8 @@ namespace LANCommander.Server.Services
     /// Idempotent startup routine that seeds the GameVersion table for games that predate
     /// first-class versioning. Each existing archive becomes its own version (ordered oldest
     /// to newest), and the game's current version-scoped config (Scripts, Actions, SavePaths)
-    /// is attached to the newest version. Games with no archives receive a single empty
+    /// is attached to the newest version. Every version gets the game's option schema and
+    /// redistributables. Games with no archives receive a single empty
     /// version so their config still has a home.
     /// </summary>
     public static class GameVersionBackfill
@@ -86,6 +87,28 @@ namespace LANCommander.Server.Services
 
                     context.GameVersions.Add(version);
                     versions.Add(version);
+                }
+
+                // Until now the option schema and redistributables belonged to the game, so every
+                // version starts with them
+                var redistributableRows = await context.Set<Dictionary<string, object>>("GameRedistributable")
+                    .AsNoTracking()
+                    .Where(e => EF.Property<Guid>(e, "GameId") == gameId)
+                    .ToListAsync();
+
+                foreach (var version in versions)
+                {
+                    // Versions of a game already offered to launchers stay offered
+                    version.Published = game.Published;
+                    version.OptionSchema = game.OptionSchema;
+                    version.Redistributables = redistributableRows
+                        .Select(e => new GameVersionRedistributable
+                        {
+                            GameVersionId = version.Id,
+                            RedistributableId = (Guid)e["RedistributableId"],
+                            Options = e.TryGetValue("Options", out var options) ? options as string : null,
+                        })
+                        .ToList();
                 }
 
                 // Attach the game's existing config to the newest version. Existing GameId values

@@ -1,0 +1,66 @@
+@inherits Dialog<Guid, GameVersion>
+@inject GameVersionService GameVersionService
+@inject NotificationService Notifications
+
+@* Creates a version of the game whose Id is the options, as a draft; it starts as a copy of the latest version's config *@
+<Form Model="this">
+    @if (_draft != null)
+    {
+        <Alert Warning Title="@($"Version {DraftLabel} will be published")">
+            It's still a draft. Creating a new version publishes it, so launchers are offered it.
+        </Alert>
+    }
+
+    <FormItem Label="Version" Required>
+        <TextInput @bind-Value="_version" Immediate AutoFocus Placeholder="e.g. 1.1.0" />
+    </FormItem>
+
+    <FormItem Label="Changelog">
+        <TextArea @bind-Value="_changelog" MaxLength="500" Counter Rows="3" />
+    </FormItem>
+
+    <Typography Secondary Small>
+        The new version is a draft until it's published, and starts with a copy of the latest version's actions, scripts, save paths, redistributables and options.
+    </Typography>
+</Form>
+
+@code {
+    string? _version;
+    string? _changelog;
+
+    // The latest version, when it's still a draft that creating this one will publish
+    GameVersion? _draft;
+
+    string DraftLabel => String.IsNullOrWhiteSpace(_draft?.Version) ? "(unversioned)" : _draft.Version;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var latest = await GameVersionService.GetLatestAsync(Options);
+
+        if (latest is { Published: false })
+            _draft = latest;
+    }
+
+    protected override bool CanConfirm => !String.IsNullOrWhiteSpace(_version);
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        if (String.IsNullOrWhiteSpace(_version))
+            return false;
+
+        try
+        {
+            Result = await GameVersionService.CreateAsync(Options, _version.Trim(), String.IsNullOrWhiteSpace(_changelog) ? null : _changelog);
+
+            Notifications.Success("Version created!");
+
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Version could not be created.");
+
+            return false;
+        }
+    }
+}

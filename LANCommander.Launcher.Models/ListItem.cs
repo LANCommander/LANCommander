@@ -55,7 +55,7 @@ namespace LANCommander.Launcher.Models
 
             var manifestPath = ManifestHelper.GetPath(game.InstallDirectory, game.Id);
 
-            if (game.Installed && !String.IsNullOrWhiteSpace(game.LatestVersion) && game.InstalledVersion != game.LatestVersion)
+            if (game.IsUpdateAvailable())
                 State = ListItemState.UpdateAvailable;
             else if (game.Installed && File.Exists(manifestPath))
                 State = ListItemState.Installed;

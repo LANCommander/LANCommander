@@ -236,10 +236,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         IsInstalled = game.Installed;
         InstallDirectory = game.InstallDirectory;
         InstalledVersion = game.Installed ? game.InstalledVersion : null;
-        OptionSchema = game.OptionSchema;
-        IsUpdateAvailable = game.Installed
-            && !string.IsNullOrWhiteSpace(game.LatestVersion)
-            && game.InstalledVersion != game.LatestVersion;
+        OptionSchema = GameService.GetOptionSchema(game);
+        IsUpdateAvailable = game.IsUpdateAvailable();
 
         using var scope = _serviceProvider.CreateScope();
         
@@ -254,9 +252,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         await LoadActionsAsync();
         StartRunningCheck();
 
-        // Check server for updates if installed and not already detected locally
-        if (game.Installed && !IsUpdateAvailable)
-            _ = CheckForUpdateFromServerAsync(game.Id, game.InstalledVersion);
+        // The server's versioning decides whether an update is really available
+        if (game.Installed)
+            _ = CheckForUpdateFromServerAsync(game.Id);
     }
 
     /// <summary>
@@ -288,9 +286,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
             InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
-            IsUpdateAvailable = localGame.Installed
-                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                && localGame.InstalledVersion != localGame.LatestVersion;
+            IsUpdateAvailable = localGame.IsUpdateAvailable();
             
             await LoadPlayStatsAsync(localGame.Id);
             LoadManuals(localGame);
@@ -321,10 +317,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             IsInstalled = localGame.Installed;
             InstallDirectory = localGame.InstallDirectory;
             InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
-            OptionSchema = localGame.OptionSchema;
-            IsUpdateAvailable = localGame.Installed
-                && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                && localGame.InstalledVersion != localGame.LatestVersion;
+            OptionSchema = GameService.GetOptionSchema(localGame);
+            IsUpdateAvailable = localGame.IsUpdateAvailable();
             await LoadPlayStatsAsync(localGame.Id);
             LoadManuals(localGame);
         }
@@ -357,9 +351,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         await LoadActionsAsync();
         StartRunningCheck();
 
-        // Check server for updates if installed and not already detected locally
-        if (localGame != null && localGame.Installed && !IsUpdateAvailable)
-            _ = CheckForUpdateFromServerAsync(localGame.Id, localGame.InstalledVersion);
+        // The server's versioning decides whether an update is really available
+        if (localGame != null && localGame.Installed)
+            _ = CheckForUpdateFromServerAsync(localGame.Id);
     }
 
     private static string FormatBytes(long bytes)
@@ -459,10 +453,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 IsInstalled = localGame.Installed;
                 InstallDirectory = localGame.InstallDirectory;
                 InstalledVersion = localGame.Installed ? localGame.InstalledVersion : null;
-                OptionSchema = localGame.OptionSchema;
-                IsUpdateAvailable = localGame.Installed
-                    && !string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                    && localGame.InstalledVersion != localGame.LatestVersion;
+                OptionSchema = GameService.GetOptionSchema(localGame);
+                IsUpdateAvailable = localGame.IsUpdateAvailable();
                 IsInLibrary = await libraryService.IsInLibraryAsync(GameId);
                 await LoadPlayStatsAsync(localGame.Id);
                 LoadManuals(localGame);
@@ -641,11 +633,12 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     }
 
     /// <summary>
-    /// Checks the server for available updates and updates local state if found.
-    /// If no update is available, refreshes the on-disk manifest and scripts.
-    /// Runs in the background (fire-and-forget) so it doesn't block UI loading.
+    /// Checks the server for available updates and updates local state to match. Games with automatic
+    /// updates on have a found update queued; games with them off are never offered one and keep their
+    /// installed version's manifest and scripts. When there's no update the on-disk manifest and scripts
+    /// are refreshed. Runs in the background (fire-and-forget) so it doesn't block UI loading.
     /// </summary>
-    private async Task CheckForUpdateFromServerAsync(Guid gameId, string installedVersion)
+    private async Task CheckForUpdateFromServerAsync(Guid gameId)
     {
         try
         {
@@ -653,22 +646,40 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
             var importService = scope.ServiceProvider.GetRequiredService<ImportService>();
+            var autoUpdateService = scope.ServiceProvider.GetRequiredService<AutoUpdateService>();
             var redistributableClient = scope.ServiceProvider.GetRequiredService<RedistributableClient>();
 
-            var hasUpdate = await gameClient.CheckForUpdateAsync(gameId, installedVersion);
+            var localGame = await gameService.GetAsync(gameId);
 
-            if (!hasUpdate && !string.IsNullOrEmpty(InstallDirectory))
+            if (localGame == null || !localGame.Installed)
+                return;
+
+            if (!localGame.AutoUpdate)
+            {
+                await Dispatcher.UIThread.InvokeAsync(() => IsUpdateAvailable = false);
+
+                if (localGame.InstalledVersionId is Guid frozenVersionId && !string.IsNullOrEmpty(localGame.InstallDirectory))
+                {
+                    _logger.LogDebug("Refreshing manifest and scripts for frozen game {GameId} at version {VersionId}", gameId, frozenVersionId);
+                    await gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, gameId, frozenVersionId);
+                }
+
+                return;
+            }
+
+            var hasUpdate = await gameClient.CheckForUpdateAsync(gameId, localGame.InstalledVersion, localGame.InstalledVersionId);
+            var gameHasUpdate = hasUpdate;
+
+            if (!hasUpdate && !string.IsNullOrEmpty(localGame.InstallDirectory))
             {
                 // Check redistributables for updates
-                var localGame = await gameService.GetAsync(gameId);
-
-                if (localGame?.Redistributables != null)
+                if (localGame.Redistributables != null)
                 {
                     foreach (var redistributable in localGame.Redistributables)
                     {
                         try
                         {
-                            var redistManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(InstallDirectory, redistributable.Id);
+                            var redistManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Redistributable>(localGame.InstallDirectory, redistributable.Id);
 
                             if (redistManifest == null || string.IsNullOrWhiteSpace(redistManifest.Version))
                                 continue;
@@ -698,20 +709,37 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 // Re-import the game to pull latest version info into local DB
                 await importService.ImportGameAsync(gameId);
 
-                var localGame = await gameService.GetAsync(gameId);
+                localGame = await gameService.GetAsync(gameId);
+
                 if (localGame != null)
                 {
                     await Dispatcher.UIThread.InvokeAsync(() =>
                     {
                         IsUpdateAvailable = true;
                     });
+
+                    if (gameHasUpdate)
+                        await autoUpdateService.QueueAsync(localGame);
                 }
             }
-            else if (!string.IsNullOrEmpty(InstallDirectory))
+            else
             {
-                // No update available — refresh manifest and scripts to keep them in sync
-                _logger.LogDebug("Refreshing manifest and scripts for game {GameId}", gameId);
-                await gameClient.RefreshManifestAndScriptsAsync(InstallDirectory, gameId);
+                // Versions with archives, not version labels, decide whether there's an update
+                await Dispatcher.UIThread.InvokeAsync(() => IsUpdateAvailable = false);
+
+                if (!string.IsNullOrEmpty(localGame.InstallDirectory))
+                {
+                    // No update available — refresh manifest and scripts to keep them in sync
+                    _logger.LogDebug("Refreshing manifest and scripts for game {GameId}", gameId);
+                    // The installed version's, which is normally the latest
+                    var installedVersionId = localGame.InstalledVersionId
+                        ?? GameClient.GetInstalledVersionId(localGame.InstallDirectory, gameId);
+
+                    if (installedVersionId is Guid versionId)
+                        await gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, gameId, versionId);
+                    else
+                        await gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, gameId);
+                }
             }
         }
         catch (Exception ex)
@@ -1159,9 +1187,12 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             };
 
             // ── Options section ────────────────────────────────────────────────
-            if (!string.IsNullOrWhiteSpace(localGame.OptionSchema))
+            // The installed version's schema, else the latest's
+            var optionSchema = GameService.GetOptionSchema(localGame);
+
+            if (!string.IsNullOrWhiteSpace(optionSchema))
             {
-                var optionsVm = GameOptionsOverlayViewModel.Build(localGame.OptionSchema, localGame.Options, Title ?? "Game");
+                var optionsVm = GameOptionsOverlayViewModel.Build(optionSchema, localGame.Options, Title ?? "Game");
 
                 if (optionsVm != null)
                 {
@@ -1220,56 +1251,105 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 manageVm.Sections.Add(modifySection);
             }
 
-            // ── Versions section (installed games with downloadable versions) ───
+            // ── Versions section (installed games only) ─────────────────────────
             if (IsInstalled)
             {
-                var versions = (await gameClient.GetVersionsAsync(GameId))?.ToList() ?? [];
+                List<SDK.Models.GameVersion> versions;
 
-                // Only versions that carry an archive can be installed or rolled back to.
+                try
+                {
+                    versions = (await gameClient.GetVersionsAsync(GameId))?.ToList() ?? [];
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "Could not load versions for game {GameId} ({Title})", GameId, Title);
+                    versions = [];
+                }
+
+                // Versions with files, of their own or (config-only versions) from an older archive,
+                // can be installed or rolled back to.
                 var installable = versions
-                    .Where(v => v.ArchiveId.HasValue && v.ArchiveId.Value != Guid.Empty)
+                    .Where(v => (v.EffectiveArchiveId ?? v.ArchiveId) is Guid archiveId && archiveId != Guid.Empty)
                     .ToList();
 
-                if (installable.Count > 0)
+                var installedVersion   = InstallService.ResolveInstalledVersion(installable, localGame);
+                var installedSortOrder = installedVersion?.SortOrder;
+
+                var versionsVm = new GameVersionsViewModel
                 {
-                    var installedVersion   = installable.FirstOrDefault(v => v.Version == localGame.InstalledVersion);
-                    var installedSortOrder = installedVersion?.SortOrder;
+                    AutomaticallyUpdate = localGame.AutoUpdate,
+                };
 
-                    var versionsVm = new GameVersionsViewModel();
+                var versionsSection = new ManageSectionViewModel
+                {
+                    Title = "Versions",
+                    IconValue = "ClockCounterClockwise",
+                    Content = versionsVm,
+                };
 
-                    foreach (var version in installable)
+                versionsVm.AutomaticallyUpdateChangedAsync = async autoUpdate =>
+                {
+                    try
                     {
-                        var isInstalled = version.Version == localGame.InstalledVersion;
-                        var isNewer = installedSortOrder.HasValue && version.SortOrder > installedSortOrder.Value;
+                        localGame.AutoUpdate = autoUpdate;
+                        await gameService.UpdateAsync(localGame);
 
-                        var item = new GameVersionItemViewModel(version, isInstalled, isNewer)
+                        versionsSection.Status = "Saved";
+                        _logger.LogInformation("Automatic updates {State} for game {GameId} ({Title})", autoUpdate ? "enabled" : "disabled", GameId, Title);
+
+                        if (autoUpdate)
+                            _ = CheckForUpdateFromServerAsync(GameId);
+                        else
+                            IsUpdateAvailable = false;
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "Could not save automatic updates for game {GameId} ({Title})", GameId, Title);
+                        versionsSection.Status = $"Couldn't save: {ex.Message}";
+                    }
+                };
+
+                foreach (var version in installable)
+                {
+                    var isInstalled = version.Id == installedVersion?.Id;
+                    var isNewer = installedSortOrder.HasValue && version.SortOrder > installedSortOrder.Value;
+
+                    var item = new GameVersionItemViewModel(version, isInstalled, isNewer)
+                    {
+                        SwitchRequested = async chosen =>
                         {
-                            SwitchRequested = async chosen =>
-                            {
-                                IsInstalling = true;
-                                StatusMessage = $"Preparing to switch to version {chosen.Version.Version}...";
+                            IsInstalling = true;
+                            StatusMessage = $"Preparing to switch to version {chosen.Version.Version}...";
 
+                            try
+                            {
                                 _logger.LogInformation("Queuing switch of game {GameId} ({Title}) to version {Version}", GameId, Title, chosen.Version.Version);
 
                                 await installService.AddVersionSwitchAsync(localGame, chosen.Version);
 
                                 StatusMessage = "Added to download queue";
-                                IsInstalling = false;
                                 InstallRequested?.Invoke(this, EventArgs.Empty);
                                 manageVm.Close();
-                            },
-                        };
+                            }
+                            catch (Exception ex)
+                            {
+                                // Leave the dialog open so another version can be picked or it can be closed
+                                _logger.LogError(ex, "Could not queue switch of game {GameId} ({Title}) to version {Version}", GameId, Title, chosen.Version.Version);
 
-                        versionsVm.Versions.Add(item);
-                    }
+                                versionsSection.Status = $"Couldn't switch version: {ex.Message}";
+                                StatusMessage = versionsSection.Status;
+                            }
+                            finally
+                            {
+                                IsInstalling = false;
+                            }
+                        },
+                    };
 
-                    manageVm.Sections.Add(new ManageSectionViewModel
-                    {
-                        Title = "Versions",
-                        IconValue = "ClockCounterClockwise",
-                        Content = versionsVm,
-                    });
+                    versionsVm.Versions.Add(item);
                 }
+
+                manageVm.Sections.Add(versionsSection);
             }
 
             // ── Saves section (installed games only) ────────────────────────────

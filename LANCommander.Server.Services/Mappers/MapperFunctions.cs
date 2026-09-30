@@ -13,9 +13,11 @@ namespace LANCommander.Server.Services.Mappers
                 ? archives.OrderByDescending(a => a.CreatedOn).First().Version
                 : null;
 
+        /// <summary>The version launchers are offered: the newest published one, else the newest.</summary>
         public static string? ManifestVersion(ICollection<Entities.GameVersion>? versions, ICollection<Entities.Archive>? archives)
             => versions != null && versions.Any()
-                ? versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).First().Version
+                ? (versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).FirstOrDefault(v => v.Published)
+                    ?? versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).First()).Version
                 : (archives != null && archives.Any()
                     ? archives.OrderByDescending(a => a.CreatedOn).First().Version
                     : null);

@@ -116,7 +116,9 @@ public class GameImporter(
             await gameService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record, existing);
 
-            if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
+            // Only an install already on the imported (latest) version takes its manifest; older installs
+            // keep their own version's config
+            if (await libraryService.IsInstalledAsync(existing.Id) && IsOnImportedVersion(existing, importItemInfo.Record))
                 await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
             return true;
@@ -125,6 +127,19 @@ public class GameImporter(
         {
             throw new ImportSkippedException<Game>(importItemInfo.Record, "An unknown error occurred while trying to update game", ex);
         }
+    }
+
+    private static bool IsOnImportedVersion(Data.Models.Game existing, Game record)
+    {
+        if (record.VersionId is Guid importedVersionId)
+        {
+            var installedVersionId = existing.InstalledVersionId
+                ?? SDK.Services.GameClient.GetInstalledVersionId(existing.InstallDirectory, existing.Id);
+
+            return installedVersionId == importedVersionId;
+        }
+
+        return existing.LatestVersion == existing.InstalledVersion;
     }
 
     private async Task UpdateRelationships(Game manifest, Data.Models.Game? cachedGame = null)

@@ -30,7 +30,7 @@
                     Placeholder="@Placeholder"
                     Style="@_style"
                     Template="ItemTemplate"
-                    Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-select"))' />
+                    Attributes='@InputAttributes.Build(this, false, default, BuildClass(Small ? "lc-select lc-select-small" : "lc-select"))' />
 }
 else
 {
@@ -50,7 +50,7 @@ else
                     Style="@_style"
                     Template="ItemTemplate"
                     ValueTemplate="ItemTemplate"
-                    Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-select"))' />
+                    Attributes='@InputAttributes.Build(this, false, default, BuildClass(Small ? "lc-select lc-select-small" : "lc-select"))' />
 }
 
 @code {
@@ -74,6 +74,9 @@ else
 
     /// <summary>Shows a button that clears the selection.</summary>
     [Parameter] public bool Clearable { get; set; }
+
+    /// <summary>A compact 24px select sized to its choice, e.g. beside a page title.</summary>
+    [Parameter] public bool Small { get; set; }
 
     readonly List<SelectItem<TValue>> _childOptions = [];
     List<SelectItem<TValue>> _options = [];

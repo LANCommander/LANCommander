@@ -6,6 +6,8 @@ namespace LANCommander.Server.Models
     {
         public Guid ScriptId { get; set; }
         public Guid? GameId { get; set; }
+        /// <summary>The game version whose scripts are being edited; the latest when not set.</summary>
+        public Guid? GameVersionId { get; set; }
         public Guid? RedistributableId { get; set; }
         public Guid? ServerId { get; set; }
         public Guid? ToolId { get; set; }

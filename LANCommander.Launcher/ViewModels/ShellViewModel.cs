@@ -336,6 +336,16 @@ public partial class ShellViewModel : ViewModelBase
                 importService.OnImportComplete.EventRaised += OnImportCompleted;
 
                 await importService.ImportLibraryAsync();
+
+                // Queue updates for installed games that take them now the library knows the latest versions
+                try
+                {
+                    await scope.ServiceProvider.GetRequiredService<AutoUpdateService>().CheckAllAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Automatic update check failed");
+                }
             });
         }
         catch (Exception ex)

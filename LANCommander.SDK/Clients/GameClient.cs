@@ -202,9 +202,18 @@ namespace LANCommander.SDK.Services
                 {
                     using var cts = new CancellationTokenSource(TimeSpan.FromSeconds(5));
 
+                    // Ask for the actions of the versions actually installed
+                    var installedVersionIds = String.Join(',', manifests
+                        .Where(m => m?.VersionId is Guid versionId && versionId != Guid.Empty)
+                        .Select(m => m.VersionId));
+
+                    var route = String.IsNullOrEmpty(installedVersionIds)
+                        ? $"/api/Games/{id}/Actions"
+                        : $"/api/Games/{id}/Actions?versionIds={installedVersionIds}";
+
                     var serverActions = await apiRequestFactory
                         .Create()
-                        .UseRoute($"/api/Games/{id}/Actions")
+                        .UseRoute(route)
                         .UseAuthenticationToken()
                         .UseVersioning()
                         .UseCancellationToken(cts.Token)
@@ -220,6 +229,7 @@ namespace LANCommander.SDK.Services
                             WorkingDirectory = a.WorkingDirectory,
                             IsPrimaryAction = a.IsPrimaryAction,
                             SortOrder = a.SortOrder,
+                            OptionOverrides = a.OptionOverrides,
                             Variables = a.Variables,
                             Platforms = a.Platforms
                         }));
@@ -373,24 +383,50 @@ namespace LANCommander.SDK.Services
                 .GetAsync<IEnumerable<Script>>();
         }
 
-        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion)
+        /// <summary>
+        /// Asks the server whether a version newer than the installed one has an archive to install. The
+        /// installed version is identified by <paramref name="installedVersionId"/> when known, falling
+        /// back to the version string.
+        /// </summary>
+        public async Task<bool> CheckForUpdateAsync(Guid id, string currentVersion, Guid? installedVersionId = null)
         {
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{id}/CheckForUpdate?version={currentVersion}")
+                .UseRoute($"/api/Games/{id}/CheckForUpdate?{InstalledVersionQuery(currentVersion, installedVersionId)}")
                 .GetAsync<bool>();
         }
 
-        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version)
+        public async Task<IEnumerable<Archive>> GetUpdatesAsync(Guid gameId, string version, Guid? installedVersionId = null)
         {
             return await apiRequestFactory
                 .Create()
                 .UseAuthenticationToken()
                 .UseVersioning()
-                .UseRoute($"/api/Games/{gameId}/Updates?version={version}")
+                .UseRoute($"/api/Games/{gameId}/Updates?{InstalledVersionQuery(version, installedVersionId)}")
                 .GetAsync<IEnumerable<Archive>>();
+        }
+
+        private static string InstalledVersionQuery(string version, Guid? versionId)
+        {
+            var query = $"version={Uri.EscapeDataString(version ?? string.Empty)}";
+
+            if (versionId is Guid id && id != Guid.Empty)
+                query += $"&versionId={id}";
+
+            return query;
+        }
+
+        /// <summary>Lists the entries of a specific archive.</summary>
+        public async Task<IEnumerable<ArchiveEntry>> GetArchiveContentsAsync(Guid archiveId)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Archives/Contents/{archiveId}")
+                .GetAsync<IEnumerable<ArchiveEntry>>();
         }
 
         private async Task<TrackableStream> StreamArchiveAsync(Guid archiveId)
@@ -407,7 +443,11 @@ namespace LANCommander.SDK.Services
         /// Downloads and extracts a specific archive for a game update.
         /// </summary>
         /// <returns>True if successful, false if canceled.</returns>
-        public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid gameId, string destination, CancellationToken cancellationToken = default)
+        /// <param name="archiveInfo">
+        /// The version the archive belongs to. When given, the files the archive writes are recorded in the
+        /// install history so a later rollback can undo them.
+        /// </param>
+        public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid gameId, string destination, CancellationToken cancellationToken = default, AppliedArchiveInfo archiveInfo = null)
         {
             var game = await GetAsync(gameId);
 
@@ -417,7 +457,7 @@ namespace LANCommander.SDK.Services
             _installProgress.Game = game;
             _installProgress.Title = game.Title;
 
-            var result = await DownloadAndExtractArchiveAsync(archiveId, game, destination, cancellationToken);
+            var result = await DownloadAndExtractArchiveAsync(archiveId, game, destination, cancellationToken, archiveInfo);
 
             if (result.Canceled)
                 return false;
@@ -428,7 +468,148 @@ namespace LANCommander.SDK.Services
             return true;
         }
 
-        internal async Task<ExtractionResult> DownloadAndExtractArchiveAsync(Guid archiveId, Game game, string destination, CancellationToken cancellationToken = default)
+        /// <summary>
+        /// Rolls an install back to an older version. Files that newer updates created are deleted, files
+        /// they overwrote are restored from the newest kept archive that has them, then the target version's
+        /// archive is extracted and the newer archives are dropped from the install history. Installs made
+        /// before install history existed fall back to comparing the server's archive contents, which can
+        /// delete added files but not restore overwritten ones.
+        /// </summary>
+        /// <param name="versions">Every version of the game, as returned by <see cref="GetVersionsAsync"/>.</param>
+        /// <returns>True if successful, false if canceled.</returns>
+        public async Task<bool> RollBackToVersionAsync(string installDirectory, Guid gameId, GameVersion target, IEnumerable<GameVersion> versions, CancellationToken cancellationToken = default)
+        {
+            // A version without its own archive uses the newest archive below it
+            if ((target?.EffectiveArchiveId ?? target?.ArchiveId) is not Guid targetArchiveId || targetArchiveId == Guid.Empty)
+                throw new InstallException("The selected version has no archive to install.");
+
+            // Recorded against the version the archive belongs to, which is older than a config-only target
+            var archiveVersion = versions.FirstOrDefault(v => v.ArchiveId == targetArchiveId) ?? target;
+
+            var targetEntries = (await GetArchiveContentsAsync(targetArchiveId))?.Select(e => e.FullName).ToList() ?? [];
+
+            RollbackPlan plan;
+
+            if (InstallHistoryHelper.Exists(installDirectory, gameId))
+            {
+                plan = RollbackPlanner.Plan(
+                    InstallHistoryHelper.Read(installDirectory, gameId),
+                    archiveId => InstallHistoryHelper.ReadArchiveFiles(installDirectory, gameId, archiveId),
+                    targetArchiveId,
+                    target.SortOrder,
+                    targetEntries);
+            }
+            else
+            {
+                logger?.LogInformation("No install history for game {GameId}, rolling back using the server's archive contents", gameId);
+
+                var newer = new List<IEnumerable<string>>();
+                var kept = new List<IEnumerable<string>> { targetEntries };
+
+                foreach (var version in versions.Where(v => v.ArchiveId is Guid id && id != Guid.Empty && id != targetArchiveId))
+                {
+                    var entries = (await GetArchiveContentsAsync(version.ArchiveId!.Value))?.Select(e => e.FullName).ToList() ?? [];
+
+                    if (version.SortOrder > target.SortOrder)
+                        newer.Add(entries);
+                    else
+                        kept.Add(entries);
+                }
+
+                plan = RollbackPlanner.PlanFromServerContents(newer, kept);
+            }
+
+            logger?.LogInformation("Rolling game {GameId} back to version {Version}: deleting {DeleteCount} file(s), restoring {RestoreCount} file(s)",
+                gameId, target.Version, plan.Delete.Count, plan.Restore.Count);
+
+            var savePaths = GetSaveFilePaths(installDirectory, gameId);
+
+            foreach (var path in plan.Delete)
+            {
+                var localPath = Path.GetFullPath(Path.Combine(installDirectory, path));
+
+                if (savePaths.Contains(localPath))
+                    continue;
+
+                try
+                {
+                    if (File.Exists(localPath))
+                        File.Delete(localPath);
+
+                    DeleteEmptyParentDirectories(localPath, installDirectory);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogWarning(ex, "Could not delete {Path} while rolling back game {GameId}", localPath, gameId);
+                }
+            }
+
+            foreach (var group in plan.Restore.GroupBy(r => r.Value))
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                await DownloadFilesFromArchiveAsync(installDirectory, group.Key, group.Select(r => r.Key).ToList(), cancellationToken);
+            }
+
+            var game = await GetAsync(gameId);
+
+            if (game == null)
+                throw new InstallException($"Could not fetch game info for game {gameId}");
+
+            _installProgress.Game = game;
+            _installProgress.Title = game.Title;
+
+            var result = await DownloadAndExtractArchiveAsync(targetArchiveId, game, installDirectory, cancellationToken, AppliedArchiveInfo.FromVersion(archiveVersion));
+
+            if (result.Canceled)
+                return false;
+
+            if (!result.Success)
+                throw new InstallException("Could not extract the version's archive. Retry or check your connection");
+
+            InstallHistoryHelper.Remove(installDirectory, gameId, plan.RemoveHistory);
+
+            return true;
+        }
+
+        /// <summary>Removes the directories a deleted file leaves empty, stopping at the install directory.</summary>
+        private static void DeleteEmptyParentDirectories(string deletedFile, string installDirectory)
+        {
+            var root = Path.GetFullPath(installDirectory).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var directory = Path.GetDirectoryName(deletedFile);
+
+            while (!String.IsNullOrEmpty(directory)
+                && directory.StartsWith(root + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase)
+                && Directory.Exists(directory)
+                && !Directory.EnumerateFileSystemEntries(directory).Any())
+            {
+                Directory.Delete(directory);
+                directory = Path.GetDirectoryName(directory);
+            }
+        }
+
+        /// <summary>Full local paths of the save files currently in the install, so a rollback leaves them be.</summary>
+        private HashSet<string> GetSaveFilePaths(string installDirectory, Guid gameId)
+        {
+            var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            try
+            {
+                var manifest = ManifestHelper.Read<SDK.Models.Manifest.Game>(installDirectory, gameId);
+
+                foreach (var savePath in manifest?.SavePaths ?? [])
+                    foreach (var entry in saveClient.GetFileSavePathEntries(savePath, installDirectory) ?? [])
+                        paths.Add(Path.GetFullPath(entry.ActualPath.ExpandEnvironmentVariables(installDirectory)));
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Could not resolve save paths for game {GameId}", gameId);
+            }
+
+            return paths;
+        }
+
+        internal async Task<ExtractionResult> DownloadAndExtractArchiveAsync(Guid archiveId, Game game, string destination, CancellationToken cancellationToken = default, AppliedArchiveInfo archiveInfo = null)
         {
             if (game == null)
                 throw new ArgumentNullException(nameof(game), "No game was specified");
@@ -442,6 +623,7 @@ namespace LANCommander.SDK.Services
 
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
+            var installedFiles = new List<InstalledArchiveFile>();
 
             try
             {
@@ -499,6 +681,14 @@ namespace LANCommander.SDK.Services
                             LocalPath = localFile,
                         });
 
+                        if (!entryKey.EndsWith("/"))
+                            installedFiles.Add(new InstalledArchiveFile
+                            {
+                                Path = entryKey,
+                                Crc = _reader.Entry.Crc.ToString("X"),
+                                Created = !File.Exists(localFile),
+                            });
+
                         await _reader.WriteEntryToDirectoryAsync(destination, new ExtractionOptions()
                         {
                             ExtractFullPath = true,
@@ -539,15 +729,64 @@ namespace LANCommander.SDK.Services
                 extractionResult.Directory = destination;
                 extractionResult.Files = files;
 
-                var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
-
-                if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
-
-                File.WriteAllText(fileListDestination, fileManifest.ToString());
+                WriteFileRecords(destination, game.Id, archiveId, archiveInfo, installedFiles, fileManifest);
             }
 
             return extractionResult;
+        }
+
+        /// <summary>
+        /// Records the files an extraction wrote. With a known archive the install history is updated and
+        /// FileList.txt becomes the union of every applied archive; otherwise FileList.txt is replaced with
+        /// this extraction's entries, as before install history existed.
+        /// </summary>
+        private void WriteFileRecords(string destination, Guid gameId, Guid archiveId, AppliedArchiveInfo archiveInfo, List<InstalledArchiveFile> installedFiles, StringBuilder fileManifest)
+        {
+            if (archiveInfo != null && archiveId != Guid.Empty)
+            {
+                archiveInfo.ArchiveId = archiveId;
+
+                try
+                {
+                    InstallHistoryHelper.Record(destination, gameId, archiveInfo, installedFiles);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex, "Could not record install history for archive {ArchiveId}", archiveId);
+                }
+            }
+
+            var fileListDestination = GetMetadataFilePath(destination, gameId, InstallHistoryHelper.FileListFilename);
+
+            if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
+                Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
+
+            File.WriteAllText(fileListDestination, fileManifest.ToString());
+        }
+
+        /// <summary>
+        /// The version the server's latest-archive download belongs to, or null if the newest version has no
+        /// archive (the server then falls back to the newest archive, which can't be tied to a version).
+        /// </summary>
+        public async Task<AppliedArchiveInfo> GetLatestArchiveInfoAsync(Guid gameId)
+        {
+            try
+            {
+                var latest = (await GetVersionsAsync(gameId))?
+                    .OrderByDescending(v => v.SortOrder)
+                    .ThenByDescending(v => v.CreatedOn)
+                    .FirstOrDefault();
+
+                if (latest?.ArchiveId is Guid archiveId && archiveId != Guid.Empty)
+                    return AppliedArchiveInfo.FromVersion(latest);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Could not resolve the latest version of game {GameId}", gameId);
+            }
+
+            return null;
         }
 
         private async Task<bool> CanStreamLatestArchiveAsync(Guid id)
@@ -1533,6 +1772,130 @@ namespace LANCommander.SDK.Services
             }
         }
 
+        /// <summary>
+        /// Removes a redistributable from a game's install: runs its uninstall script, deletes the files it
+        /// installed and its metadata. Failures are logged rather than thrown.
+        /// </summary>
+        public async Task UninstallRedistributableAsync(string installDirectory, Guid gameId, Guid redistributableId)
+        {
+            try
+            {
+                await scriptClient.Redistributable_RunUninstallScriptAsync(installDirectory, gameId, redistributableId);
+
+                var redistFileListPath = GetMetadataFilePath(installDirectory, redistributableId, "FileList.txt");
+
+                if (File.Exists(redistFileListPath))
+                {
+                    var redistFiles = await File.ReadAllLinesAsync(redistFileListPath);
+
+                    foreach (var file in redistFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
+                    {
+                        var localPath = Path.Combine(installDirectory, file);
+
+                        try
+                        {
+                            if (File.Exists(localPath))
+                                File.Delete(localPath);
+
+                            logger?.LogTrace("Deleted redistributable file {LocalPath}", localPath);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger?.LogWarning(ex, "Could not remove redistributable file {LocalPath}", localPath);
+                        }
+                    }
+                }
+
+                var redistMetadataPath = GetMetadataDirectoryPath(installDirectory, redistributableId);
+
+                if (Directory.Exists(redistMetadataPath))
+                    Directory.Delete(redistMetadataPath, true);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not clean up redistributable {RedistributableId}", redistributableId);
+            }
+        }
+
+        /// <summary>
+        /// Brings the redistributables installed with a game in line with the version its on-disk manifest
+        /// describes: installs the ones it lists that aren't installed, and uninstalls the ones only the
+        /// previous version listed. Call after the manifest has been switched to the new version.
+        /// </summary>
+        /// <param name="previousRedistributableIds">The redistributables the install's previous version listed.</param>
+        public async Task SyncRedistributablesAsync(string installDirectory, Guid gameId, IEnumerable<Guid> previousRedistributableIds, CancellationToken cancellationToken = default)
+        {
+            var manifests = await GetManifestsAsync(installDirectory, gameId);
+
+            // Installed addons share the directory and keep the redistributables they list
+            var target = manifests
+                .Where(m => m?.Redistributables != null)
+                .SelectMany(m => m.Redistributables)
+                .Select(r => r.Id)
+                .ToList();
+
+            var plan = RedistributableSyncPlanner.Plan(
+                previousRedistributableIds ?? [],
+                target,
+                id => ManifestHelper.Exists(installDirectory, id));
+
+            foreach (var redistributableId in plan.Uninstall)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                logger?.LogInformation("Uninstalling redistributable {RedistributableId} from game {GameId}; its version no longer lists it", redistributableId, gameId);
+
+                await UninstallRedistributableAsync(installDirectory, gameId, redistributableId);
+            }
+
+            if (plan.Install.Count == 0)
+                return;
+
+            var game = new Game { Id = gameId, InstallDirectory = installDirectory };
+
+            foreach (var redistributableId in plan.Install)
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+
+                try
+                {
+                    var redistributable = await redistributableClient.GetAsync(redistributableId);
+
+                    if (redistributable == null)
+                        continue;
+
+                    logger?.LogInformation("Installing redistributable {RedistributableName} for game {GameId}; its version lists it", redistributable.Name, gameId);
+
+                    await redistributableClient.InstallAsync(redistributable, game);
+                }
+                catch (Exception ex)
+                {
+                    logger?.LogError(ex, "Could not install redistributable {RedistributableId} for game {GameId}", redistributableId, gameId);
+                }
+            }
+        }
+
+        /// <summary>
+        /// The server's id for the version an install holds: from its manifest, else from the newest entry
+        /// in its install history. Null for installs made before versions existed.
+        /// </summary>
+        public static Guid? GetInstalledVersionId(string installDirectory, Guid gameId)
+        {
+            try
+            {
+                var manifest = ManifestHelper.Read<Models.Manifest.Game>(installDirectory, gameId);
+
+                if (manifest?.VersionId is Guid versionId && versionId != Guid.Empty)
+                    return versionId;
+
+                return InstallHistoryHelper.Read(installDirectory, gameId).Archives.LastOrDefault()?.VersionId;
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
         public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)
         {
             var installResult = new InstallResult(installDirectory, gameId);
@@ -1576,45 +1939,7 @@ namespace LANCommander.SDK.Services
             if (manifest.Redistributables != null)
             {
                 foreach (var redistributable in manifest.Redistributables)
-                {
-                    try
-                    {
-                        await scriptClient.Redistributable_RunUninstallScriptAsync(installDirectory, gameId, redistributable.Id);
-
-                        var redistFileListPath = GetMetadataFilePath(installDirectory, redistributable.Id, "FileList.txt");
-
-                        if (File.Exists(redistFileListPath))
-                        {
-                            var redistFiles = await File.ReadAllLinesAsync(redistFileListPath);
-
-                            foreach (var file in redistFiles.Where(f => !string.IsNullOrWhiteSpace(f)))
-                            {
-                                var localPath = Path.Combine(installDirectory, file);
-
-                                try
-                                {
-                                    if (File.Exists(localPath))
-                                        File.Delete(localPath);
-
-                                    logger?.LogTrace("Deleted redistributable file {LocalPath}", localPath);
-                                }
-                                catch (Exception ex)
-                                {
-                                    logger?.LogWarning(ex, "Could not remove redistributable file {LocalPath}", localPath);
-                                }
-                            }
-                        }
-
-                        var redistMetadataPath = GetMetadataDirectoryPath(installDirectory, redistributable.Id);
-
-                        if (Directory.Exists(redistMetadataPath))
-                            Directory.Delete(redistMetadataPath, true);
-                    }
-                    catch (Exception ex)
-                    {
-                        logger?.LogWarning(ex, "Could not clean up redistributable {RedistributableId}", redistributable.Id);
-                    }
-                }
+                    await UninstallRedistributableAsync(installDirectory, gameId, redistributable.Id);
             }
             #endregion
 
@@ -2089,6 +2414,8 @@ namespace LANCommander.SDK.Services
 
             var fileManifest = new StringBuilder();
             var files = new List<ExtractionResult.FileEntry>();
+            var installedFiles = new List<InstalledArchiveFile>();
+            var archiveInfo = await GetLatestArchiveInfoAsync(game.Id);
 
             // Tracked outside the try so the catch blocks can report exactly where extraction failed
             TrackableStream stream = null;
@@ -2182,6 +2509,15 @@ namespace LANCommander.SDK.Services
 
                         _installProgress.Status = shouldSkip ? InstallStatus.VerifyingFiles : InstallStatus.Downloading;
 
+                        // Verified files left by an earlier attempt at this install still belong to it
+                        if (!entryKey.EndsWith("/"))
+                            installedFiles.Add(new InstalledArchiveFile
+                            {
+                                Path = entryKey,
+                                Crc = _reader.Entry.Crc.ToString("X"),
+                                Created = shouldSkip || !File.Exists(localFile),
+                            });
+
                         if (!shouldSkip)
                         {
                             if (!entryKey.EndsWith("/") && !File.Exists(localFile))
@@ -2255,12 +2591,7 @@ namespace LANCommander.SDK.Services
                 extractionResult.Directory = destination;
                 extractionResult.Files = files;
 
-                var fileListDestination = Path.Combine(destination, ".lancommander", game.Id.ToString(), "FileList.txt");
-
-                if (!Directory.Exists(Path.GetDirectoryName(fileListDestination)))
-                    Directory.CreateDirectory(Path.GetDirectoryName(fileListDestination));
-
-                File.WriteAllText(fileListDestination, fileManifest.ToString());
+                WriteFileRecords(destination, game.Id, archiveInfo?.ArchiveId ?? Guid.Empty, archiveInfo, installedFiles, fileManifest);
 
                 logger?.LogTrace("Game {Game} successfully downloaded and extracted to {Destination}", game.Title, destination);
             }
@@ -3108,11 +3439,24 @@ namespace LANCommander.SDK.Services
         /// <param name="entries">A collection of file paths to download.</param>
         public async Task DownloadFilesAsync(string installDirectory, Guid gameId, ICollection<string> entries, CancellationToken cancellationToken = default)
         {
-            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
+            await ExtractEntriesAsync(await StreamLatestArchiveAsync(gameId), installDirectory, entries, cancellationToken);
+        }
+
+        /// <summary>
+        /// Extracts only the given entries of a specific archive into the install directory, e.g. to restore
+        /// files an update overwrote when rolling back.
+        /// </summary>
+        public async Task DownloadFilesFromArchiveAsync(string installDirectory, Guid archiveId, ICollection<string> entries, CancellationToken cancellationToken = default)
+        {
+            await ExtractEntriesAsync(await StreamArchiveAsync(archiveId), installDirectory, entries, cancellationToken);
+        }
+
+        private async Task ExtractEntriesAsync(TrackableStream stream, string installDirectory, ICollection<string> entries, CancellationToken cancellationToken)
+        {
+            var wanted = new HashSet<string>(entries.Select(InstallHistoryHelper.NormalizePath), InstallHistoryHelper.PathComparer);
 
             try
             {
-                var stream = await StreamLatestArchiveAsync(gameId);
                 _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
@@ -3122,7 +3466,7 @@ namespace LANCommander.SDK.Services
 
                     try
                     {
-                        if (entries.Contains(_reader.Entry.Key))
+                        if (wanted.Contains(InstallHistoryHelper.NormalizePath(_reader.Entry.Key)))
                         {
                             await _reader.WriteEntryToDirectoryAsync(installDirectory, new ExtractionOptions
                             {

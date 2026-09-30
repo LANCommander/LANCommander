@@ -20,6 +20,25 @@ namespace LANCommander.Launcher.Data.Models
         public DateTime? InstalledOn { get; set; }
         public string? LatestVersion { get; set; }
 
+        /// <summary>The server's id for the installed version, when the install was made against a known version.</summary>
+        public Guid? InstalledVersionId { get; set; }
+
+        /// <summary>
+        /// Queue updates as soon as they're found. Turned off to keep the game on its current version,
+        /// and turned off automatically when the game is rolled back.
+        /// </summary>
+        public bool AutoUpdate { get; set; } = true;
+
+        /// <summary>
+        /// Whether the library knows of a newer version than the one installed and the game takes updates.
+        /// A quick local check; the server's CheckForUpdate is authoritative.
+        /// </summary>
+        public bool IsUpdateAvailable()
+            => Installed
+                && AutoUpdate
+                && !string.IsNullOrWhiteSpace(LatestVersion)
+                && InstalledVersion != LatestVersion;
+
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
 

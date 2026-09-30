@@ -1,7 +1,7 @@
 @page "/Games/{id:guid}/Scripts"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<GameEditView Id="Id" Title="Scripts">
+<GameEditView Id="Id" Title="Scripts" Versioned>
     <ScriptEditor AllowedTypes="new[] { ScriptType.Install, ScriptType.Uninstall, ScriptType.NameChange, ScriptType.KeyChange, ScriptType.BeforeStart, ScriptType.AfterStop, ScriptType.Package }" />
 </GameEditView>
 

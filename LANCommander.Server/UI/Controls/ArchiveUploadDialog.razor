@@ -18,9 +18,23 @@
 else
 {
     <Form Model="_archive">
+        @if (ShowVersionPicker)
+        {
+            <FormItem Label="Game Version">
+                <Select TValue="Guid" Items="_versionItems" Value="_targetVersionId" ValueChanged="TargetVersionChanged" aria-label="Game version" />
+            </FormItem>
+        }
+
         <FormItem Label="Version" Required>
-            <TextInput @bind-Value="_archive.Version" Immediate AutoFocus />
+            <TextInput @bind-Value="_archive.Version" Immediate AutoFocus ReadOnly="IsLabelledVersion" />
         </FormItem>
+
+        @if (ShowVersionPicker && !IsExistingVersion)
+        {
+            <FormItem Label="Changelog">
+                <TextArea @bind-Value="_changelog" MaxLength="500" Counter Rows="2" />
+            </FormItem>
+        }
 
         <FormItem Label="Path">
             <StorageLocationSelector Type="StorageLocationType.Archive" @bind-Value="_storageLocation" />
@@ -62,6 +76,19 @@ else
     IBrowserFile? _file;
     ChunkUploadStatus _status;
     bool _moveLocalFile;
+    string? _changelog;
+
+    // Guid.Empty stands for "New version"
+    Guid _targetVersionId;
+    List<GameVersion> _versions = new();
+    IEnumerable<SelectItem<Guid>> _versionItems = [];
+
+    // Replacing an existing archive's file keeps whatever version it is already linked to
+    bool ShowVersionPicker => Options.GameId is { } gameId && gameId != Guid.Empty && Options.ArchiveId is null;
+    bool IsExistingVersion => _targetVersionId != Guid.Empty;
+
+    // An existing version's number is fixed; an unversioned placeholder takes the number typed here
+    bool IsLabelledVersion => !String.IsNullOrWhiteSpace(_versions.FirstOrDefault(v => v.Id == _targetVersionId)?.Version);
 
     readonly string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
 
@@ -82,17 +109,59 @@ else
             };
 
             // Tag the upload against the game's current version unless the uploader picks another
-            if (Options.GameId is { } gameId && gameId != Guid.Empty)
+            if (Options.GameId is { } gameId && gameId != Guid.Empty && !ShowVersionPicker)
                 _archive.Version = await GameVersionService.GetLatestVersionNumberAsync(gameId) ?? string.Empty;
+        }
+
+        if (ShowVersionPicker)
+        {
+            _versions = (await GameVersionService.GetAllAsync(Options.GameId!.Value)).ToList();
+
+            _versionItems = new[] { new SelectItem<Guid>(Guid.Empty, "New version") }
+                .Concat(_versions.Select(v => new SelectItem<Guid>(v.Id, VersionLabel(v))))
+                .ToList();
+
+            // Start on the requested version, else on a latest version still waiting for its archive
+            var initial = _versions.FirstOrDefault(v => v.Id == Options.GameVersionId)
+                ?? _versions.Take(1).FirstOrDefault(v => v.Archive == null);
+
+            if (initial != null)
+                TargetVersionChanged(initial.Id);
         }
 
         _storageLocation = _archive.StorageLocation ?? await StorageLocationService.DefaultAsync(StorageLocationType.Archive);
     }
 
+    static string VersionLabel(GameVersion version)
+    {
+        var label = String.IsNullOrWhiteSpace(version.Version) ? "(unversioned)" : version.Version;
+
+        return version.Archive != null ? $"{label} (replace archive)" : label;
+    }
+
+    void TargetVersionChanged(Guid versionId)
+    {
+        _targetVersionId = versionId;
+
+        var version = _versions.FirstOrDefault(v => v.Id == versionId);
+
+        _archive!.Version = version?.Version ?? string.Empty;
+    }
+
+    UploadDetails CaptureDetails() => new(
+        _archive!.GameId,
+        _archive.RedistributableId,
+        _archive.ToolId,
+        _archive.Version,
+        ShowVersionPicker ? _targetVersionId : null,
+        ShowVersionPicker && !IsExistingVersion ? _changelog : null);
+
+    record UploadDetails(Guid? GameId, Guid? RedistributableId, Guid? ToolId, string Version, Guid? GameVersionId, string? Changelog);
+
     async Task StartAsync()
     {
         // Capture now: the upload may finish after this dialog has closed
-        var details = (_archive!.GameId, _archive.RedistributableId, _archive.ToolId, _archive.Version);
+        var details = CaptureDetails();
         var onUploaded = Options.OnUploaded;
 
         await _uploader!.StartAsync(async objectKey =>
@@ -112,7 +181,7 @@ else
     }
 
     /// <summary>Links the stored upload to its game, tool or redistributable and records its sizes.</summary>
-    async Task<Guid?> CompleteArchiveAsync(string objectKey, (Guid? GameId, Guid? RedistributableId, Guid? ToolId, string Version) details)
+    async Task<Guid?> CompleteArchiveAsync(string objectKey, UploadDetails details)
     {
         var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey);
 
@@ -131,6 +200,15 @@ else
 
         await ArchiveService.UpdateAsync(archive);
 
+        // A new upload for a game belongs to the picked version, or to a new one made for it
+        if (details.GameVersionId is { } versionId && details.GameId is { } gameId)
+        {
+            if (versionId == Guid.Empty)
+                versionId = (await GameVersionService.CreateAsync(gameId, details.Version, details.Changelog)).Id;
+
+            await GameVersionService.LinkArchiveAsync(archive.Id, versionId);
+        }
+
         return archive.Id;
     }
 
@@ -140,7 +218,7 @@ else
         {
             var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, _storageLocation?.Id ?? Guid.Empty, _moveLocalFile);
 
-            var archiveId = await CompleteArchiveAsync(objectKey.ToString(), (_archive!.GameId, _archive.RedistributableId, _archive.ToolId, _archive.Version));
+            var archiveId = await CompleteArchiveAsync(objectKey.ToString(), CaptureDetails());
 
             if (archiveId != null && Options.OnUploaded != null)
                 await Options.OnUploaded(archiveId.Value);

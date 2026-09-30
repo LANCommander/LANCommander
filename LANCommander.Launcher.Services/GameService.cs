@@ -197,14 +197,38 @@ namespace LANCommander.Launcher.Services
         }
 
         /// <summary>
-        /// Persists the user's locally-chosen game option values into the on-disk game manifest so that
+        /// The option schema that applies to a game: an installed game's comes from its on-disk manifest,
+        /// which describes the version it's on; otherwise the latest version's, from the library.
+        /// </summary>
+        public static string? GetOptionSchema(Game game)
+        {
+            if (game.Installed && !string.IsNullOrWhiteSpace(game.InstallDirectory))
+            {
+                try
+                {
+                    var manifest = ManifestHelper.Read<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
+
+                    if (manifest != null)
+                        return manifest.OptionSchema;
+                }
+                catch
+                {
+                    // An unreadable manifest falls back to the library's schema
+                }
+            }
+
+            return game.OptionSchema;
+        }
+
+        /// <summary>
+        /// Persists the user's locally-chosen game option values into the on-disk game manifestso that
         /// before-start scripts can read them via the <c>Get-GameOptions</c> cmdlet. Option values are
         /// stored per-game in the launcher database (never on the server), so the manifest must be
         /// updated immediately before launch.
         /// </summary>
         private async Task WriteOptionsToManifestAsync(Game game)
         {
-            if (string.IsNullOrWhiteSpace(game.InstallDirectory) || string.IsNullOrWhiteSpace(game.OptionSchema))
+            if (string.IsNullOrWhiteSpace(game.InstallDirectory) || string.IsNullOrWhiteSpace(GetOptionSchema(game)))
                 return;
 
             try
@@ -235,6 +259,10 @@ namespace LANCommander.Launcher.Services
             game.Installed = false;
             game.InstalledOn = null;
             game.InstalledVersion = null;
+            game.InstalledVersionId = null;
+
+            // Freezing pins an installed version; a fresh install starts on the latest again
+            game.AutoUpdate = true;
 
             if (!skipAddons)
             {

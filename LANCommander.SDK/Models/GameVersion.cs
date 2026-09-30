@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 
 namespace LANCommander.SDK.Models
 {
@@ -17,6 +17,13 @@ namespace LANCommander.SDK.Models
         /// version exists only to hold config (Scripts, Actions, SavePaths) without a build.
         /// </summary>
         public Guid? ArchiveId { get; set; }
+
+        /// <summary>
+        /// The archive whose files this version uses: its own, else the newest archive of an older
+        /// version. A version without its own archive changes only config. Null when no version at or
+        /// below this one has an archive.
+        /// </summary>
+        public Guid? EffectiveArchiveId { get; set; }
 
         public long CompressedSize { get; set; }
         public long UncompressedSize { get; set; }

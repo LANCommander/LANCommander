@@ -300,6 +300,22 @@ namespace LANCommander.Server.Data
                 .WithOne(p => p.GameVersion)
                 .IsRequired(false)
                 .OnDelete(DeleteBehavior.ClientCascade);
+
+            // Unlike the rows above these belong only to the version, so the database can cascade them
+            builder.Entity<GameVersionRedistributable>()
+                .HasKey(r => new { r.GameVersionId, r.RedistributableId });
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Redistributables)
+                .WithOne(r => r.GameVersion)
+                .HasForeignKey(r => r.GameVersionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<GameVersionRedistributable>()
+                .HasOne(r => r.Redistributable)
+                .WithMany()
+                .HasForeignKey(r => r.RedistributableId)
+                .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
             #region Media Relationships
@@ -567,6 +583,8 @@ namespace LANCommander.Server.Data
         public DbSet<Game>? Games { get; set; }
 
         public DbSet<GameVersion>? GameVersions { get; set; }
+
+        public DbSet<GameVersionRedistributable>? GameVersionRedistributables { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }
 

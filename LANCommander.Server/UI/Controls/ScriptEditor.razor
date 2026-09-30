@@ -49,6 +49,7 @@
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid? SelectedGameVersionId { get; set; }
     [CascadingParameter(Name = "RedistributableId")] public Guid? RedistributableId { get; set; }
     [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
     [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
@@ -57,22 +58,23 @@
 
     DataTable<Script>? _table;
 
-    // For games, scripts belong to the game's latest version rather than the game itself. Resolved
-    // (creating an initial version if needed) so the table can filter to it; the service assigns
-    // it on save.
+    // For games, scripts belong to a version rather than the game itself: the one picked in the game
+    // editor, else the latest (creating an initial version if needed)
     Guid? _gameVersionId;
 
     protected override async Task OnInitializedAsync()
     {
         if (GameId is { } gameId && gameId != Guid.Empty)
-            _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(gameId);
+            _gameVersionId = SelectedGameVersionId is { } selected && selected != Guid.Empty
+                ? selected
+                : await GameVersionService.GetOrCreateLatestIdAsync(gameId);
     }
 
     Expression<Func<Script, bool>> GetQueryExpression()
     {
         if (GameId is { } gameId && gameId != Guid.Empty)
         {
-            // A game's scripts belong to its latest version. Scripts with no version yet (legacy
+            // A game's scripts belong to the version being edited. Scripts with no version yet (legacy
             // rows, or ones imported before the game's versions existed) are still the game's, so
             // include them too — matching ScriptService.GetEditorScriptsAsync, which the editor
             // dialog's own list uses. Filtering on version alone dropped these entirely.
@@ -101,6 +103,7 @@
     {
         AllowedTypes = AllowedTypes ?? [],
         GameId = GameId,
+        GameVersionId = _gameVersionId,
         RedistributableId = RedistributableId,
         ServerId = ServerId,
         ToolId = ToolId,

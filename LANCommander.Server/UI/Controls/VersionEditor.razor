@@ -1,17 +1,30 @@
-@inject GameVersionService GameVersionService
-@inject AlertService Alerts
-@inject NotificationService Notifications
+@inject DialogService Dialogs
 
-@* The versions of the game whose Id is cascaded; new versions snapshot the game's current archive, scripts, actions and save paths *@
+@* The versions of the game whose Id is cascaded. New versions are made from the game editor's version picker,
+   copy the latest version's scripts, actions, save paths, redistributables and options, and get their archive
+   from an upload *@
 <Flex Vertical Gap="Gap.Large">
-    <FormItem Label="Changelog" Help="Recorded with the next version you create">
-        <TextArea @bind-Value="_newChangelog" MaxLength="500" Counter Rows="2" />
-    </FormItem>
-
-    <DataTable @ref="_table" TItem="GameVersion" NoPaging Small SettingsKey="game-versions" Query="v => v.GameId == GameId">
+<DataTable @ref="_table" TItem="GameVersion" NoPaging Small SettingsKey="game-versions" Query="v => v.GameId == GameId">
         <Columns>
             <BoundColumn Property="v => v.SortOrder" Title="Sort Order" Sortable DefaultSort="ColumnSort.Descending" Hide />
-            <BoundColumn Property="v => v.Version" Sortable />
+            <BoundColumn Property="v => v.Version" Sortable>
+                @context.Version
+
+                @if (context.Id == GameVersionId)
+                {
+                    <Tag>Editing</Tag>
+                }
+            </BoundColumn>
+            <BoundColumn Property="v => v.Published" Title="Status" Sortable>
+                @if (context.Published)
+                {
+                    <Tag Success>Published</Tag>
+                }
+                else
+                {
+                    <Tag>Draft</Tag>
+                }
+            </BoundColumn>
             <BoundColumn Property="v => v.Changelog" />
             <BoundColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive" Sortable>
                 @if (context.Archive != null)
@@ -26,14 +39,24 @@
             <BoundColumn Property="v => v.Scripts != null ? v.Scripts.Count : 0" Title="Scripts" Include="Scripts" />
             <BoundColumn Property="v => v.Actions != null ? v.Actions.Count : 0" Title="Actions" Include="Actions" />
             <BoundColumn Property="v => v.SavePaths != null ? v.SavePaths.Count : 0" Title="Save Paths" Include="SavePaths" />
+            <BoundColumn Property="v => v.Redistributables != null ? v.Redistributables.Count : 0" Title="Redistributables" Include="Redistributables" />
             <BoundColumn Property="v => v.CreatedOn" Title="Created On" Sortable>
                 <LocalTime Value="context.CreatedOn" />
             </BoundColumn>
             <ActionsColumn TItem="GameVersion">
+                <Tooltip Title="Edit Config">
+                    <Button Text Icon="IconType.PencilSimple" aria-label="Edit config" Href="@($"/Games/{GameId}/Scripts?version={context.Id}")" />
+                </Tooltip>
                 @if (context.Archive != null)
                 {
                     <Tooltip Title="Download Archive">
                         <Button Text Icon="IconType.DownloadSimple" aria-label="Download archive" Href="@($"/Download/Archive/{context.Archive.Id}")" NewTab />
+                    </Tooltip>
+                }
+                else
+                {
+                    <Tooltip Title="Upload Archive">
+                        <Button Text Icon="IconType.UploadSimple" aria-label="Upload archive" OnClick="() => UploadArchiveAsync(context.Id)" />
                     </Tooltip>
                 }
             </ActionsColumn>
@@ -43,38 +66,22 @@
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
-    [Parameter] public EventCallback OnVersionCreated { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid GameVersionId { get; set; }
 
     DataTable<GameVersion>? _table;
 
-    string? _newChangelog = string.Empty;
-
-    /// <summary>Asks for a version number and creates the version.</summary>
-    public async Task OpenCreateVersion()
-    {
-        var version = await Alerts.PromptAsync("Create New Version", "Version", okText: "Create", placeholder: "e.g. 1.1.0");
-
-        if (String.IsNullOrWhiteSpace(version))
-            return;
-
-        try
+    /// <summary>Uploads the archive for a version that doesn't have one yet.</summary>
+    Task UploadArchiveAsync(Guid versionId) =>
+        Dialogs.OpenAsync<ArchiveUploadDialog, ArchiveUploadOptions, bool>("Upload Archive", new ArchiveUploadOptions
         {
-            await GameVersionService.CreateAsync(GameId, version, _newChangelog);
+            GameId = GameId,
+            GameVersionId = versionId,
+            OnUploaded = _ => InvokeAsync(async () =>
+            {
+                if (_table != null)
+                    await _table.ReloadAsync();
 
-            _newChangelog = string.Empty;
-
-            if (_table != null)
-                await _table.ReloadAsync();
-
-            await OnVersionCreated.InvokeAsync();
-
-            Notifications.Success("Version created!");
-        }
-        catch (Exception ex)
-        {
-            Notifications.Error(ex, "Version could not be created.");
-        }
-
-        StateHasChanged();
-    }
+                StateHasChanged();
+            }),
+        }, new DialogSettings { NoFooter = true });
 }

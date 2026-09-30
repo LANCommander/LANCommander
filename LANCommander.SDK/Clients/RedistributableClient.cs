@@ -34,6 +34,17 @@ namespace LANCommander.SDK.Services
         
         private InstallProgress _installProgress;
 
+        /// <summary>A redistributable with its archives and scripts, as needed to install it.</summary>
+        public async Task<Redistributable> GetAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributables/{id}")
+                .GetAsync<Redistributable>();
+        }
+
         public async Task<SDK.Models.Manifest.Redistributable> GetManifestAsync(Guid id)
         {
             return await apiRequestFactory

@@ -53,12 +53,14 @@
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid? GameId { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid? SelectedGameVersionId { get; set; }
     [CascadingParameter(Name = "ServerId")] public Guid? ServerId { get; set; }
     [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
 
     Archive? _archive;
 
-    // For games, actions belong to the game's latest version rather than the game itself
+    // For games, actions belong to a version rather than the game itself: the one picked in the game
+    // editor, else the latest
     Guid? _gameVersionId;
 
     // Replaced rather than changed in place, so the table notices new orders
@@ -70,7 +72,9 @@
         try
         {
             if (GameId is { } gameId && gameId != Guid.Empty)
-                _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(gameId);
+                _gameVersionId = SelectedGameVersionId is { } selected && selected != Guid.Empty
+                    ? selected
+                    : await GameVersionService.GetOrCreateLatestIdAsync(gameId);
 
             await LoadAsync();
         }
@@ -106,6 +110,7 @@
         {
             PrimaryAction = _actions.Count == 0,
             GameId = GameId,
+            GameVersionId = _gameVersionId,
             ServerId = ServerId,
             ToolId = ToolId,
         };

@@ -169,9 +169,7 @@ public partial class GameItemViewModel : ViewModelBase
         HasOnlineMultiplayer = game.MultiplayerModes?.Any(m => m.Type == MultiplayerType.Online) ?? false;
         MaxPlayers = game.MultiplayerModes?.Where(m => m.MaxPlayers > 0).Select(m => m.MaxPlayers).DefaultIfEmpty(0).Max() ?? 0;
         IsInstalled = game.Installed;
-        IsUpdateAvailable = game.Installed
-            && !string.IsNullOrWhiteSpace(game.LatestVersion)
-            && game.InstalledVersion != game.LatestVersion;
+        IsUpdateAvailable = game.IsUpdateAvailable();
         CoverPath = coverPath;
         CoverMimeType = coverMimeType;
         HasCover = !string.IsNullOrEmpty(coverPath);

@@ -44,7 +44,9 @@ public class GameEditHeaderTests : BUnitTestContext
         Assert.Equal(["Games", BUnitServerFixture.TestGameTitle], crumbs);
 
         Assert.Equal(BUnitServerFixture.TestGameTitle, cut.Find(".lc-page-header-title").TextContent.Trim());
-        Assert.Equal("Published", cut.Find(".lc-page-header-tags .lc-tag").TextContent.Trim());
+
+        // Published belongs to versions now; the game only says when it's hidden from launchers
+        Assert.DoesNotContain(cut.FindAll(".lc-page-header-tags .lc-tag"), t => t.TextContent.Trim() == "Hidden");
     }
 
     [Fact]
@@ -94,7 +96,7 @@ public class GameEditHeaderTests : BUnitTestContext
 
         cut.WaitForAssertion(() =>
         {
-            Assert.Equal("Hidden", cut.Find(".lc-page-header-tags .lc-tag").TextContent.Trim());
+            Assert.Contains(cut.FindAll(".lc-page-header-tags .lc-tag"), t => t.TextContent.Trim() == "Hidden");
             Assert.NotEmpty(cut.FindAll(".game-edit-unsaved"));
         });
     }
@@ -104,13 +106,13 @@ public class GameEditHeaderTests : BUnitTestContext
 public class GameEditFormatTests
 {
     [Theory]
-    [InlineData("338.4", 4_700_000_000L, "v338.4 · 4.70 GB")]
-    [InlineData("v1.2", null, "v1.2")]
-    [InlineData(null, 512_000_000L, "512.00 MB")]
-    [InlineData("", 0L, null)]
-    public void Summary_JoinsVersionAndSize(string? version, long? size, string? expected)
+    [InlineData(4_700_000_000L, "4.70 GB")]
+    [InlineData(512_000_000L, "512.00 MB")]
+    [InlineData(0L, null)]
+    [InlineData(null, null)]
+    public void Summary_IsTheSize(long? size, string? expected)
     {
-        Assert.Equal(expected, GameEditFormat.Summary(version, size)?.Replace(',', '.'));
+        Assert.Equal(expected, GameEditFormat.Summary(size)?.Replace(',', '.'));
     }
 
     [Theory]

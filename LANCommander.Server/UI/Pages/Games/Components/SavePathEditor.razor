@@ -50,13 +50,15 @@
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid? SelectedGameVersionId { get; set; }
 
     Archive? _archive;
 
     // Replaced rather than changed in place, so the table notices additions and removals
     List<SavePath> _savePaths = new();
 
-    // Save paths belong to the game's latest version rather than the game itself
+    // Save paths belong to a version rather than the game itself: the one picked in the game editor,
+    // else the latest
     Guid? _gameVersionId;
 
     protected override async Task OnInitializedAsync()
@@ -64,7 +66,9 @@
         try
         {
             if (GameId != Guid.Empty)
-                _gameVersionId = await GameVersionService.GetOrCreateLatestIdAsync(GameId);
+                _gameVersionId = SelectedGameVersionId is { } selected && selected != Guid.Empty
+                    ? selected
+                    : await GameVersionService.GetOrCreateLatestIdAsync(GameId);
 
             _archive = await ArchiveService.GetLatestArchiveAsync(a => a.GameId == GameId);
 
@@ -79,7 +83,7 @@
     async Task LoadAsync() =>
         _savePaths = (await SavePathService.GetAsync(p => p.GameVersionId == _gameVersionId)).ToList();
 
-    void Add() => _savePaths = [.. _savePaths, new SavePath { GameId = GameId, WorkingDirectory = "{InstallDir}" }];
+    void Add() => _savePaths = [.. _savePaths, new SavePath { GameId = GameId, GameVersionId = _gameVersionId, WorkingDirectory = "{InstallDir}" }];
 
     async Task RemoveAsync(SavePath path)
     {

@@ -195,7 +195,7 @@ namespace LANCommander.Launcher.Services
                 }
             }
 
-            if (Queue.Any(i => i.Id == game.Id && i.Status == InstallStatus.Queued))
+            if (IsActive(game.Id))
             {
                 Logger?.LogInformation("[InstallQueue] Add: Game {GameTitle} ({GameId}) already queued, skipping", gameInfo.Title, game.Id);
                 return;
@@ -599,12 +599,14 @@ namespace LANCommander.Launcher.Services
                     && !string.IsNullOrEmpty(localGame.InstallDirectory)
                     && ManifestHelper.Exists(localGame.InstallDirectory, localGame.Id))
                 {
-                    // Check if this is an update (versions differ)
-                    var isUpdate = queueItem.IsUpdate
-                        || (!string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                            && localGame.InstalledVersion != localGame.LatestVersion)
-                        || (!string.IsNullOrWhiteSpace(queueItem.Version)
-                            && queueItem.Version != localGame.InstalledVersion);
+                    // Check if this is an update (versions differ). A game with automatic updates off
+                    // stays on its version; only an explicit version switch moves it.
+                    var isUpdate = localGame.AutoUpdate
+                        && (queueItem.IsUpdate
+                            || (!string.IsNullOrWhiteSpace(localGame.LatestVersion)
+                                && localGame.InstalledVersion != localGame.LatestVersion)
+                            || (!string.IsNullOrWhiteSpace(queueItem.Version)
+                                && queueItem.Version != localGame.InstalledVersion));
 
                     if (isUpdate)
                     {
@@ -612,11 +614,20 @@ namespace LANCommander.Launcher.Services
                     }
                     else
                     {
-                        // update current local installed game first, might be moved afterwards
-                        await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                        // update current local installed game first, might be moved afterwards. The install
+                        // keeps the config of the version it's on, which is the latest unless it's frozen.
+                        var installedVersionId = localGame.InstalledVersionId
+                            ?? GameClient.GetInstalledVersionId(localGame.InstallDirectory, localGame.Id);
 
-                        // Check for and apply redistributable updates
-                        await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables);
+                        if (installedVersionId is Guid versionId)
+                            await ApplyVersionConfigAsync(localGame, versionId);
+                        else
+                        {
+                            await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+
+                            // Check for and apply redistributable updates
+                            await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables);
+                        }
 
                         // Probably doing a modification of some sort
                         if (localGame.InstallDirectory.StartsWith(queueItem.InstallDirectory))
@@ -866,13 +877,18 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    // Get all archives newer than the installed version, ordered ascending by CreatedOn
-                    var updates = await _gameClient.GetUpdatesAsync(localGame.Id, localGame.InstalledVersion);
+                    // Versions let each applied archive be recorded against the version it belongs to
+                    var versions = await GetVersionsOrEmptyAsync(localGame.Id);
+
+                    // Get all archives newer than the installed version, ordered oldest to newest
+                    var updates = await _gameClient.GetUpdatesAsync(localGame.Id, localGame.InstalledVersion, localGame.InstalledVersionId);
                     var updateList = updates?.ToList() ?? [];
 
-                    if (updateList.Count > 0)
+                    var latestVersion = LatestVersion(versions);
+
+                    if (updateList.Count > 0 || latestVersion != null)
                     {
-                        Logger?.LogInformation("[InstallQueue] Update(Game): Found {Count} update(s) to apply sequentially: {Versions}",
+                        Logger?.LogInformation("[InstallQueue] Update(Game): Found {Count} archive(s) to apply sequentially: {Versions}",
                             updateList.Count, string.Join(" → ", updateList.Select(a => a.Version)));
 
                         // Apply each archive sequentially
@@ -881,13 +897,17 @@ namespace LANCommander.Launcher.Services
                             Logger?.LogInformation("[InstallQueue] Update(Game): Applying archive {ArchiveId} version {Version} for {Title}",
                                 archive.Id, archive.Version, currentItem.Title);
 
-                            var success = await _gameClient.ApplyUpdateArchiveAsync(archive.Id, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
+                            var archiveVersion = versions.FirstOrDefault(v => v.ArchiveId == archive.Id);
+                            var archiveInfo = archiveVersion != null ? AppliedArchiveInfo.FromVersion(archiveVersion) : null;
+
+                            var success = await _gameClient.ApplyUpdateArchiveAsync(archive.Id, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token, archiveInfo);
 
                             if (!success)
                                 throw new InstallCanceledException("Game update was canceled");
 
                             // Update version in local DB after each archive
-                            localGame.InstalledVersion = archive.Version;
+                            localGame.InstalledVersion = archiveVersion?.Version ?? archive.Version;
+                            localGame.InstalledVersionId = archiveVersion?.Id;
                             await _gameService.UpdateAsync(localGame);
 
                             Logger?.LogInformation("[InstallQueue] Update(Game): Applied version {Version}, updated InstalledVersion in DB", archive.Version);
@@ -898,29 +918,39 @@ namespace LANCommander.Launcher.Services
                         await _importService.ImportGameAsync(localGame.Id);
                         localGame = await _gameService.GetAsync(localGame.Id);
 
-                        // Update manifest and scripts on disk
-                        await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                        // Move the install's config (manifest, scripts, redistributables) to the latest
+                        // version. A newer version without an archive is a config-only update.
+                        if (latestVersion != null)
+                            await ApplyVersionConfigAsync(localGame, latestVersion.Id, currentItem.CancellationToken.Token);
+                        else
+                        {
+                            await _gameClient.UpdateGameInstallationAsync(localGame.InstallDirectory, remoteGame);
+                            await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables, currentItem.CancellationToken.Token);
+                        }
 
                         // Bug #1 convergence: after applying all updates and re-importing, the installed
                         // version may still trail the server's resolved latest version (the last applied
                         // archive's version string is not guaranteed to equal the canonical latest version).
                         // Converge explicitly so the game leaves the "update available" state.
-                        if (!string.IsNullOrWhiteSpace(localGame.LatestVersion))
+                        if (latestVersion != null || !string.IsNullOrWhiteSpace(localGame.LatestVersion))
                         {
-                            localGame.InstalledVersion = localGame.LatestVersion;
+                            localGame.InstalledVersion = !string.IsNullOrWhiteSpace(latestVersion?.Version)
+                                ? latestVersion.Version
+                                : localGame.LatestVersion;
+                            localGame.InstalledVersionId = latestVersion?.Id ?? localGame.InstalledVersionId;
                             await _gameService.UpdateAsync(localGame);
 
-                            Logger?.LogInformation("[InstallQueue] Update(Game): Converged InstalledVersion to LatestVersion {LatestVersion} for {Title}",
-                                localGame.LatestVersion, currentItem.Title);
+                            Logger?.LogInformation("[InstallQueue] Update(Game): Converged InstalledVersion to latest version {LatestVersion} for {Title}",
+                                localGame.InstalledVersion, currentItem.Title);
                         }
                     }
                     else
                     {
                         Logger?.LogInformation("[InstallQueue] Update(Game): No game archive updates found for {Title} ({Id}), checking redistributables", currentItem.Title, currentItem.Id);
-                    }
 
-                    // Check for and apply redistributable updates
-                    await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables, currentItem.CancellationToken.Token);
+                        // Check for and apply redistributable updates
+                        await UpdateRedistributablesForGameAsync(localGame.InstallDirectory, remoteGame.Redistributables, currentItem.CancellationToken.Token);
+                    }
 
                     // Update the queue item version to match
                     currentItem.Version = localGame.InstalledVersion;
@@ -972,6 +1002,11 @@ namespace LANCommander.Launcher.Services
             }
         }
 
+        /// <summary>Whether the game already has a queue item that is waiting or in progress.</summary>
+        public bool IsActive(Guid gameId)
+            => Queue.Any(i => i.Id == gameId
+                && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading, InstallStatus.VerifyingFiles));
+
         /// <summary>
         /// Queues an explicit install/rollback of an already-installed game to a specific version.
         /// The switch runs through the download queue (so it shows progress and supports cancel)
@@ -982,7 +1017,8 @@ namespace LANCommander.Launcher.Services
             ArgumentNullException.ThrowIfNull(localGame);
             ArgumentNullException.ThrowIfNull(version);
 
-            if (version.ArchiveId == null || version.ArchiveId == Guid.Empty)
+            // A version without its own archive uses the newest archive below it
+            if ((version.EffectiveArchiveId ?? version.ArchiveId) is not Guid archiveId || archiveId == Guid.Empty)
                 throw new InstallException("The selected version has no archive to install.");
 
             if (string.IsNullOrWhiteSpace(localGame.InstallDirectory))
@@ -1000,8 +1036,7 @@ namespace LANCommander.Launcher.Services
                 Queue.Remove(staleItem);
 
             // If a switch/install for this game is already in flight, don't queue a duplicate.
-            if (Queue.Any(i => i.Id == localGame.Id
-                && i.Status.ValueIsIn(InstallStatus.Queued, InstallStatus.Starting, InstallStatus.Downloading, InstallStatus.VerifyingFiles)))
+            if (IsActive(localGame.Id))
             {
                 Logger?.LogInformation("[InstallQueue] AddVersionSwitch: Game {GameId} already has an active queue item, skipping", localGame.Id);
                 return;
@@ -1052,15 +1087,31 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    var success = await _gameClient.ApplyUpdateArchiveAsync(version.ArchiveId.Value, localGame.Id, localGame.InstallDirectory, currentItem.CancellationToken.Token);
+                    var versions = await GetVersionsOrEmptyAsync(localGame.Id);
+                    var installed = ResolveInstalledVersion(versions, localGame);
+                    var isRollback = installed != null && version.SortOrder < installed.SortOrder;
+
+                    Logger?.LogInformation("[InstallQueue] SwitchToVersion: {Direction} {Title} from {InstalledVersion} to {TargetVersion}",
+                        isRollback ? "Rolling back" : "Switching", localGame.Title, installed?.Version ?? localGame.InstalledVersion, version.Version);
+
+                    var success = isRollback
+                        ? await _gameClient.RollBackToVersionAsync(localGame.InstallDirectory, localGame.Id, version, versions, currentItem.CancellationToken.Token)
+                        : await ApplyVersionFilesAsync(localGame, version, versions, currentItem.CancellationToken.Token);
 
                     if (!success)
                         throw new InstallCanceledException("Version switch was canceled");
 
-                    // Write the version-scoped manifest and scripts so on-disk config matches the chosen version.
-                    await _gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, localGame.Id, version.Id);
+                    // Write the version's manifest and scripts and match its redistributables, so on-disk
+                    // config matches the chosen version.
+                    await ApplyVersionConfigAsync(localGame, version.Id, currentItem.CancellationToken.Token);
 
                     localGame.InstalledVersion = version.Version;
+                    localGame.InstalledVersionId = version.Id;
+
+                    // A rolled-back game stays on the chosen version until the user turns updates back on
+                    if (isRollback)
+                        localGame.AutoUpdate = false;
+
                     await _gameService.UpdateAsync(localGame);
                 }
                 catch (InstallCanceledException)
@@ -1366,10 +1417,100 @@ namespace LANCommander.Launcher.Services
 
         private static void UpdateGameState(InstallQueueGame currentItem, Game localGame, string installDirectory)
         {
+            // Modifying a frozen install (e.g. changing addons) doesn't move it to the queued version
+            if (!localGame.Installed || localGame.AutoUpdate)
+                localGame.InstalledVersion = currentItem.Version;
+
             localGame.InstallDirectory = installDirectory;
             localGame.Installed = true;
-            localGame.InstalledVersion = currentItem.Version;
             localGame.InstalledOn ??= DateTime.Now;
+
+            // The install's manifest (or its history) says which version it holds, when the server could say
+            var installedVersionId = GameClient.GetInstalledVersionId(installDirectory, localGame.Id);
+
+            if (installedVersionId != null)
+                localGame.InstalledVersionId = installedVersionId;
+        }
+
+        /// <summary>
+        /// Extracts the files a version uses, unless the install already has them: a version without its
+        /// own archive uses the newest archive below it, which may be the newest one applied already.
+        /// </summary>
+        private async Task<bool> ApplyVersionFilesAsync(Game localGame, SDK.Models.GameVersion version, IEnumerable<SDK.Models.GameVersion> versions, CancellationToken cancellationToken)
+        {
+            if ((version.EffectiveArchiveId ?? version.ArchiveId) is not Guid archiveId || archiveId == Guid.Empty)
+                throw new InstallException("The selected version has no archive to install.");
+
+            var newestApplied = InstallHistoryHelper.Read(localGame.InstallDirectory, localGame.Id).Archives
+                .OrderBy(a => a.SortOrder)
+                .ThenBy(a => a.AppliedOn)
+                .LastOrDefault();
+
+            if (newestApplied?.ArchiveId == archiveId)
+            {
+                Logger?.LogInformation("[InstallQueue] {Title} already has the files of version {Version}; switching its config only", localGame.Title, version.Version);
+                return true;
+            }
+
+            // Recorded against the version the archive belongs to, which is older than a config-only target
+            var archiveVersion = versions.FirstOrDefault(v => v.ArchiveId == archiveId) ?? version;
+
+            return await _gameClient.ApplyUpdateArchiveAsync(archiveId, localGame.Id, localGame.InstallDirectory, cancellationToken, AppliedArchiveInfo.FromVersion(archiveVersion));
+        }
+
+        /// <summary>
+        /// Moves an install's config to a version: writes that version's manifest and scripts, installs the
+        /// redistributables it lists and uninstalls the ones it doesn't, and updates the ones it keeps.
+        /// </summary>
+        private async Task ApplyVersionConfigAsync(Game localGame, Guid versionId, CancellationToken cancellationToken = default)
+        {
+            var previousManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(localGame.InstallDirectory, localGame.Id);
+            var previousRedistributableIds = previousManifest?.Redistributables?.Select(r => r.Id).ToList() ?? [];
+
+            await _gameClient.RefreshManifestAndScriptsAsync(localGame.InstallDirectory, localGame.Id, versionId);
+
+            await _gameClient.SyncRedistributablesAsync(localGame.InstallDirectory, localGame.Id, previousRedistributableIds, cancellationToken);
+
+            var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(localGame.InstallDirectory, localGame.Id);
+
+            await UpdateRedistributablesForGameAsync(
+                localGame.InstallDirectory,
+                manifest?.Redistributables?.Select(r => new SDK.Models.Redistributable { Id = r.Id, Name = r.Name }) ?? [],
+                cancellationToken);
+        }
+
+        private async Task<List<SDK.Models.GameVersion>> GetVersionsOrEmptyAsync(Guid gameId)
+        {
+            try
+            {
+                return (await _gameClient.GetVersionsAsync(gameId))?.ToList() ?? [];
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogWarning(ex, "Could not get versions for game {GameId}", gameId);
+                return [];
+            }
+        }
+
+        private static SDK.Models.GameVersion? LatestVersion(IEnumerable<SDK.Models.GameVersion> versions)
+            => versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).FirstOrDefault();
+
+        /// <summary>The installed version, by id when known and otherwise by version string (newest match).</summary>
+        public static SDK.Models.GameVersion? ResolveInstalledVersion(IEnumerable<SDK.Models.GameVersion> versions, Game localGame)
+        {
+            var newestFirst = versions.OrderByDescending(v => v.SortOrder).ThenByDescending(v => v.CreatedOn).ToList();
+
+            if (localGame.InstalledVersionId is Guid id)
+            {
+                var byId = newestFirst.FirstOrDefault(v => v.Id == id);
+
+                if (byId != null)
+                    return byId;
+            }
+
+            return string.IsNullOrWhiteSpace(localGame.InstalledVersion)
+                ? null
+                : newestFirst.FirstOrDefault(v => v.Version == localGame.InstalledVersion);
         }
 
         private static void UpdateAddonStates(InstallQueueGame currentItem, Game localGame)

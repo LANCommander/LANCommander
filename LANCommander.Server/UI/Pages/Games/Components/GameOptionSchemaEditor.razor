@@ -1,0 +1,55 @@
+@inject GameVersionService GameVersionService
+@inject NotificationService Notifications
+
+@* The option schema of the game version picked in the game editor (the latest when none is cascaded) *@
+@if (_loaded)
+{
+    <OptionSchemaEditor @bind-Value="_optionSchema" OnSave="SaveAsync" />
+}
+else
+{
+    <Spin />
+}
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid? GameVersionId { get; set; }
+
+    Guid _versionId;
+    string? _optionSchema;
+    bool _loaded;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _versionId = GameVersionId is { } selected && selected != Guid.Empty
+                ? selected
+                : await GameVersionService.GetOrCreateLatestIdAsync(GameId);
+
+            _optionSchema = await GameVersionService.GetOptionSchemaAsync(_versionId);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The game's options could not be loaded");
+        }
+        finally
+        {
+            _loaded = true;
+        }
+    }
+
+    public async Task SaveAsync()
+    {
+        try
+        {
+            await GameVersionService.SetOptionSchemaAsync(_versionId, _optionSchema);
+
+            Notifications.Success("Options saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not save options!");
+        }
+    }
+}

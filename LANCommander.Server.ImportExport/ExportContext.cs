@@ -19,6 +19,7 @@ public class ExportContext(
     ServerExporter serverExporter,
     ToolExporter toolExporter,
     GameService gameService,
+    GameVersionService gameVersionService,
     RedistributableService redistributableService,
     ServerService serverService,
     ToolService toolService,
@@ -186,6 +187,17 @@ public class ExportContext(
                 .Include(g => g.Tools);
         }).GetAsync(gameId);
         
+        // Actions, scripts and save paths belong to versions and the game's own rows span every version;
+        // an export carries the latest version's
+        var latestVersionId = await gameVersionService.GetLatestIdAsync(game.Id);
+
+        if (latestVersionId != null)
+        {
+            game.Actions = game.Actions?.Where(a => a.GameVersionId == null || a.GameVersionId == latestVersionId).ToList();
+            game.Scripts = game.Scripts?.Where(s => s.GameVersionId == null || s.GameVersionId == latestVersionId).ToList();
+            game.SavePaths = game.SavePaths?.Where(p => p.GameVersionId == null || p.GameVersionId == latestVersionId).ToList();
+        }
+
         var gameManifest = manifestMapper.ToManifest(game);
 
         DataRecord = game;

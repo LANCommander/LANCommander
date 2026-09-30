@@ -7,25 +7,11 @@ namespace LANCommander.Server.UI.Pages.Games.Components;
 public static class GameEditFormat
 {
     /// <summary>
-    /// The mono line beside a game's title: "v338.4 · 4.70 GB". Either part may be missing; null
-    /// when both are. A version that already starts with "v" isn't given a second one.
+    /// The mono line beside a game's title: its latest archive's size, "4.70 GB". The version is the
+    /// picker beside it. Null without a size.
     /// </summary>
-    public static string? Summary(string? version, long? size)
-    {
-        var parts = new List<string>(2);
-
-        if (!string.IsNullOrWhiteSpace(version))
-        {
-            version = version.Trim();
-
-            parts.Add(version.Length > 1 && version[0] is 'v' or 'V' && char.IsDigit(version[1]) ? version : $"v{version}");
-        }
-
-        if (size is > 0)
-            parts.Add(GameListFormat.Size(size.Value, "0.00"));
-
-        return parts.Count > 0 ? string.Join(" · ", parts) : null;
-    }
+    public static string? Summary(long? size) =>
+        size is > 0 ? GameListFormat.Size(size.Value, "0.00") : null;
 
     /// <summary>"1 script", "5 scripts", "2 redistributables".</summary>
     public static string Count(int count, string singular, string? plural = null) =>

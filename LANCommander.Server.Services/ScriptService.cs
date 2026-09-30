@@ -110,7 +110,7 @@ namespace LANCommander.Server.Services
         /// redistributables it depends on, then the system scripts (those with no owner at all).
         /// With no owner, only the system scripts.
         /// </summary>
-        public async Task<ICollection<Script>> GetEditorScriptsAsync(Guid? gameId, Guid? redistributableId, Guid? serverId, Guid? toolId)
+        public async Task<ICollection<Script>> GetEditorScriptsAsync(Guid? gameId, Guid? redistributableId, Guid? serverId, Guid? toolId, Guid? gameVersionId = null)
         {
             using var context = await contextFactory.CreateDbContextAsync();
 
@@ -119,17 +119,24 @@ namespace LANCommander.Server.Services
             serverId = serverId == Guid.Empty ? null : serverId;
             toolId = toolId == Guid.Empty ? null : toolId;
 
-            Guid? gameVersionId = null;
+            gameVersionId = gameVersionId == Guid.Empty ? null : gameVersionId;
+
             List<Guid> redistributableIds = [];
 
             if (gameId is { } game)
             {
-                gameVersionId = await gameVersionService.GetLatestIdAsync(game);
+                // The version being edited (the latest unless one is given) and its redistributables
+                gameVersionId ??= await gameVersionService.GetLatestIdAsync(game);
 
-                redistributableIds = await context.Games
-                    .Where(g => g.Id == game)
-                    .SelectMany(g => g.Redistributables!.Select(r => r.Id))
-                    .ToListAsync();
+                redistributableIds = gameVersionId is { } versionId
+                    ? await context.GameVersionRedistributables
+                        .Where(r => r.GameVersionId == versionId)
+                        .Select(r => r.RedistributableId)
+                        .ToListAsync()
+                    : await context.Games
+                        .Where(g => g.Id == game)
+                        .SelectMany(g => g.Redistributables!.Select(r => r.Id))
+                        .ToListAsync();
             }
 
             if (redistributableId is { } redistributable)

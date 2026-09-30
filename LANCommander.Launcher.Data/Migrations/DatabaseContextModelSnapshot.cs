@@ -244,6 +244,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AutoUpdate")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("BaseGameId")
                         .HasColumnType("TEXT");
 
@@ -272,6 +275,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<string>("InstalledVersion")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("InstalledVersionId")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("LatestVersion")

@@ -1,31 +1,17 @@
 @page "/Games/{id:guid}/Options"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject GameService GameService
-@inject NotificationService Notifications
 
-<GameEditView Id="Id" Title="Options">
+<GameEditView Id="Id" Title="Options" Versioned>
     <TitleExtraTemplate>
-        <Button Primary OnClick="() => SaveAsync(context)">Save</Button>
+        <Button Primary OnClick="() => _editor?.SaveAsync() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <OptionSchemaEditor @bind-Value="context.OptionSchema" OnSave="() => SaveAsync(context)" />
+        <GameOptionSchemaEditor @ref="_editor" />
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    async Task SaveAsync(Game game)
-    {
-        try
-        {
-            await GameService.UpdateAsync(game);
-
-            Notifications.Success("Options saved!");
-        }
-        catch (Exception ex)
-        {
-            Notifications.Error(ex, "Could not save options!");
-        }
-    }
+    GameOptionSchemaEditor? _editor;
 }

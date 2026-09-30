@@ -140,7 +140,6 @@ public static class ToolsEndpoints
 
     internal static async Task<IResult> UploadArchiveAsync(
         SDK.Models.UploadArchiveRequest request,
-        [FromServices] StorageLocationService storageLocationService,
         [FromServices] ArchiveService archiveService,
         [FromServices] ILoggerFactory loggerFactory)
     {
@@ -148,36 +147,12 @@ public static class ToolsEndpoints
 
         try
         {
-            var storageLocation = await storageLocationService.FirstOrDefaultAsync(l =>
-                request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-
-            var archive = await archiveService.FirstOrDefaultAsync(a =>
-                a.ToolId == request.Id && a.Version == request.Version);
-
-            var archivePath = await archiveService.GetArchiveFileLocationAsync(archive);
-
-            if (archive != null)
-            {
-                File.Delete(archivePath);
-
-                archive.ObjectKey = request.ObjectKey.ToString();
-                archive.CompressedSize = new FileInfo(archivePath).Length;
-                archive.StorageLocation = storageLocation;
-
-                archive = await archiveService.UpdateAsync(archive);
-            }
-            else
-            {
-                archive = new Archive
-                {
-                    ObjectKey = request.ObjectKey.ToString(),
-                    ToolId = request.Id,
-                    CompressedSize = new FileInfo(archivePath).Length,
-                    StorageLocation = storageLocation,
-                };
-
-                await archiveService.AddAsync(archive);
-            }
+            await archiveService.CompleteUploadAsync(
+                request.ObjectKey,
+                request.StorageLocationId,
+                request.Version,
+                a => a.ToolId = request.Id,
+                a => a.ToolId == request.Id && a.Version == request.Version);
 
             return TypedResults.Ok();
         }

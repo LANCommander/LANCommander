@@ -167,6 +167,33 @@
     border-color: var(--rz-danger) !important;
 }
 
+// A compact select sized to its choice. Sized through Radzen's input variables so the label,
+// trigger and height stay in step.
+.lc-select-small.rz-dropdown {
+    --rz-input-height: 24px;
+    --rz-input-line-height: 22px;
+    --rz-input-font-size: 12px;
+    --rz-input-padding-block: 0;
+    --rz-input-padding-inline: 0;
+    --rz-dropdown-label-padding-block: 0;
+    --rz-dropdown-label-padding-inline: 8px;
+    --rz-dropdown-trigger-icon-width: 14px;
+    --rz-dropdown-trigger-icon-height: 14px;
+
+    flex: none;
+    width: auto;
+    min-width: 0;
+
+    // Room for the trigger, which sits over the label's end
+    .rz-dropdown-label {
+        padding-inline-end: 26px;
+    }
+
+    .rz-dropdown-trigger {
+        inset-inline-end: 6px;
+    }
+}
+
 .lc-select-option {
     display: inline-flex;
     align-items: center;

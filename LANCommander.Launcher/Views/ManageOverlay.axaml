@@ -148,54 +148,67 @@
 
         <!-- Versions section -->
         <DataTemplate DataType="vm:GameVersionsViewModel">
-            <ItemsControl ItemsSource="{Binding Versions}">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate x:DataType="vm:GameVersionItemViewModel">
-                        <Border Background="{DynamicResource SurfaceRaisedBrush}"
-                                Padding="12,10"
-                                Margin="0,0,0,6"
-                                CornerRadius="4">
-                            <StackPanel Spacing="6">
-                                <DockPanel>
-                                    <StackPanel DockPanel.Dock="Right"
-                                                Orientation="Horizontal"
-                                                Spacing="8"
-                                                VerticalAlignment="Center">
-                                        <TextBlock Text="Installed"
-                                                   FontSize="{DynamicResource FontSizeKicker}"
-                                                   Opacity="0.55"
-                                                   VerticalAlignment="Center"
-                                                   IsVisible="{Binding IsInstalled}" />
-                                        <Button Content="{Binding ButtonText}"
-                                                Classes="Primary"
-                                                Command="{Binding SwitchCommand}"
-                                                IsVisible="{Binding IsInstallable}" />
-                                    </StackPanel>
-                                    <StackPanel Spacing="2">
-                                        <TextBlock Text="{Binding VersionLabel}"
-                                                   FontWeight="SemiBold"
-                                                   FontSize="{DynamicResource FontSizeBody}" />
-                                        <TextBlock Text="{Binding CreatedOnText}"
-                                                   FontSize="{DynamicResource FontSizeKicker}"
-                                                   Opacity="0.55"
-                                                   IsVisible="{Binding CreatedOnKnown}" />
-                                    </StackPanel>
-                                </DockPanel>
-                                <TextBlock Text="{Binding ChangelogText}"
-                                           FontSize="{DynamicResource FontSizeCaption}"
-                                           TextWrapping="Wrap"
-                                           IsVisible="{Binding HasChangelog}" />
-                                <TextBlock FontSize="{DynamicResource FontSizeKicker}"
-                                           Opacity="0.55"
-                                           IsVisible="{Binding HasSize}">
-                                    <Run Text="Download:" />
-                                    <Run Text="{Binding SizeText}" />
-                                </TextBlock>
-                            </StackPanel>
-                        </Border>
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+            <StackPanel>
+                <StackPanel Spacing="2" Margin="0,0,0,10">
+                    <CheckBox IsChecked="{Binding AutomaticallyUpdate}"
+                              Content="Automatically update this game" />
+                    <TextBlock Text="Turn off to keep this game on its current version. Rolling back turns this off."
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Text="No other versions are available to install."
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           Opacity="0.55"
+                           IsVisible="{Binding !HasVersions}" />
+                <ItemsControl ItemsSource="{Binding Versions}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:GameVersionItemViewModel">
+                            <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                                    Padding="12,10"
+                                    Margin="0,0,0,6"
+                                    CornerRadius="4">
+                                <StackPanel Spacing="6">
+                                    <DockPanel>
+                                        <StackPanel DockPanel.Dock="Right"
+                                                    Orientation="Horizontal"
+                                                    Spacing="8"
+                                                    VerticalAlignment="Center">
+                                            <TextBlock Text="Installed"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
+                                                       Opacity="0.55"
+                                                       VerticalAlignment="Center"
+                                                       IsVisible="{Binding IsInstalled}" />
+                                            <Button Content="{Binding ButtonText}"
+                                                    Classes="Primary"
+                                                    Command="{Binding SwitchCommand}"
+                                                    IsVisible="{Binding IsInstallable}" />
+                                        </StackPanel>
+                                        <StackPanel Spacing="2">
+                                            <TextBlock Text="{Binding VersionLabel}"
+                                                       FontWeight="SemiBold"
+                                                       FontSize="{DynamicResource FontSizeBody}" />
+                                            <TextBlock Text="{Binding CreatedOnText}"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
+                                                       Opacity="0.55"
+                                                       IsVisible="{Binding CreatedOnKnown}" />
+                                        </StackPanel>
+                                    </DockPanel>
+                                    <TextBlock Text="{Binding ChangelogText}"
+                                               FontSize="{DynamicResource FontSizeCaption}"
+                                               TextWrapping="Wrap"
+                                               IsVisible="{Binding HasChangelog}" />
+                                    <TextBlock FontSize="{DynamicResource FontSizeKicker}"
+                                               Opacity="0.55"
+                                               IsVisible="{Binding HasSize}">
+                                        <Run Text="Download:" />
+                                        <Run Text="{Binding SizeText}" />
+                                    </TextBlock>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </DataTemplate>
 
         <!-- Saves section: server saves as a list group, newest first. The newest gets the

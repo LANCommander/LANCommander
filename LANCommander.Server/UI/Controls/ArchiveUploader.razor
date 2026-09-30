@@ -11,12 +11,17 @@
     [Parameter] public Guid ToolId { get; set; }
     [Parameter] public EventCallback<Guid> OnArchiveUploaded { get; set; }
 
+    // The version picked in the game editor; an older one is where a new upload most likely belongs
+    [CascadingParameter(Name = "GameVersionId")] public Guid? GameVersionId { get; set; }
+    [CascadingParameter(Name = "IsLatestVersion")] public bool IsLatestVersion { get; set; } = true;
+
     /// <summary>Uploads a new archive, or a replacement file for <paramref name="archiveId"/>.</summary>
     public Task Open(Guid? archiveId = null) =>
         Dialogs.OpenAsync<ArchiveUploadDialog, ArchiveUploadOptions, bool>("Upload Archive", new ArchiveUploadOptions
         {
             ArchiveId = archiveId,
             GameId = GameId != Guid.Empty ? GameId : null,
+            GameVersionId = GameId != Guid.Empty && !IsLatestVersion ? GameVersionId : null,
             RedistributableId = RedistributableId != Guid.Empty ? RedistributableId : null,
             ToolId = ToolId != Guid.Empty ? ToolId : null,
             OnUploaded = id => InvokeAsync(() => OnArchiveUploaded.InvokeAsync(id)),

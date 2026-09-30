@@ -11,6 +11,13 @@ namespace LANCommander.SDK.Models.Manifest
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string Version { get; set; }
+
+        /// <summary>
+        /// The server's id for the game version this manifest describes, so an install knows which
+        /// version's config it holds. Null for manifests written before versions existed.
+        /// </summary>
+        public Guid? VersionId { get; set; }
+
         public string DirectoryName { get; set; }
         public string Notes { get; set; }
         public string Description { get; set; }

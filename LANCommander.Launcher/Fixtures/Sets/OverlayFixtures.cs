@@ -188,7 +188,7 @@ public static class OverlayFixtures
     {
         var title = FixtureGames.UnrealTournament2004.Title;
 
-        var versions = new GameVersionsViewModel();
+        var versions = new GameVersionsViewModel { AutomaticallyUpdate = true };
 
         versions.Versions.Add(Version("3369", "Final patch: fixes Onslaught vehicle desync and adds the bonus pack maps.", 2_900, new DateTime(2005, 11, 7), installed: false, newer: true));
         versions.Versions.Add(Version("3339", "Server browser fixes.", 2_870, new DateTime(2005, 4, 21), installed: true, newer: false));

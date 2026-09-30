@@ -3,10 +3,10 @@
 
 <GameEditView @ref="_view" Id="Id" Title="Versions">
     <TitleExtraTemplate>
-        <Button Primary Icon="IconType.Plus" OnClick="() => _editor?.OpenCreateVersion() ?? Task.CompletedTask">New Version</Button>
+        <Button Primary Icon="IconType.Plus" OnClick="() => _view?.CreateVersionAsync() ?? Task.CompletedTask">New Version</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <VersionEditor @ref="_editor" OnVersionCreated="OnVersionCreatedAsync" />
+        <VersionEditor />
     </ChildContent>
 </GameEditView>
 
@@ -14,11 +14,4 @@
     [Parameter] public Guid Id { get; set; }
 
     GameEditView? _view;
-    VersionEditor? _editor;
-
-    async Task OnVersionCreatedAsync()
-    {
-        if (_view != null)
-            await _view.RefreshVersionAsync();
-    }
 }

@@ -1,6 +1,8 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
 @using System.Reflection
+@using LANCommander.Server.Plugins
 @inject IEnumerable<UIRouteAssembly> RouteAssemblies
+@inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
 
 <Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="@_additionalAssemblies">
     <Found Context="routeData">
@@ -22,6 +24,6 @@
 
     protected override void OnInitialized()
     {
-        _additionalAssemblies = UIRouteAssembly.Resolve(RouteAssemblies);
+        _additionalAssemblies = UIRouteAssembly.Resolve(RouteAssemblies, PluginRouteAssemblies);
     }
 }

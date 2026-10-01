@@ -35,9 +35,32 @@ public class ImportRunner(
     public async Task<ImportRunResult> RunAsync(
         Guid objectKey,
         Guid? storageLocationId = null,
-        ManifestType? manifestType = null)
+        ManifestType? manifestType = null,
+        CancellationToken cancellationToken = default)
     {
         var archivePath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+        var result = await RunFileAsync(
+            archivePath,
+            storageLocationId,
+            manifestType,
+            cancellationToken);
+
+        logger.LogInformation(
+            "Imported {Count} record(s) as {ManifestType} {RecordId} from object key {ObjectKey}",
+            result.ImportedCount, result.ManifestType, result.RecordId, objectKey);
+
+        return result;
+    }
+
+    /// <summary>Imports every selected record from an LCX file already available to the server.</summary>
+    public async Task<ImportRunResult> RunFileAsync(
+        string archivePath,
+        Guid? storageLocationId = null,
+        ManifestType? manifestType = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(archivePath);
+        cancellationToken.ThrowIfCancellationRequested();
 
         var storageLocation = await storageLocationService
             .GetOrDefaultAsync(storageLocationId, StorageLocationType.Archive);
@@ -48,7 +71,11 @@ public class ImportRunner(
 
         using var context = importContextFactory.Create();
 
-        var items = (await context.InitializeImportAsync(archivePath, manifestType)).ToList();
+        cancellationToken.ThrowIfCancellationRequested();
+        var items = (await context.InitializeImportAsync(
+            archivePath,
+            manifestType,
+            cancellationToken)).ToList();
 
         // Import everything the archive offers. The record selection UI exists for the Blazor
         // dialog; an API caller that uploaded a package wants all of it.
@@ -58,25 +85,26 @@ public class ImportRunner(
             .Select(id => id!.Value)
             .ToList();
 
-        await context.PrepareImportQueueAsync(selectedRecordIds, storageLocation.Id);
-        await context.ImportQueueAsync();
+        cancellationToken.ThrowIfCancellationRequested();
+        await context.PrepareImportQueueAsync(
+            selectedRecordIds,
+            storageLocation.Id,
+            cancellationToken);
 
-        var result = new ImportRunResult
+        cancellationToken.ThrowIfCancellationRequested();
+        await context.ImportQueueAsync(cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return new ImportRunResult
         {
             RecordId = GetRecordId(context.Manifest),
             ManifestType = GetManifestType(context.Manifest),
             ImportedCount = context.Processed,
         };
-
-        logger.LogInformation(
-            "Imported {Count} record(s) as {ManifestType} {RecordId} from object key {ObjectKey}",
-            result.ImportedCount, result.ManifestType, result.RecordId, objectKey);
-
-        return result;
     }
 
-    // Importers use the manifest's own Id as the entity primary key (see GameImporter.AddAsync),
-    // so the root manifest Id is the id of the record that was created or updated.
+    // Root importers preserve the manifest Id for new records and replace it with the matched
+    // persisted Id when an existing record is found by its natural key.
     private static Guid GetRecordId(object manifest) =>
         manifest is SDK.Models.Manifest.IKeyedModel keyed ? keyed.Id : Guid.Empty;
 

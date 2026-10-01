@@ -3,12 +3,14 @@
 @using Microsoft.EntityFrameworkCore
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Data
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.Services.Enums
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
 @inject ServerManager ServerManager
 @inject NavigationManager NavigationManager
 @inject ILogger<MainMenu> Logger
+@inject IEnumerable<IServerNavigationExtension> PluginNavigationExtensions
 @implements IDisposable
 
 @* The sidebar's navigation. Items that front a list carry a count of it, never the records themselves *@
@@ -77,6 +79,14 @@
     {
         <MenuItem Href="/Pages" Icon="IconType.BookOpen">Pages</MenuItem>
     }
+    @if (VisiblePluginNavigation.Count > 0)
+    {
+        <MenuDivider />
+        @foreach (var extension in VisiblePluginNavigation)
+        {
+            <MenuItem Href="@extension.Href" Icon="@ParseIcon(extension.Icon)">@extension.Label</MenuItem>
+        }
+    }
 </Menu>
 
 @code {
@@ -85,6 +95,12 @@
     int? _games;
     int? _openIssues;
     int? _runningServers;
+    IReadOnlyList<IServerNavigationExtension> _pluginNavigation = [];
+
+    IReadOnlyList<IServerNavigationExtension> VisiblePluginNavigation =>
+        _pluginNavigation
+            .Where(extension => PluginNavigationVisibility.IsVisible(extension, _user))
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
@@ -93,10 +109,57 @@
         if (authState.User.Identity?.IsAuthenticated ?? false)
             _user = authState.User;
 
+        _pluginNavigation = ResolvePluginNavigation();
+
         NavigationManager.LocationChanged += RefreshOnNavigation;
 
         await RefreshCountsAsync();
     }
+
+    IReadOnlyList<IServerNavigationExtension> ResolvePluginNavigation()
+    {
+        var valid = PluginNavigationExtensions
+            .Where(extension =>
+            {
+                if (!string.IsNullOrWhiteSpace(extension.Id)
+                    && !string.IsNullOrWhiteSpace(extension.Label)
+                    && extension.Href.StartsWith("/Plugins/", StringComparison.OrdinalIgnoreCase))
+                    return true;
+
+                Logger.LogWarning(
+                    "Ignoring invalid server navigation extension {ExtensionType}",
+                    extension.GetType().FullName);
+                return false;
+            })
+            .ToList();
+
+        var duplicateIds = valid
+            .GroupBy(extension => extension.Id, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        var duplicateRoutes = valid
+            .GroupBy(extension => extension.Href, StringComparer.OrdinalIgnoreCase)
+            .Where(group => group.Count() > 1)
+            .Select(group => group.Key)
+            .ToHashSet(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var duplicateId in duplicateIds)
+            Logger.LogWarning("Ignoring server navigation extensions with duplicate id {ExtensionId}", duplicateId);
+
+        foreach (var duplicateRoute in duplicateRoutes)
+            Logger.LogWarning("Ignoring server navigation extensions with duplicate route {Route}", duplicateRoute);
+
+        return valid
+            .Where(extension => !duplicateIds.Contains(extension.Id) && !duplicateRoutes.Contains(extension.Href))
+            .OrderBy(extension => extension.Order)
+            .ThenBy(extension => extension.Label, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    static IconType ParseIcon(string? icon) =>
+        Enum.TryParse<IconType>(icon, true, out var parsed) ? parsed : IconType.None;
 
     // Servers carry only a live dot while any is running, never a count
     RenderFragment? RunningServers => _runningServers is > 0

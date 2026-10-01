@@ -131,6 +131,55 @@ public void ConfigureServices(IServiceCollection services)
 }
 ```
 
+## Server UI extensions
+
+Server plugins can contribute routable Razor components and navigation entries through the
+`LANCommander.Server.Plugins` contracts.
+
+Register the assembly containing your `@page` components:
+
+```csharp
+services.AddSingleton<IServerRouteAssemblyExtension>(
+    new MyRouteAssemblyExtension(typeof(MyPlugin).Assembly));
+```
+
+Then register one or more navigation entries:
+
+```csharp
+public sealed class MyNavigationExtension : IServerNavigationExtension
+{
+    public string Id => "com.mycompany.myplugin.catalog";
+    public string Label => "My Catalog";
+    public string Href => "/Plugins/MyCatalog";
+    public string? Icon => "Package";
+    public int Order => 100;
+    public string? RequiredRole => "Administrator";
+}
+```
+
+Navigation visibility is not route authorization. Apply an authorization attribute or policy to every
+contributed page. Plugin navigation routes must live under `/Plugins/`; duplicate navigation ids and
+routes are rejected rather than rendered ambiguously.
+
+## Importing generated game packages
+
+Resolve `IGamePackageImporter` when a server plugin has generated an LCX package:
+
+```csharp
+var importer = services.GetRequiredService<IGamePackageImporter>();
+
+await using var package = File.OpenRead(packagePath);
+var result = await importer.ImportAsync(
+    package,
+    new GamePackageImportOptions { StorageLocationId = storageLocationId },
+    progress,
+    cancellationToken);
+```
+
+The service copies the stream to controlled temporary storage, enforces the configured maximum size,
+and runs the same game import pipeline as the server API. Plugins should use this contract instead of
+resolving database or `ImportContext` implementation types.
+
 ## PowerShell extensions
 
 LANCommander runs installs and other tasks through an embedded PowerShell runtime. A plugin can add its

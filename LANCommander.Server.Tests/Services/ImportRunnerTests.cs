@@ -1,7 +1,11 @@
+using System.IO.Compression;
+using System.Text;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.ImportExport;
 using LANCommander.Server.ImportExport.Factories;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Services;
 using Shouldly;
 
@@ -61,6 +65,104 @@ public class ImportRunnerTests(ApplicationFixture fixture) : BaseTest(fixture)
             importContext.InitializeImportAsync(Path.Combine(Path.GetTempPath(), $"{Guid.NewGuid()}.lcx")));
 
         importContext.Dispose();
+    }
+
+    [Fact]
+    public async Task PluginPackageImporterImportsAStream()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var packageImporter = GetService<IGamePackageImporter>();
+        var gameId = Guid.NewGuid();
+        await using var package = new MemoryStream();
+
+        using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry(ManifestHelper.ManifestFilename);
+            await using var entryStream = entry.Open();
+            await using var writer = new StreamWriter(entryStream, Encoding.UTF8);
+
+            await writer.WriteAsync(ManifestHelper.Serialize(new SDK.Models.Manifest.Game
+            {
+                Id = gameId,
+                Title = "Plugin Package Import",
+                Version = "1.0",
+                DirectoryName = "PluginPackageImport",
+            }));
+        }
+
+        package.Position = 0;
+
+        var result = await packageImporter.ImportAsync(package);
+
+        result.ManifestType.ShouldBe(ManifestType.Game);
+        result.RecordId.ShouldBe(gameId);
+        result.ImportedCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task PluginPackageImporterReturnsExistingGameIdWhenMatchedByTitle()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var gameService = GetService<GameService>();
+        var packageImporter = GetService<IGamePackageImporter>();
+        var title = $"Plugin Package Existing Game {Guid.NewGuid()}";
+        var existing = await gameService.AddAsync(new Game
+        {
+            Id = Guid.NewGuid(),
+            Title = title,
+        });
+        await using var package = new MemoryStream();
+
+        using (var archive = new ZipArchive(package, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            var entry = archive.CreateEntry(ManifestHelper.ManifestFilename);
+            await using var entryStream = entry.Open();
+            await using var writer = new StreamWriter(entryStream, Encoding.UTF8);
+
+            await writer.WriteAsync(ManifestHelper.Serialize(new SDK.Models.Manifest.Game
+            {
+                Id = Guid.NewGuid(),
+                Title = title,
+                Version = "1.0",
+                DirectoryName = "PluginPackageExistingGame",
+            }));
+        }
+
+        package.Position = 0;
+
+        var result = await packageImporter.ImportAsync(package);
+
+        result.RecordId.ShouldBe(existing.Id);
+        result.ImportedCount.ShouldBeGreaterThan(0);
+    }
+
+    [Fact]
+    public async Task PluginPackageImporterRejectsOversizedStreams()
+    {
+        var packageImporter = GetService<IGamePackageImporter>();
+        await using var package = new MemoryStream(new byte[16]);
+
+        await Should.ThrowAsync<InvalidDataException>(() =>
+            packageImporter.ImportAsync(package, new GamePackageImportOptions
+            {
+                MaxPackageBytes = 8,
+            }));
+    }
+
+    [Fact]
+    public async Task PluginPackageImporterHonorsCancellation()
+    {
+        var packageImporter = GetService<IGamePackageImporter>();
+        await using var package = new MemoryStream(new byte[16]);
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Should.ThrowAsync<OperationCanceledException>(() =>
+            packageImporter.ImportAsync(
+                package,
+                cancellationToken: cancellation.Token));
     }
 
     /// <summary>

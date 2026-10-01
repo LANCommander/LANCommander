@@ -1,0 +1,38 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.UI
+
+@* Gates a plugin-contributed route with the server's own policy before the component renders. *@
+@if (_authorized == true)
+{
+    @* The page's own [Authorize] attributes still apply on top of the server policy. *@
+    <AuthorizeRouteView RouteData="@RouteData" DefaultLayout="@typeof(MainLayout)">
+        <NotAuthorized>
+            <RedirectToLogin />
+        </NotAuthorized>
+    </AuthorizeRouteView>
+}
+else if (_authorized == false)
+{
+    <RedirectToLogin />
+}
+
+@code {
+    [CascadingParameter]
+    private Task<AuthenticationState>? AuthenticationStateTask { get; set; }
+
+    [Parameter, EditorRequired]
+    public RouteData RouteData { get; set; } = default!;
+
+    // Null until the authentication state resolves, so nothing renders on a guess.
+    bool? _authorized;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Without an authentication state there is no principal to evaluate, so deny.
+        var user = AuthenticationStateTask is null
+            ? null
+            : (await AuthenticationStateTask).User;
+
+        _authorized = PluginRouteAccess.IsAuthorized(RouteData.PageType, user);
+    }
+}

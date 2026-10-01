@@ -22,8 +22,12 @@ public interface IServerNavigationExtension
     int Order => 0;
 
     /// <summary>
-    /// Optional role required to see the navigation entry. The route must enforce its own
-    /// authorization independently.
+    /// Who may see this entry. Defaults to administrators only.
     /// </summary>
-    string? RequiredRole => null;
+    /// <remarks>
+    /// This governs visibility, not access. The server independently enforces the policy declared
+    /// by the target page, and hides the entry when the user could not reach that page anyway, so
+    /// a permissive value here cannot expose a restricted page.
+    /// </remarks>
+    PluginAccessPolicy Access => PluginAccessPolicy.Administrator;
 }

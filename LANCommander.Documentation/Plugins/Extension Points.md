@@ -153,13 +153,32 @@ public sealed class MyNavigationExtension : IServerNavigationExtension
     public string Href => "/Plugins/MyCatalog";
     public string? Icon => "Package";
     public int Order => 100;
-    public string? RequiredRole => "Administrator";
+    public PluginAccessPolicy Access => PluginAccessPolicy.Administrator;
 }
 ```
 
-Navigation visibility is not route authorization. Apply an authorization attribute or policy to every
-contributed page. Plugin navigation routes must live under `/Plugins/`; duplicate navigation ids and
-routes are rejected rather than rendered ambiguously.
+### Page access
+
+Plugin routes are authorized by the server, not by the plugin. A routable plugin component with no
+declaration is reachable only by administrators, so forgetting to declare access produces a locked
+page rather than a public one.
+
+Widen access deliberately with `[PluginAccess]`:
+
+```csharp
+[PluginAccess(PluginAccessLevel.AuthenticatedUser)]  // any signed-in user
+[PluginAccess("Curator", "Moderator")]               // operator-defined roles
+```
+
+Administrators satisfy every policy, and anonymous visitors satisfy none. Only the administrator role
+ships with LANCommander; every other role is created by the server operator, so a plugin that names a
+role must tolerate that role not existing on a given server — the policy simply is not satisfied.
+
+Any `[Authorize]` attribute on the component still applies on top of the server policy, so the
+stricter of the two wins. Navigation visibility is not authorization: an entry is shown only when the
+user satisfies both the entry's own `Access` and the policy of the page it points at. Plugin
+navigation routes must live under `/Plugins/`; duplicate navigation ids and routes are rejected rather
+than rendered ambiguously.
 
 ## Importing generated game packages
 

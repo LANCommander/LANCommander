@@ -444,7 +444,7 @@ Imports an LCX game package through the server's canonical import pipeline.
 **Methods**
 
 - `Task<ImportResponse> ImportAsync(Stream package, GamePackageImportOptions options, IProgress<GamePackageImportProgress> progress, CancellationToken cancellationToken)`
-  - Imports a package stream and returns the created or updated game. Cancellation is cooperative; records completed before cancellation are not rolled back.
+  - Imports a package stream and returns the created or updated game. Cancellation is cooperative; the record currently being written is completed before cancellation is observed, and completed records are not rolled back.
 
 ### IServerNavigationExtension
 
@@ -464,8 +464,8 @@ Contributes a link to the server's primary navigation. Register an implementatio
   - Optional LANCommander icon name.
 - `int Order { get; }`
   - Sort order relative to other plugin navigation entries.
-- `string RequiredRole { get; }`
-  - Optional role required to see the navigation entry. The route must enforce its own authorization independently.
+- `PluginAccessPolicy Access { get; }`
+  - Who may see this entry. Defaults to administrators only.
 
 ### IServerRouteAssemblyExtension
 
@@ -503,6 +503,37 @@ Progress reported by `IGamePackageImporter`.
 - `long BytesTransferred { get; init; }`
 - `int ImportedCount { get; init; }`
 
+### PluginAccessAttribute
+
+`attribute` — `LANCommander.Server.Plugins.PluginAccessAttribute`
+
+Declares who may reach a plugin-contributed routable component.
+
+**Properties**
+
+- `PluginAccessPolicy Policy { get; }`
+  - The policy the server enforces for the decorated component.
+
+### PluginAccessPolicy
+
+`class` — `LANCommander.Server.Plugins.PluginAccessPolicy`
+
+Describes who may reach a plugin-contributed surface, such as a page or a navigation entry.
+
+**Properties**
+
+- `PluginAccessLevel Level { get; }`
+  - The kind of requirement this policy enforces.
+- `IReadOnlyList<string> RequiredRoles { get; }`
+  - The roles accepted when `Level` is `Role`. Empty for every other level.
+
+**Methods**
+
+- `PluginAccessPolicy RequireRoles(string[] roles)`
+  - Allows members of any of the supplied server-defined roles. Administrators also qualify.
+- `bool IsSatisfiedBy(ClaimsPrincipal user)`
+  - Determines whether `user` satisfies this policy.
+
 ### GamePackageImportStage
 
 `enum` — `LANCommander.Server.Plugins.GamePackageImportStage`
@@ -515,4 +546,16 @@ High-level stages reported while importing a game package.
 | `Reading` = `1` |  |
 | `Importing` = `2` |  |
 | `Complete` = `3` |  |
+
+### PluginAccessLevel
+
+`enum` — `LANCommander.Server.Plugins.PluginAccessLevel`
+
+The kind of requirement a `PluginAccessPolicy` enforces.
+
+| Value | Description |
+| --- | --- |
+| `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
+| `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
+| `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
 

@@ -2,6 +2,7 @@ using LANCommander.Server.ImportExport.Exporters;
 using LANCommander.Server.ImportExport.Factories;
 using LANCommander.Server.ImportExport.Importers;
 using LANCommander.Server.ImportExport.Services;
+using LANCommander.Server.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.ImportExport.Extensions;
@@ -16,6 +17,7 @@ public static class IServiceCollectionExtensions
         #region Import
         services.AddScoped<ImportContextFactory>();
         services.AddScoped<ImportRunner>();
+        services.AddScoped<IGamePackageImporter, GamePackageImporter>();
         services.AddScoped<ImportContext>();
         
         services.AddScoped<GameImporter>();

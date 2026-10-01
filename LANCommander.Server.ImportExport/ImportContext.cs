@@ -102,8 +102,13 @@ public class ImportContext : IDisposable
     public void SetId(Guid id) => Id = id;
 
     #region Initialize Import
-    public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(string archivePath, ManifestType? manifestType = null)
+    public async Task<IEnumerable<IImportItemInfo>> InitializeImportAsync(
+        string archivePath,
+        ManifestType? manifestType = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         _actions.UseContext(this);
         _archives.UseContext(this);
         _collections.UseContext(this);
@@ -141,7 +146,8 @@ public class ImportContext : IDisposable
 
         using (var reader = new StreamReader(manifestEntry.OpenEntryStream()))
         {
-            var manifestContents = await reader.ReadToEndAsync();
+            var manifestContents = await reader.ReadToEndAsync(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
             var manifestMeta = ManifestHelper.Deserialize<SDK.Models.Manifest.BaseManifest>(manifestContents);
 
             // Check for legacy manifest
@@ -331,80 +337,104 @@ public class ImportContext : IDisposable
     }
     #endregion
     
-    public async Task PrepareImportQueueAsync(IEnumerable<Guid> selectedRecordIds, Guid storageLocationId)
+    public async Task PrepareImportQueueAsync(
+        IEnumerable<Guid> selectedRecordIds,
+        Guid storageLocationId,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         SelectedRecordIds = selectedRecordIds;
         
         ArchiveStorageLocation = await _storageLocationService.GetAsync(storageLocationId);
+        cancellationToken.ThrowIfCancellationRequested();
 
         if (Manifest is SDK.Models.Manifest.Game gameManifest)
-            await AddAsync(gameManifest);
+            await AddAsync(gameManifest, cancellationToken);
         
         if (Manifest is SDK.Models.Manifest.Redistributable redistributableManifest)
-            await AddAsync(redistributableManifest);
+            await AddAsync(redistributableManifest, cancellationToken);
         
         if (Manifest is SDK.Models.Manifest.Server serverManifest)
-            await AddAsync(serverManifest);
+            await AddAsync(serverManifest, cancellationToken);
         
         if (Manifest is SDK.Models.Manifest.Tool toolManifest)
-            await AddAsync(toolManifest);
+            await AddAsync(toolManifest, cancellationToken);
     }
 
-    public async Task AddAsync(SDK.Models.Manifest.Game game)
+    public async Task AddAsync(
+        SDK.Models.Manifest.Game game,
+        CancellationToken cancellationToken = default)
     {
-        await AddAsync(game.Actions, _actions);
-        await AddAsync(game.Archives, _archives);
-        await AddAsync(game.Collections, _collections);
-        await AddAsync(game.CustomFields, _customFields);
-        await AddAsync(game.Developers, _developers);
-        await AddAsync(game.Engine, _engines);
-        await AddAsync(game.Genres, _genres);
-        await AddAsync(game.Keys, _keys);
-        await AddAsync(game.Media, _media);
-        await AddAsync(game.MultiplayerModes, _multiplayerModes);
-        await AddAsync(game.Platforms, _platforms);
-        await AddAsync(game.PlaySessions, _playSessions);
-        await AddAsync(game.Publishers, _publishers);
-        await AddAsync(game.Saves, _saves);
-        await AddAsync(game.SavePaths, _savePaths);
-        await AddAsync(game.Scripts, _scripts);
-        await AddAsync(game.Tags, _tags);
-        await AddAsync(game, _games);
+        await AddAsync(game.Actions, _actions, cancellationToken);
+        await AddAsync(game.Archives, _archives, cancellationToken);
+        await AddAsync(game.Collections, _collections, cancellationToken);
+        await AddAsync(game.CustomFields, _customFields, cancellationToken);
+        await AddAsync(game.Developers, _developers, cancellationToken);
+        await AddAsync(game.Engine, _engines, cancellationToken);
+        await AddAsync(game.Genres, _genres, cancellationToken);
+        await AddAsync(game.Keys, _keys, cancellationToken);
+        await AddAsync(game.Media, _media, cancellationToken);
+        await AddAsync(game.MultiplayerModes, _multiplayerModes, cancellationToken);
+        await AddAsync(game.Platforms, _platforms, cancellationToken);
+        await AddAsync(game.PlaySessions, _playSessions, cancellationToken);
+        await AddAsync(game.Publishers, _publishers, cancellationToken);
+        await AddAsync(game.Saves, _saves, cancellationToken);
+        await AddAsync(game.SavePaths, _savePaths, cancellationToken);
+        await AddAsync(game.Scripts, _scripts, cancellationToken);
+        await AddAsync(game.Tags, _tags, cancellationToken);
+        await AddAsync(game, _games, cancellationToken);
     }
 
-    public async Task AddAsync(SDK.Models.Manifest.Redistributable redistributable)
+    public async Task AddAsync(
+        SDK.Models.Manifest.Redistributable redistributable,
+        CancellationToken cancellationToken = default)
     {
-        await AddAsync(redistributable.Archives, _archives);
-        await AddAsync(redistributable.Scripts, _scripts);
-        await AddAsync(redistributable, _redistributables);
+        await AddAsync(redistributable.Archives, _archives, cancellationToken);
+        await AddAsync(redistributable.Scripts, _scripts, cancellationToken);
+        await AddAsync(redistributable, _redistributables, cancellationToken);
     }
 
-    public async Task AddAsync(SDK.Models.Manifest.Server server)
+    public async Task AddAsync(
+        SDK.Models.Manifest.Server server,
+        CancellationToken cancellationToken = default)
     {
-        await AddAsync(server.Actions, _actions);
-        await AddAsync(server.Scripts, _scripts);
-        await AddAsync(server.HttpPaths, _serverHttpPaths);
-        await AddAsync(server.ServerConsoles, _serverConsoles);
-        await AddAsync(server, _servers);
+        await AddAsync(server.Actions, _actions, cancellationToken);
+        await AddAsync(server.Scripts, _scripts, cancellationToken);
+        await AddAsync(server.HttpPaths, _serverHttpPaths, cancellationToken);
+        await AddAsync(server.ServerConsoles, _serverConsoles, cancellationToken);
+        await AddAsync(server, _servers, cancellationToken);
     }
     
-    public async Task AddAsync(SDK.Models.Manifest.Tool tool)
+    public async Task AddAsync(
+        SDK.Models.Manifest.Tool tool,
+        CancellationToken cancellationToken = default)
     {
-        await AddAsync(tool.Archives, _archives);
-        await AddAsync(tool.Scripts, _scripts);
-        await AddAsync(tool, _tools);
+        await AddAsync(tool.Archives, _archives, cancellationToken);
+        await AddAsync(tool.Scripts, _scripts, cancellationToken);
+        await AddAsync(tool, _tools, cancellationToken);
     }
     
-    private async Task AddAsync<TRecord>(IEnumerable<TRecord> records, BaseImporter<TRecord> importer)
+    private async Task AddAsync<TRecord>(
+        IEnumerable<TRecord> records,
+        BaseImporter<TRecord> importer,
+        CancellationToken cancellationToken = default)
         where TRecord : class
     {
         foreach (var record in records)
-            await AddAsync(record, importer);
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            await AddAsync(record, importer, cancellationToken);
+        }
     }
 
-    private async Task AddAsync<TRecord>(TRecord? record, BaseImporter<TRecord> importer)
+    private async Task AddAsync<TRecord>(
+        TRecord? record,
+        BaseImporter<TRecord> importer,
+        CancellationToken cancellationToken = default)
         where TRecord : class
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (record != null && !InQueue(record, importer) && await importer.CanImportAsync(record))
         {
             var importInfo = await importer.GetImportInfoAsync(record);
@@ -415,8 +445,9 @@ public class ImportContext : IDisposable
         }
     }
 
-    public async Task ImportQueueAsync()
+    public async Task ImportQueueAsync(CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Processed = 0;
         Total = Queue.Count;
         
@@ -426,119 +457,136 @@ public class ImportContext : IDisposable
             Total = Total,
         })!;
 
-        int deferred = 0;
-
-        while (Queue.Count > 0)
+        try
         {
-            var queueItem = Queue.Dequeue();
-            
-            await OnImportStatusUpdate?.InvokeAsync(new ImportStatusUpdate
+            int deferred = 0;
+
+            while (Queue.Count > 0)
             {
-                CurrentItem = queueItem,
-                Index = Processed,
+                cancellationToken.ThrowIfCancellationRequested();
+                var queueItem = Queue.Dequeue();
+
+                await OnImportStatusUpdate?.InvokeAsync(new ImportStatusUpdate
+                {
+                    CurrentItem = queueItem,
+                    Index = Processed,
+                    Total = Total,
+                })!;
+
+                var success = await TryImportAsync(queueItem, cancellationToken);
+                cancellationToken.ThrowIfCancellationRequested();
+
+                if (success)
+                {
+                    Processed++;
+                    deferred = 0;
+                    continue;
+                }
+
+                Queue.Enqueue(queueItem);
+                deferred++;
+
+                if (deferred >= Queue.Count)
+                    throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
+            {
+                Index = Total,
                 Total = Total,
             })!;
-            
-            var success = await TryImportAsync(queueItem);
-
-            if (success)
-            {
-                Processed++;
-                deferred = 0;
-                continue;
-            }
-            
-            Queue.Enqueue(queueItem);
-            deferred++;
-
-            if (deferred >= Queue.Count)
-                throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
         }
-
-        await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
+        finally
         {
-            Index = Total,
-            Total = Total,
-        })!;
-
-        _importService.RemoveContext(Id.Value);
+            if (Id.HasValue)
+                _importService.RemoveContext(Id.Value);
+        }
     }
 
-    private async Task<bool> TryImportAsync(IImportItemInfo queueItem)
+    private async Task<bool> TryImportAsync(
+        IImportItemInfo queueItem,
+        CancellationToken cancellationToken)
     {
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
+
             switch (queueItem.Type)
             {
                 case ImportExportRecordType.Action:
-                    return await _actions.ImportAsync(queueItem);
+                    return await _actions.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Archive:
-                    return await _archives.ImportAsync(queueItem);
+                    return await _archives.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Collection:
-                    return await _collections.ImportAsync(queueItem);
+                    return await _collections.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.CustomField:
-                    return await _customFields.ImportAsync(queueItem);
+                    return await _customFields.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Developer:
-                    return await _developers.ImportAsync(queueItem);
+                    return await _developers.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Engine:
-                    return await _engines.ImportAsync(queueItem);
+                    return await _engines.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Game:
-                    return await _games.ImportAsync(queueItem);
+                    return await _games.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Genre:
-                    return await _genres.ImportAsync(queueItem);
+                    return await _genres.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Key:
-                    return await _keys.ImportAsync(queueItem);
+                    return await _keys.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Media:
-                    return await _media.ImportAsync(queueItem);
+                    return await _media.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.MultiplayerMode:
-                    return await _multiplayerModes.ImportAsync(queueItem);
+                    return await _multiplayerModes.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Platform:
-                    return await _platforms.ImportAsync(queueItem);
+                    return await _platforms.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.PlaySession:
-                    return await _playSessions.ImportAsync(queueItem);
+                    return await _playSessions.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Publisher:
-                    return await _publishers.ImportAsync(queueItem);
+                    return await _publishers.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Redistributable:
-                    return await _redistributables.ImportAsync(queueItem);
+                    return await _redistributables.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Save:
-                    return await _saves.ImportAsync(queueItem);
+                    return await _saves.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.SavePath:
-                    return await _savePaths.ImportAsync(queueItem);
+                    return await _savePaths.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Script:
-                    return await _scripts.ImportAsync(queueItem);
+                    return await _scripts.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Server:
-                    return await _servers.ImportAsync(queueItem);
+                    return await _servers.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.ServerConsole:
-                    return await _serverConsoles.ImportAsync(queueItem);
+                    return await _serverConsoles.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.ServerHttpPath:
-                    return await _serverHttpPaths.ImportAsync(queueItem);
+                    return await _serverHttpPaths.ImportAsync(queueItem, cancellationToken);
 
                 case ImportExportRecordType.Tag:
-                    return await _tags.ImportAsync(queueItem);
+                    return await _tags.ImportAsync(queueItem, cancellationToken);
                 
                 case ImportExportRecordType.Tool:
-                    return await _tools.ImportAsync(queueItem);
+                    return await _tools.ImportAsync(queueItem, cancellationToken);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {

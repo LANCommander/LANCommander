@@ -7,6 +7,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+      <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" />
       <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     </ItemGroup>
 

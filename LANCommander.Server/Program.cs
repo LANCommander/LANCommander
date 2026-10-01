@@ -1,5 +1,6 @@
 ﻿using LANCommander.Server.UI;
 using LANCommander.Server.Startup;
+using LANCommander.Server.Plugins;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -80,7 +81,9 @@ app.MapEndpoints();
 app.MapRazorComponents<App>()
     .DisableAntiforgery()
     .AddInteractiveServerRenderMode()
-    .AddAdditionalAssemblies(UIRouteAssembly.Resolve(app.Services.GetServices<UIRouteAssembly>()));
+    .AddAdditionalAssemblies(UIRouteAssembly.Resolve(
+        app.Services.GetServices<UIRouteAssembly>(),
+        app.Services.GetServices<IServerRouteAssemblyExtension>()));
 
 app.PrepareDirectories();
 

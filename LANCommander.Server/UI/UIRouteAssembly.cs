@@ -1,4 +1,5 @@
 using System.Reflection;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.UI;
 
@@ -9,9 +10,12 @@ namespace LANCommander.Server.UI;
 public sealed record UIRouteAssembly(Assembly Assembly)
 {
     /// <summary>The distinct registered assemblies, excluding the server's own.</summary>
-    public static Assembly[] Resolve(IEnumerable<UIRouteAssembly> registrations) =>
+    public static Assembly[] Resolve(
+        IEnumerable<UIRouteAssembly> registrations,
+        IEnumerable<IServerRouteAssemblyExtension>? extensions = null) =>
         registrations
             .Select(r => r.Assembly)
+            .Concat(extensions?.Select(e => e.Assembly) ?? [])
             .Where(a => a != typeof(Program).Assembly)
             .Distinct()
             .ToArray();

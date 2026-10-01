@@ -13,7 +13,7 @@ public interface IImporter<TRecord> where TRecord : class
     void UseContext(ImportContext context);
     Task<ImportItemInfo<TRecord>> GetImportInfoAsync(TRecord record);
     Task<bool> CanImportAsync(TRecord record);
-    Task<bool> ImportAsync(IImportItemInfo importItem);
+    Task<bool> ImportAsync(IImportItemInfo importItem, CancellationToken cancellationToken = default);
     Task<bool> AddAsync(TRecord record);
     Task<bool> UpdateAsync(TRecord record);
     Task<bool> IngestAsync(IImportAsset asset);

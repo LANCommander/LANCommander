@@ -61,6 +61,7 @@ public class ToolImporter(
 
         try
         {
+            record.Id = existing.Id;
             existing.Name = record.Name;
             existing.Description = record.Description;
             existing.Notes = record.Notes;

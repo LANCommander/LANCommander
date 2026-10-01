@@ -340,6 +340,26 @@ Adds an additional tab to a game's detail view. Implementations are resolved fro
 - `Control BuildContent(Guid gameId)`
   - Builds the control rendered inside the tab for the given game.
 
+### IGameManageSectionExtension
+
+`interface` — `LANCommander.Launcher.Plugins.Extensions.IGameManageSectionExtension`
+
+Adds an additional section to a game's "Manage" dialog. Implementations are resolved from DI and appended, ordered by `Order`, after the built-in sections (Options, Modify, Versions) in the left-hand navigation.
+
+**Properties**
+
+- `string Title { get; }`
+  - Label shown for the section in the dialog's navigation menu.
+- `string IconValue { get; }`
+  - Phosphor icon name shown next to the section in the navigation menu.
+- `int Order { get; }`
+  - Relative position among extension sections; lower values appear first.
+
+**Methods**
+
+- `Control BuildContent(Guid gameId)`
+  - Builds the control rendered in the section's content pane for the given game.
+
 ### INavigationPageExtension
 
 `interface` — `LANCommander.Launcher.Plugins.Extensions.INavigationPageExtension`
@@ -412,4 +432,130 @@ Base type for view models supplied by plugins. Lives in this project (rather tha
 - `void Register(Type viewModelType, Func<Control> factory)`
 - `void Register<TViewModel>(Func<Control> factory)`
 - `IDataTemplate AsDataTemplate()`
+
+## `LANCommander.Server.Plugins`
+
+### IGamePackageImporter
+
+`interface` — `LANCommander.Server.Plugins.IGamePackageImporter`
+
+Imports an LCX game package through the server's canonical import pipeline.
+
+**Methods**
+
+- `Task<ImportResponse> ImportAsync(Stream package, GamePackageImportOptions options, IProgress<GamePackageImportProgress> progress, CancellationToken cancellationToken)`
+  - Imports a package stream and returns the created or updated game. Cancellation is cooperative; the record currently being written is completed before cancellation is observed, and completed records are not rolled back.
+
+### IServerNavigationExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
+
+Contributes a link to the server's primary navigation. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Id { get; }`
+  - Stable identifier used to detect duplicate contributions.
+- `string Label { get; }`
+  - Text displayed in the server navigation.
+- `string Href { get; }`
+  - Plugin application route, beginning with `/Plugins/`.
+- `string Icon { get; }`
+  - Optional LANCommander icon name.
+- `int Order { get; }`
+  - Sort order relative to other plugin navigation entries.
+- `PluginAccessPolicy Access { get; }`
+  - Who may see this entry. Defaults to administrators only.
+
+### IServerRouteAssemblyExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerRouteAssemblyExtension`
+
+Contributes an assembly containing routable Razor components to the server. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `Assembly Assembly { get; }`
+  - The assembly containing the plugin's routable components.
+
+### GamePackageImportOptions
+
+`class` — `LANCommander.Server.Plugins.GamePackageImportOptions`
+
+Controls how an LCX game package is imported.
+
+**Properties**
+
+- `Guid? StorageLocationId { get; init; }`
+  - Archive storage location to use, or null for the server default.
+- `long MaxPackageBytes { get; init; }`
+  - Maximum accepted package size in bytes.
+
+### GamePackageImportProgress
+
+`record` — `LANCommander.Server.Plugins.GamePackageImportProgress`
+
+Progress reported by `IGamePackageImporter`.
+
+**Properties**
+
+- `GamePackageImportStage Stage { get; init; }`
+- `long BytesTransferred { get; init; }`
+- `int ImportedCount { get; init; }`
+
+### PluginAccessAttribute
+
+`attribute` — `LANCommander.Server.Plugins.PluginAccessAttribute`
+
+Declares who may reach a plugin-contributed routable component.
+
+**Properties**
+
+- `PluginAccessPolicy Policy { get; }`
+  - The policy the server enforces for the decorated component.
+
+### PluginAccessPolicy
+
+`class` — `LANCommander.Server.Plugins.PluginAccessPolicy`
+
+Describes who may reach a plugin-contributed surface, such as a page or a navigation entry.
+
+**Properties**
+
+- `PluginAccessLevel Level { get; }`
+  - The kind of requirement this policy enforces.
+- `IReadOnlyList<string> RequiredRoles { get; }`
+  - The roles accepted when `Level` is `Role`. Empty for every other level.
+
+**Methods**
+
+- `PluginAccessPolicy RequireRoles(string[] roles)`
+  - Allows members of any of the supplied server-defined roles. Administrators also qualify.
+- `bool IsSatisfiedBy(ClaimsPrincipal user)`
+  - Determines whether `user` satisfies this policy.
+
+### GamePackageImportStage
+
+`enum` — `LANCommander.Server.Plugins.GamePackageImportStage`
+
+High-level stages reported while importing a game package.
+
+| Value | Description |
+| --- | --- |
+| `Copying` = `0` |  |
+| `Reading` = `1` |  |
+| `Importing` = `2` |  |
+| `Complete` = `3` |  |
+
+### PluginAccessLevel
+
+`enum` — `LANCommander.Server.Plugins.PluginAccessLevel`
+
+The kind of requirement a `PluginAccessPolicy` enforces.
+
+| Value | Description |
+| --- | --- |
+| `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
+| `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
+| `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
 

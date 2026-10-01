@@ -66,6 +66,7 @@
 
     <ItemGroup>
       <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+      <InternalsVisibleTo Include="LANCommander.Server.UI.Tests" />
     </ItemGroup>
 
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
@@ -121,6 +122,7 @@
     <ProjectReference Include="..\LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />

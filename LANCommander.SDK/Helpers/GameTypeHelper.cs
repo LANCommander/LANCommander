@@ -7,7 +7,7 @@ namespace LANCommander.SDK.Helpers
     /// <summary>
     /// Translates the legacy <see cref="GameType"/> values (StandaloneExpansion/StandaloneMod)
     /// into the explicit <see cref="GameInstallLocation"/> and ShowInLibrary fields.
-    /// The mapping mirrors the AddGameInstallLocation database migrations.
+    /// The mapping mirrors the V2_2_0 database migrations.
     /// </summary>
     public static class GameTypeHelper
     {

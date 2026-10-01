@@ -12,8 +12,8 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LANCommander.Server.Data.PostgreSQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260929042143_AddGameInstallLocation")]
-    partial class AddGameInstallLocation
+    [Migration("20261001005915_V2_2_0")]
+    partial class V2_2_0
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -769,6 +769,12 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("integer");
 
@@ -791,6 +797,24 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("GameVersions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.Property<Guid>("GameVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RedistributableId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("text");
+
+                    b.HasKey("GameVersionId", "RedistributableId");
+
+                    b.HasIndex("RedistributableId");
+
+                    b.ToTable("GameVersionRedistributables");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -2637,6 +2661,25 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Redistributables")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Redistributable", "Redistributable")
+                        .WithMany()
+                        .HasForeignKey("RedistributableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameVersion");
+
+                    b.Navigation("Redistributable");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3380,6 +3423,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("Actions");
 
                     b.Navigation("Archive");
+
+                    b.Navigation("Redistributables");
 
                     b.Navigation("SavePaths");
 

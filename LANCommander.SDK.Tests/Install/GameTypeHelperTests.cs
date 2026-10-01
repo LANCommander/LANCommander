@@ -6,7 +6,7 @@ namespace LANCommander.SDK.Tests.Install;
 
 /// <summary>
 /// Legacy GameType values map to InstallTo/ShowInLibrary the same way the
-/// AddGameInstallLocation database migrations do.
+/// V2_2_0 database migrations do.
 /// </summary>
 public class GameTypeHelperTests
 {

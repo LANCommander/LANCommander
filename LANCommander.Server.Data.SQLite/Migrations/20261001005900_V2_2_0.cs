@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
@@ -6,11 +6,16 @@ using Microsoft.EntityFrameworkCore.Migrations;
 namespace LANCommander.Migrations
 {
     /// <inheritdoc />
-    public partial class AddGameVersions : Migration
+    public partial class V2_2_0 : Migration
     {
         /// <inheritdoc />
         protected override void Up(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.RenameColumn(
+                name: "Changelog",
+                table: "Archive",
+                newName: "GameVersionId");
+
             migrationBuilder.AddColumn<Guid>(
                 name: "GameVersionId",
                 table: "Scripts",
@@ -23,11 +28,32 @@ namespace LANCommander.Migrations
                 type: "TEXT",
                 nullable: true);
 
-            migrationBuilder.AddColumn<Guid>(
-                name: "GameVersionId",
-                table: "Archive",
+            migrationBuilder.AddColumn<int>(
+                name: "InstallTo",
+                table: "Games",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: 0);
+
+            migrationBuilder.AddColumn<string>(
+                name: "OptionSchema",
+                table: "Games",
                 type: "TEXT",
                 nullable: true);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "Published",
+                table: "Games",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: true);
+
+            migrationBuilder.AddColumn<bool>(
+                name: "ShowInLibrary",
+                table: "Games",
+                type: "INTEGER",
+                nullable: false,
+                defaultValue: true);
 
             migrationBuilder.AddColumn<Guid>(
                 name: "GameVersionId",
@@ -43,7 +69,9 @@ namespace LANCommander.Migrations
                     Version = table.Column<string>(type: "TEXT", nullable: false),
                     Changelog = table.Column<string>(type: "TEXT", nullable: true),
                     SortOrder = table.Column<int>(type: "INTEGER", nullable: false),
+                    Published = table.Column<bool>(type: "INTEGER", nullable: false),
                     GameId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    OptionSchema = table.Column<string>(type: "TEXT", nullable: true),
                     CreatedOn = table.Column<DateTime>(type: "TEXT", nullable: false),
                     CreatedById = table.Column<Guid>(type: "TEXT", nullable: true),
                     UpdatedOn = table.Column<DateTime>(type: "TEXT", nullable: false),
@@ -72,6 +100,31 @@ namespace LANCommander.Migrations
                         onDelete: ReferentialAction.SetNull);
                 });
 
+            migrationBuilder.CreateTable(
+                name: "GameVersionRedistributables",
+                columns: table => new
+                {
+                    GameVersionId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    RedistributableId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Options = table.Column<string>(type: "TEXT", nullable: true)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_GameVersionRedistributables", x => new { x.GameVersionId, x.RedistributableId });
+                    table.ForeignKey(
+                        name: "FK_GameVersionRedistributables_GameVersions_GameVersionId",
+                        column: x => x.GameVersionId,
+                        principalTable: "GameVersions",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                    table.ForeignKey(
+                        name: "FK_GameVersionRedistributables_Redistributables_RedistributableId",
+                        column: x => x.RedistributableId,
+                        principalTable: "Redistributables",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Cascade);
+                });
+
             migrationBuilder.CreateIndex(
                 name: "IX_Scripts_GameVersionId",
                 table: "Scripts",
@@ -92,6 +145,11 @@ namespace LANCommander.Migrations
                 name: "IX_Actions_GameVersionId",
                 table: "Actions",
                 column: "GameVersionId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_GameVersionRedistributables_RedistributableId",
+                table: "GameVersionRedistributables",
+                column: "RedistributableId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_GameVersions_CreatedById",
@@ -135,11 +193,22 @@ namespace LANCommander.Migrations
                 column: "GameVersionId",
                 principalTable: "GameVersions",
                 principalColumn: "Id");
+
+            // Derive the new fields from the legacy types (GameTypeHelper.FromLegacyType):
+            // Types: 0 MainGame, 1 Expansion, 2 StandaloneExpansion, 3 Mod, 4 StandaloneMod
+            // InstallTo: 0 OwnDirectory, 1 BaseGameDirectory
+            migrationBuilder.Sql("UPDATE Games SET ShowInLibrary = 0 WHERE Type IN (1, 3)");
+            migrationBuilder.Sql("UPDATE Games SET InstallTo = 1 WHERE Type IN (1, 3, 4) AND BaseGameId IS NOT NULL");
+            migrationBuilder.Sql("UPDATE Games SET Type = 1 WHERE Type = 2");
+            migrationBuilder.Sql("UPDATE Games SET Type = 3 WHERE Type = 4");
         }
 
         /// <inheritdoc />
         protected override void Down(MigrationBuilder migrationBuilder)
         {
+            migrationBuilder.Sql("UPDATE Games SET Type = 2 WHERE Type = 1 AND ShowInLibrary = 1");
+            migrationBuilder.Sql("UPDATE Games SET Type = 4 WHERE Type = 3 AND ShowInLibrary = 1");
+
             migrationBuilder.DropForeignKey(
                 name: "FK_Actions_GameVersions_GameVersionId",
                 table: "Actions");
@@ -155,6 +224,9 @@ namespace LANCommander.Migrations
             migrationBuilder.DropForeignKey(
                 name: "FK_Scripts_GameVersions_GameVersionId",
                 table: "Scripts");
+
+            migrationBuilder.DropTable(
+                name: "GameVersionRedistributables");
 
             migrationBuilder.DropTable(
                 name: "GameVersions");
@@ -184,12 +256,29 @@ namespace LANCommander.Migrations
                 table: "SavePaths");
 
             migrationBuilder.DropColumn(
-                name: "GameVersionId",
-                table: "Archive");
+                name: "InstallTo",
+                table: "Games");
+
+            migrationBuilder.DropColumn(
+                name: "OptionSchema",
+                table: "Games");
+
+            migrationBuilder.DropColumn(
+                name: "Published",
+                table: "Games");
+
+            migrationBuilder.DropColumn(
+                name: "ShowInLibrary",
+                table: "Games");
 
             migrationBuilder.DropColumn(
                 name: "GameVersionId",
                 table: "Actions");
+
+            migrationBuilder.RenameColumn(
+                name: "GameVersionId",
+                table: "Archive",
+                newName: "Changelog");
         }
     }
 }

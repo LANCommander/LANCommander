@@ -113,10 +113,11 @@ public static class GameDetailFixtures
         }),
     ];
 
+    // The heading lives outside the raw string: in Release this file sits in an inactive #if
+    // block, where any line starting with '#' is read as a preprocessor directive (CS1024).
     private const string InstalledNotes =
+        "### LAN setup\n\n" +
         """
-        ### LAN setup
-
         Everyone needs the **3369** patch. The server runs *ONS-Torlan* and *ONS-Primeval* on rotation.
 
         - Voice chat is off; use the party's own

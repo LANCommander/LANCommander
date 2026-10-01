@@ -12,8 +12,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace LANCommander.Server.Data.MySQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20261001005919_V2_2_0")]
-    partial class V2_2_0
+    [Migration("20260930003232_VersionRedistributablesAndOptions")]
+    partial class VersionRedistributablesAndOptions
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -771,9 +771,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<string>("OptionSchema")
                         .HasColumnType("longtext");
-
-                    b.Property<bool>("Published")
-                        .HasColumnType("tinyint(1)");
 
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");

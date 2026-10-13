@@ -1,6 +1,8 @@
 using System.IO.Compression;
 using LANCommander.Packaging.Models;
 using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Models.Manifest;
+using ManifestArchive = LANCommander.SDK.Models.Manifest.Archive;
 
 namespace LANCommander.Packaging.LCX;
 
@@ -149,6 +151,196 @@ public static class LCXBuilder
         }
 
         progress?.Report("Done!");
+    }
+
+    /// <summary>
+    /// Writes an LCX from an already-normalized game archive.
+    /// </summary>
+    /// <remarks>
+    /// This is intended for callers that already have the inner game ZIP and manifest metadata.
+    /// The server's export pipeline is for records that have already been persisted; this overload
+    /// supports creating a package before importing it.
+    /// </remarks>
+    public static async Task BuildFromArchiveAsync(
+        string outputPath,
+        Game manifest,
+        ManifestArchive archiveManifest,
+        Stream archiveContent,
+        string createdBy,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentException.ThrowIfNullOrWhiteSpace(outputPath);
+        ValidatePrebuiltArchive(manifest, archiveManifest, archiveContent, createdBy);
+
+        var fullOutputPath = Path.GetFullPath(outputPath);
+        var outputDirectory = Path.GetDirectoryName(fullOutputPath);
+
+        if (!string.IsNullOrEmpty(outputDirectory))
+            Directory.CreateDirectory(outputDirectory);
+
+        var temporaryPath = $"{fullOutputPath}.{Guid.NewGuid():N}.tmp";
+
+        try
+        {
+            await using (var output = new FileStream(
+                temporaryPath,
+                FileMode.CreateNew,
+                FileAccess.Write,
+                FileShare.None,
+                1024 * 1024,
+                FileOptions.Asynchronous | FileOptions.SequentialScan))
+            {
+                await BuildFromArchiveAsync(
+                    output,
+                    manifest,
+                    archiveManifest,
+                    archiveContent,
+                    createdBy,
+                    progress,
+                    cancellationToken);
+            }
+
+            File.Move(temporaryPath, fullOutputPath, overwrite: true);
+        }
+        finally
+        {
+            if (File.Exists(temporaryPath))
+                File.Delete(temporaryPath);
+        }
+    }
+
+    /// <summary>
+    /// Writes an LCX from an already-normalized game archive to a caller-owned stream.
+    /// </summary>
+    public static async Task BuildFromArchiveAsync(
+        Stream output,
+        Game manifest,
+        ManifestArchive archiveManifest,
+        Stream archiveContent,
+        string createdBy,
+        IProgress<string>? progress = null,
+        CancellationToken cancellationToken = default)
+    {
+        ArgumentNullException.ThrowIfNull(output);
+        ValidatePrebuiltArchive(manifest, archiveManifest, archiveContent, createdBy);
+
+        if (!output.CanWrite)
+            throw new ArgumentException("The output stream must be writable.", nameof(output));
+
+        using var package = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
+        var now = DateTime.UtcNow;
+
+        manifest.Id = manifest.Id == Guid.Empty ? Guid.NewGuid() : manifest.Id;
+        manifest.ManifestVersion = ManifestVersion;
+        manifest.CreatedBy = string.IsNullOrWhiteSpace(manifest.CreatedBy)
+            ? createdBy
+            : manifest.CreatedBy;
+        manifest.CreatedOn = manifest.CreatedOn == default ? now : manifest.CreatedOn;
+        manifest.UpdatedBy = createdBy;
+        manifest.UpdatedOn = now;
+        manifest.Archives ??= [];
+        manifest.Scripts ??= [];
+
+        archiveManifest.ObjectKey = archiveManifest.Id.ToString();
+        archiveManifest.CreatedBy = string.IsNullOrWhiteSpace(archiveManifest.CreatedBy)
+            ? createdBy
+            : archiveManifest.CreatedBy;
+        archiveManifest.CreatedOn = archiveManifest.CreatedOn == default
+            ? now
+            : archiveManifest.CreatedOn;
+
+        progress?.Report($"Writing archive {archiveManifest.Version}...");
+
+        var archiveEntry = package.CreateEntry(
+            $"Archives/{archiveManifest.Id}",
+            CompressionLevel.NoCompression);
+
+        await using (var entryStream = archiveEntry.Open())
+        {
+            archiveManifest.CompressedSize = await CopyAndCountAsync(
+                archiveContent,
+                entryStream,
+                cancellationToken);
+        }
+
+        manifest.Archives.Add(archiveManifest);
+
+        cancellationToken.ThrowIfCancellationRequested();
+        progress?.Report("Writing manifest...");
+
+        var yaml = ManifestHelper.Serialize(manifest);
+        var manifestEntry = package.CreateEntry(
+            ManifestHelper.ManifestFilename,
+            CompressionLevel.NoCompression);
+
+        await using (var manifestStream = manifestEntry.Open())
+        await using (var writer = new StreamWriter(manifestStream))
+        {
+            await writer.WriteAsync(yaml.AsMemory(), cancellationToken);
+        }
+
+        progress?.Report("Done!");
+    }
+
+    private static void ValidatePrebuiltArchive(
+        Game manifest,
+        ManifestArchive archiveManifest,
+        Stream archiveContent,
+        string createdBy)
+    {
+        ArgumentNullException.ThrowIfNull(manifest);
+        ArgumentNullException.ThrowIfNull(archiveManifest);
+        ArgumentNullException.ThrowIfNull(archiveContent);
+        ArgumentException.ThrowIfNullOrWhiteSpace(createdBy);
+
+        if (archiveManifest.Id == Guid.Empty)
+            throw new InvalidOperationException("The archive id must be assigned by the caller.");
+
+        if (!archiveContent.CanRead)
+            throw new ArgumentException(
+                "The archive content stream must be readable.",
+                nameof(archiveContent));
+
+        if (manifest.Archives?.Count > 0)
+            throw new ArgumentException(
+                "The manifest must not contain archives; pass the archive separately.",
+                nameof(manifest));
+
+        if (manifest.Scripts?.Count > 0)
+            throw new ArgumentException(
+                "The prebuilt archive overload does not write script content.",
+                nameof(manifest));
+
+        if (manifest.Media?.Count > 0)
+            throw new ArgumentException(
+                "The prebuilt archive overload does not write media content.",
+                nameof(manifest));
+
+        if (manifest.Saves?.Count > 0)
+            throw new ArgumentException(
+                "The prebuilt archive overload does not write save content.",
+                nameof(manifest));
+    }
+
+    private static async Task<long> CopyAndCountAsync(
+        Stream source,
+        Stream destination,
+        CancellationToken cancellationToken)
+    {
+        var buffer = new byte[1024 * 1024];
+        long total = 0;
+
+        while (true)
+        {
+            var read = await source.ReadAsync(buffer, cancellationToken);
+
+            if (read == 0)
+                return total;
+
+            await destination.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
+            total += read;
+        }
     }
 
     /// <summary>

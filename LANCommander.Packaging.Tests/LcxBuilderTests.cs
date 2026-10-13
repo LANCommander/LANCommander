@@ -152,6 +152,112 @@ public class LcxBuilderTests : IDisposable
         await Should.ThrowAsync<InvalidOperationException>(() => LCXBuilder.BuildAsync(package));
     }
 
+    [Fact]
+    public async Task PrebuiltArchiveOverloadPreservesCallerAssignedIdsAndProvenance()
+    {
+        var gameId = Guid.NewGuid();
+        var archiveId = Guid.NewGuid();
+        var outputPath = Path.Combine(_workingDirectory, "streamed.lcx");
+        var manifest = new SDK.Models.Manifest.Game
+        {
+            Id = gameId,
+            Title = "Streamed Example",
+            Version = "2.0",
+        };
+
+        await using var innerArchive = await BuildInnerArchiveAsync(("game.exe", "binary"));
+
+        await LCXBuilder.BuildFromArchiveAsync(
+            outputPath,
+            manifest,
+            new SDK.Models.Manifest.Archive
+            {
+                Id = archiveId,
+                Version = "2.0",
+                UncompressedSize = 6,
+            },
+            innerArchive,
+            createdBy: "Recomp Catalog Tests");
+
+        var written = await ReadManifestAsync(outputPath);
+
+        written.Id.ShouldBe(gameId);
+        written.CreatedBy.ShouldBe("Recomp Catalog Tests");
+        written.UpdatedBy.ShouldBe("Recomp Catalog Tests");
+        written.Archives.ShouldHaveSingleItem().Id.ShouldBe(archiveId);
+        written.Archives.Single().ObjectKey.ShouldBe(archiveId.ToString());
+        written.Archives.Single().CompressedSize.ShouldBe(innerArchive.Length);
+    }
+
+    [Fact]
+    public async Task PrebuiltArchiveOverloadRejectsUnassignedArchiveIds()
+    {
+        await using var innerArchive = await BuildInnerArchiveAsync(("game.exe", "binary"));
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            LCXBuilder.BuildFromArchiveAsync(
+                new MemoryStream(),
+                new SDK.Models.Manifest.Game { Title = "Example" },
+                new SDK.Models.Manifest.Archive { Version = "1.0" },
+                innerArchive,
+                createdBy: "Tests"));
+    }
+
+    [Fact]
+    public async Task PrebuiltArchiveOverloadDoesNotReplaceExistingFileWhenValidationFails()
+    {
+        var outputPath = Path.Combine(_workingDirectory, "existing.lcx");
+        await File.WriteAllTextAsync(outputPath, "existing package");
+        await using var innerArchive = await BuildInnerArchiveAsync(("game.exe", "binary"));
+
+        await Should.ThrowAsync<InvalidOperationException>(() =>
+            LCXBuilder.BuildFromArchiveAsync(
+                outputPath,
+                new SDK.Models.Manifest.Game { Title = "Example" },
+                new SDK.Models.Manifest.Archive { Version = "1.0" },
+                innerArchive,
+                createdBy: "Tests"));
+
+        (await File.ReadAllTextAsync(outputPath)).ShouldBe("existing package");
+        Directory.GetFiles(_workingDirectory, "*.tmp").ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("archive")]
+    [InlineData("script")]
+    [InlineData("media")]
+    [InlineData("save")]
+    public async Task PrebuiltArchiveOverloadRejectsManifestEntriesWithoutContent(string entryType)
+    {
+        var manifest = new SDK.Models.Manifest.Game { Title = "Example" };
+
+        switch (entryType)
+        {
+            case "archive":
+                manifest.Archives.Add(new SDK.Models.Manifest.Archive { Id = Guid.NewGuid() });
+                break;
+            case "script":
+                manifest.Scripts.Add(new SDK.Models.Manifest.Script { Id = Guid.NewGuid() });
+                break;
+            case "media":
+                manifest.Media.Add(new SDK.Models.Manifest.Media { Id = Guid.NewGuid() });
+                break;
+            case "save":
+                manifest.Saves.Add(new SDK.Models.Manifest.Save { Id = Guid.NewGuid() });
+                break;
+        }
+
+        await using var innerArchive = await BuildInnerArchiveAsync(("game.exe", "binary"));
+
+        await Should.ThrowAsync<ArgumentException>(() =>
+            LCXBuilder.BuildFromArchiveAsync(
+                new MemoryStream(),
+                manifest,
+                new SDK.Models.Manifest.Archive { Id = Guid.NewGuid(), Version = "1.0" },
+                innerArchive,
+                createdBy: "Tests"));
+    }
+
     private static async Task<SDK.Models.Manifest.Game> ReadManifestAsync(string lcxPath)
     {
         using var archive = ZipFile.OpenRead(lcxPath);
@@ -179,6 +285,26 @@ public class LcxBuilderTests : IDisposable
         using var innerArchive = new ZipArchive(buffer, ZipArchiveMode.Read);
 
         return [.. innerArchive.Entries.Select(e => e.FullName)];
+    }
+
+    private static async Task<MemoryStream> BuildInnerArchiveAsync(
+        params (string RelativePath, string Contents)[] files)
+    {
+        var stream = new MemoryStream();
+
+        using (var archive = new ZipArchive(stream, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            foreach (var (relativePath, contents) in files)
+            {
+                var entry = archive.CreateEntry(relativePath);
+                await using var entryStream = entry.Open();
+                await using var writer = new StreamWriter(entryStream);
+                await writer.WriteAsync(contents);
+            }
+        }
+
+        stream.Position = 0;
+        return stream;
     }
 
     private PackageDefinition BuildPackage(params (string RelativePath, string Contents)[] files)

@@ -95,6 +95,7 @@ public class GameImporter(
 
         try
         {
+            record.Id = existing.Id;
             existing.Title = record.Title;
             existing.SortTitle = record.SortTitle;
             existing.Description = record.Description;

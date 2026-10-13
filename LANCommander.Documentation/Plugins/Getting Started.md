@@ -40,6 +40,9 @@ shipping (and loading) its own duplicates:
 
   <!-- Server contracts such as IMetadataProvider (only needed for server extensions). -->
   <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" Private="false" />
+
+  <!-- Server routes, navigation, and package importing. -->
+  <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" Private="false" />
 </ItemGroup>
 ```
 
@@ -49,6 +52,10 @@ the framework preserves type identity across the plugin's load context by deferr
 assemblies to the host. Your plugin's *own* private dependencies (NuGet packages, helper libraries)
 should ship normally so they land next to your plugin's DLL.
 :::
+
+When developing a plugin in a separate repository before contract packages are available, reference
+locally built contract DLLs from a configurable MSBuild path. Do not copy host contract assemblies
+into the deployed plugin folder; only ship the plugin's private dependencies.
 
 ## 3. Implement the entry point
 

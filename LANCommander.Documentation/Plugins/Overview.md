@@ -14,7 +14,9 @@ Plugins can, among other things:
 
 - Add new pages, settings sections, game detail tabs, context menu items, and footer widgets to the
   launcher UI.
+- Add routable pages and authorized navigation entries to the server UI.
 - Register additional metadata providers on the server.
+- Import plugin-generated LCX game packages through the server's canonical import pipeline.
 - Add custom PowerShell cmdlets and modules to the scripting runtime used during installs.
 - React to host lifecycle events such as game install, launch, exit, and user login.
 

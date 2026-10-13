@@ -131,6 +131,80 @@ public void ConfigureServices(IServiceCollection services)
 }
 ```
 
+## Server UI extensions
+
+Server plugins can contribute routable Razor components and navigation entries through the
+`LANCommander.Server.Plugins` contracts.
+
+Register the assembly containing your `@page` components:
+
+```csharp
+services.AddSingleton<IServerRouteAssemblyExtension>(
+    new MyRouteAssemblyExtension(typeof(MyPlugin).Assembly));
+```
+
+Then register one or more navigation entries:
+
+```csharp
+public sealed class MyNavigationExtension : IServerNavigationExtension
+{
+    public string Id => "com.mycompany.myplugin.catalog";
+    public string Label => "My Catalog";
+    public string Href => "/Plugins/MyCatalog";
+    public string? Icon => "Package";
+    public int Order => 100;
+    public PluginAccessPolicy Access => PluginAccessPolicy.Administrator;
+}
+```
+
+### Page access
+
+Plugin routes are authorized by the server, not by the plugin. A routable plugin component with no
+declaration is reachable only by administrators, so forgetting to declare access produces a locked
+page rather than a public one.
+
+Widen access deliberately with `[PluginAccess]`:
+
+```csharp
+[PluginAccess(PluginAccessLevel.AuthenticatedUser)]  // any signed-in user
+[PluginAccess("Curator", "Moderator")]               // operator-defined roles
+```
+
+Administrators satisfy every policy, and anonymous visitors satisfy none. Only the administrator role
+ships with LANCommander; every other role is created by the server operator, so a plugin that names a
+role must tolerate that role not existing on a given server — the policy simply is not satisfied.
+
+Any `[Authorize]` attribute on the component still applies on top of the server policy, so the
+stricter of the two wins. Navigation visibility is not authorization: an entry is shown only when the
+user satisfies both the entry's own `Access` and the policy of the page it points at. Plugin
+navigation routes must live under `/Plugins/`; duplicate navigation ids and routes are rejected rather
+than rendered ambiguously.
+
+## Importing generated game packages
+
+The SDK `GameClient.ImportAsync` method is intended for remote clients: it uploads a package over
+HTTP and then calls the server import endpoint. A plugin already running inside the server should
+instead inject `ImportRunner` from `LANCommander.Server.ImportExport.Services` into the plugin page
+or another scoped plugin service and invoke the import pipeline directly:
+
+```csharp
+@inject ImportRunner ImportRunner
+
+await using var package = File.OpenRead(packagePath);
+var result = await ImportRunner.RunStreamAsync(
+    package,
+    storageLocationId,
+    ManifestType.Game,
+    copyProgress: progress,
+    cancellationToken: cancellationToken);
+```
+
+`RunStreamAsync` copies the stream to controlled temporary storage, enforces a maximum size, and then
+runs the same initialize, queue, and commit pipeline as the server API. `RunFileAsync` is also
+available when the LCX already exists on the server. Plugins should use `ImportRunner` instead of
+resolving database services or `ImportContext` directly. `PluginContext.Services` is scoped to
+`InitializeAsync` and must not be retained for later imports.
+
 ## PowerShell extensions
 
 LANCommander runs installs and other tasks through an embedded PowerShell runtime. A plugin can add its

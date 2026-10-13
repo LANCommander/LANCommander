@@ -11,7 +11,11 @@ public sealed class PluginContext
     /// <summary>The host the plugin is running inside (a single value, never a flags combination).</summary>
     public PluginHost Host { get; init; }
 
-    /// <summary>The fully built host service provider (scoped per plugin during initialization).</summary>
+    /// <summary>
+    /// The host service provider scoped to the current <see cref="IPlugin.InitializeAsync"/> call.
+    /// Resolve services needed during initialization, but do not retain this provider or scoped
+    /// services after initialization completes.
+    /// </summary>
     public IServiceProvider Services { get; init; } = default!;
 
     /// <summary>Absolute path to the folder the plugin was loaded from.</summary>

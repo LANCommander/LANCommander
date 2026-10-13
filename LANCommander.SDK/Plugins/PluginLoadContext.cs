@@ -24,6 +24,8 @@ public sealed class PluginLoadContext : AssemblyLoadContext
     {
         "LANCommander.SDK",
         "LANCommander.Launcher.Plugins",
+        "LANCommander.Server.Plugins",
+        "LANCommander.Server.ImportExport",
         "LANCommander.Server.Services",
         "Microsoft.Extensions.DependencyInjection",
         "Microsoft.Extensions.Logging",
@@ -56,7 +58,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         return path is null ? IntPtr.Zero : LoadUnmanagedDllFromPath(path);
     }
 
-    private static bool IsShared(string? simpleName)
+    internal static bool IsShared(string? simpleName)
     {
         if (string.IsNullOrEmpty(simpleName))
             return false;

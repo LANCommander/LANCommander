@@ -63,6 +63,7 @@ public class ServerImporter(
 
         try
         {
+            record.Id = existing.Id;
             existing.Name = record.Name;
             existing.Path = record.Path;
             existing.WorkingDirectory = record.WorkingDirectory;

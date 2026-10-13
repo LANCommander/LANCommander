@@ -3,17 +3,19 @@ using System.Text;
 using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.PluginDocsGenerator;
 using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 // Generates the plugin API reference for the documentation site directly from the plugin contract
 // assemblies and their XML doc comments. Run with:
 //   dotnet run --project LANCommander.PluginDocsGenerator [output-path]
 // If no output path is supplied, the generator writes to LANCommander.Documentation/Plugins/API Reference.md.
 
-// Anchor types pull in the two assemblies that make up the public plugin surface.
+// Anchor types pull in the assemblies that make up the public plugin surface.
 var assemblies = new[]
 {
     typeof(IPlugin).Assembly,                    // LANCommander.SDK (LANCommander.SDK.Plugins.*)
     typeof(INavigationPageExtension).Assembly,   // LANCommander.Launcher.Plugins.*
+    typeof(IServerNavigationExtension).Assembly, // LANCommander.Server.Plugins.*
 };
 
 // Only types in these namespaces are considered part of the plugin surface.
@@ -21,6 +23,7 @@ string[] namespacePrefixes =
 {
     "LANCommander.SDK.Plugins",
     "LANCommander.Launcher.Plugins",
+    "LANCommander.Server.Plugins",
 };
 
 // Fixed ordering so the reference reads top-down from "what you implement" to host internals.
@@ -30,6 +33,7 @@ string[] namespaceOrder =
     "LANCommander.SDK.Plugins.Events",
     "LANCommander.Launcher.Plugins.Extensions",
     "LANCommander.Launcher.Plugins",
+    "LANCommander.Server.Plugins",
 };
 
 var docs = new XmlDocLookup(assemblies);

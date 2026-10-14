@@ -6,6 +6,17 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
     <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
+    <Version>1.1.0</Version>
+    <Authors>pathartl</Authors>
+    <Company>LANCommander</Company>
+    <Description>A Blazor component library for building UIs on the LANCommander platform</Description>
+    <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
+    <PackageIcon>package-icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>lancommander;blazor;components</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
   <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
@@ -54,6 +65,11 @@
   <ItemGroup>
     <!-- Icon geometry, written by Controls/Icon/generate-icons.py and read by IconData -->
     <EmbeddedResource Include="Controls\Icon\Resources\*.tsv.gz" LogicalName="LANCommander.Server.UI.Icons.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LANCommander.SDK\package-icon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
   </ItemGroup>
 
   <ItemGroup>

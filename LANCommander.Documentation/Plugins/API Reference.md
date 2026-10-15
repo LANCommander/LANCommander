@@ -16,6 +16,17 @@ each group.
 
 ## `LANCommander.SDK.Plugins`
 
+### ILobbyProvider
+
+`interface` — `LANCommander.SDK.Plugins.ILobbyProvider`
+
+Implemented by launcher plugins that can find multiplayer lobbies for an installed game, for example the lobbies a player's friends are hosting on a platform like Steam. Register the implementation in `ConfigureServices`.
+
+**Methods**
+
+- `Task<IEnumerable<GameLobby>> GetLobbiesAsync(LobbyQuery query, CancellationToken cancellationToken)`
+  - Returns the lobbies currently available for the game.
+
 ### IPlugin
 
 `interface` — `LANCommander.SDK.Plugins.IPlugin`
@@ -66,6 +77,21 @@ Implemented by plugins that want to add PowerShell cmdlets or script modules int
 - `IEnumerable<string> GetModulePaths()`
   - Returns absolute paths to PowerShell script modules (.psm1/.psd1) shipped with the plugin that should be imported into each runspace.
 
+### GameLobby
+
+`record` — `LANCommander.SDK.Plugins.GameLobby`
+
+A multiplayer lobby the player can join.
+
+**Properties**
+
+- `string Id { get; init; }`
+  - The lobby's id on the platform that hosts it.
+- `string HostName { get; init; }`
+  - Name of the player hosting the lobby, shown as "Join {HostName}'s lobby".
+- `string JoinArguments { get; init; }`
+  - Arguments appended to the game's primary action to join the lobby, for example `+connect_lobby 109775241055537385`.
+
 ### LANCommanderPluginAttribute
 
 `attribute` — `LANCommander.SDK.Plugins.LANCommanderPluginAttribute`
@@ -84,6 +110,21 @@ Assembly-level attribute that marks an assembly as a LANCommander plugin and dec
   - Maximum compatible host (SDK) version, inclusive. Null means no upper bound.
 - `PluginHost Hosts { get; set; }`
   - The hosts this plugin supports. Defaults to both server and launcher.
+
+### LobbyQuery
+
+`record` — `LANCommander.SDK.Plugins.LobbyQuery`
+
+The installed game a `ILobbyProvider` is asked to find lobbies for.
+
+**Properties**
+
+- `Guid GameId { get; init; }`
+  - Id of the game.
+- `string InstallDirectory { get; init; }`
+  - Directory the game is installed in.
+- `IReadOnlyList<Game> Manifests { get; init; }`
+  - The manifests of the game and its installed addons.
 
 ### PluginBootstrap
 
@@ -435,6 +476,19 @@ Base type for view models supplied by plugins. Lives in this project (rather tha
 
 ## `LANCommander.Server.Plugins`
 
+### IPackageImporter
+
+`interface` — `LANCommander.Server.Plugins.IPackageImporter`
+
+Imports LCX packages through the server's own import pipeline, the same one the import API and the import dialog use. Provided by the server; inject it into a scoped plugin service or page.
+
+**Methods**
+
+- `Task<PackageImportResult> ImportFileAsync(string packagePath, Guid? storageLocationId, ManifestType? manifestType, CancellationToken cancellationToken)`
+  - Imports every record in an LCX file the server can already read.
+- `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
+  - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
+
 ### IServerNavigationExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
@@ -467,6 +521,32 @@ Contributes an assembly containing routable Razor components to the server. Regi
 - `Assembly Assembly { get; }`
   - The assembly containing the plugin's routable components.
 
+### IStorageLocationProvider
+
+`interface` — `LANCommander.Server.Plugins.IStorageLocationProvider`
+
+Lists the server's storage locations, for example to let an administrator pick where an import writes its archives. Provided by the server; inject it into a scoped plugin service or page.
+
+**Methods**
+
+- `Task<IReadOnlyList<StorageLocationInfo>> GetAsync(StorageLocationType type, CancellationToken cancellationToken)`
+  - The storage locations of the given type, the default first.
+
+### PackageImportResult
+
+`record` — `LANCommander.Server.Plugins.PackageImportResult`
+
+The outcome of an import run by `IPackageImporter`.
+
+**Properties**
+
+- `Guid RecordId { get; init; }`
+  - Id of the record the import created or updated.
+- `ManifestType ManifestType { get; init; }`
+  - The kind of record the package held.
+- `int ImportedCount { get; init; }`
+  - Number of records imported.
+
 ### PluginAccessAttribute
 
 `attribute` — `LANCommander.Server.Plugins.PluginAccessAttribute`
@@ -497,6 +577,23 @@ Describes who may reach a plugin-contributed surface, such as a page or a naviga
   - Allows members of any of the supplied server-defined roles. Administrators also qualify.
 - `bool IsSatisfiedBy(ClaimsPrincipal user)`
   - Determines whether `user` satisfies this policy.
+
+### StorageLocationInfo
+
+`record` — `LANCommander.Server.Plugins.StorageLocationInfo`
+
+A storage location on the server.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Id to pass back to the server, for example as an import's storage location.
+- `string Path { get; init; }`
+  - Where the location is on the server's file system.
+- `StorageLocationType Type { get; init; }`
+  - What the location stores.
+- `bool Default { get; init; }`
+  - Whether the server uses this location when none is chosen.
 
 ### PluginAccessLevel
 

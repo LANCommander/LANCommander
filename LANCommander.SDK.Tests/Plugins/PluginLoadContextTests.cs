@@ -9,6 +9,7 @@ public class PluginLoadContextTests
     [InlineData("LANCommander.Server.Plugins")]
     [InlineData("LANCommander.Server.ImportExport")]
     [InlineData("LANCommander.Server.ImportExport.SomeFutureAssembly")]
+    [InlineData("LANCommander.Server.UI")]
     public void HostContractAssembliesAreShared(string assemblyName) =>
         Assert.True(PluginLoadContext.IsShared(assemblyName));
 

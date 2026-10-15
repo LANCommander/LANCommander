@@ -12,9 +12,9 @@ plugin under `LANCommander.SamplePlugin` that exercises every extension point de
 ## Prerequisites
 
 - The .NET 10 SDK.
-- A local checkout of the LANCommander source, or a package/binary reference to the contract assemblies
-  listed below. The framework binds plugins against the host's already-loaded assemblies, so you build
-  against the same contract assemblies the host ships.
+- The version of LANCommander your plugin targets. The contract packages below are released under the
+  same version as the server and launcher, and the framework binds plugins against the host's
+  already-loaded copies of them, so build against the version you will run on.
 
 ## 1. Create a class library
 
@@ -24,38 +24,40 @@ A plugin is an ordinary class library targeting `net10.0`:
 dotnet new classlib -n MyCompany.MyPlugin -f net10.0
 ```
 
-## 2. Reference the contract assemblies
+## 2. Reference the contract packages
 
-Reference the LANCommander assemblies that expose the extension points you need. Reference them with
-`Private=false` so your plugin binds against the host's already-loaded copies at runtime rather than
-shipping (and loading) its own duplicates:
+Reference the LANCommander packages that expose the extension points you need. Reference them with
+`ExcludeAssets="runtime"` so your plugin binds against the host's already-loaded copies at runtime
+rather than shipping (and loading) its own duplicates:
 
 ```xml
 <ItemGroup>
   <!-- Core plugin contracts, events, and the PowerShell extension point. -->
-  <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" Private="false" />
+  <PackageReference Include="LANCommander.SDK" Version="2.2.0" ExcludeAssets="runtime" />
 
-  <!-- Launcher UI extension points (only needed if you extend the launcher UI). -->
-  <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" Private="false" />
+  <!-- Server routes, navigation, page access, package importing and storage locations. -->
+  <PackageReference Include="LANCommander.Server.Plugins" Version="2.2.0" ExcludeAssets="runtime" />
 
-  <!-- Server contracts such as IMetadataProvider (only needed for server extensions). -->
-  <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" Private="false" />
-
-  <!-- Server routes, navigation, and package importing. -->
-  <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" Private="false" />
+  <!-- The server's Blazor controls, for plugin pages. -->
+  <PackageReference Include="LANCommander.Server.UI" Version="2.2.0" ExcludeAssets="runtime" />
 </ItemGroup>
 ```
 
-:::note
-`Private=false` keeps the contract assemblies out of your plugin's output folder. This is important:
-the framework preserves type identity across the plugin's load context by deferring these shared
-assemblies to the host. Your plugin's *own* private dependencies (NuGet packages, helper libraries)
-should ship normally so they land next to your plugin's DLL.
-:::
+A server plugin does not reference `LANCommander.Server`, `LANCommander.Server.Data` or the other
+server assemblies; what the server offers plugins is in `LANCommander.Server.Plugins`. The exception for
+now is `IMetadataProvider`, which still lives in `LANCommander.Server.Services`.
 
-When developing a plugin in a separate repository before contract packages are available, reference
-locally built contract DLLs from a configurable MSBuild path. Do not copy host contract assemblies
-into the deployed plugin folder; only ship the plugin's private dependencies.
+Launcher UI extension points are in `LANCommander.Launcher.Plugins`, which is not published as a package
+yet; reference it from a LANCommander checkout with `Private="false"`.
+
+:::note
+`ExcludeAssets="runtime"` keeps the contract assemblies out of your plugin's output folder. This is
+important: the framework preserves type identity across the plugin's load context by deferring these
+shared assemblies to the host. Your plugin's *own* private dependencies (NuGet packages, helper libraries)
+should ship normally so they land next to your plugin's DLL. The packages the contract packages depend
+on (Radzen, for example) are still copied to your output. Unless your own code uses them they are never
+loaded, so they can be left out of the drop-in folder.
+:::
 
 ## 3. Implement the entry point
 

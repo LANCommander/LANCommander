@@ -18,8 +18,7 @@ using LANCommander.SDK.Services;
 namespace LANCommander.SDK
 {
     public class ProcessExecutionContext(
-        ILogger<ProcessExecutionContext> logger,
-        LobbyClient lobbyClient) : IDisposable
+        ILogger<ProcessExecutionContext> logger) : IDisposable
     {
         private Process Process;
 
@@ -371,8 +370,6 @@ namespace LANCommander.SDK
                 }
             }
             catch { }
-
-            lobbyClient.ReleaseSteam();
         }
     }
 }

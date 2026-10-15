@@ -7,9 +7,6 @@ using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Services;
-using LANCommander.Steam.Abstractions;
-using LANCommander.Steam.Extensions;
-using LANCommander.Steam.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RpcSubscriber = LANCommander.SDK.Rpc.Clients.RpcSubscriber;
@@ -46,7 +43,6 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IssueClient>();
         services.AddSingleton<LauncherClient>();
         services.AddSingleton<LibraryClient>();
-        services.AddSingleton<LobbyClient>();
         services.AddSingleton<MediaClient>();
         services.AddSingleton<ModuleClient>();
         services.AddSingleton<PlaySessionClient>();

@@ -27,6 +27,7 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         "LANCommander.Server.Plugins",
         "LANCommander.Server.ImportExport",
         "LANCommander.Server.Services",
+        "LANCommander.Server.UI",
         "Microsoft.Extensions.DependencyInjection",
         "Microsoft.Extensions.Logging",
         "Microsoft.Extensions.Hosting",

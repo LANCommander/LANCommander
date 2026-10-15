@@ -4,6 +4,7 @@ using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Clients;
 using LANCommander.Server.ImportExport.Extensions;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Providers;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Extensions;
@@ -25,6 +26,11 @@ public static class Services
         builder.Services.AddLANCommanderServer();
         builder.Services.AddLANCommanderImportExport();
         builder.Services.AddLANCommanderServerUI();
+
+        // What the server offers plugins through LANCommander.Server.Plugins, so they never need
+        // its service or data assemblies
+        builder.Services.AddScoped<IPackageImporter, PackageImporter>();
+        builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
         
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();

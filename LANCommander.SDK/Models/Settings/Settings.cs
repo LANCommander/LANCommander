@@ -17,7 +17,6 @@ public class Settings
     public DebugSettings Debug { get; set; } = new();
     public UpdateSettings Updates { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();
-    public SteamSettings Steam { get; set; } = new();
 
     public string Culture { get; set; } = "en-US";
 }

@@ -75,9 +75,9 @@ namespace LANCommander.SDK.Services
         SaveClient saveClient,
         ScriptClient scriptClient,
         ProfileClient profileClient,
-        LobbyClient lobbyClient,
         ToolClient toolClient,
-        IPluginEventBus pluginEventBus)
+        IPluginEventBus pluginEventBus,
+        IEnumerable<ILobbyProvider> lobbyProviders)
     {
         public delegate void OnArchiveEntryExtractionProgressHandler(object sender, ArchiveEntryExtractionProgressArgs e);
         public event OnArchiveEntryExtractionProgressHandler OnArchiveEntryExtractionProgress;
@@ -95,6 +95,8 @@ namespace LANCommander.SDK.Services
         private const string KeyFilename = "Key";
 
         private static readonly TimeSpan ServerNotificationTimeout = TimeSpan.FromSeconds(15);
+        /// <summary>How long each <see cref="ILobbyProvider"/> gets to answer.</summary>
+        internal TimeSpan LobbyProviderTimeout { get; init; } = TimeSpan.FromSeconds(5);
 
         private TrackableStream _transferStream;
         private IAsyncReader _reader;
@@ -294,41 +296,61 @@ namespace LANCommander.SDK.Services
                 .ThenBy(a => a.SortOrder)
                 .ToList();
 
-            if (manifests.Any(m => m.MultiplayerModes?.Any(m => m.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
-            {
-                var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction);
-
-                if (primaryAction != null)
-                {
-                    try
-                    {
-                        var lobbies = lobbyClient.GetSteamLobbies(installDirectory, id);
-
-                        foreach (var lobby in lobbies)
-                        {
-                            var lobbyAction = new Models.Manifest.Action
-                            {
-                                Arguments = $"{primaryAction.Arguments} +connect_lobby {lobby.Id}",
-                                IsPrimaryAction = true,
-                                Name = $"Join {lobby.ExternalUsername}'s lobby",
-                                SortOrder = actions.Count,
-                                Path = primaryAction.Path,
-                                WorkingDirectory = primaryAction.WorkingDirectory,
-                                Platforms = primaryAction.Platforms,
-                                ToolId = primaryAction.ToolId
-                            };
-
-                            actions.Add(lobbyAction);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger?.LogError(ex, "Could not get lobbies");
-                    }
-                }
-            }
+            if (manifests.Any(m => m.MultiplayerModes?.Any(mode => mode.NetworkProtocol == NetworkProtocol.Lobby) ?? false))
+                actions.AddRange(await GetLobbyActionsAsync(installDirectory, id, manifests, actions));
 
             return actions;
+        }
+
+        /// <summary>
+        /// Asks every plugin <see cref="ILobbyProvider"/> for the game's lobbies at once, and turns each
+        /// lobby into an action that joins it through the primary action.
+        /// </summary>
+        private async Task<IEnumerable<Models.Manifest.Action>> GetLobbyActionsAsync(
+            string installDirectory,
+            Guid id,
+            ICollection<Models.Manifest.Game> manifests,
+            List<Models.Manifest.Action> actions)
+        {
+            var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction);
+
+            if (primaryAction == null || lobbyProviders == null)
+                return [];
+
+            var query = new LobbyQuery(id, installDirectory, manifests.ToList());
+            var lobbies = await Task.WhenAll(lobbyProviders.Select(provider => GetLobbiesAsync(provider, query)));
+
+            return lobbies
+                .SelectMany(providerLobbies => providerLobbies)
+                .Select((lobby, index) => new Models.Manifest.Action
+                {
+                    Arguments = $"{primaryAction.Arguments} {lobby.JoinArguments}".Trim(),
+                    IsPrimaryAction = true,
+                    Name = $"Join {lobby.HostName}'s lobby",
+                    SortOrder = actions.Count + index,
+                    Path = primaryAction.Path,
+                    WorkingDirectory = primaryAction.WorkingDirectory,
+                    Platforms = primaryAction.Platforms,
+                    ToolId = primaryAction.ToolId
+                })
+                .ToList();
+        }
+
+        private async Task<IEnumerable<GameLobby>> GetLobbiesAsync(ILobbyProvider provider, LobbyQuery query)
+        {
+            using var cts = new CancellationTokenSource(LobbyProviderTimeout);
+
+            try
+            {
+                // WaitAsync so a provider that ignores the token cannot hold up the action list
+                return await provider.GetLobbiesAsync(query, cts.Token).WaitAsync(cts.Token) ?? [];
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Lobby provider {Provider} could not list the lobbies of game {GameId}", provider.GetType().FullName, query.GameId);
+
+                return [];
+            }
         }
         
         /// <summary>

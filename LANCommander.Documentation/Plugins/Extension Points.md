@@ -184,14 +184,15 @@ than rendered ambiguously.
 
 The SDK `GameClient.ImportAsync` method is intended for remote clients: it uploads a package over
 HTTP and then calls the server import endpoint. A plugin already running inside the server should
-instead inject `ImportRunner` from `LANCommander.Server.ImportExport.Services` into the plugin page
-or another scoped plugin service and invoke the import pipeline directly:
+instead inject [`IPackageImporter`](/Plugins/API%20Reference#ipackageimporter) from
+`LANCommander.Server.Plugins` into the plugin page or another scoped plugin service and invoke the
+import pipeline directly:
 
 ```csharp
-@inject ImportRunner ImportRunner
+@inject IPackageImporter Importer
 
 await using var package = File.OpenRead(packagePath);
-var result = await ImportRunner.RunStreamAsync(
+var result = await Importer.ImportStreamAsync(
     package,
     storageLocationId,
     ManifestType.Game,
@@ -199,11 +200,50 @@ var result = await ImportRunner.RunStreamAsync(
     cancellationToken: cancellationToken);
 ```
 
-`RunStreamAsync` copies the stream to controlled temporary storage, enforces a maximum size, and then
-runs the same initialize, queue, and commit pipeline as the server API. `RunFileAsync` is also
-available when the LCX already exists on the server. Plugins should use `ImportRunner` instead of
-resolving database services or `ImportContext` directly. `PluginContext.Services` is scoped to
-`InitializeAsync` and must not be retained for later imports.
+`ImportStreamAsync` copies the stream to controlled temporary storage, enforces a maximum size, and
+then runs the same initialize, queue, and commit pipeline as the server API. `ImportFileAsync` is
+also available when the LCX already exists on the server. Both return the id of the record the
+import created or updated.
+
+To let an administrator choose where an import writes its archives, list the server's storage
+locations with [`IStorageLocationProvider`](/Plugins/API%20Reference#istoragelocationprovider):
+
+```csharp
+@inject IStorageLocationProvider StorageLocations
+
+var locations = await StorageLocations.GetAsync(StorageLocationType.Archive);
+```
+
+The server registers both services. Plugins should use them instead of resolving the server's
+database services or import internals, which are not part of the plugin surface.
+`PluginContext.Services` is scoped to `InitializeAsync` and must not be retained for later imports.
+
+## Multiplayer lobbies
+
+A launcher plugin can offer lobbies to join, such as the ones a player's friends are hosting on
+another platform, by registering an [`ILobbyProvider`](/Plugins/API%20Reference#ilobbyprovider).
+The launcher asks every provider when it lists the actions of an installed game that has a
+multiplayer mode using the Lobby network protocol. Each lobby returned becomes a "Join *host*'s
+lobby" action that runs the game's primary action with the lobby's `JoinArguments` appended.
+
+```csharp
+public sealed class MyLobbyProvider : ILobbyProvider
+{
+    public async Task<IEnumerable<GameLobby>> GetLobbiesAsync(LobbyQuery query, CancellationToken cancellationToken)
+    {
+        var lobbies = await FindFriendLobbiesAsync(query.InstallDirectory, cancellationToken);
+
+        return lobbies.Select(lobby => new GameLobby(lobby.Id, lobby.HostName, $"+connect_lobby {lobby.Id}"));
+    }
+}
+
+services.AddSingleton<ILobbyProvider, MyLobbyProvider>();
+```
+
+`LobbyQuery` carries the game's id, its install directory, and the manifests of the game and its
+installed addons. Providers are queried at the same time and each has a few seconds to answer; one
+that throws or runs out of time is logged and skipped without affecting the others. If a provider
+holds resources open for a game, such as a platform client, release them on `GameAfterExitEvent`.
 
 ## PowerShell extensions
 

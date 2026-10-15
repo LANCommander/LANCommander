@@ -67,8 +67,10 @@ jobs:
       - name: Restore dependencies
         run: dotnet restore LANCommander.Server.UI/LANCommander.Server.UI.csproj
 
+      # working-directory rather than --prefix: npm on Windows resolves package.json from the cwd
       - name: Install Node Packages
-        run: npm install --prefix ./LANCommander.Server.UI
+        working-directory: LANCommander.Server.UI
+        run: npm install
 
       # The build regenerates these too, but wwwroot must be populated before MSBuild evaluates the
       # project, otherwise the bundle is missing from the package's static web assets
@@ -76,7 +78,8 @@ jobs:
         run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 
       - name: Package Frontend
-        run: npm run package --prefix ./LANCommander.Server.UI
+        working-directory: LANCommander.Server.UI
+        run: npm run package
 
       - name: Build project
         run: dotnet build --configuration Release LANCommander.Server.UI/LANCommander.Server.UI.csproj -p:Version="${{ needs.prep.outputs.version_tag }}" -p:AssemblyVersion="${{ needs.prep.outputs.version_semver }}"

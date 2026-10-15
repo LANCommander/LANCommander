@@ -127,11 +127,28 @@ public class UpdateEntityContext<TEntity>
                     }
                 }
 
-                // Clear the existing collection and add all updated entities
-                existingEntities.Clear();
+                // Sync the collection by delta instead of clearing and re-adding.
+                // For many-to-many relationships backed by a join table with extra
+                // columns (e.g. GameRedistributable.Options), clearing the collection
+                // deletes every join row and re-adding the same entities inserts
+                // fresh rows, silently wiping the extra column values. Removing
+                // only truly-removed entities and adding only new ones leaves
+                // surviving associations (and their payloads) untouched.
+                var updatedIds = new HashSet<Guid>(updatedTrackedEntities.Select(e => e.Id));
+
+                foreach (var existingEntity in existingEntities.Where(e => !updatedIds.Contains(e.Id)).ToList())
+                {
+                    existingEntities.Remove(existingEntity);
+                }
+
+                var existingIds = new HashSet<Guid>(existingEntities.Select(e => e.Id));
+
                 foreach (var entity in updatedTrackedEntities)
                 {
-                    existingEntities.Add(entity);
+                    if (existingIds.Add(entity.Id))
+                    {
+                        existingEntities.Add(entity);
+                    }
                 }
 
                 _context.Entry(_entity).State = EntityState.Modified;

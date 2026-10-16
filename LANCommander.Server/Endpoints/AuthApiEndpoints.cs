@@ -121,7 +121,8 @@ public static class AuthApiEndpoints
 
     internal static async Task<IResult> RefreshAsync(
         AuthToken token,
-        [FromServices] AuthenticationService authenticationService)
+        [FromServices] AuthenticationService authenticationService,
+        [FromServices] ILoggerFactory loggerFactory)
     {
         try
         {
@@ -129,9 +130,14 @@ public static class AuthApiEndpoints
 
             return TypedResults.Ok(refreshed);
         }
+        catch (UserAuthenticationException)
+        {
+            return TypedResults.Unauthorized();
+        }
         catch (Exception ex)
         {
-            return TypedResults.BadRequest(ex);
+            loggerFactory.CreateLogger("AuthApi").LogError(ex, "Could not renew authentication session");
+            return TypedResults.Problem("Could not renew authentication session.");
         }
     }
 
@@ -217,5 +223,4 @@ public static class AuthApiEndpoints
         return TypedResults.BadRequest(errorResponse);
     }
 }
-
 

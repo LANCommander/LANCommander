@@ -11,10 +11,11 @@ namespace LANCommander.SDK.Factories;
 public class ApiRequestFactory(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    ISettingsProvider settingsProvider)
+    ISettingsProvider settingsProvider,
+    AuthenticationSession authenticationSession)
 {
     public ApiRequestBuilder Create()
     {
-        return new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider);
+        return new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, authenticationSession);
     }
 }

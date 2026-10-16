@@ -91,10 +91,9 @@ namespace LANCommander.Server.Services
             var token = GetToken(authClaims);
             var refreshToken = GenerateRefreshToken();
                 
-            user.RefreshToken = refreshToken;
-            user.RefreshTokenExpiration = DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime);
-                
-            await userService.UpdateAsync(user);
+            await userService.UpdateRefreshTokenAsync(
+                user.Id, refreshToken,
+                DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime));
 
             return new AuthToken
             {
@@ -106,19 +105,28 @@ namespace LANCommander.Server.Services
 
         public async Task<AuthToken> RefreshTokenAsync(AuthToken token)
         {
-            if (token == null)
+            if (token == null || string.IsNullOrWhiteSpace(token.AccessToken) ||
+                string.IsNullOrWhiteSpace(token.RefreshToken))
             {
                 _logger?.LogDebug("Refresh token is null");
                 
-                throw new Exception("Invalid refresh token");
+                throw new UserAuthenticationException("Invalid refresh token");
             }
             
-            var principal = GetPrincipalFromExpiredToken(token.AccessToken);
+            ClaimsPrincipal? principal;
+            try
+            {
+                principal = GetPrincipalFromExpiredToken(token.AccessToken);
+            }
+            catch (Exception ex) when (ex is SecurityTokenException or ArgumentException)
+            {
+                throw new UserAuthenticationException("Invalid access token or refresh token", ex);
+            }
 
             if (principal == null)
             {
                 _logger?.LogDebug("Invalid access token or refresh token");
-                throw new Exception("Invalid access token or refresh token");
+                throw new UserAuthenticationException("Invalid access token or refresh token");
             }
             
             var user = await userService.GetAsync(principal.Identity.Name);
@@ -127,15 +135,13 @@ namespace LANCommander.Server.Services
                 user.RefreshTokenExpiration <= DateTime.UtcNow)
             {
                 _logger?.LogDebug("Refresh token expired");
-                throw new Exception("Invalid refresh token");
+                throw new UserAuthenticationException("Invalid refresh token");
             }
             
             var newAccessToken = GetToken(principal.Claims.ToList());
             var newRefreshToken = GenerateRefreshToken();
             
-            user.RefreshToken = newRefreshToken;
-            
-            await userService.UpdateAsync(user);
+            await userService.UpdateRefreshTokenAsync(user.Id, newRefreshToken, user.RefreshTokenExpiration);
             
             _logger?.LogDebug("Refresh token updated for user {UserName}", user.UserName);
 

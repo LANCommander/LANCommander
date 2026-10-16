@@ -24,7 +24,6 @@ builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices();
 builder.AddMigrations();
 builder.AddDatabase(args);
-builder.UseSteam();
 
 #if DEBUG
 builder.AddUIFixtures();

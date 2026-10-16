@@ -15,11 +15,16 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public CompositeMediaGrabberService(
             HqMediaGrabber hq,
-            SteamMediaGrabber steam,
             SteamGridDBMediaGrabber steamGridDb,
-            YouTubeMediaGrabber youtube)
+            YouTubeMediaGrabber youtube,
+            IEnumerable<IMediaGrabberProvider> providers)
         {
-            _grabbers = new List<IMediaGrabberService> { hq, steam, steamGridDb, youtube };
+            _grabbers = new List<IMediaGrabberService> { hq, steamGridDb, youtube };
+
+            // A grabber whose name is already taken could never be told apart from the first one
+            foreach (var grabber in providers.SelectMany(p => p.GetGrabbers()))
+                if (_grabbers.All(g => g.Name != grabber.Name))
+                    _grabbers.Add(grabber);
         }
 
         public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)

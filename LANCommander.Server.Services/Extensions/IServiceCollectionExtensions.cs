@@ -109,7 +109,6 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<HqAuthorizationStateStore>();
         services.AddHostedService<HqConnectionMonitor>();
         services.AddScoped<HqMediaGrabber>();
-        services.AddScoped<SteamMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();
         services.AddScoped<YouTubeMediaGrabber>();
         services.AddScoped<IMediaGrabberService, CompositeMediaGrabberService>();

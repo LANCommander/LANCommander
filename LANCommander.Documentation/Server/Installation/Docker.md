@@ -60,7 +60,7 @@ services:
       - PUID=1000
       - PGID=1000
       - TZ=Etc/UTC
-      # Uncomment the line below to install SteamCMD
+      # Uncomment the line below to install SteamCMD, for the Steam plugin
       # - STEAMCMD=1
       # Uncomment the line below to install WINE
       # - WINE=1

@@ -131,6 +131,37 @@ public void ConfigureServices(IServiceCollection services)
 }
 ```
 
+## Server media sources
+
+A plugin can add a source to the server's media search, the one behind a game's Media tab, by
+registering an [`IMediaGrabberExtension`](/Plugins/API%20Reference#imediagrabberextension). Its
+results are shown alongside those of HQ, SteamGridDB and YouTube, under the extension's `Name`, which
+must not be one the server already uses. The extension only searches: when an administrator picks a
+result, the server downloads its `SourceUrl`.
+
+```csharp
+public sealed class MyMediaGrabber : IMediaGrabberExtension
+{
+    public string Name => "My Source";
+
+    public IReadOnlyCollection<MediaType> SupportedMediaTypes => [MediaType.Cover, MediaType.Logo];
+
+    public async Task<IReadOnlyList<MediaGrabberItem>> SearchAsync(
+        MediaType type, string keywords, int page, CancellationToken cancellationToken)
+    {
+        // Look up keywords and return one MediaGrabberItem per image
+    }
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IMediaGrabberExtension, MyMediaGrabber>();
+}
+```
+
+A source that returns results in pages sets `SupportsPaging`; otherwise the server asks only for
+page 0. A source that throws is shown with its error, and the other sources' results still appear.
+
 ## Server UI extensions
 
 Server plugins can contribute routable Razor components and navigation entries through the

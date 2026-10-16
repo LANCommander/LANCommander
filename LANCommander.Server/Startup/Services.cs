@@ -31,7 +31,10 @@ public static class Services
         // its service or data assemblies
         builder.Services.AddScoped<IPackageImporter, PackageImporter>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
-        
+
+        // And what plugins offer the server: their media sources join the media search
+        builder.Services.AddScoped<IMediaGrabberProvider, PluginMediaGrabbers>();
+
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();
         builder.AddServiceDefaults();

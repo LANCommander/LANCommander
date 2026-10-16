@@ -126,7 +126,6 @@
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
     <ProjectReference Include="..\LANCommander.Server.UI\LANCommander.Server.UI.csproj" />
     <!-- Control gallery (/_fixtures) and seeded data for development; never shipped -->
     <ProjectReference Include="..\LANCommander.Server.UI.Fixtures\LANCommander.Server.UI.Fixtures.csproj" Condition="'$(Configuration)' == 'Debug'" />

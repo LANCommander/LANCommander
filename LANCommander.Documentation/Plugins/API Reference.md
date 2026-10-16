@@ -476,6 +476,26 @@ Base type for view models supplied by plugins. Lives in this project (rather tha
 
 ## `LANCommander.Server.Plugins`
 
+### IMediaGrabberExtension
+
+`interface` — `LANCommander.Server.Plugins.IMediaGrabberExtension`
+
+Adds a source to the server's media search, alongside the built-in ones such as HQ and SteamGridDB. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Name { get; }`
+  - The name the source is shown and filtered by in the media search. Must be unique among the server's sources.
+- `IReadOnlyCollection<MediaType> SupportedMediaTypes { get; }`
+  - The kinds of media the source can find.
+- `bool SupportsPaging { get; }`
+  - Whether the source returns results in pages. When false, the server asks only for page 0.
+
+**Methods**
+
+- `Task<IReadOnlyList<MediaGrabberItem>> SearchAsync(MediaType type, string keywords, int page, CancellationToken cancellationToken)`
+  - Searches for media of one kind. Only called for a type in `SupportedMediaTypes`. A failure is shown as the source's error without affecting the other sources.
+
 ### IPackageImporter
 
 `interface` — `LANCommander.Server.Plugins.IPackageImporter`
@@ -535,6 +555,33 @@ Lists the server's storage locations, for example to let an administrator pick w
 
 - `Task<IReadOnlyList<StorageLocationInfo>> GetAsync(StorageLocationType type, CancellationToken cancellationToken)`
   - The storage locations of the given type, the default first.
+
+### MediaGrabberItem
+
+`record` — `LANCommander.Server.Plugins.MediaGrabberItem`
+
+One result of an `IMediaGrabberExtension` search.
+
+**Properties**
+
+- `string Id { get; init; }`
+  - Identifies the result within the source.
+- `MediaType Type { get; init; }`
+  - The kind of media the result is.
+- `string SourceUrl { get; init; }`
+  - Where the server downloads the media from.
+- `string ThumbnailUrl { get; init; }`
+  - A preview to show in the search results; may be the same as `SourceUrl`.
+- `string MimeType { get; init; }`
+  - The MIME type of the media at `SourceUrl`.
+- `string Group { get; init; }`
+  - Results with the same group are shown together, e.g. under the game they belong to.
+- `string Name { get; init; }`
+  - The result's own title where the source has one, e.g. a video's name.
+- `TimeSpan? Duration { get; init; }`
+  - Running time, for videos.
+- `string Resolution { get; init; }`
+  - A video's frame height as people say it ("1080p"), where the source knows it.
 
 ### PackageImportResult
 

@@ -18,7 +18,21 @@ public interface IServerNavigationExtension
     /// <summary>Optional LANCommander icon name.</summary>
     string? Icon => null;
 
-    /// <summary>Sort order relative to other plugin navigation entries.</summary>
+    /// <summary>
+    /// The section the entry is placed in, one of <see cref="ServerNavigationSection"/>. Null places
+    /// it in the plugin area at the end of the navigation.
+    /// </summary>
+    string? Section => null;
+
+    /// <summary>
+    /// The built-in entry in <see cref="Section"/> this entry follows: a link's route, e.g.
+    /// <c>/Settings/Users</c>, or a group's <see cref="ServerNavigationSection"/>. Use
+    /// <see cref="ServerNavigationAnchor.Start"/> to place it first; null, or an entry the section
+    /// does not show, places it last.
+    /// </summary>
+    string? After => null;
+
+    /// <summary>Orders entries placed at the same spot; ties are sorted by label.</summary>
     int Order => 0;
 
     /// <summary>

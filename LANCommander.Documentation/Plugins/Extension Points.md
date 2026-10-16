@@ -157,6 +157,44 @@ public sealed class MyNavigationExtension : IServerNavigationExtension
 }
 ```
 
+### Placing navigation entries
+
+By default an entry is shown in the plugin area at the end of the navigation, ordered by `Order`
+among the other plugin entries. To place it elsewhere, set `Section` to one of the
+`ServerNavigationSection` constants, and `After` to the built-in entry it should follow:
+
+| Section | Where |
+| --- | --- |
+| `Main` | The top level, alongside Games, Servers and Settings |
+| `Dashboards` | The Dashboards group |
+| `Metadata` | The Metadata group |
+| `Scripting` | The Scripting group |
+| `Pages` | The Pages group |
+| `Settings` | The Settings group |
+| `Integrations` | The Integrations group inside Settings |
+
+`After` names a built-in link by its route, or a built-in group by its section:
+
+```csharp
+public sealed class RoleSyncNavigationExtension : IServerNavigationExtension
+{
+    public string Id => "com.mycompany.myplugin.rolesync";
+    public string Label => "Role Sync";
+    public string Href => "/Plugins/RoleSync";
+    public string? Section => ServerNavigationSection.Settings;
+    public string? After => "/Settings/Users"; // between Users and Roles
+}
+```
+
+`ServerNavigationAnchor.Start` places the entry first in its section. With no `After`, or an `After`
+the section does not show, the entry is placed last in the section. Entries at the same spot are
+ordered by `Order`, then by label. Entries follow built-in entries only, not other plugins' entries.
+
+Every section other than `Main` and `Dashboards` is shown only to administrators, and an entry
+placed in a section the user cannot see is not shown to them. Place entries meant for other users in
+`Main`, `Dashboards`, or the plugin area. An entry whose section is not recognized is shown in the
+plugin area, and a warning is logged.
+
 ### Page access
 
 Plugin routes are authorized by the server, not by the plugin. A routable plugin component with no

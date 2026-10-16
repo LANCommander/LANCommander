@@ -1,0 +1,11 @@
+@namespace LANCommander.Server.UI.Controls
+
+@* The end of a group's insertions. It comes after the group's own items, so it renders once they have all registered their anchors *@
+@Menu?.Insertions?.End(Group, Menu.AnchorsIn(Group))
+
+@code {
+    /// <summary>The group this ends; null for the menu's top level.</summary>
+    [Parameter] public string? Group { get; set; }
+
+    [CascadingParameter] Menu? Menu { get; set; }
+}

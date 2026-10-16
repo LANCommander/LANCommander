@@ -18,6 +18,7 @@
         </button>
     }
 </li>
+@Menu?.InsertionsAfter(SubMenu, Href)
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -48,6 +49,7 @@
     [CascadingParameter] SubMenu? SubMenu { get; set; }
 
     string? _class;
+    string? _anchor;
 
     /// <summary>Whether the current page is this item's page.</summary>
     internal bool IsActive
@@ -71,6 +73,9 @@
 
     protected override void OnParametersSet()
     {
+        Menu?.MoveAnchor(SubMenu, _anchor, Href);
+        _anchor = Href;
+
         _class = new ClassBuilder()
             .Add("lc-menu-item")
             .If(Disabled, "lc-menu-item-disabled")
@@ -106,5 +111,9 @@
             await Menu.ItemClickedAsync();
     }
 
-    public void Dispose() => SubMenu?.Unregister(this);
+    public void Dispose()
+    {
+        SubMenu?.Unregister(this);
+        Menu?.MoveAnchor(SubMenu, _anchor, null);
+    }
 }

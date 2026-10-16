@@ -25,10 +25,19 @@
     </button>
     <ul class="lc-menu-list lc-submenu-list" style="--lc-menu-depth: @Depth" hidden="@(!_open)">
         <CascadingValue Value="this" IsFixed>
+            @if (Name != null)
+            {
+                @Menu?.Insertions?.Start(Name)
+            }
             @ChildContent
+            @if (Name != null && Menu?.Insertions != null)
+            {
+                <MenuInsertionsEnd Group="@Name" />
+            }
         </CascadingValue>
     </ul>
 </li>
+@Menu?.InsertionsAfter(Parent, Name)
 
 @code {
     [Parameter] public RenderFragment? ChildContent { get; set; }
@@ -40,8 +49,13 @@
 
     [Parameter] public IconType Icon { get; set; }
 
+    /// <summary>Names the group so a menu's <see cref="Menu.Insertions"/> can place items in it and after it.</summary>
+    [Parameter] public string? Name { get; set; }
+
     /// <summary>Starts open regardless of the current page.</summary>
     [Parameter] public bool Open { get; set; }
+
+    [CascadingParameter] Menu? Menu { get; set; }
 
     /// <summary>The enclosing SubMenu, if this group is nested inside another.</summary>
     [CascadingParameter] SubMenu? Parent { get; set; }
@@ -53,6 +67,7 @@
     bool _open;
     bool _toggledByUser;
     string? _class;
+    string? _anchor;
 
     protected override void OnInitialized()
     {
@@ -60,7 +75,12 @@
         Navigation.LocationChanged += LocationChanged;
     }
 
-    protected override void OnParametersSet() => UpdateClass();
+    protected override void OnParametersSet()
+    {
+        Menu?.MoveAnchor(Parent, _anchor, Name);
+        _anchor = Name;
+        UpdateClass();
+    }
 
     protected override void OnAfterRender(bool firstRender)
     {
@@ -103,5 +123,9 @@
             .Add(Class)
             .Build();
 
-    public void Dispose() => Navigation.LocationChanged -= LocationChanged;
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= LocationChanged;
+        Menu?.MoveAnchor(Parent, _anchor, null);
+    }
 }

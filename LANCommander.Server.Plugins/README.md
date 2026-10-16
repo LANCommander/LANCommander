@@ -16,6 +16,7 @@ Use the version of the server the plugin targets.
 | --- | --- |
 | `IServerRouteAssemblyExtension` | Registers the assembly holding the plugin's `@page` components |
 | `IServerNavigationExtension` | Adds an entry to the server's navigation |
+| `ServerNavigationSection`, `ServerNavigationAnchor` | Where in the navigation an entry is placed |
 | `PluginAccessAttribute`, `PluginAccessPolicy` | Who may open a plugin page or see its entry |
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |

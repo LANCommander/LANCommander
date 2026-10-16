@@ -505,8 +505,12 @@ Contributes a link to the server's primary navigation. Register an implementatio
   - Plugin application route, beginning with `/Plugins/`.
 - `string Icon { get; }`
   - Optional LANCommander icon name.
+- `string Section { get; }`
+  - The section the entry is placed in, one of `ServerNavigationSection`. Null places it in the plugin area at the end of the navigation.
+- `string After { get; }`
+  - The built-in entry in `Section` this entry follows: a link's route, e.g. `/Settings/Users`, or a group's `ServerNavigationSection`. Use `Start` to place it first; null, or an entry the section does not show, places it last.
 - `int Order { get; }`
-  - Sort order relative to other plugin navigation entries.
+  - Orders entries placed at the same spot; ties are sorted by label.
 - `PluginAccessPolicy Access { get; }`
   - Who may see this entry. Defaults to administrators only.
 
@@ -577,6 +581,18 @@ Describes who may reach a plugin-contributed surface, such as a page or a naviga
   - Allows members of any of the supplied server-defined roles. Administrators also qualify.
 - `bool IsSatisfiedBy(ClaimsPrincipal user)`
   - Determines whether `user` satisfies this policy.
+
+### ServerNavigationAnchor
+
+`class` — `LANCommander.Server.Plugins.ServerNavigationAnchor`
+
+Special values for `After`. Any other value is the route of a built-in link, or a `ServerNavigationSection` naming a built-in group.
+
+### ServerNavigationSection
+
+`class` — `LANCommander.Server.Plugins.ServerNavigationSection`
+
+Identifiers of the server navigation sections a plugin entry can be placed in through `Section`. A group's identifier is also the `After` anchor that places an entry after the group.
 
 ### StorageLocationInfo
 

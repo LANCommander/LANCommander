@@ -1,0 +1,59 @@
+FROM mcr.microsoft.com/dotnet/sdk:9.0 AS base
+WORKDIR /app
+ENV LANCOMMANDER_FULL_IMAGE=1
+
+EXPOSE 1337
+EXPOSE 213/udp
+EXPOSE 35891/udp
+
+ARG TARGETARCH
+COPY ./published-${TARGETARCH} /app
+COPY entrypoint.sh /app/entrypoint.sh
+COPY steamcmd.sh /usr/local/bin/steamcmd
+
+RUN apt-get update \
+  && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    curl \
+    ffmpeg \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN case "$(dpkg --print-architecture)" in \
+    amd64) ytdlp_asset="yt-dlp_linux" ;; \
+    arm64) ytdlp_asset="yt-dlp_linux_aarch64" ;; \
+    armhf) ytdlp_asset="yt-dlp_linux_armv7l" ;; \
+    *) ytdlp_asset="yt-dlp_linux" ;; \
+  esac \
+  && curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${ytdlp_asset}" -o /usr/local/bin/yt-dlp \
+  && chmod +x /usr/local/bin/yt-dlp
+
+RUN dpkg --add-architecture i386 \
+  && apt-get update \
+  && apt-get install -y --no-install-recommends \
+    wget \
+    software-properties-common \
+    lib32gcc-s1 \
+    lib32stdc++6 \
+    wine \
+    wine32:i386 \
+    wine64 \
+    libwine \
+    fonts-wine \
+    cabextract \
+    unzip \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN mkdir -p /opt/steamcmd \
+  && wget -qO /tmp/steamcmd_linux.tar.gz "https://steamcdn-a.akamaihd.net/client/installer/steamcmd_linux.tar.gz" \
+  && tar -xzf /tmp/steamcmd_linux.tar.gz -C /opt/steamcmd \
+  && rm -f /tmp/steamcmd_linux.tar.gz \
+  && chmod -R 755 /opt/steamcmd
+
+RUN curl -fsSL "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -o /usr/local/bin/winetricks \
+  && chmod +x /usr/local/bin/winetricks \
+  && useradd -m -d /home/wine -s /usr/sbin/nologin wine \
+  && install -d -m 0755 -o wine -g wine /home/wine/.wine
+
+RUN chmod +x /app/entrypoint.sh /usr/local/bin/steamcmd
+
+ENTRYPOINT ["/app/entrypoint.sh"]

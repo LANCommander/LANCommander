@@ -161,6 +161,9 @@ jobs:
       - build_server_win_x64
     if: needs.prep.outputs.should_build == 'true'
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [base, full]
     steps:
       - name: Checkout Repo for Docker build
         uses: actions/checkout@v4
@@ -211,17 +214,17 @@ jobs:
         with:
           platforms: linux/amd64,linux/arm64
 
-      - name: Build and push Docker image
+      - name: Publish ${{ matrix.variant }} Docker image
         id: push
         uses: docker/build-push-action@v6
         with:
           context: ./LANCommander.Server
-          file: ./LANCommander.Server/Dockerfile
+          file: ./LANCommander.Server/${{ matrix.variant == 'full' && 'Dockerfile.full' || 'Dockerfile' }}
           push: true
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.variant == 'full' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:nightly
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:${{ matrix.variant == 'full' && 'nightly-full' || 'nightly' }}
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}${{ matrix.variant == 'full' && '-full' || '' }}
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
@@ -230,7 +233,7 @@ jobs:
             BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
           provenance: true
 
-      - name: Generate artifact attestation
+      - name: Generate image attestation
         uses: actions/attest-build-provenance@v2
         with:
           subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
@@ -238,9 +241,11 @@ jobs:
           push-to-registry: true
 
       - name: Save version to artifact
+        if: matrix.variant == 'base'
         run: echo "${{ needs.prep.outputs.version_tag }}" > version.txt
 
       - name: Upload version artifact
+        if: matrix.variant == 'base'
         uses: actions/upload-artifact@v4
         with:
           name: version.${{ needs.prep.outputs.version_tag }}

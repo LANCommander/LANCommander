@@ -51,7 +51,6 @@ jobs:
         LANCommander.Server.Services/
         LANCommander.Server.Settings/
         LANCommander.ServiceDefaults/
-        LANCommander.Steam/
         LANCommander.Server.UI/
         Directory.Packages.props
         Microsoft.Common.props

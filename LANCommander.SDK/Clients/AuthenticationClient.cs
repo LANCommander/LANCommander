@@ -216,9 +216,13 @@ public class AuthenticationClient(
 
             return true;
         }
+        catch (AuthFailedException)
+        {
+            throw;
+        }
         catch (Exception ex)
         {
-            logger?.LogError("Validating token failed", ex);
+            logger?.LogError(ex, "Validating token failed");
         }
 
         return false;

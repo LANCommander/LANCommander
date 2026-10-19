@@ -94,6 +94,12 @@ namespace LANCommander.SDK.Services
         private const string PlayerAliasFilename = "PlayerAlias";
         private const string KeyFilename = "Key";
 
+        // The download stream is non-seekable, so SharpCompress uses a ring buffer to rewind while
+        // scanning entry headers. Archives with many small entries can require rewinding further than
+        // the library's default (160KB) buffer, throwing an ArchiveOperationException
+        // ("Ring buffer underflow"). Use a larger buffer to accommodate these cases.
+        private const int ArchiveRewindableBufferSize = 4 * 1024 * 1024;
+
         private static readonly TimeSpan ServerNotificationTimeout = TimeSpan.FromSeconds(15);
         /// <summary>How long each <see cref="ILobbyProvider"/> gets to answer.</summary>
         internal TimeSpan LobbyProviderTimeout { get; init; } = TimeSpan.FromSeconds(5);
@@ -681,7 +687,7 @@ namespace LANCommander.SDK.Services
                     });
                 });
 
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 _installProgress.Status = InstallStatus.Downloading;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -2499,7 +2505,7 @@ namespace LANCommander.SDK.Services
                     });
                 });
 
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 _installProgress.Status = skipFiles?.Count > 0 ? InstallStatus.VerifyingFiles : InstallStatus.Downloading;
                 _installProgress.BytesTransferred = 0;
@@ -3479,7 +3485,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {

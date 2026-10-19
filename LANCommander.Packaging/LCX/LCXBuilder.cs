@@ -109,6 +109,7 @@ public static class LCXBuilder
 
         manifest.Id = manifest.Id == Guid.Empty ? Guid.NewGuid() : manifest.Id;
         manifest.ManifestVersion = ManifestVersion;
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Game>(VersionHelper.GetCurrentVersion().ToString());
         manifest.CreatedOn = now;
         manifest.CreatedBy = CreatedBy;
         manifest.UpdatedOn = now;
@@ -233,6 +234,7 @@ public static class LCXBuilder
 
         manifest.Id = manifest.Id == Guid.Empty ? Guid.NewGuid() : manifest.Id;
         manifest.ManifestVersion = ManifestVersion;
+        manifest.Schema = ManifestSchemaHelper.GetSchemaUrl<SDK.Models.Manifest.Game>(VersionHelper.GetCurrentVersion().ToString());
         manifest.CreatedBy = string.IsNullOrWhiteSpace(manifest.CreatedBy)
             ? createdBy
             : manifest.CreatedBy;

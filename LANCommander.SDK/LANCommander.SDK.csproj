@@ -2,17 +2,11 @@
 
     <PropertyGroup>
         <TargetFrameworks>net8.0;net9.0;net10.0</TargetFrameworks>
-        <Version>1.1.0</Version>
-        <Authors>pathartl</Authors>
-        <Company>LANCommander</Company>
         <Description>A .NET library for interacting with a LANCommander server</Description>
-        <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
         <PackageIcon>package-icon.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
-        <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
-        <RepositoryType>git</RepositoryType>
-        <PackageTags>lancommander</PackageTags>
-        <PackageLicenseExpression>MIT</PackageLicenseExpression>
+        <!-- Opt out of the repo-wide Nullable=enable; Mapperly projections over the manifest models rely on oblivious collections. -->
+        <Nullable>disable</Nullable>
         <!-- Emit XML docs so the plugin API reference can be generated from source comments. -->
         <GenerateDocumentationFile>true</GenerateDocumentationFile>
         <!-- Don't fail/spam the build for members without XML comments. -->

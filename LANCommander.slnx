@@ -52,6 +52,7 @@
   <Project Path="LANCommander.Packaging.Worker\LANCommander.Packaging.Worker.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
   <Project Path="LANCommander.SDK\LANCommander.SDK.csproj" />
+  <Project Path="LANCommander.SchemaGenerator\LANCommander.SchemaGenerator.csproj" />
   <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
   <Folder Name="/Plugins/">
     <Project Path="LANCommander.PluginDocsGenerator\LANCommander.PluginDocsGenerator.csproj" />

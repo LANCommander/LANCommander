@@ -1,10 +1,12 @@
 using System;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Platform;
 using LANCommander.SDK.Providers;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
@@ -18,6 +20,7 @@ public partial class MainWindowViewModel : ViewModelBase
     private readonly AuthenticationService _authenticationService;
     private readonly SettingsProvider<Settings.Settings> _settingsProvider;
     private readonly ILogger<MainWindowViewModel> _logger;
+    private volatile bool _requiresSignIn;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsLogoVisible))]
@@ -118,6 +121,7 @@ public partial class MainWindowViewModel : ViewModelBase
         LoginViewModel.LoginSucceeded += OnLoginSucceeded;
         LoginViewModel.ChangeServerRequested += OnChangeServerRequested;
         ShellViewModel.LogoutRequested += OnLogoutRequested;
+        serviceProvider.GetRequiredService<AuthenticationSession>().SessionExpired += OnSessionExpired;
 
         // Start with splash screen
         _currentView = SplashViewModel;
@@ -166,15 +170,22 @@ public partial class MainWindowViewModel : ViewModelBase
                         // Try to login with stored credentials
                         await _authenticationService.Login();
                         
-                        if (_connectionClient.IsConnected())
+                        if (!_requiresSignIn)
                         {
                             SplashViewModel.UpdateStatus("Loading library...");
                             // Token is valid - go directly to shell in online mode
                             ShellViewModel.SetOfflineMode(false);
                             await ShellViewModel.InitializeAsync();
-                            CurrentView = ShellViewModel;
+                            if (!_requiresSignIn)
+                                CurrentView = ShellViewModel;
                             return;
                         }
+                    }
+                    catch (AuthFailedException ex)
+                    {
+                        LoginViewModel.StatusMessage = ex.Message;
+                        LoginViewModel.HasError = true;
+                        _logger.LogWarning(ex, "Stored authentication session is no longer valid");
                     }
                     catch (Exception ex)
                     {
@@ -226,6 +237,7 @@ public partial class MainWindowViewModel : ViewModelBase
 
     private async void OnLoginSucceeded(object? sender, EventArgs e)
     {
+        _requiresSignIn = false;
         // Show the splash screen with a loading message while initializing
         SplashViewModel.UpdateStatus("Loading library...");
         CurrentView = SplashViewModel;
@@ -233,7 +245,37 @@ public partial class MainWindowViewModel : ViewModelBase
         // Initialize shell fully before switching view to avoid rendering uninitialized state
         ShellViewModel.SetOfflineMode(false);
         await ShellViewModel.InitializeAsync();
-        CurrentView = ShellViewModel;
+        if (!_requiresSignIn)
+            CurrentView = ShellViewModel;
+    }
+
+    private void OnSessionExpired(object? sender, EventArgs e)
+    {
+        _requiresSignIn = true;
+        Dispatcher.UIThread.Post(async () =>
+        {
+            try
+            {
+                if (!_requiresSignIn)
+                    return;
+
+                LoginViewModel.Password = string.Empty;
+                LoginViewModel.PasswordConfirmation = string.Empty;
+                LoginViewModel.IsRegistering = false;
+                LoginViewModel.IsServerOffline = false;
+                LoginViewModel.ServerAddress = _connectionClient.GetServerAddress()?.ToString() ?? string.Empty;
+                LoginViewModel.StatusMessage = "Your session has expired. Please sign in again.";
+                LoginViewModel.HasError = true;
+                CurrentView = LoginViewModel;
+                await _connectionClient.DisconnectAsync();
+                await LoginViewModel.LoadAuthenticationProvidersAsync();
+                LoginViewModel.AutoRedirectToProvider = false;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Could not finish returning to sign-in after the session expired");
+            }
+        });
     }
 
     private void OnChangeServerRequested(object? sender, EventArgs e)

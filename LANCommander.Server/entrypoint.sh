@@ -43,98 +43,30 @@ ensure_dir_owned() {
   install -d -m 0755 -o "$owner" -g "$group" "$path"
 }
 
-apt_update_once() {
-  # Run apt-get update only once per invocation when needed
-  if [[ -z "${_APT_UPDATED:-}" ]]; then
-    apt-get update
-    _APT_UPDATED=1
-  fi
-}
-
-apt_install() {
-  apt_update_once
-  apt-get install -y --no-install-recommends "$@"
-}
-
-# ---------- ffmpeg ----------
-install_ffmpeg() {
-  if [[ -x "/usr/local/bin/ffmpeg" ]]; then
-    echo "ffmpeg already installed. Skipping download."
-    return
-  fi
-
-  # A static LGPL build rather than Debian's "ffmpeg" package, which is a GPL build.
-  # This also avoids re-resolving a large apt dependency tree on every container start.
-  # No libx264 here - MediaToolService probes for an encoder and uses libopenh264.
-  case "$(uname -m)" in
-    aarch64|arm64) ffmpeg_arch="linuxarm64" ;;
-    *)             ffmpeg_arch="linux64" ;;
-  esac
-
-  echo "Downloading ffmpeg (${ffmpeg_arch}, LGPL build)..."
-  ffmpeg_tmp="$(mktemp -d)"
-  curl -fsSL "https://github.com/BtbN/FFmpeg-Builds/releases/download/latest/ffmpeg-master-latest-${ffmpeg_arch}-lgpl.tar.xz" \
-    -o "$ffmpeg_tmp/ffmpeg.tar.xz"
-  tar -xf "$ffmpeg_tmp/ffmpeg.tar.xz" -C "$ffmpeg_tmp"
-
-  # Only ffmpeg itself: ffprobe is never invoked by the server.
-  find "$ffmpeg_tmp" -type f -name ffmpeg -perm -u+x -exec install -m 0755 {} /usr/local/bin/ffmpeg \;
-  rm -rf "$ffmpeg_tmp"
-
-  if [[ -x "/usr/local/bin/ffmpeg" ]]; then
-    echo "ffmpeg installed."
-  else
-    echo "WARNING: ffmpeg install failed; video media processing will be skipped." >&2
-  fi
-}
-
-# ---------- yt-dlp ----------
-install_ytdlp() {
-  echo "Installing yt-dlp..."
-
-  apt_install curl ca-certificates xz-utils
-
-  # yt-dlp shells out to ffmpeg to mux the separate video and audio streams that
-  # "bestvideo+bestaudio" downloads, so it has to be on PATH before yt-dlp runs.
-  install_ffmpeg
-
-  if [[ -x "/usr/local/bin/yt-dlp" ]]; then
-    echo "yt-dlp already installed. Skipping download."
-  else
-    # Use the self-contained binary (bundles its own Python) instead of the
-    # bare "yt-dlp" zipapp asset, which requires a system python3.
-    case "$(uname -m)" in
-      x86_64|amd64)   ytdlp_asset="yt-dlp_linux" ;;
-      aarch64|arm64)  ytdlp_asset="yt-dlp_linux_aarch64" ;;
-      armv7l)         ytdlp_asset="yt-dlp_linux_armv7l" ;;
-      *)              ytdlp_asset="yt-dlp_linux" ;;
-    esac
-
-    echo "Downloading yt-dlp ($ytdlp_asset)..."
-    curl -fsSL "https://github.com/yt-dlp/yt-dlp/releases/latest/download/${ytdlp_asset}" -o /usr/local/bin/yt-dlp
-    chmod +x /usr/local/bin/yt-dlp
-    echo "yt-dlp installed."
-  fi
-}
-
 # ---------- SteamCMD ----------
 install_steamcmd() {
   echo "Installing SteamCMD..."
 
-  apt_install wget ca-certificates software-properties-common lib32gcc-s1 lib32stdc++6
+  if [[ "${LANCOMMANDER_FULL_IMAGE:-0}" == "1" ]]; then
+    STEAMCMD_DIR="/app/Data/Steam"
+    mkdir -p "$STEAMCMD_DIR/.steam/steamcmd"
+    if [[ ! -x "$STEAMCMD_DIR/steamcmd.sh" ]]; then
+      cp -a /opt/steamcmd/. "$STEAMCMD_DIR/"
+      chmod -R 755 "$STEAMCMD_DIR"
+    fi
+    echo "Full image detected; SteamCMD is available."
+    return 0
+  fi
 
-  # Create SteamCMD directory in /app/Data/Steam for persistence
+  apt-get update
+  apt-get install -y --no-install-recommends wget ca-certificates software-properties-common lib32gcc-s1 lib32stdc++6
+
   STEAMCMD_DIR="/app/Data/Steam"
-  mkdir -p "$STEAMCMD_DIR"
-  
-  # Create .steam directory for credential persistence
   mkdir -p "$STEAMCMD_DIR/.steam/steamcmd"
-  
-  # Set permissions to allow the app to use SteamCMD
   chmod -R 755 "$STEAMCMD_DIR"
 
   if [[ -x "$STEAMCMD_DIR/steamcmd.sh" ]]; then
-    echo "SteamCMD already present. Skipping download."
+    echo "SteamCMD already present."
   else
     echo "Downloading SteamCMD..."
     tmpdir="$(mktemp -d)"
@@ -145,10 +77,8 @@ install_steamcmd() {
     )
     rm -rf "$tmpdir"
     chmod +x "$STEAMCMD_DIR/steamcmd.sh"
-    echo "SteamCMD installed to $STEAMCMD_DIR."
   fi
-  
-  # Ensure .steam directory exists for credential persistence
+
   mkdir -p "$STEAMCMD_DIR/.steam/steamcmd"
   chmod -R 755 "$STEAMCMD_DIR/.steam"
 }
@@ -157,32 +87,29 @@ install_steamcmd() {
 install_wine() {
   echo "Installing WINE..."
 
-  if ! dpkg --print-foreign-architectures | grep -qx i386; then
-    dpkg --add-architecture i386
-    _APT_UPDATED=""   # force apt-get update to pull the i386 package lists
+  if [[ "${LANCOMMANDER_FULL_IMAGE:-0}" != "1" ]]; then
+    if ! dpkg --print-foreign-architectures | grep -qx i386; then
+      dpkg --add-architecture i386
+    fi
+
+    apt-get update
+    apt-get install -y --no-install-recommends wine wine32:i386 wine64 libwine fonts-wine cabextract unzip wget curl ca-certificates
   fi
 
-  apt_install wine wine32:i386 wine64 libwine fonts-wine cabextract unzip wget curl ca-certificates
-
-  # winetricks: install the self-contained upstream script.
   if [[ -x "/usr/local/bin/winetricks" ]]; then
     echo "winetricks already installed. Skipping download."
   else
-    echo "Downloading winetricks..."
     curl -fsSL "https://raw.githubusercontent.com/Winetricks/winetricks/master/src/winetricks" -o /usr/local/bin/winetricks
     chmod +x /usr/local/bin/winetricks
-    echo "winetricks installed."
   fi
 
   ensure_user "wine" "/home/wine"
   ensure_dir_owned "/home/wine/.wine" "wine" "wine"
 
-  # Initialize wine prefix once (headless-friendly)
   if [[ -f "/home/wine/.wine/system.reg" ]]; then
     echo "WINE prefix already initialized. Skipping winecfg."
   else
     echo "Initializing WINE prefix..."
-    # Suppress noisy logs and run a minimal init
     su -s /bin/bash -c 'WINEDEBUG=-all WINEARCH=win64 wineboot -u || true' wine
   fi
 
@@ -191,30 +118,18 @@ install_wine() {
 
 # ---------- Conditional execution (only if first run or explicitly requested again) ----------
 if [[ ! -f "$MARKER_FILE" ]]; then
-  install_ytdlp
-
   if [[ "${STEAMCMD:-0}" == "1" ]]; then
-    echo "STEAMCMD=1 detected, installing SteamCMD..."
     install_steamcmd
-  else
-    echo "STEAMCMD not set to 1, skipping SteamCMD installation."
   fi
 
   if [[ "${WINE:-0}" == "1" ]]; then
-    echo "WINE=1 detected, installing WINE..."
     install_wine
-  else
-    echo "WINE not set to 1, skipping WINE installation."
   fi
 
-  # Mark as completed
   date -Is > "$MARKER_FILE"
   echo "Setup steps completed. Marker written to $MARKER_FILE"
 else
-  # Even if previously completed, allow user to force re-run parts by setting REINSTALL=1
   if [[ "${REINSTALL:-0}" == "1" ]]; then
-    echo "REINSTALL=1 set — re-running requested installers if toggled."
-    install_ytdlp
     if [[ "${STEAMCMD:-0}" == "1" ]]; then install_steamcmd; fi
     if [[ "${WINE:-0}" == "1" ]]; then install_wine; fi
     date -Is > "$MARKER_FILE"

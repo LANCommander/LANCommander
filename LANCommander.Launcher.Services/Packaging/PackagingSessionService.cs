@@ -166,7 +166,9 @@ public class PackagingSessionService : IPackagingSessionService
             await TrySendAsync(worker, BuildFilterCommand(), cancellationToken);
         }
 
-        _counterTask = Task.Run(() => PublishCountersAsync(_sessionCts.Token));
+        // Captured here: a stop can null _sessionCts before the pool thread runs the lambda
+        var sessionToken = _sessionCts.Token;
+        _counterTask = Task.Run(() => PublishCountersAsync(sessionToken));
 
         var launchTarget = ResolveLaunchWorker(workers);
 

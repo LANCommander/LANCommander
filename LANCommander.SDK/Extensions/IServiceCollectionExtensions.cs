@@ -36,6 +36,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<PowerShellScriptFactory>();
 
         services.AddSingleton<AuthenticationClient>();
+        services.AddSingleton<AuthenticationSession>();
         services.AddSingleton<BeaconClient>();
         services.AddSingleton<ChatHubClient>();
         services.AddSingleton<IConnectionClient, ConnectionClient>();

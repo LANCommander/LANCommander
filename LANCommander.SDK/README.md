@@ -26,3 +26,20 @@ await client.Games.InstallAsync("114f653d-ea91-484b-8fe9-8e9bb58bde81");
 
 # Documentation
 For full documentation, review the [official LANCommander documentation](https://docs.lancommander.app/en/SDK).
+
+## Session renewal
+
+Clients registered with `AddLANCommanderClient<TSettings>()` automatically renew access
+tokens within one minute of expiry before sending authenticated API requests. Concurrent
+requests share a single renewal, and rotated tokens are saved through `ITokenProvider`.
+An API authentication rejection (401 or a redirect to the server's `/Login` page) triggers
+one renewal and one retry, including for servers that still return login redirects.
+
+Subscribe to `AuthenticationSession.SessionExpired` to return your UI to sign-in when
+renewal is rejected. Authenticated requests then throw `AuthFailedException` with
+`AuthenticationErrorCode.TokenExpired`. Network errors and server errors preserve stored
+credentials rather than signing the user out. The launcher continues to support its
+existing offline startup when the server cannot be reached.
+
+Both the launcher and server need the session-renewal fixes. After upgrading a server
+that did not persist refresh tokens, sign in once to establish renewable credentials.

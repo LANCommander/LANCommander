@@ -2,6 +2,7 @@ using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
@@ -75,21 +76,20 @@ public class AuthenticationService(
 
                 tokenProvider.SetToken(token);
 
-                if (await authenticationClient.ValidateTokenAsync())
+                if (!await authenticationClient.ValidateTokenAsync())
+                    throw new AuthFailedException("Could not validate your session. Please sign in again.");
+
+                TemporarilyOffline = false;
+
+                settingsProvider.Update(s =>
                 {
-                    //SetOfflineMode(false);
-                    TemporarilyOffline = false;
+                    s.Authentication.ServerAddress = serverAddress;
+                });
 
-                    settingsProvider.Update(s =>
-                    {
-                        s.Authentication.ServerAddress = serverAddress;
-                    });
+                await using var scope = scopeFactory.CreateAsyncScope();
+                var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
 
-                    await using var scope = scopeFactory.CreateAsyncScope();
-                    var profileService = scope.ServiceProvider.GetRequiredService<ProfileService>();
-
-                    await profileService.DownloadProfileInfoAsync();
-                }
+                await profileService.DownloadProfileInfoAsync();
                 
                 op.Complete();
             }
@@ -97,6 +97,7 @@ public class AuthenticationService(
         catch (Exception ex)
         {
             logger.LogError(ex, "Error while logging in");
+            throw;
         }
     }
 

@@ -2,7 +2,6 @@ using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
-using System.Net.Http.Headers;
 using System.Net.Mime;
 using System.Text;
 using System.Text.Json;
@@ -12,6 +11,7 @@ using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Services;
 using Semver;
 using Action = System.Action;
 
@@ -20,8 +20,10 @@ namespace LANCommander.SDK.Helpers;
 public class ApiRequestBuilder(
     HttpClient httpClient,
     ITokenProvider tokenProvider,
-    ISettingsProvider settingsProvider)
+    ISettingsProvider settingsProvider,
+    AuthenticationSession authenticationSession)
 {
+    private bool _useAuthenticationToken;
     private bool _ignoreVersion { get; set; }
     private object _body { get; set; }
     private string _route { get; set; }
@@ -109,8 +111,7 @@ public class ApiRequestBuilder(
 
     public ApiRequestBuilder UseAuthenticationToken()
     {
-        var token = tokenProvider.GetToken();
-        _request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token.AccessToken);
+        _useAuthenticationToken = true;
 
         return this;
     }
@@ -189,7 +190,7 @@ public class ApiRequestBuilder(
 
     public async Task<ApiResponseMessage<TResult>> SendAsync<TResult>() where TResult : class
     {
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
 
         var result = new ApiResponseMessage<TResult>
         {
@@ -204,7 +205,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
         
         response
             .EnsureSuccessStatusCode();
@@ -216,7 +217,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Post;
 
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
 
         response
             .EnsureSuccessStatusCode();
@@ -228,7 +229,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Post;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
         
         response
             .EnsureSuccessStatusCode();
@@ -238,7 +239,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Put;
         
-        var response = await  _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
         
         response
             .EnsureSuccessStatusCode();
@@ -250,7 +251,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Delete;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
 
         response
             .EnsureSuccessStatusCode();
@@ -262,7 +263,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Head;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
 
         response
             .EnsureSuccessStatusCode();
@@ -272,7 +273,7 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Head;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
         
         response
             .EnsureSuccessStatusCode();
@@ -284,7 +285,8 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, _cancellationToken);
+        var response = await SendRequestAsync();
+        response.EnsureSuccessStatusCode();
 
         var folder = Path.GetDirectoryName(destination);
         if (!Directory.Exists(folder))
@@ -317,7 +319,8 @@ public class ApiRequestBuilder(
     {
         _request.Method = HttpMethod.Get;
         
-        var response = await _httpClient.SendAsync(_request, HttpCompletionOption.ResponseHeadersRead, _cancellationToken);
+        var response = await SendRequestAsync(HttpCompletionOption.ResponseHeadersRead);
+        response.EnsureSuccessStatusCode();
         
         return await response.Content.ReadAsTrackableStreamAsync(_cancellationToken);
     }
@@ -334,7 +337,7 @@ public class ApiRequestBuilder(
             _request.Content = form;
             _request.Method = HttpMethod.Post;
             
-            var response = await _httpClient.SendAsync(_request, _cancellationToken);
+            var response = await SendRequestAsync();
 
             return await DeserializeResultAsync<TResult>(response);
         }
@@ -351,7 +354,7 @@ public class ApiRequestBuilder(
 
     public async Task<Guid> UploadInChunksAsync(long chunkSize, Stream data)
     {
-        var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider)
+        var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, authenticationSession)
             .UseRoute("/api/Upload/Init")
             .UseVersioning()
             .UseAuthenticationToken()
@@ -381,7 +384,7 @@ public class ApiRequestBuilder(
             content.Add(new StringContent(initResponse.Key.ToString()), "Key");
             content.Add(new ByteArrayContent(buffer), "File", "chunk.bin");
 
-            var chunkBuilder = new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider);
+            var chunkBuilder = new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, authenticationSession);
             chunkBuilder.UseRoute("/api/Upload/Chunk");
             chunkBuilder.UseVersioning();
             chunkBuilder.UseAuthenticationToken();
@@ -389,10 +392,16 @@ public class ApiRequestBuilder(
             chunkBuilder._request.Content = content;
             chunkBuilder._request.Method = HttpMethod.Post;
 
-            var response = await httpClient.SendAsync(chunkBuilder._request, _cancellationToken);
+            var response = await chunkBuilder.SendRequestAsync();
             response.EnsureSuccessStatusCode();
         }
 
         return initResponse.Key;
-    } 
+    }
+
+    private Task<HttpResponseMessage> SendRequestAsync(
+        HttpCompletionOption completionOption = HttpCompletionOption.ResponseContentRead) =>
+        _useAuthenticationToken
+            ? authenticationSession.SendAsync(_httpClient, _request, completionOption, _cancellationToken)
+            : _httpClient.SendAsync(_request, completionOption, _cancellationToken);
 }

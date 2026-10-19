@@ -563,6 +563,24 @@ namespace LANCommander.Server.Services
             return result;
         }
 
+        public async Task UpdateRefreshTokenAsync(Guid userId, string refreshToken, DateTime expiration)
+        {
+            using var identityContext = await _identityContextFactory.CreateAsync();
+            var user = await identityContext.UserManager.FindByIdAsync(userId.ToString());
+            if (user == null)
+                throw new UserAuthenticationException("User no longer exists");
+
+            user.RefreshToken = refreshToken;
+            user.RefreshTokenExpiration = expiration;
+
+            var result = await identityContext.UserManager.UpdateAsync(user);
+            if (!result.Succeeded)
+                throw new InvalidOperationException(
+                    $"Could not save refresh token: {string.Join(", ", result.Errors.Select(error => error.Description))}");
+
+            await Cache.RemoveByTagAsync($"User/{userId}");
+        }
+
         public async Task<User> UpdateAsync(User entity)
         {
             using var identityContext = await _identityContextFactory.CreateAsync();

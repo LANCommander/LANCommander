@@ -1,7 +1,12 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
+using System.Net;
 using LANCommander.SDK.Abstractions;
+using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Services;
+using LANCommander.Launcher.Services.Tests.Helpers;
 using Microsoft.Extensions.Logging.Abstractions;
 using Moq;
 using Shouldly;
@@ -108,5 +113,53 @@ public class AuthenticationServiceTests
         provider.Setup(p => p.GetToken()).Returns(new AuthToken { AccessToken = string.Empty });
 
         CreateSubject(provider.Object).GetCurrentUserName().ShouldBe(string.Empty);
+    }
+
+    [Theory]
+    [InlineData(HttpStatusCode.BadRequest, true)]
+    [InlineData(HttpStatusCode.ServiceUnavailable, false)]
+    public async Task Login_does_not_report_success_when_token_validation_fails(
+        HttpStatusCode responseStatus, bool expired)
+    {
+        var serverAddress = new Uri("https://server.test");
+        var settings = TestSettingsProvider.Create();
+        settings.CurrentValue.Authentication.ServerAddress = serverAddress;
+        var token = new AuthToken
+        {
+            AccessToken = IssueJwt(Guid.NewGuid(), "alice"),
+            RefreshToken = "refresh-token",
+            Expiration = expired ? DateTime.UtcNow.AddMinutes(-1) : DateTime.UtcNow.AddHours(1),
+        };
+        var tokens = new Mock<ITokenProvider>();
+        tokens.Setup(p => p.GetToken()).Returns(() => settings.CurrentValue.Authentication.Token);
+        tokens.Setup(p => p.SetToken(It.IsAny<AuthToken>()))
+            .Callback<AuthToken>(value => settings.CurrentValue.Authentication.Token = value);
+        var connection = new Mock<IConnectionClient>();
+        connection.Setup(c => c.UpdateServerAddressAsync(It.IsAny<string>())).Returns(Task.CompletedTask);
+        connection.Setup(c => c.IsConnected()).Returns(true);
+        using var client = new HttpClient(new FailureHandler(responseStatus));
+        using var session = new AuthenticationSession(
+            tokens.Object, settings, NullLogger<AuthenticationSession>.Instance);
+        var requests = new ApiRequestFactory(client, tokens.Object, settings, session);
+        var authentication = new AuthenticationClient(
+            NullLogger<AuthenticationClient>.Instance, tokens.Object, null!, settings,
+            requests, connection.Object, null!);
+        var subject = new AuthenticationService(
+            tokens.Object, settings, null!, connection.Object, authentication,
+            NullLogger<AuthenticationService>.Instance);
+
+        var error = await Should.ThrowAsync<AuthFailedException>(() => subject.Login(serverAddress, token));
+
+        if (expired)
+            error.ErrorCode.ShouldBe(AuthFailedException.AuthenticationErrorCode.TokenExpired);
+        else
+            settings.CurrentValue.Authentication.Token.ShouldBe(token);
+    }
+
+    private sealed class FailureHandler(HttpStatusCode statusCode) : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request, CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(statusCode));
     }
 }

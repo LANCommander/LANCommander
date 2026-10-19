@@ -18,6 +18,7 @@ public class FixtureCatalogTests
         typeof(Theme),          // Emits the theme stylesheet link
         typeof(ThemeScripts),   // Emits a script tag
         typeof(ComponentHost),  // Host for service-opened overlays; covered by the dialog/notification fixtures
+        typeof(MenuInsertionsEnd), // Renders only plugin-inserted menu items; emitted by Menu/SubMenu, covered by Menu.Sidebar
     ];
 
     [Fact]

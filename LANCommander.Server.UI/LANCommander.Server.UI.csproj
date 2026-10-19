@@ -24,9 +24,13 @@
     <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
   </Target>
 
-  <Target Name="CompileFrontendResources" BeforeTargets="Compile">
+  <Target Name="CompileFrontendResources" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
     <Message Text="Compiling frontend" Importance="high" />
     <Exec Command="npm run package" />
+    <!-- The wwwroot glob is evaluated before this runs, so on a clean checkout the bundle would be left out of the static web assets -->
+    <ItemGroup>
+      <Content Include="wwwroot\**" Exclude="@(Content)" />
+    </ItemGroup>
   </Target>
 	
   <ItemGroup>

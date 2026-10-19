@@ -45,9 +45,13 @@
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
 
-	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
 		<Message Text="Compiling global SCSS files" Importance="high" />
 		<Exec Command="npm run package" />
+		<!-- The wwwroot glob is evaluated before this runs, so on a clean checkout app.css would be left out of the static web assets -->
+		<ItemGroup>
+			<Content Include="wwwroot\css\**" Exclude="@(Content)" />
+		</ItemGroup>
 	</Target>
 
     <ItemGroup>

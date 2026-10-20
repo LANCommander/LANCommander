@@ -246,6 +246,12 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 return results;
             });
 
+            // A local-DB reload (e.g. import completing) may have landed while the server call was
+            // in flight, so re-check against the current list rather than the pre-await snapshot
+            var currentIds = _allGames.Select(g => g.Id).ToHashSet();
+
+            newItems = newItems.Where(vm => currentIds.Add(vm.Id)).ToList();
+
             if (newItems.Count == 0)
                 return;
 

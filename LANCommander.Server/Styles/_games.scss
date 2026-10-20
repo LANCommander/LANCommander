@@ -1,0 +1,947 @@
+// The Games list: filter rail, page header, active filter chips, the list's cells, cover tiles and
+// the floating bulk bar. Uses the --lc-* tokens from LANCommander.Server.UI's theme only.
+
+$games-rail-width: 236px;
+$games-mobile-breakpoint: 767px;
+
+.games-mono {
+    font-family: var(--lc-font-mono);
+}
+
+// A text button in the accent colour, e.g. "Clear all"
+.games-link {
+    padding: 0 4px;
+    border: 0;
+    background: transparent;
+    color: var(--lc-accent-text-color);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--lc-primary-light);
+    }
+
+    &:focus-visible {
+        border-radius: var(--lc-radius-sm);
+        outline: 2px solid var(--lc-selection-rail-color);
+    }
+}
+
+// Layout: the rail flush against the navigation, full height with its own 60px header, then the
+// page's header over the list. The page fills the window beside the sidebar, whatever padding the
+// shell gives other pages, so the list scrolls within it and the header and rail stay put.
+.games-page {
+    position: fixed;
+    inset: 0 0 0 var(--lc-layout-sidebar-width);
+    display: grid;
+    grid-template-columns: $games-rail-width minmax(0, 1fr);
+    background: var(--lc-canvas);
+}
+
+.games-main {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+}
+
+// The page header at 60px: 20/600 title with the count and library size in mono beside it, and
+// Import and Add Game. Local to this page; the shared header is taller.
+.lc-page-header.games-header {
+    flex-shrink: 0;
+    flex-wrap: nowrap;
+    align-items: center;
+    height: 60px;
+    padding: 0 24px;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+
+    .lc-page-header-heading {
+        flex-direction: row;
+        align-items: baseline;
+        gap: 12px;
+    }
+
+    .lc-page-header-title {
+        font-size: 20px;
+        font-weight: 600;
+        letter-spacing: -0.015em;
+        line-height: 28px;
+    }
+
+    .lc-page-header-subtitle {
+        margin: 0;
+        color: var(--lc-text-tertiary-color);
+        font-family: var(--lc-font-mono);
+        font-size: 12px;
+    }
+
+    .lc-page-header-extra {
+        gap: 12px;
+    }
+}
+
+.games-content {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 14px 24px;
+
+    // The table fills what's left: its rows (or tiles) scroll, its footer stays at the bottom
+    > .lc-error-handler,
+    > div:not(.games-bulkbar) {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+    }
+}
+
+.lc-table.games-table {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+
+    > .lc-table-frame {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+    }
+
+    .lc-table-rows {
+        flex: 1;
+        min-height: 0;
+    }
+
+    .lc-table-rows-hidden {
+        display: none;
+    }
+
+    .lc-table-rows > .lc-table-grid {
+        height: 100%;
+    }
+
+    .lc-table-tiles {
+        flex: 1;
+        min-height: 0;
+        overflow-y: auto;
+    }
+
+    .lc-table-frame-tiles .lc-table-footer {
+        flex-shrink: 0;
+    }
+}
+
+// Rail: views, what's missing, then facets, each entry with its count
+
+.games-rail {
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+    border-inline-end: 1px solid var(--lc-border-subtle-color);
+}
+
+.games-rail-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    height: 60px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+}
+
+.games-rail-kicker {
+    flex-grow: 1;
+    margin: 0;
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    text-transform: uppercase;
+}
+
+// Save the current filters as a view
+.games-rail-add {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-raised);
+    color: var(--lc-text-secondary-color);
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+        color: var(--lc-text-title-color);
+    }
+
+    &:disabled {
+        color: var(--lc-text-disabled-color);
+        cursor: default;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 1px;
+    }
+}
+
+.games-rail-body {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 10px 8px;
+}
+
+.games-rail-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.games-rail-divider {
+    height: 1px;
+    margin: 10px 8px;
+    background: var(--lc-border-subtle-color);
+}
+
+.games-rail-section-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 0 8px 8px;
+
+    .games-rail-link {
+        padding: 0;
+        border: 0;
+        background: transparent;
+        color: var(--lc-accent-text-color);
+        font: inherit;
+        font-size: 12px;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--lc-primary-light);
+        }
+    }
+}
+
+// Shared by views and facet entries: full-width buttons with the name and a mono count
+.games-rail-view,
+.games-rail-facet {
+    position: relative;
+    display: flex;
+    align-items: center;
+    width: 100%;
+    padding: 0 8px;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--lc-text-secondary-color);
+    font: inherit;
+    font-size: 13px;
+    text-align: start;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+    }
+}
+
+// Views: 30px, a status dot, and Raised with a rail inset 6px when chosen
+.games-rail-view {
+    gap: 8px;
+    height: 30px;
+}
+
+.games-rail-view-active {
+    background: var(--lc-raised);
+    color: var(--lc-text-title-color);
+
+    &::before {
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        left: 0;
+        width: var(--lc-selection-rail);
+        border-radius: 1px;
+        background: var(--lc-selection-rail-color);
+        content: "";
+    }
+
+    &:hover {
+        background: var(--lc-raised);
+    }
+
+    .games-rail-count {
+        color: var(--lc-text-secondary-color);
+    }
+}
+
+.games-rail-dot {
+    flex-shrink: 0;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--lc-popover);
+}
+
+.games-rail-dot-warning {
+    background: var(--lc-warning);
+}
+
+.games-rail-dot-danger {
+    background: var(--lc-danger);
+}
+
+// Facet entries: 26px with a 14px checkbox; chosen ones get a faint fill
+.games-rail-facet {
+    gap: 9px;
+    height: 26px;
+}
+
+.games-rail-facet-active {
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--lc-text-title-color);
+
+    .games-rail-count {
+        color: var(--lc-text-tertiary-color);
+    }
+}
+
+.games-rail-check {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border: 1px solid rgba(255, 255, 255, 0.22);
+    border-radius: var(--lc-radius-sm);
+    color: #FFFFFF;
+    font-size: 9px;
+
+    .games-rail-facet-active & {
+        border-color: var(--lc-primary);
+        background: var(--lc-primary);
+    }
+}
+
+.games-rail-name {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-rail-count {
+    flex-shrink: 0;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+.games-rail-saved {
+    position: relative;
+
+    .games-rail-view {
+        padding-inline-end: 28px;
+    }
+}
+
+.games-rail-remove {
+    position: absolute;
+    top: 50%;
+    right: 4px;
+    display: inline-flex;
+    padding: 3px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    background: none;
+    color: var(--lc-text-tertiary-color);
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(-50%);
+
+    .games-rail-saved:hover &,
+    &:focus-visible {
+        opacity: 1;
+    }
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--lc-danger-text-color);
+    }
+}
+
+// Facet groups: a caret, the facet's name and a pill counting its chosen values
+.games-rail-group + .games-rail-group {
+    margin-top: 4px;
+}
+
+.games-rail-group-open + .games-rail-group,
+.games-rail-group + .games-rail-group-open {
+    margin-top: 8px;
+}
+
+.games-rail-group-toggle {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    width: 100%;
+    padding: 4px 8px;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--lc-text-secondary-color);
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+
+    .games-rail-group-open & {
+        padding-bottom: 2px;
+        color: var(--lc-text-title-color);
+    }
+
+    &:hover {
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: -2px;
+    }
+}
+
+.games-rail-caret {
+    color: var(--lc-text-disabled-color);
+    font-size: 11px;
+    transition: transform 0.15s;
+
+    .games-rail-group-open & {
+        color: var(--lc-text-tertiary-color);
+        transform: rotate(90deg);
+    }
+}
+
+.games-rail-group-title {
+    flex-grow: 1;
+}
+
+// Accent count pill; stays local until the shared Badge's Count mode covers this tint
+.games-rail-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 5px;
+    border-radius: 999px;
+    background: rgba(23, 125, 220, 0.24);
+    color: #69B1FF;
+    font-family: var(--lc-font-mono);
+    font-size: 10px;
+    font-weight: 400;
+}
+
+.games-rail-more {
+    padding: 2px 8px 6px 31px;
+    border: 0;
+    background: none;
+    color: var(--lc-accent-text-color);
+    font: inherit;
+    font-size: 12px;
+    cursor: pointer;
+
+    &:hover {
+        color: var(--lc-primary-light);
+    }
+}
+
+// Active filters, each removable: 26px Raised chips, "Facet: Value"; views in the accent tint.
+// Local until the shared Tag's chip variants land.
+
+.games-chips {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+}
+
+.games-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    height: 26px;
+    padding: 0 7px 0 10px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-raised);
+    color: var(--lc-text-title-color);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.games-chip-accent {
+    border-color: rgba(64, 150, 255, 0.38);
+    background: rgba(23, 125, 220, 0.18);
+    color: #69B1FF;
+    font-weight: 500;
+}
+
+.games-chip-warning {
+    border-color: rgba(255, 197, 61, 0.34);
+    background: rgba(216, 150, 20, 0.16);
+    color: var(--lc-warning-text-color);
+}
+
+.games-chip-close {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px;
+    border: 0;
+    border-radius: var(--lc-radius-sm);
+    background: transparent;
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+    cursor: pointer;
+
+    .games-chip-accent &,
+    .games-chip-warning & {
+        color: inherit;
+    }
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+    }
+}
+
+// The list's cells
+
+.games-table .lc-table-grid {
+    tbody td {
+        font-size: 14px;
+    }
+
+    .games-icon-cell {
+        padding-inline-end: 0;
+    }
+}
+
+.games-title {
+    color: var(--lc-text-title-color);
+
+    [data-lc-child] & {
+        color: var(--lc-text-secondary-color);
+        font-size: 13px;
+    }
+}
+
+.games-title-cell .lc-table-expandable-child {
+    gap: 9px;
+}
+
+// A child row's type: an 18px neutral badge in small caps
+.games-type-badge {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 18px;
+    margin-inline-start: 9px;
+    padding: 0 6px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-popover);
+    color: var(--lc-text-secondary-color);
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    vertical-align: middle;
+}
+
+.games-muted-cell {
+    color: var(--lc-text-secondary-color);
+    font-size: 13px;
+}
+
+.games-faint-cell {
+    color: var(--lc-text-tertiary-color);
+}
+
+.games-table .lc-table-grid .lc-table-numeric {
+    font-size: 13px;
+}
+
+.games-none {
+    color: var(--lc-text-disabled-color);
+}
+
+.games-danger {
+    color: var(--lc-danger-text-color);
+}
+
+// The icon slot: the game's icon, else a toned tile with its initials, else (no cover either) a
+// dashed amber slot that says the art is missing
+.games-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1px solid rgba(255, 255, 255, 0.09);
+    border-radius: var(--lc-radius-md);
+    object-fit: cover;
+    vertical-align: middle;
+}
+
+.games-icon-placeholder {
+    color: rgba(255, 255, 255, 0.72);
+    font-size: 10px;
+    font-weight: 600;
+}
+
+.games-icon-missing {
+    border: 1px dashed rgba(255, 197, 61, 0.40);
+    background: var(--lc-well);
+    color: var(--lc-warning);
+    font-size: 13px;
+}
+
+// The row menu: a 26px kebab, brighter while its row is hovered
+.games-kebab {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--lc-text-tertiary-color);
+    font-size: 16px;
+    cursor: pointer;
+
+    tr:hover & {
+        color: var(--lc-text-title-color);
+    }
+
+    &:hover {
+        background: var(--lc-hover-background);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+    }
+}
+
+// Cover tiles: 139×200 at the middle size, a 12px title and a mono line beneath
+
+.games-tile {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.games-tile-cover {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    aspect-ratio: 139 / 200;
+    padding: 10px;
+    overflow: hidden;
+    border-radius: var(--lc-radius-md);
+    box-shadow: inset 0 0 0 1px var(--lc-border-card-color);
+    container-type: inline-size;
+
+    img {
+        position: absolute;
+        inset: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+}
+
+@for $tone from 0 through 5 {
+    .games-tile-tone-#{$tone} {
+        background: linear-gradient(155deg, var(--lc-cover-tone-#{$tone}-light), var(--lc-cover-tone-#{$tone}-dark));
+    }
+}
+
+// The launcher's placeholder: the title, centred, 13/600 at the middle size
+.games-tile-placeholder {
+    display: -webkit-box;
+    max-width: 100%;
+    overflow: hidden;
+    color: rgba(255, 255, 255, 0.80);
+    font-size: clamp(10px, 11cqi, 16px);
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1.3;
+    text-align: center;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 5;
+}
+
+// In flight: a 3px bar along the foot of the cover, running until the game is done
+.games-tile-progress {
+    position: absolute;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 1;
+    height: 3px;
+    overflow: hidden;
+    background: rgba(0, 0, 0, 0.45);
+
+    &::after {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        left: 0;
+        width: 40%;
+        background: var(--lc-selection-rail-color);
+        animation: games-tile-progress 1.2s ease-in-out infinite;
+        content: "";
+    }
+}
+
+@keyframes games-tile-progress {
+    from {
+        transform: translateX(-100%);
+    }
+
+    to {
+        transform: translateX(250%);
+    }
+}
+
+// Done: an 18px green tick in the corner opposite the selection tick
+.games-tile-done {
+    position: absolute;
+    top: 7px;
+    right: 7px;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--lc-success);
+    color: #FFFFFF;
+    font-size: 10px;
+}
+
+// No match: the cover gives way to a dashed amber frame, since it needs a person
+.games-tile-nomatch-state .games-tile-cover {
+    background: var(--lc-well);
+
+    &::before {
+        position: absolute;
+        inset: 6px;
+        border: 1px dashed rgba(255, 197, 61, 0.40);
+        border-radius: var(--lc-radius-sm);
+        content: "";
+    }
+}
+
+.games-tile-nomatch {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    color: var(--lc-warning-text-color);
+    font-size: 11px;
+    text-align: center;
+
+    .lc-icon {
+        color: var(--lc-warning);
+        font-size: 20px;
+    }
+}
+
+.games-tile-caption {
+    margin-top: 8px;
+    overflow: hidden;
+    color: var(--lc-text-title-color);
+    font-size: 12px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-tile-sub {
+    margin-top: 2px;
+    overflow: hidden;
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.games-tile-sub-muted {
+    color: var(--lc-text-tertiary-color);
+}
+
+.games-tile-sub-accent {
+    color: #69B1FF;
+}
+
+.games-tile-sub-success {
+    color: var(--lc-success-text-color);
+}
+
+.games-tile-sub-warning {
+    color: var(--lc-warning-text-color);
+}
+
+.games-tile-sub-danger {
+    color: var(--lc-danger-text-color);
+}
+
+// Floating bulk bar: Popover tone, the one shadow for what floats. It sits over the list, above
+// the table's footer; in the grid, near the bottom.
+
+.games-bulkbar {
+    position: absolute;
+    bottom: 68px;
+    left: 50%;
+    z-index: 5;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    height: 44px;
+    max-width: calc(100% - 48px);
+    padding: 0 10px 0 14px;
+    border: 1px solid var(--lc-border-overlay-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-popover);
+    box-shadow: var(--lc-shadow-popover);
+    transform: translateX(-50%);
+    white-space: nowrap;
+}
+
+.games-bulkbar-grid {
+    bottom: 22px;
+}
+
+.games-bulkbar-count,
+.games-bulkbar-status {
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+}
+
+.games-bulkbar-link {
+    padding: 0;
+    font-size: 13px;
+}
+
+.games-bulkbar-divider {
+    width: 1px;
+    height: 20px;
+    margin-inline: 2px;
+    background: var(--lc-border-overlay-color);
+}
+
+// Delete is borderless danger text here, beside the raised buttons
+.games-bulkbar .lc-button.games-bulkbar-delete {
+    color: var(--lc-danger-text-color);
+}
+
+.games-bulkbar-clear {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px;
+    height: 26px;
+    padding: 0;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+    }
+}
+
+// Narrow windows: the shell stacks, so the page goes back into the flow with the rail above the list
+@media (max-width: $games-mobile-breakpoint) {
+    .games-page {
+        position: static;
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .games-rail {
+        max-height: 320px;
+        border-inline-end: 0;
+        border-bottom: 1px solid var(--lc-border-subtle-color);
+    }
+
+    .lc-table.games-table .lc-table-rows > .lc-table-grid {
+        height: auto;
+        max-height: 70vh;
+    }
+
+    .games-bulkbar {
+        position: fixed;
+        bottom: 12px;
+        max-width: calc(100vw - 24px);
+        flex-wrap: wrap;
+        height: auto;
+        padding-block: 6px;
+    }
+}
+
+// Game edit, General: short fields in pairs, so long text gets the full width
+.game-form-pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0 24px;
+
+    @media (max-width: 900px) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+// Add Game: the choice between a lookup and entering the game by hand
+.add-game-mode {
+    margin-bottom: 16px;
+}

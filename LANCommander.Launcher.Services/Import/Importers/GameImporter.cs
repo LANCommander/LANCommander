@@ -37,6 +37,20 @@ public class GameImporter(
             (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
     }
 
+    /// <summary>
+    /// Manifests from servers that predate InstallTo/ShowInLibrary only carry a (possibly legacy)
+    /// Type; derive the install behavior from it.
+    /// </summary>
+    private static void ApplyInstallBehavior(Data.Models.Game game, Game record)
+    {
+        var hasBaseGame = record.BaseGameId != Guid.Empty || !String.IsNullOrWhiteSpace(record.BaseGame);
+        var resolved = GameTypeHelper.FromLegacyType(record.Type, hasBaseGame);
+
+        game.Type = resolved.Type;
+        game.InstallTo = record.InstallTo ?? resolved.InstallTo;
+        game.ShowInLibrary = record.ShowInLibrary ?? resolved.ShowInLibrary;
+    }
+
     public override async Task<bool> AddAsync(ImportItemInfo<Game> importItemInfo)
     {
         try
@@ -51,6 +65,7 @@ public class GameImporter(
                 ReleasedOn = importItemInfo.Record.ReleasedOn,
                 Singleplayer = importItemInfo.Record.Singleplayer,
                 Type = importItemInfo.Record.Type,
+                OptionSchema = importItemInfo.Record.OptionSchema,
                 ExternalIds = importItemInfo.Record.ExternalIds?.Select(e => new Data.Models.GameExternalId
                 {
                     Provider = e.Provider,
@@ -61,7 +76,9 @@ public class GameImporter(
                 ImportedOn = DateTime.UtcNow,
                 LatestVersion = importItemInfo.Record.Version,
             };
-            
+
+            ApplyInstallBehavior(game, importItemInfo.Record);
+
             await gameService.AddAsync(game);
             await UpdateRelationships(importItemInfo.Record);
             await libraryService.AddToLibraryAsync(game);
@@ -89,14 +106,19 @@ public class GameImporter(
             existing.ReleasedOn = importItemInfo.Record.ReleasedOn;
             existing.Singleplayer = importItemInfo.Record.Singleplayer;
             existing.Type = importItemInfo.Record.Type;
+            existing.OptionSchema = importItemInfo.Record.OptionSchema;
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
 
+            ApplyInstallBehavior(existing, importItemInfo.Record);
+
             await gameService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record, existing);
 
-            if (await libraryService.IsInstalledAsync(existing.Id) && existing.LatestVersion == existing.InstalledVersion)
+            // Only an install already on the imported (latest) version takes its manifest; older installs
+            // keep their own version's config
+            if (await libraryService.IsInstalledAsync(existing.Id) && IsOnImportedVersion(existing, importItemInfo.Record))
                 await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
             return true;
@@ -105,6 +127,19 @@ public class GameImporter(
         {
             throw new ImportSkippedException<Game>(importItemInfo.Record, "An unknown error occurred while trying to update game", ex);
         }
+    }
+
+    private static bool IsOnImportedVersion(Data.Models.Game existing, Game record)
+    {
+        if (record.VersionId is Guid importedVersionId)
+        {
+            var installedVersionId = existing.InstalledVersionId
+                ?? SDK.Services.GameClient.GetInstalledVersionId(existing.InstallDirectory, existing.Id);
+
+            return installedVersionId == importedVersionId;
+        }
+
+        return existing.LatestVersion == existing.InstalledVersion;
     }
 
     private async Task UpdateRelationships(Game manifest, Data.Models.Game? cachedGame = null)

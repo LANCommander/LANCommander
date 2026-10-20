@@ -1,0 +1,248 @@
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.Server.Data
+@using LANCommander.Server.Services.Enums
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject ServerManager ServerManager
+@inject NavigationManager NavigationManager
+@inject IJSRuntime JS
+@inject ILogger<ServerSwitcher> Logger
+
+@*
+    Jumps between servers from any server's page, staying on the same section. There may be a
+    hundred servers, so the sidebar never lists them: running ones are pinned here with their player
+    counts, recently opened ones follow, and All servers is at the foot.
+*@
+<Popover MaxWidth="null" Class="server-switcher">
+    <ChildContent>
+        <Button Icon="IconType.HardDrives" Class="server-switcher-button" aria-label="Switch server">
+            Switch
+            <Icon Type="IconType.CaretDown" Class="server-switcher-caret" />
+        </Button>
+    </ChildContent>
+    <Content>
+        <div class="server-switcher-panel">
+            <TextInput Icon="IconType.MagnifyingGlass" Immediate @bind-Value="_search" Placeholder="Find a server" aria-label="Find a server" Class="server-switcher-search" Small />
+
+            @{
+                var running = Matching(_running).ToList();
+                var recent = Matching(_recent).ToList();
+                var shownRunning = _showAllRunning || !String.IsNullOrWhiteSpace(_search) ? running : running.Take(RunningLimit).ToList();
+            }
+
+            @if (running.Any())
+            {
+                <div class="server-switcher-heading">
+                    <span>Running</span>
+                    <span class="server-switcher-heading-count server-switcher-heading-count-live">@running.Count.ToString("N0")</span>
+                </div>
+                <ul class="server-switcher-list">
+                    @foreach (var server in shownRunning)
+                    {
+                        <li>@Entry(server, ServerProcessStatus.Running)</li>
+                    }
+                </ul>
+
+                @if (shownRunning.Count < running.Count)
+                {
+                    <button type="button" class="server-switcher-more" @onclick="() => _showAllRunning = true">@((running.Count - shownRunning.Count).ToString("N0")) more running&hellip;</button>
+                }
+            }
+
+            @if (recent.Any())
+            {
+                @if (running.Any())
+                {
+                    <div class="server-switcher-divider" role="separator"></div>
+                }
+
+                <div class="server-switcher-heading">
+                    <span>Recent</span>
+                    <span class="server-switcher-heading-count">@_all.Count.ToString("N0") total</span>
+                </div>
+                <ul class="server-switcher-list">
+                    @foreach (var server in recent)
+                    {
+                        <li>@Entry(server, _status.GetValueOrDefault(server.Id, ServerProcessStatus.Stopped))</li>
+                    }
+                </ul>
+            }
+
+            @if (!string.IsNullOrWhiteSpace(_search))
+            {
+                var others = Matching(_all).Except(_running).Except(_recent).Take(8).ToList();
+
+                @if (others.Any())
+                {
+                    <div class="server-switcher-divider" role="separator"></div>
+                    <div class="server-switcher-heading">
+                        <span>Servers</span>
+                    </div>
+                    <ul class="server-switcher-list">
+                        @foreach (var server in others)
+                        {
+                            <li>@Entry(server, _status.GetValueOrDefault(server.Id, ServerProcessStatus.Stopped))</li>
+                        }
+                    </ul>
+                }
+            }
+
+            <div class="server-switcher-divider" role="separator"></div>
+            <a class="server-switcher-all" href="/Servers">
+                <Icon Type="IconType.List" />
+                <span>All servers</span>
+            </a>
+        </div>
+    </Content>
+</Popover>
+
+@code {
+    [Parameter, EditorRequired] public Server Current { get; set; } = default!;
+
+    const string RecentKey = "lc-servers:recent";
+    const int RecentLimit = 6;
+    const int RunningLimit = 4;
+
+    sealed record ServerEntry(Guid Id, string Name, int Players, int? MaxPlayers);
+
+    List<ServerEntry> _all = [];
+    List<ServerEntry> _running = [];
+    List<ServerEntry> _recent = [];
+    readonly Dictionary<Guid, ServerProcessStatus> _status = [];
+    string? _search;
+    bool _showAllRunning;
+
+    IEnumerable<ServerEntry> Matching(IEnumerable<ServerEntry> servers) =>
+        string.IsNullOrWhiteSpace(_search)
+            ? servers
+            : servers.Where(s => s.Name.Contains(_search.Trim(), StringComparison.OrdinalIgnoreCase));
+
+    RenderFragment Entry(ServerEntry server, ServerProcessStatus status) =>
+        @<a class="@(server.Id == Current.Id ? "server-switcher-entry server-switcher-entry-current" : "server-switcher-entry")"
+            href="@SectionOf(server.Id)"
+            aria-current="@(server.Id == Current.Id ? "page" : null)">
+            <span class="@($"server-switcher-dot server-switcher-dot-{StatusClass(status)}")" aria-hidden="true"></span>
+            <span class="server-switcher-entry-name">@server.Name</span>
+            @if (status == ServerProcessStatus.Running)
+            {
+                <span class="server-switcher-count" title="Players">@(server.MaxPlayers is > 0 ? $"{server.Players}/{server.MaxPlayers}" : server.Players.ToString("N0"))</span>
+            }
+            else
+            {
+                <span class="@($"server-switcher-count server-switcher-count-{StatusClass(status)}")">@StatusWord(status)</span>
+            }
+        </a>;
+
+    static string StatusClass(ServerProcessStatus status) => status switch
+    {
+        ServerProcessStatus.Running => "running",
+        ServerProcessStatus.Error => "crashed",
+        ServerProcessStatus.Starting or ServerProcessStatus.Stopping => "busy",
+        _ => "off",
+    };
+
+    static string StatusWord(ServerProcessStatus status) => status switch
+    {
+        ServerProcessStatus.Error => "crashed",
+        ServerProcessStatus.Starting => "starting",
+        ServerProcessStatus.Stopping => "stopping",
+        _ => "off",
+    };
+
+    /// <summary>The same section of another server, e.g. its Monitor.</summary>
+    string SectionOf(Guid serverId)
+    {
+        var path = NavigationManager.ToBaseRelativePath(NavigationManager.Uri).Split('?', '#')[0];
+        var segments = path.Split('/', StringSplitOptions.RemoveEmptyEntries);
+
+        // Servers/{id}/{section}, but not a log console id that only the current server has
+        var section = segments.Length >= 3 ? segments[2] : "General";
+
+        return $"/Servers/{serverId}/{section}";
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            var servers = await context.Set<Server>().AsNoTracking()
+                .OrderBy(s => s.Name)
+                .Select(s => new { s.Id, s.Name, s.GameId })
+                .ToListAsync();
+
+            // Players are the open play sessions of each server's game, as autostop counts them
+            var playersByGame = await context.Set<PlaySession>().AsNoTracking()
+                .Where(p => p.End == null && p.GameId != null)
+                .GroupBy(p => p.GameId!.Value)
+                .Select(g => new { GameId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(g => g.GameId, g => g.Count);
+
+            // ...out of the most any of the game's multiplayer modes allows
+            var maxByGame = await context.Set<MultiplayerMode>().AsNoTracking()
+                .Where(m => m.GameId != null && m.MaxPlayers > 0)
+                .GroupBy(m => m.GameId!.Value)
+                .Select(g => new { GameId = g.Key, Max = g.Max(m => m.MaxPlayers) })
+                .ToDictionaryAsync(g => g.GameId, g => g.Max);
+
+            _all = servers
+                .Select(s => new ServerEntry(
+                    s.Id,
+                    s.Name,
+                    s.GameId is { } gameId && playersByGame.TryGetValue(gameId, out var count) ? count : 0,
+                    s.GameId is { } id && maxByGame.TryGetValue(id, out var max) ? max : null))
+                .ToList();
+
+            var running = new List<ServerEntry>();
+
+            foreach (var server in _all)
+            {
+                if (!ServerManager.IsManaging(server.Id))
+                    continue;
+
+                var status = await ServerManager.GetStatusAsync(server.Id);
+
+                _status[server.Id] = status;
+
+                if (status == ServerProcessStatus.Running)
+                    running.Add(server);
+            }
+
+            _running = running;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not list servers for the switcher");
+        }
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", RecentKey);
+            var recentIds = string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<List<Guid>>(json) ?? [];
+
+            // This server is the most recent now
+            recentIds = recentIds.Where(id => id != Current.Id).Prepend(Current.Id).Take(RecentLimit).ToList();
+
+            await JS.InvokeVoidAsync("localStorage.setItem", RecentKey, JsonSerializer.Serialize(recentIds));
+
+            _recent = recentIds
+                .Select(id => _all.FirstOrDefault(s => s.Id == id))
+                .Where(s => s != null && !_running.Contains(s))
+                .Select(s => s!)
+                .ToList();
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not read the recent servers");
+        }
+    }
+}

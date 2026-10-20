@@ -1,102 +1,66 @@
-@inherits FeedbackComponent<Guid, bool>
+@inherits Dialog<Guid, bool>
 @inject KeyService KeyService
 @inject UserService UserService
-@inject IMessageService MessageService
-@inject ILogger<AssignKeyDialog> Logger
+@inject NotificationService Notifications
 
-<Form Model="_model" Layout="FormLayout.Vertical">
+@* Allocates the key whose Id is passed as the options to a machine or a user *@
+<Form Model="_model">
     <FormItem Label="Allocation Method">
-        <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="context.KeyAllocationMethod" />
+        <EnumSelect TEnum="KeyAllocationMethod" @bind-Value="_model.KeyAllocationMethod" />
     </FormItem>
 
-    @if (context.KeyAllocationMethod == KeyAllocationMethod.MacAddress)
+    @if (_model.KeyAllocationMethod == KeyAllocationMethod.MacAddress)
     {
-        <FormItem Label="MAC Address">
-            <Input @bind-Value="context.MacAddress" Placeholder="00:00:00:00:00:00" />
+        <FormItem Label="MAC Address" Required>
+            <TextInput @bind-Value="_model.MacAddress" Placeholder="00:00:00:00:00:00" />
         </FormItem>
     }
-    else if (context.KeyAllocationMethod == KeyAllocationMethod.UserAccount)
+    else if (_model.KeyAllocationMethod == KeyAllocationMethod.UserAccount)
     {
-        <FormItem Label="User">
-            <Select TItem="User"
-                    TItemValue="Guid"
-                    DataSource="_users"
-                    @bind-Value="context.SelectedUserId"
-                    LabelName="@nameof(User.UserName)"
-                    ValueName="@nameof(User.Id)"
-                    Placeholder="Select a user"
-                    EnableSearch />
+        <FormItem Label="User" Required>
+            <Select TValue="Guid" Items="_users" @bind-Value="_model.SelectedUserId" Placeholder="Select a user" Searchable />
         </FormItem>
     }
 </Form>
 
 @code {
     AssignKeyDialogViewModel _model = new();
-    
-    IEnumerable<User> _users = new List<User>();
+
+    IEnumerable<SelectItem<Guid>> _users = [];
 
     protected override async Task OnInitializedAsync()
     {
-        _users = await UserService.GetAsync();
+        var users = await UserService.GetAsync();
+
+        _users = users.OrderBy(u => u.UserName).ToSelectItems(u => u.Id, u => u.UserName).ToList();
     }
 
-    public override async Task OnFeedbackOkAsync(ModalClosingEventArgs args)
+    protected override async Task<bool> OnOkAsync()
     {
-        try
+        var key = await KeyService.GetAsync(Options) ?? throw new InvalidOperationException("Key not found!");
+
+        switch (_model.KeyAllocationMethod)
         {
-            var key = await KeyService.GetAsync(Options);
+            case KeyAllocationMethod.MacAddress:
+                if (string.IsNullOrWhiteSpace(_model.MacAddress))
+                    throw new InvalidOperationException("Please enter a MAC address.");
 
-            if (key == null)
-            {
-                MessageService.Error("Key not found!");
-                args.Reject();
-                return;
-            }
+                await KeyService.AllocateAsync(key, _model.MacAddress);
+                break;
 
-            switch (_model.KeyAllocationMethod)
-            {
-                case KeyAllocationMethod.MacAddress:
-                    if (string.IsNullOrWhiteSpace(_model.MacAddress))
-                    {
-                        MessageService.Warning("Please enter a MAC address.");
-                        args.Reject();
-                        return;
-                    }
+            case KeyAllocationMethod.UserAccount:
+                var user = _model.SelectedUserId != Guid.Empty
+                    ? await UserService.GetAsync(_model.SelectedUserId)
+                    : null;
 
-                    await KeyService.AllocateAsync(key, _model.MacAddress);
-                    break;
-
-                case KeyAllocationMethod.UserAccount:
-                    if (_model.SelectedUserId == Guid.Empty)
-                    {
-                        MessageService.Warning("Please select a user.");
-                        args.Reject();
-                        return;
-                    }
-
-                    var user = await UserService.GetAsync(_model.SelectedUserId);
-
-                    if (user == null)
-                    {
-                        MessageService.Error("User not found!");
-                        args.Reject();
-                        return;
-                    }
-
-                    await KeyService.AllocateAsync(key, user);
-                    break;
-            }
-
-            MessageService.Success("Key assigned!");
-            
-            await base.OkCancelRefWithResult!.OnOk(true);
+                await KeyService.AllocateAsync(key, user ?? throw new InvalidOperationException("Please select a user."));
+                break;
         }
-        catch (Exception ex)
-        {
-            MessageService.Error("Could not assign key!");
-            Logger.LogError(ex, "Could not assign key!");
-            
-            args.Reject();
-        }
+
+        Notifications.Success("Key assigned!");
+
+        Result = true;
+
+        return true;
     }
 }

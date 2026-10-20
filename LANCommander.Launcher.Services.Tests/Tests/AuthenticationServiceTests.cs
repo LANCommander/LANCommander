@@ -143,7 +143,8 @@ public class AuthenticationServiceTests
         var requests = new ApiRequestFactory(client, tokens.Object, settings, session);
         var authentication = new AuthenticationClient(
             NullLogger<AuthenticationClient>.Instance, tokens.Object, null!, settings,
-            requests, connection.Object, null!);
+            requests, connection.Object, null!,
+            new LANCommander.SDK.Plugins.PluginEventBus(NullLogger<LANCommander.SDK.Plugins.PluginEventBus>.Instance));
         var subject = new AuthenticationService(
             tokens.Object, settings, null!, connection.Object, authentication,
             NullLogger<AuthenticationService>.Instance);

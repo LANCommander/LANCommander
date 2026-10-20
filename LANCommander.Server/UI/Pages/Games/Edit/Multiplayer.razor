@@ -1,13 +1,10 @@
-﻿@page "/Games/{id:guid}/Multiplayer"
+@page "/Games/{id:guid}/Multiplayer"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Multiplayer">
     <TitleExtraTemplate>
-        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="() => _multiplayerModeEditor?.Save()">Save</Button>
-        </Flex>
+        <Button Primary OnClick="() => _multiplayerModeEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
         <MultiplayerModeEditor @ref="_multiplayerModeEditor" />
     </ChildContent>
@@ -16,5 +13,5 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    MultiplayerModeEditor _multiplayerModeEditor;
+    MultiplayerModeEditor? _multiplayerModeEditor;
 }

@@ -1,0 +1,19 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Several avatars overlapping in a row, e.g. the people in a conversation *@
+<span @attributes="AdditionalAttributes" class="@(new ClassBuilder().Add("lc-avatar-group").Add(Class).Build())" style="@Style">
+    @ChildContent
+    @if (Overflow > 0)
+    {
+        <span class="lc-avatar lc-avatar-overflow" title="@($"{Overflow} more")">+@Overflow</span>
+    }
+</span>
+
+@code {
+    /// <summary>The avatars.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>How many more people there are than avatars shown.</summary>
+    [Parameter] public int Overflow { get; set; }
+}

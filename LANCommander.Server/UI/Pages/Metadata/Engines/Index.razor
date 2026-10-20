@@ -1,134 +1,103 @@
-﻿@page "/Metadata/Engines"
+@page "/Metadata/Engines"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject EngineService EngineService
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject AlertService Alerts
 
 <PageHeader Title="Engines" />
 
-<DataTable
-    TItem="Engine"
-    @ref="Table"
-    Size="@TableSize.Small"
-    Searchable
-    OnRowDoubleClick="OpenEdit"
-    SearchProperty="e => e.Name">
-    <RightToolbar>
-        <Button OnClick="() => OpenEdit(null)" Type="@ButtonType.Primary">Add Engine</Button>
-    </RightToolbar>
-    <Columns>
-        <BoundDataColumn Property="e => e.Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <BoundDataColumn Property="e => e.Games.Count" Sortable Title="Games" Include="Games" />
-        <BoundDataColumn Property="e => e.CreatedOn" Title="Created On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-        <BoundDataColumn Property="e => e.UpdatedOn" Title="Updated On" Sortable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-        <DataActions TData="string">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <Button OnClick="() => OpenEdit(context)" Icon="@IconType.Outline.Edit" Type="@ButtonType.Text" />
-                @* TODO: Add seperate Edit page and navigate to it *@
-                @* <a href="@($"/Metadata/Engines/{context.Id}")" class="ant-btn ant-btn-primary">Edit</a> *@
-
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this engine?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger/>
+<PageContent>
+    <DataTable TItem="Engine"
+               @ref="_table"
+               Small
+               SearchProperty="e => e.Name"
+               OnRowDoubleClick="EditAsync">
+        <RightToolbar>
+            <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Engine</Button>
+        </RightToolbar>
+        <Columns>
+            <BoundColumn Property="e => e.Name" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="e => e.Games.Count" Title="Games" Sortable Include="Games" />
+            <BoundColumn Property="e => e.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+            <BoundColumn Property="e => e.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+            <ActionsColumn TItem="Engine">
+                <Button Text Icon="IconType.PencilSimple" OnClick="() => EditAsync(context)" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this engine?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </DataActions>
-    </Columns>
-</DataTable>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</PageContent>
 
-<Modal Title="@(EngineContext.Id == Guid.Empty ? "New Engine" : "Edit Engine")"
-    @bind-Visible="@EditEngineVisible"
-    OnOk="UpdateOrAdd"
-    OnCancel="CloseEdit">
-    <Form Model="@EngineContext">
-        <FormItem Label="Name">
-            <Input @bind-Value="@context.Name" AutoFocus />
-        </FormItem>
-    </Form>
-</Modal>
+@code {
+    DataTable<Engine> _table = default!;
 
- @code {
-    bool Loading = true;
-
-    bool EditEngineVisible = false;
-    Engine EngineContext = new();
-
-    DataTable<Engine> Table;
-
-    protected override async Task OnInitializedAsync()
+    async Task AddAsync()
     {
-        Loading = false;
-    }
+        var name = await Alerts.PromptAsync("New Engine", "Name", okText: "Add");
 
-    async Task UpdateOrAdd()
-    {
+        if (name == null)
+            return;
+
         try
         {
-            if (EngineContext.Id == Guid.Empty)
-            {
-                await EngineService.AddMissingAsync(x => x.Name == EngineContext.Name, EngineContext);
+            await EngineService.AddMissingAsync(x => x.Name == name, new Engine { Name = name });
 
-                MessageService.Success($"{EngineContext.Name} was added!");
-            }
-            else
-            {
-                await EngineService.UpdateAsync(EngineContext);
+            Notifications.Success($"{name} was added!");
 
-                MessageService.Success($"{EngineContext.Name} was updated!");
-            }
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            if (EngineContext.Id == Guid.Empty)
-                MessageService.Error($"Could not add {EngineContext.Name}!");
-            else
-                MessageService.Error($"Could not update {EngineContext.Name}!");
-
-            Logger.LogError(ex, "Could not add/update {EngineContext.Name}!");
+            Notifications.Error(ex, $"Could not add {name}!");
         }
-
-        await Table.ReloadAsync();
-
-        await CloseEdit();
     }
 
-    async Task OpenEdit(Engine? engine)
+    async Task EditAsync(Engine engine)
     {
-        // query new instance, or create a new Edit context instance
-        EngineContext = engine != null ? await EngineService.GetAsync(engine.Id) : default!;
-        EngineContext ??= new();
-        
-        EditEngineVisible = true;
+        var name = await Alerts.PromptAsync("Edit Engine", "Name", engine.Name, okText: "Save");
 
-        await InvokeAsync(StateHasChanged);
+        if (name == null || name == engine.Name)
+            return;
+
+        try
+        {
+            var existing = await EngineService.GetAsync(engine.Id);
+
+            existing.Name = name;
+
+            await EngineService.UpdateAsync(existing);
+
+            Notifications.Success($"{name} was updated!");
+
+            await _table.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not update {name}!");
+        }
     }
 
-    async Task CloseEdit()
-    {
-        EditEngineVisible = false;
-
-        await InvokeAsync(StateHasChanged);
-    }
-    
-    async Task Delete(Engine engine)
+    async Task DeleteAsync(Engine engine)
     {
         try
         {
             await EngineService.DeleteAsync(engine);
 
-            MessageService.Success("Engine deleted!");
+            Notifications.Success("Engine deleted!");
 
-            await Table.ReloadAsync();
+            await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete engine!");
-            Logger?.LogError(ex, "Could not delete engine");
+            Notifications.Error(ex, "Could not delete engine!");
         }
     }
 }

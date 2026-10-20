@@ -49,11 +49,11 @@ namespace launcher
             return g.sort_title.empty() ? g.title : g.sort_title;
         }
 
-        static bool is_top_level(lancommander::GameType t)
+        // Addons that aren't shown in the library are only offered when installing their base game
+        template <typename T>
+        static bool is_top_level(const T &g)
         {
-            return t == lancommander::GameType::MainGame
-                || t == lancommander::GameType::StandaloneExpansion
-                || t == lancommander::GameType::StandaloneMod;
+            return g.type == lancommander::GameType::MainGame || g.show_in_library;
         }
 
         static void load_depot(App &app)
@@ -64,7 +64,7 @@ namespace launcher
                 std::vector<lancommander::DepotGame> filtered;
                 for (size_t i = 0; i < result.value.games.size(); ++i)
                 {
-                    if (is_top_level(result.value.games[i].type))
+                    if (is_top_level(result.value.games[i]))
                         filtered.push_back(result.value.games[i]);
                 }
                 app.depot_cache() = filtered;
@@ -90,7 +90,7 @@ namespace launcher
                 std::vector<lancommander::Game> lib;
                 for (size_t i = 0; i < result.value.size(); ++i)
                 {
-                    if (result.value[i].in_library && is_top_level(result.value[i].type))
+                    if (result.value[i].in_library && is_top_level(result.value[i]))
                     {
                         lancommander::Game g = result.value[i];
 

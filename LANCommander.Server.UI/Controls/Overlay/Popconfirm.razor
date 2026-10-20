@@ -1,0 +1,97 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@*
+    Asks "are you sure?" in a small popover next to the wrapped content (usually a delete button)
+    before running OnConfirm.
+*@
+<span @ref="_trigger" @attributes="AdditionalAttributes" class="@_class" style="@Style" @onclick="ToggleAsync">
+    @ChildContent
+</span>
+
+@* Radzen positions the popup with left/top but leaves positioning and initial visibility to us *@
+<RadzenPopup @ref="_popup" Style="display: none; position: absolute" Lazy="true" CloseOnClickOutside="true" Close="() => _open = false" Open="() => _open = true">
+    <div class="lc-popconfirm" role="dialog" aria-label="@Title">
+        <div class="lc-popconfirm-message">
+            <Icon Type="IconType.WarningCircle" Fill Class="lc-popconfirm-icon" />
+            <div>
+                <div class="lc-popconfirm-title">@Title</div>
+                @if (Description != null)
+                {
+                    <div class="lc-popconfirm-description">@Description</div>
+                }
+            </div>
+        </div>
+        <div class="lc-popconfirm-actions">
+            <Button Small OnClick="CancelAsync">@CancelText</Button>
+            <Button Small Primary Danger="Danger" Loading="_busy" OnClick="ConfirmAsync">@OkText</Button>
+        </div>
+    </div>
+</RadzenPopup>
+
+@code {
+    /// <summary>The element that opens the popover, typically a button.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public EventCallback OnConfirm { get; set; }
+
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    [Parameter] public string Title { get; set; } = "Are you sure?";
+
+    [Parameter] public string? Description { get; set; }
+
+    [Parameter] public string OkText { get; set; } = "OK";
+
+    [Parameter] public string CancelText { get; set; } = "Cancel";
+
+    /// <summary>The OK button performs a destructive action and is drawn as such.</summary>
+    [Parameter] public bool Danger { get; set; }
+
+    /// <summary>Clicking the content does nothing, e.g. while the action isn't available.</summary>
+    [Parameter] public bool Disabled { get; set; }
+
+    ElementReference _trigger;
+    RadzenPopup? _popup;
+    string? _class;
+    bool _open;
+    bool _busy;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-popconfirm-trigger").Add(Class).Build();
+    }
+
+    async Task ToggleAsync()
+    {
+        if (Disabled || _popup == null)
+            return;
+
+        await _popup.ToggleAsync(_trigger);
+    }
+
+    async Task ConfirmAsync()
+    {
+        _busy = true;
+
+        try
+        {
+            await OnConfirm.InvokeAsync();
+        }
+        finally
+        {
+            _busy = false;
+
+            if (_popup != null)
+                await _popup.CloseAsync();
+        }
+    }
+
+    async Task CancelAsync()
+    {
+        await OnCancel.InvokeAsync();
+
+        if (_popup != null)
+            await _popup.CloseAsync();
+    }
+}

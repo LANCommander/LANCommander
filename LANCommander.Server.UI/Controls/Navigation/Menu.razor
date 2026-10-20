@@ -1,0 +1,91 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A list of navigation links and actions: the sidebar, section navigation, dropdown menus *@
+<nav @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <ul class="lc-menu-list">
+        <CascadingValue Value="this" IsFixed>
+            @Insertions?.Start(null)
+            @ChildContent
+            @if (Insertions != null)
+            {
+                <MenuInsertionsEnd />
+            }
+        </CascadingValue>
+    </ul>
+</nav>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Items side by side instead of stacked.</summary>
+    [Parameter] public bool Horizontal { get; set; }
+
+    /// <summary>How a vertical menu is drawn: compact, the main sidebar, or an edit page's section list.</summary>
+    [Parameter] public MenuVariant Variant { get; set; }
+
+    /// <summary>Called when any item is clicked, e.g. so a dropdown can close.</summary>
+    [Parameter] public EventCallback OnItemClick { get; set; }
+
+    /// <summary>Items placed among the ones written in the menu, e.g. entries added by plugins.</summary>
+    [Parameter] public IMenuInsertions? Insertions { get; set; }
+
+    /// <summary>The dropdown this menu is in, if any; it closes when an item is chosen.</summary>
+    [CascadingParameter] Dropdown? Dropdown { get; set; }
+
+    string? _class;
+
+    // The anchors each group has rendered, keyed by group name; the top level is ""
+    readonly Dictionary<string, HashSet<string>> _anchors = [];
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-menu")
+            .Add(Horizontal ? "lc-menu-horizontal" : "lc-menu-vertical")
+            .If(!Horizontal && Variant == MenuVariant.Sidebar, "lc-menu-sidebar")
+            .If(!Horizontal && Variant == MenuVariant.Section, "lc-menu-section")
+            .Add(Class)
+            .Build();
+    }
+
+    /// <summary>The group items in <paramref name="subMenu"/> belong to; false when it takes no insertions.</summary>
+    internal static bool TryGetGroup(SubMenu? subMenu, out string? group)
+    {
+        group = subMenu?.Name;
+        return subMenu == null || group != null;
+    }
+
+    internal IReadOnlySet<string> AnchorsIn(string? group) =>
+        _anchors.TryGetValue(group ?? "", out var anchors) ? anchors : new HashSet<string>();
+
+    /// <summary>Records that the item in <paramref name="subMenu"/> now anchors at <paramref name="current"/> instead of <paramref name="previous"/>.</summary>
+    internal void MoveAnchor(SubMenu? subMenu, string? previous, string? current)
+    {
+        if (!TryGetGroup(subMenu, out var group))
+            return;
+
+        if (!_anchors.TryGetValue(group ?? "", out var anchors))
+            _anchors[group ?? ""] = anchors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        if (previous != null)
+            anchors.Remove(previous);
+
+        if (current != null)
+            anchors.Add(current);
+    }
+
+    /// <summary>The items inserted right after <paramref name="anchor"/>, which sits in <paramref name="subMenu"/>.</summary>
+    internal RenderFragment? InsertionsAfter(SubMenu? subMenu, string? anchor) =>
+        Insertions != null && anchor != null && TryGetGroup(subMenu, out var group)
+            ? Insertions.After(group, anchor)
+            : null;
+
+    internal async Task ItemClickedAsync()
+    {
+        await OnItemClick.InvokeAsync();
+
+        if (Dropdown != null)
+            await Dropdown.CloseAsync();
+    }
+}

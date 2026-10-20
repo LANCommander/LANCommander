@@ -2,7 +2,9 @@ using System;
 using Avalonia.Controls;
 using Avalonia.Input;
 using Avalonia.Interactivity;
+using LANCommander.Launcher.Plugins;
 using LANCommander.Launcher.ViewModels;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Views;
 
@@ -17,6 +19,12 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Content templates come from the shared view registry (seeded with the built-in mappings and
+        // extendable by plugins) rather than inline XAML DataTemplates.
+        var registry = App.Services?.GetService<IViewRegistry>();
+        if (registry != null)
+            MainContent.DataTemplates.Add(registry.AsDataTemplate());
 
         Closing += (_, e) =>
         {

@@ -1,9 +1,9 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Mappers;
 using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Clients;
@@ -12,7 +12,7 @@ public class ServerChatClient(
     ChatService chatService,
     UserService userService,
     IHttpContextAccessor httpContextAccessor,
-    IMapper mapper,
+    SdkMapper sdkMapper,
     IFusionCache cache,
     ILogger<ServerChatClient> logger) : IChatClient
 {
@@ -25,7 +25,7 @@ public class ServerChatClient(
         {
             var dbThread = await chatService.GetThreadAsync(threadId);
             
-            thread = mapper.Map<ChatThread>(dbThread);
+            thread = sdkMapper.ToSdk(dbThread);
             
             await cache.SetChatThreadAsync(threadId, thread);
         }
@@ -75,7 +75,7 @@ public class ServerChatClient(
         var user = await userService.GetAsync(principal.Identity.Name!);
         var threads = await chatService.GetThreadsAsync(user.Id);
 
-        var mappedThreads = mapper.Map<IEnumerable<ChatThread>>(threads);
+        var mappedThreads = threads.Select(sdkMapper.ToSdk).ToList();
         
         foreach (var thread in mappedThreads)
             await cache.SetChatThreadAsync(thread.Id, thread);
@@ -91,8 +91,8 @@ public class ServerChatClient(
     public async Task<IEnumerable<User>> GetUsersAsync()
     {
         var users = await chatService.GetUsersAsync();
-        
-        return mapper.Map<IEnumerable<User>>(users);
+
+        return users.Select(sdkMapper.ToSdk).ToList();
     }
 
     public async Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages)
@@ -159,7 +159,7 @@ public class ServerChatClient(
         await GetThreadAsync(threadId);
         
         var messages = await chatService.GetMessagesAsync(threadId, 10);
-        var mappedMessages = mapper.Map<ChatMessage[]>(messages);
+        var mappedMessages = messages.Items;
         
         // Populate thread with messages
         await ReceiveMessagesAsync(threadId, mappedMessages);

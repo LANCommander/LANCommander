@@ -1,5 +1,5 @@
-using AutoMapper;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.AspNetCore.Mvc;
 using System.Net.Mime;
@@ -20,16 +20,16 @@ public static class MediaEndpoints
     }
 
     internal static async Task<Ok<IEnumerable<SDK.Models.Media>>> GetAsync(
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] MediaService mediaService)
     {
         var media = await mediaService.GetAsync();
-        return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.Media>>(media));
+        return TypedResults.Ok<IEnumerable<SDK.Models.Media>>(media.Select(sdkMapper.ToSdk).ToList());
     }
 
     internal static async Task<Results<NotFound, Ok<SDK.Models.Media>>> GetByIdAsync(
         Guid id,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] MediaService mediaService)
     {
         var media = await mediaService.GetAsync(id);
@@ -37,20 +37,30 @@ public static class MediaEndpoints
         if (media == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(mapper.Map<SDK.Models.Media>(media));
+        return TypedResults.Ok(sdkMapper.ToSdk(media));
     }
 
+    /// <summary>
+    /// Serves the media's thumbnail. Clients on scaled displays can pass the device-pixel <paramref name="width"/>
+    /// and/or <paramref name="height"/> they'll draw it at to get a variant sized for that instead of the default.
+    /// </summary>
     internal static async Task<Results<FileStreamHttpResult, NotFound, InternalServerError>> ThumbnailAsync(
         Guid id,
         [FromServices] MediaService mediaService,
-        [FromServices] ILoggerFactory loggerFactory)
+        [FromServices] ILoggerFactory loggerFactory,
+        [FromQuery] int? width = null,
+        [FromQuery] int? height = null)
     {
         var logger = loggerFactory.CreateLogger(nameof(MediaEndpoints));
         try
         {
             var media = await mediaService.GetAsync(id);
 
-            var fs = File.OpenRead(mediaService.GetThumbnailPath(media));
+            var path = width > 0 || height > 0
+                ? await mediaService.GetThumbnailPathAsync(media, width ?? 0, height ?? 0)
+                : mediaService.GetThumbnailPath(media);
+
+            var fs = File.OpenRead(path);
 
             return TypedResults.File(fs, GetThumbnailContentType(fs, media.MimeType));
         }

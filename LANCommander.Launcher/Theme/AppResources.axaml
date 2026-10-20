@@ -1,0 +1,19 @@
+<!-- Application-wide resources. Kept out of App.axaml so the headless test app can include exactly
+     what the launcher renders with. -->
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:converters="using:LANCommander.Launcher.Converters">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/Bold.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/DuoTone.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/Fill.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/Light.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/Regular.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Icons/Thin.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Assets/Localization/en-US.axaml" />
+        <ResourceInclude Source="avares://LANCommander.Launcher/Theme/ColorPalette.axaml" />
+    </ResourceDictionary.MergedDictionaries>
+
+    <converters:MultiplyConverter x:Key="MultiplyConverter" />
+    <converters:StringFormatConverter x:Key="StringFormatConverter" />
+</ResourceDictionary>

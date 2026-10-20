@@ -13,10 +13,14 @@ public abstract class BaseImporter<TRecord> : IImporter<TRecord> where TRecord :
         ImportContext = context;
     }
 
-    public async Task<bool> ImportAsync(IImportItemInfo importItem)
+    public async Task<bool> ImportAsync(
+        IImportItemInfo importItem,
+        CancellationToken cancellationToken = default)
     {
         bool result = false;
-        
+
+        cancellationToken.ThrowIfCancellationRequested();
+
         if (importItem is ImportItemInfo<TRecord> importItemInfo)
         {
             if (await ExistsAsync(importItemInfo.Record))

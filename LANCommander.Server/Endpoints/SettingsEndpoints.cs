@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;
 
@@ -15,8 +14,7 @@ public static class SettingsEndpoints
     
     public static async Task<IResult> GetAsync(
         [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
-        [FromServices] ServerService serverService,
-        [FromServices] IMapper mapper)
+        [FromServices] ServerService serverService)
     {
         var clientSettings = new
         {

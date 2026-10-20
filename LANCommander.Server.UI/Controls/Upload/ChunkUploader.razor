@@ -1,0 +1,206 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.UI.Services
+@inherits ControlBase
+@implements IDisposable
+@inject UploadTracker UploadTracker
+@inject LANCommander.Server.UI.Services.NotificationService Notifications
+
+@*
+    Picks one (possibly very large) file and, when Start is called, uploads it in chunks to a storage
+    location through UploadTracker. The upload carries on in the background if the uploader goes away,
+    e.g. when its dialog is closed.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <label class="@_dropClass" for="@FileInputId">
+        <InputFile id="@FileInputId" OnChange="OnFileSelectedAsync" accept="@Accept" disabled="@(Disabled || Status != ChunkUploadStatus.Idle)" class="lc-chunk-uploader-input" />
+
+        @if (Status == ChunkUploadStatus.Idle)
+        {
+            @if (ChildContent != null)
+            {
+                @ChildContent
+            }
+            else
+            {
+                <Icon Type="IconType.UploadSimple" Class="lc-upload-icon" />
+                <span class="lc-upload-text">@Text</span>
+                @if (!String.IsNullOrWhiteSpace(Hint))
+                {
+                    <span class="lc-upload-hint">@Hint</span>
+                }
+            }
+        }
+        else
+        {
+            <Progress Circle Value="_progress" Success="Status == ChunkUploadStatus.Complete" />
+            <span class="lc-upload-hint">@(Status == ChunkUploadStatus.Complete ? "Upload complete" : FormatSpeed(_speed))</span>
+        }
+    </label>
+
+    @if (File != null)
+    {
+        <div class="lc-upload-file">
+            <Icon Type="IconType.FileZip" />
+            <span class="lc-upload-file-name" title="@File.Name">@File.Name</span>
+            <ByteSize Value="File.Size" />
+            <Button Text Small Icon="IconType.Trash" title="Remove" Disabled="Status != ChunkUploadStatus.Idle" OnClick="ClearAsync" />
+        </div>
+    }
+</div>
+
+@code {
+    /// <summary>File types the picker offers and accepts, e.g. ".zip,.lcx".</summary>
+    [Parameter] public string? Accept { get; set; }
+
+    [Parameter] public string Text { get; set; } = "Click or drag a file here";
+
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>Replaces the default icon and text in the drop area.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>The picked file, before and during upload.</summary>
+    [Parameter] public IBrowserFile? File { get; set; }
+
+    [Parameter] public EventCallback<IBrowserFile?> FileChanged { get; set; }
+
+    [Parameter] public ChunkUploadStatus Status { get; set; }
+
+    [Parameter] public EventCallback<ChunkUploadStatus> StatusChanged { get; set; }
+
+    /// <summary>Where the file is stored.</summary>
+    [Parameter] public Guid StorageLocationId { get; set; }
+
+    /// <summary>Replace an existing object (e.g. an archive's file) instead of creating a new one.</summary>
+    [Parameter] public string? ObjectKey { get; set; }
+
+    /// <summary>What the upload is for, so the upload indicator knows what to offer when it finishes.</summary>
+    [Parameter] public UploadType UploadType { get; set; } = UploadType.Archive;
+
+    [Parameter] public EventCallback<string> OnUploadError { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    readonly string _id = Guid.NewGuid().ToString("N");
+    string? _uploadId;
+    int _progress;
+    double _speed;
+    string? _class;
+    string? _dropClass;
+
+    public string FileInputId => $"lc-chunk-uploader-{_id}";
+
+    public bool IsUploading => Status == ChunkUploadStatus.Uploading;
+
+    protected override void OnInitialized()
+    {
+        UploadTracker.OnStateChanged += UploadStateChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-upload").Add("lc-chunk-uploader").Add(Class).Build();
+
+        _dropClass = new ClassBuilder()
+            .Add("lc-upload-drop")
+            .If(Disabled, "lc-upload-drop-disabled")
+            .If(Status != ChunkUploadStatus.Idle, "lc-chunk-uploader-busy")
+            .Build();
+    }
+
+    /// <summary>
+    /// Starts uploading the picked file. <paramref name="onCompleted"/> receives the stored object's
+    /// key, and runs even if this uploader has been disposed by then.
+    /// </summary>
+    public async Task StartAsync(Func<string, Task>? onCompleted = null)
+    {
+        if (File == null)
+            return;
+
+        await SetStatusAsync(ChunkUploadStatus.Uploading);
+
+        _uploadId = await UploadTracker.StartUploadAsync(
+            FileInputId,
+            StorageLocationId,
+            File.Name,
+            UploadType,
+            !String.IsNullOrWhiteSpace(ObjectKey) && ObjectKey != Guid.Empty.ToString() ? ObjectKey : null,
+            onCompleted);
+    }
+
+    /// <summary>Cancels any upload and forgets the picked file.</summary>
+    public async Task ClearAsync()
+    {
+        if (_uploadId != null)
+        {
+            await UploadTracker.CancelUploadAsync(_uploadId);
+            _uploadId = null;
+        }
+
+        _progress = 0;
+        File = null;
+
+        await FileChanged.InvokeAsync(null);
+        await SetStatusAsync(ChunkUploadStatus.Idle);
+    }
+
+    async Task OnFileSelectedAsync(InputFileChangeEventArgs args)
+    {
+        var file = args.File;
+
+        if (!String.IsNullOrWhiteSpace(Accept))
+        {
+            var extensions = Accept.Split(',').Select(x => x.Trim()).ToArray();
+
+            if (!extensions.Any(x => file.Name.EndsWith(x, StringComparison.OrdinalIgnoreCase)))
+            {
+                Notifications.Error($"Only {String.Join(", ", extensions)} can be selected!");
+                return;
+            }
+        }
+
+        File = file;
+
+        await FileChanged.InvokeAsync(file);
+        await SetStatusAsync(ChunkUploadStatus.Idle);
+    }
+
+    void UploadStateChanged()
+    {
+        if (_uploadId == null || !UploadTracker.ActiveUploads.TryGetValue(_uploadId, out var info))
+            return;
+
+        _progress = info.Percent;
+        _speed = info.Speed;
+
+        _ = InvokeAsync(async () =>
+        {
+            if (info.Status == UploadStatus.Complete && Status != ChunkUploadStatus.Complete)
+                await SetStatusAsync(ChunkUploadStatus.Complete);
+            else if (info.Status == UploadStatus.Error && Status == ChunkUploadStatus.Uploading)
+            {
+                await SetStatusAsync(ChunkUploadStatus.Idle);
+                await OnUploadError.InvokeAsync(info.ErrorMessage ?? "Upload failed");
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    async Task SetStatusAsync(ChunkUploadStatus status)
+    {
+        Status = status;
+
+        OnParametersSet();
+
+        await StatusChanged.InvokeAsync(status);
+    }
+
+    static string FormatSpeed(double bytesPerSecond) =>
+        bytesPerSecond > 0 ? $"{ByteSizeLib.ByteSize.FromBytes(bytesPerSecond).ToString("0.0")}/s" : "Starting upload";
+
+    public void Dispose()
+    {
+        UploadTracker.OnStateChanged -= UploadStateChanged;
+    }
+}

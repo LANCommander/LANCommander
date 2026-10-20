@@ -8,33 +8,36 @@
 
     <Border HorizontalAlignment="Stretch"
             VerticalAlignment="Stretch"
-            CornerRadius="0"
+            CornerRadius="{DynamicResource RadiusMedium}"
             ClipToBounds="True">
         <Panel>
             <Image x:Name="CoverImage"
                    Stretch="UniformToFill"
                    IsVisible="{Binding HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}" />
 
-            <Border IsVisible="{Binding !HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}">
-                <Border.Background>
-                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
-                        <GradientStop Color="#3D1A6B" Offset="0" />
-                        <GradientStop Color="#0F3460" Offset="1" />
-                    </LinearGradientBrush>
-                </Border.Background>
-
+            <!-- Fallback plate: title-hashed tone, title centred; type and inset scale with the cover -->
+            <Border IsVisible="{Binding !HasCover, RelativeSource={RelativeSource AncestorType=local:Cover}}"
+                    Background="{Binding FallbackBackground, RelativeSource={RelativeSource AncestorType=local:Cover}}"
+                    Padding="{Binding FallbackPadding, RelativeSource={RelativeSource AncestorType=local:Cover}}">
                 <TextBlock Text="{Binding Title, RelativeSource={RelativeSource AncestorType=local:Cover}}"
                            FontSize="{Binding FallbackFontSize, RelativeSource={RelativeSource AncestorType=local:Cover}}"
                            FontWeight="SemiBold"
+                           LetterSpacing="-0.15"
                            TextWrapping="Wrap"
                            TextAlignment="Center"
+                           MaxLines="5"
+                           TextTrimming="CharacterEllipsis"
                            HorizontalAlignment="Center"
                            VerticalAlignment="Center"
-                           Margin="10"
-                           Foreground="White" />
+                           Foreground="{DynamicResource TextPrimaryBrush}" />
             </Border>
 
             <ContentPresenter Content="{Binding Overlay, RelativeSource={RelativeSource AncestorType=local:Cover}}" />
+
+            <!-- Hairline ring and lit top edge over art and fallback alike, so dark art keeps an edge -->
+            <Border CornerRadius="{DynamicResource RadiusMedium}"
+                    BoxShadow="{DynamicResource HairlineShadow}"
+                    IsHitTestVisible="False" />
         </Panel>
     </Border>
 </UserControl>

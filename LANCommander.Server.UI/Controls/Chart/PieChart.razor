@@ -1,0 +1,73 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@inherits ControlBase
+
+@* Each item's share of the total, as a pie (or a ring with Donut) *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @if (_points.Count == 0)
+    {
+        <Empty Small Description="@EmptyText" />
+    }
+    else
+    {
+        <RadzenChart Style="@($"height: {Height}px; width: 100%")" ColorScheme="ColorScheme.Palette">
+            @if (Donut)
+            {
+                <RadzenDonutSeries Data="_points" CategoryProperty="@nameof(ChartPoint.Category)" ValueProperty="@nameof(ChartPoint.Value)" Title="@ValueTitle" Fills="_fills">
+                    <RadzenSeriesDataLabels Visible="DataLabels" Formatter="FormatValue" />
+                </RadzenDonutSeries>
+            }
+            else
+            {
+                <RadzenPieSeries Data="_points" CategoryProperty="@nameof(ChartPoint.Category)" ValueProperty="@nameof(ChartPoint.Value)" Title="@ValueTitle" Fills="_fills">
+                    <RadzenSeriesDataLabels Visible="DataLabels" Formatter="FormatValue" />
+                </RadzenPieSeries>
+            }
+            <RadzenValueAxis Formatter="FormatValue" />
+            <RadzenLegend Visible="!NoLegend" Position="LegendPosition.Right" />
+        </RadzenChart>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<TItem>? Items { get; set; }
+
+    /// <summary>What each slice is, e.g. a game's title. Shown in the legend.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string> Label { get; set; } = default!;
+
+    [Parameter, EditorRequired] public Func<TItem, double> Value { get; set; } = default!;
+
+    /// <summary>How values read in labels and tooltips, e.g. as a duration.</summary>
+    [Parameter] public Func<double, string>? ValueFormat { get; set; }
+
+    [Parameter] public string? ValueTitle { get; set; }
+
+    /// <summary>A ring instead of a filled pie.</summary>
+    [Parameter] public bool Donut { get; set; }
+
+    /// <summary>Writes each value on its slice.</summary>
+    [Parameter] public bool DataLabels { get; set; }
+
+    [Parameter] public bool NoLegend { get; set; }
+
+    /// <summary>Height in pixels.</summary>
+    [Parameter] public int Height { get; set; } = 300;
+
+    [Parameter] public string EmptyText { get; set; } = "No data";
+
+    List<ChartPoint> _points = [];
+    IEnumerable<string> _fills = [];
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _points = (Items ?? []).Select(item => new ChartPoint(Label(item), Value(item))).ToList();
+        _fills = ChartPalette.For(_points.Count);
+        _class = new ClassBuilder().Add("lc-chart").Add(Class).Build();
+    }
+
+    string FormatValue(object value) =>
+        ValueFormat != null && value is IConvertible convertible
+            ? ValueFormat(convertible.ToDouble(null))
+            : value?.ToString() ?? "";
+}

@@ -1,7 +1,7 @@
 ﻿using System.Collections.Concurrent;
-using AutoMapper;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -15,7 +15,7 @@ namespace LANCommander.Server.Services
         ILogger<ChatService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
+        SdkMapper sdkMapper,
         ChatMessageService chatMessageService,
         ChatThreadService chatThreadService,
         ChatThreadReadStatusService chatThreadReadStatusService,
@@ -74,7 +74,7 @@ namespace LANCommander.Server.Services
                 var current = await cache.GetChatThreadAsync(threadId);
 
                 if (current != null)
-                    await current.MessageReceivedAsync(mapper.Map<SDK.Models.ChatMessage>(message));
+                    await current.MessageReceivedAsync(sdkMapper.ToSdk(message));
             }
             finally
             {
@@ -157,7 +157,7 @@ namespace LANCommander.Server.Services
 
             return new InfiniteResponse<SDK.Models.ChatMessage>
             {
-                Items = mapper.Map<IEnumerable<SDK.Models.ChatMessage>>(messageList),
+                Items = messageList.Select(sdkMapper.ToSdk),
                 HasMore = hasMore,
             };
         }

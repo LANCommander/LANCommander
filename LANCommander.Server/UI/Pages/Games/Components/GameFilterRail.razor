@@ -1,0 +1,393 @@
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.Server.Data
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject IJSRuntime JS
+@inject ILogger<GameFilterRail> Logger
+
+@*
+    Beside the Games list: saved views, what's missing, then facets. Every entry carries the count
+    its own query returns, from COUNT queries against the database, never from a loaded list.
+*@
+<nav class="games-rail" aria-label="Filter games">
+    <div class="games-rail-header">
+        <h2 class="games-rail-kicker">Views</h2>
+        <button type="button" class="games-rail-add" title="Save the current filters as a view" aria-label="Save the current filters as a view"
+                disabled="@Filters.IsEmpty" @onclick="() => OnSaveView.InvokeAsync()">
+            <Icon Type="IconType.Plus" Bold />
+        </button>
+    </div>
+
+    <div class="games-rail-body">
+        <ul class="games-rail-list">
+            @foreach (var view in GameFilters.Views)
+            {
+                <li>
+                    <button type="button" class="@ViewClass(Filters.View == view.Key && !HasFacets)" @onclick="() => ShowViewAsync(view.Key)">
+                        @if (view.Tone != GameViewTone.None)
+                        {
+                            <span class="@($"games-rail-dot games-rail-dot-{view.Tone.ToString().ToLowerInvariant()}")" aria-hidden="true"></span>
+                        }
+                        <span class="games-rail-name">@view.Name</span>
+                        <span class="games-rail-count">@Count(_viewCounts, view.Key)</span>
+                    </button>
+                </li>
+            }
+            @foreach (var saved in _saved)
+            {
+                <li class="games-rail-saved">
+                    <button type="button" class="@ViewClass(Filters == _savedFilters.GetValueOrDefault(saved.Name))" @onclick="() => ShowSavedAsync(saved)">
+                        <span class="games-rail-dot games-rail-dot-neutral" aria-hidden="true"></span>
+                        <span class="games-rail-name">@saved.Name</span>
+                        <span class="games-rail-count">@Count(_savedCounts, saved.Name)</span>
+                    </button>
+                    <button type="button" class="games-rail-remove" aria-label="@($"Delete the view {saved.Name}")" title="Delete view" @onclick="() => DeleteSavedAsync(saved)">
+                        <Icon Type="IconType.X" />
+                    </button>
+                </li>
+            }
+        </ul>
+
+        <div class="games-rail-divider" role="separator"></div>
+
+        <section class="games-rail-section" aria-labelledby="games-rail-missing">
+            <div class="games-rail-section-head">
+                <h2 class="games-rail-kicker" id="games-rail-missing">Missing</h2>
+            </div>
+            <ul class="games-rail-list">
+                @foreach (var value in GameFilters.MissingValues)
+                {
+                    @FacetEntry(GameFacet.Missing, new FacetEntryInfo(value, value, _missingCounts.GetValueOrDefault(value)))
+                }
+            </ul>
+        </section>
+
+        @if (_facets.Count > 0)
+        {
+            <div class="games-rail-divider" role="separator"></div>
+
+            <section class="games-rail-section" aria-labelledby="games-rail-filters">
+                <div class="games-rail-section-head">
+                    <h2 class="games-rail-kicker" id="games-rail-filters">Filters</h2>
+                    @if (HasFacets)
+                    {
+                        <button type="button" class="games-rail-link" @onclick="ClearAsync">Clear</button>
+                    }
+                </div>
+
+                @foreach (var facet in _facets)
+                {
+                    var open = _open.Contains(facet.Facet);
+                    var chosen = Filters.CountOf(facet.Facet);
+
+                    <div class="@(open ? "games-rail-group games-rail-group-open" : "games-rail-group")">
+                        <button type="button" class="games-rail-group-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => ToggleOpen(facet.Facet)">
+                            <Icon Type="IconType.CaretRight" Bold Class="games-rail-caret" />
+                            <span class="games-rail-group-title">@facet.Title</span>
+                            @if (chosen > 0)
+                            {
+                                <span class="games-rail-pill" aria-label="@($"{chosen} chosen")">@chosen</span>
+                            }
+                        </button>
+                        @if (open)
+                        {
+                            var all = _showAll.Contains(facet.Facet);
+                            var entries = all
+                                ? facet.Entries
+                                : facet.Entries.Take(CollapsedEntries).Concat(facet.Entries.Skip(CollapsedEntries).Where(e => Filters.Has(facet.Facet, e.Value))).ToList();
+                            var hidden = facet.Entries.Count - entries.Count;
+
+                            <ul class="games-rail-list">
+                                @foreach (var entry in entries)
+                                {
+                                    @FacetEntry(facet.Facet, entry)
+                                }
+                            </ul>
+                            @if (hidden > 0)
+                            {
+                                <button type="button" class="games-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">@hidden.ToString("N0") more…</button>
+                            }
+                            else if (all && facet.Entries.Count > CollapsedEntries)
+                            {
+                                <button type="button" class="games-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">Show fewer</button>
+                            }
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+</nav>
+
+@code {
+    /// <summary>The filter the list shows.</summary>
+    [Parameter, EditorRequired] public GameFilters Filters { get; set; } = new();
+
+    [Parameter] public EventCallback<GameFilters> FiltersChanged { get; set; }
+
+    /// <summary>The "+" beside Views: keep the current filter under a name.</summary>
+    [Parameter] public EventCallback OnSaveView { get; set; }
+
+    public const string SavedViewsKey = "lc-games:saved-views";
+
+    /// <summary>Entries shown per facet before "N more…".</summary>
+    const int CollapsedEntries = 3;
+
+    sealed record FacetEntryInfo(string Value, string Name, int Count);
+
+    sealed record FacetGroup(GameFacet Facet, string Title, IReadOnlyList<FacetEntryInfo> Entries);
+
+    IReadOnlyList<FacetGroup> _facets = [];
+    Dictionary<string, int> _viewCounts = new();
+    Dictionary<string, int> _missingCounts = new();
+    Dictionary<string, int> _savedCounts = new();
+    List<SavedGameView> _saved = [];
+    Dictionary<string, GameFilters> _savedFilters = new();
+
+    // Collection, Platform and Type start open; the long lists start closed
+    readonly HashSet<GameFacet> _open = [GameFacet.Collection, GameFacet.Platform, GameFacet.Type];
+    readonly HashSet<GameFacet> _showAll = [];
+
+    bool HasFacets => Filters.Facets.Any(f => f.Value.Count > 0);
+
+    static string ViewClass(bool active) => active ? "games-rail-view games-rail-view-active" : "games-rail-view";
+
+    static string Count(Dictionary<string, int> counts, string key) =>
+        counts.TryGetValue(key, out var count) ? count.ToString("N0") : "";
+
+    RenderFragment FacetEntry(GameFacet facet, FacetEntryInfo entry)
+    {
+        var active = Filters.Has(facet, entry.Value);
+
+        return @<li>
+            <button type="button" class="@(active ? "games-rail-facet games-rail-facet-active" : "games-rail-facet")" aria-pressed="@(active ? "true" : "false")" @onclick="() => ToggleAsync(facet, entry.Value)">
+                <span class="games-rail-check" aria-hidden="true">
+                    @if (active)
+                    {
+                        <Icon Type="IconType.Check" Bold />
+                    }
+                </span>
+                <span class="games-rail-name" title="@entry.Name">@entry.Name</span>
+                <span class="games-rail-count">@entry.Count.ToString("N0")</span>
+            </button>
+        </li>;
+    }
+
+    protected override async Task OnInitializedAsync() => await RefreshCountsAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoadSavedAsync();
+        await CountSavedAsync();
+        StateHasChanged();
+    }
+
+    GameFilters? _lastFilters;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(Filters, _lastFilters))
+            return;
+
+        _lastFilters = Filters;
+
+        // A facet with chosen values (e.g. from a saved view) opens so they can be seen
+        foreach (var (facet, values) in Filters.Facets)
+        {
+            if (values.Count > 0)
+                _open.Add(facet);
+        }
+    }
+
+    /// <summary>Counts every view and facet entry again, e.g. after games were added, changed or deleted.</summary>
+    public async Task RefreshCountsAsync()
+    {
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            var listed = context.Set<Game>().AsNoTracking().Where(GameFilters.Listed);
+
+            var viewCounts = new Dictionary<string, int>();
+
+            foreach (var view in GameFilters.Views)
+                viewCounts[view.Key] = view.Predicate == null ? await listed.CountAsync() : await listed.Where(view.Predicate).CountAsync();
+
+            _viewCounts = viewCounts;
+
+            var missingCounts = new Dictionary<string, int>();
+
+            foreach (var value in GameFilters.MissingValues)
+                missingCounts[value] = await listed.CountAsync(GameFilters.MissingPredicate(value)!);
+
+            _missingCounts = missingCounts;
+
+            _facets =
+            [
+                new(GameFacet.Collection, "Collection", await CountRelatedAsync(listed.SelectMany(g => g.Collections))),
+                new(GameFacet.Platform, "Platform", await CountRelatedAsync(listed.SelectMany(g => g.Platforms!))),
+                new(GameFacet.Type, "Type", await CountTypesAsync(listed)),
+                new(GameFacet.Genre, "Genre", await CountRelatedAsync(listed.SelectMany(g => g.Genres!))),
+                new(GameFacet.Developer, "Developer", await CountRelatedAsync(listed.SelectMany(g => g.Developers!))),
+                new(GameFacet.Publisher, "Publisher", await CountRelatedAsync(listed.SelectMany(g => g.Publishers!))),
+                new(GameFacet.Engine, "Engine", await CountRelatedAsync(listed.Where(g => g.EngineId != null).Select(g => g.Engine))),
+                new(GameFacet.MultiplayerMode, "Multiplayer mode", await CountMultiplayerAsync(listed)),
+                new(GameFacet.Tag, "Tag", await CountRelatedAsync(listed.SelectMany(g => g.Tags!))),
+            ];
+
+            _facets = _facets.Where(f => f.Entries.Count > 0).ToList();
+
+            await CountSavedAsync(context);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not count the Games filters");
+        }
+    }
+
+    /// <summary>How many listed games each related record (a genre, a developer…) has, as one GROUP BY.</summary>
+    static async Task<IReadOnlyList<FacetEntryInfo>> CountRelatedAsync<T>(IQueryable<T> related) where T : BaseTaxonomyModel
+    {
+        var counts = await related
+            .GroupBy(x => new { x.Id, x.Name })
+            .Select(g => new { g.Key.Id, g.Key.Name, Count = g.Count() })
+            .ToListAsync();
+
+        return counts
+            .OrderByDescending(c => c.Count).ThenBy(c => c.Name)
+            .Select(c => new FacetEntryInfo(c.Id.ToString(), c.Name, c.Count))
+            .ToList();
+    }
+
+    static async Task<IReadOnlyList<FacetEntryInfo>> CountMultiplayerAsync(IQueryable<Game> listed)
+    {
+        var entries = new List<FacetEntryInfo>();
+
+        foreach (var mode in Enum.GetValues<MultiplayerType>())
+        {
+            var count = await listed.CountAsync(g => g.MultiplayerModes!.Any(m => m.Type == mode));
+
+            if (count > 0)
+                entries.Add(new FacetEntryInfo(mode.ToString(), mode.GetDisplayName(), count));
+        }
+
+        return entries.OrderByDescending(e => e.Count).ToList();
+    }
+
+    static async Task<IReadOnlyList<FacetEntryInfo>> CountTypesAsync(IQueryable<Game> listed)
+    {
+        var counts = await listed.GroupBy(g => g.Type).Select(g => new { g.Key, Count = g.Count() }).ToListAsync();
+
+        return counts
+            .OrderByDescending(c => c.Count)
+            .Select(c => new FacetEntryInfo(c.Key.ToString(), c.Key.GetDisplayName(), c.Count))
+            .ToList();
+    }
+
+    // Saved views
+
+    async Task LoadSavedAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", SavedViewsKey);
+
+            _saved = string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<List<SavedGameView>>(json) ?? [];
+            _savedFilters = _saved.ToDictionary(s => s.Name, s => s.ToFilters());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not read the saved game views");
+        }
+    }
+
+    async Task CountSavedAsync(DatabaseContext? context = null)
+    {
+        if (_saved.Count == 0)
+            return;
+
+        var owned = context == null;
+        context ??= await DatabaseContextFactory.CreateDbContextAsync();
+
+        try
+        {
+            var counts = new Dictionary<string, int>();
+
+            foreach (var saved in _saved)
+                counts[saved.Name] = await context.Set<Game>().AsNoTracking().CountAsync(saved.ToFilters().ToExpression());
+
+            _savedCounts = counts;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not count the saved game views");
+        }
+        finally
+        {
+            if (owned)
+                await context.DisposeAsync();
+        }
+    }
+
+    /// <summary>Keeps the current filter under <paramref name="name"/>, replacing a view of the same name.</summary>
+    public async Task SaveAsync(string name)
+    {
+        _saved = _saved.Where(s => s.Name != name).Append(SavedGameView.From(name, Filters)).OrderBy(s => s.Name).ToList();
+
+        await StoreSavedAsync();
+    }
+
+    async Task DeleteSavedAsync(SavedGameView saved)
+    {
+        _saved.Remove(saved);
+
+        await StoreSavedAsync();
+    }
+
+    async Task StoreSavedAsync()
+    {
+        _savedFilters = _saved.ToDictionary(s => s.Name, s => s.ToFilters());
+
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", SavedViewsKey, JsonSerializer.Serialize(_saved));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not store the saved game views");
+        }
+
+        await CountSavedAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>A facet value's display name, e.g. a genre's name for its id.</summary>
+    public string LabelOf(GameFacet facet, string value) =>
+        _facets.FirstOrDefault(f => f.Facet == facet)?.Entries.FirstOrDefault(e => e.Value == value)?.Name ?? value;
+
+    public string TitleOf(GameFacet facet) =>
+        facet == GameFacet.Missing ? "Missing" : _facets.FirstOrDefault(f => f.Facet == facet)?.Title ?? facet.ToString();
+
+    Task ShowViewAsync(string view) => FiltersChanged.InvokeAsync(new GameFilters { View = view });
+
+    Task ShowSavedAsync(SavedGameView saved) => FiltersChanged.InvokeAsync(_savedFilters[saved.Name]);
+
+    Task ToggleAsync(GameFacet facet, string value) => FiltersChanged.InvokeAsync(Filters.Toggle(facet, value));
+
+    Task ClearAsync() => FiltersChanged.InvokeAsync(Filters.WithoutFacets());
+
+    void ToggleOpen(GameFacet facet)
+    {
+        if (!_open.Remove(facet))
+            _open.Add(facet);
+    }
+
+    void ToggleShowAll(GameFacet facet)
+    {
+        if (!_showAll.Remove(facet))
+            _showAll.Add(facet);
+    }
+}

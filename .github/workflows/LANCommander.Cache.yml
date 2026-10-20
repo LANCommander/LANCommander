@@ -56,26 +56,26 @@ jobs:
         node-version: '20'
 
     - name: Generate PowerShell Completions
-      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 
     # Parallel UI builds
     - name: Build UI Components
       run: |
-        cd ./LANCommander.UI
+        cd ./LANCommander.Server.UI
         npm install
         npm run package
 
     - name: Cache UI npm packages
       uses: actions/cache/save@v4
       with:
-        path: ./LANCommander.UI/node_modules
-        key: LANCommander.UI-npm-${{ hashFiles('**/package-lock.json') }}
+        path: ./LANCommander.Server.UI/node_modules
+        key: LANCommander.Server.UI-npm-${{ hashFiles('**/package-lock.json') }}
 
     - name: Cache UI build
       uses: actions/cache/save@v4
       with:
-        path: ./LANCommander.UI/wwwroot
-        key: LANCommander.UI-${{ hashFiles('**/package-lock.json') }}
+        path: ./LANCommander.Server.UI/wwwroot
+        key: LANCommander.Server.UI-${{ hashFiles('**/package-lock.json') }}
       
     - name: Install Server Node Dependencies
       run: |

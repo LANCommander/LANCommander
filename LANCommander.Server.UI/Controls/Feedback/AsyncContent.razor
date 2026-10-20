@@ -1,0 +1,96 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam T
+
+@*
+    Loads data and renders it, with the in-between states handled: a spinner while loading, an
+    error with Retry if loading fails, and an empty state if there is nothing to show.
+*@
+@if (_loading)
+{
+    <div class="lc-async-loading">
+        <Spin Tip="@LoadingText" />
+    </div>
+}
+else if (_error != null)
+{
+    <Alert Danger Title="@ErrorTitle">
+        <div>@_error.Message</div>
+        <Button Small Icon="IconType.ArrowClockwise" OnClick="ReloadAsync" Style="margin-top: 8px">Retry</Button>
+    </Alert>
+}
+else if (IsEmpty(_value) && Empty != null)
+{
+    @Empty
+}
+else
+{
+    @ChildContent(_value!)
+}
+
+@code {
+    /// <summary>Fetches the data. Called once on first render, when <see cref="Key"/> changes, and on <see cref="ReloadAsync"/>.</summary>
+    [Parameter, EditorRequired] public Func<Task<T>> Load { get; set; } = default!;
+
+    [Parameter, EditorRequired] public RenderFragment<T> ChildContent { get; set; } = default!;
+
+    /// <summary>Shown instead of <see cref="ChildContent"/> when the result is null or an empty collection.</summary>
+    [Parameter] public RenderFragment? Empty { get; set; }
+
+    /// <summary>Reloads whenever this changes, e.g. the Id from the route.</summary>
+    [Parameter] public object? Key { get; set; }
+
+    [Parameter] public string? LoadingText { get; set; }
+
+    [Parameter] public string ErrorTitle { get; set; } = "Could not load this content";
+
+    [Inject] ILogger<AsyncContent<T>> Logger { get; set; } = default!;
+
+    T? _value;
+    bool _loading = true;
+    Exception? _error;
+    object? _loadedKey;
+    bool _loadedOnce;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (!_loadedOnce || !Equals(_loadedKey, Key))
+        {
+            _loadedOnce = true;
+            _loadedKey = Key;
+
+            await ReloadAsync();
+        }
+    }
+
+    /// <summary>Loads the data again, e.g. after it was changed elsewhere on the page.</summary>
+    public async Task ReloadAsync()
+    {
+        _loading = true;
+        _error = null;
+        StateHasChanged();
+
+        try
+        {
+            _value = await Load();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Failed to load content");
+            _error = ex;
+        }
+        finally
+        {
+            _loading = false;
+        }
+
+        StateHasChanged();
+    }
+
+    static bool IsEmpty(T? value) => value switch
+    {
+        null => true,
+        string text => text.Length == 0,
+        System.Collections.ICollection collection => collection.Count == 0,
+        _ => false,
+    };
+}

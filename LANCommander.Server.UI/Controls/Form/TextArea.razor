@@ -1,0 +1,46 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<string>
+
+<div class="lc-text-area">
+    <RadzenTextArea Name="@InputId"
+                    Value="@Value"
+                    ValueChanged="@((string? value) => SetValueAsync(value))"
+                    Immediate="@(Immediate || Counter)"
+                    ReadOnly="ReadOnly"
+                    Rows="Rows"
+                    MaxLength="MaxLength"
+                    Disabled="IsDisabled"
+                    Placeholder="@Placeholder"
+                    Style="@_style"
+                    Attributes='@InputAttributes.Build(this, AutoFocus, default, BuildClass("lc-text-area-input"))' />
+
+    @if (Counter)
+    {
+        <div class="lc-text-area-counter">@(Value?.Length ?? 0)@(MaxLength != null ? $" / {MaxLength}" : "")</div>
+    }
+</div>
+
+@code {
+    [Parameter] public int Rows { get; set; } = 4;
+
+    [Parameter] public int? MaxLength { get; set; }
+
+    /// <summary>Shows how many characters have been typed (out of <see cref="MaxLength"/>).</summary>
+    [Parameter] public bool Counter { get; set; }
+
+    /// <summary>Update the bound value on every keystroke instead of when the input loses focus.</summary>
+    [Parameter] public bool Immediate { get; set; }
+
+    [Parameter] public bool ReadOnly { get; set; }
+
+    [Parameter] public bool AutoFocus { get; set; }
+
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _style = new StyleBuilder().Add("width", "100%").Add(Style).Build();
+    }
+}

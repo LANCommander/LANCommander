@@ -1,0 +1,18 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Contracts shared between the launcher and the out-of-process packaging workers.
+
+    Deliberately depends on nothing but the BCL: the worker publishes self-contained and
+    trimmed for two architectures, so every reference here is paid for twice on disk.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LANCommander.Packaging</RootNamespace>
+    <AssemblyName>LANCommander.Packaging.Abstractions</AssemblyName>
+  </PropertyGroup>
+
+</Project>

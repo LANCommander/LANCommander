@@ -1,8 +1,21 @@
-.uploader-progress .ant-progress-outer {
-    padding-right: 0;
-    margin-right: 0;
+// Upload progress in the sidebar (UI/Controls/UploadIndicator.razor)
+.upload-indicator-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    min-width: 280px;
 }
 
-.uploader-progress .ant-progress-bg {
-    transition: none;
+.upload-indicator-name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.upload-indicator-button {
+    justify-content: flex-start;
+}
+
+.upload-indicator-count {
+    margin-inline-start: auto;
 }

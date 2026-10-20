@@ -1,0 +1,57 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Services.Abstractions
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IVersionProvider VersionProvider
+
+@* The signed-in user at the foot of the sidebar; their profile pages and sign-out open from it *@
+@if (_name != null)
+{
+    <Dropdown Class="lc-sidebar-profile">
+        <ChildContent>
+            <button type="button" class="lc-sidebar-profile-button" aria-label="Profile menu">
+                <Avatar Square Name="@_name" />
+                <span class="lc-sidebar-profile-name">@_name</span>
+                <Icon Type="IconType.CaretDown" Class="lc-sidebar-profile-caret" />
+            </button>
+        </ChildContent>
+        <Overlay>
+            <Menu>
+                <MenuItem Href="/Profile" Exact Icon="IconType.User">General</MenuItem>
+                @if (SettingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
+                {
+                    <MenuItem Href="/Profile/Library" Icon="IconType.Books">Library</MenuItem>
+                }
+                <MenuItem Href="/Profile/ConnectedAccounts" Icon="IconType.Plugs">Connected Accounts</MenuItem>
+                @if (SettingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+                {
+                    <MenuItem Href="/Profile/ChangePassword" Icon="IconType.Password">Change Password</MenuItem>
+                }
+                <MenuItem Href="/Profile/Saves" Icon="IconType.FloppyDisk">Saves</MenuItem>
+                <MenuDivider />
+                <MenuItem Href="/Logout" Icon="IconType.SignOut">Logout</MenuItem>
+            </Menu>
+        </Overlay>
+    </Dropdown>
+}
+
+@* Social links and the server's version stay visible at the foot of the rail, signed in or out *@
+<Social />
+<div class="lc-sidebar-version">LANCommander v@(_version)</div>
+
+@code {
+    string? _name;
+    string? _version;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _version = VersionProvider.GetCurrentVersion().WithoutMetadata().ToString();
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity?.IsAuthenticated ?? false)
+            _name = authState.User.Identity.Name;
+    }
+}

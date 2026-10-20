@@ -1,0 +1,143 @@
+name: LANCommander Server UI Tests — PR Visual Diff Comment
+
+# Triggered by workflow_run (not workflow_call/pull_request_target) so this
+# job gets a trusted, elevated GITHUB_TOKEN even when the underlying PR came
+# from a fork. A pull_request-triggered job's token is read-only for forks,
+# which caused the push to gh-visual-diffs and the PR comment to fail with a
+# 403 when the PR author isn't a member/contributor.
+on:
+    workflow_run:
+        workflows: ["LANCommander Pull Request"]
+        types: [completed]
+
+permissions:
+    contents: write       # push diff PNGs to the gh-visual-diffs branch
+    pull-requests: write  # post / update the comment
+    actions: read         # download artifacts from the triggering run
+
+jobs:
+    comment:
+        runs-on: ubuntu-latest
+        if: github.event.workflow_run.event == 'pull_request'
+        steps:
+            - name: Checkout for branch push
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Download visual artifacts
+              id: download
+              continue-on-error: true
+              uses: actions/download-artifact@v4
+              with:
+                  name: server-ui-visual-artifacts
+                  path: visual
+                  run-id: ${{ github.event.workflow_run.id }}
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+
+            - name: Read regression manifest
+              id: manifest
+              run: |
+                  if [ "${{ steps.download.outcome }}" != "success" ] || [ ! -f visual/regressions.json ]; then
+                      echo "no manifest — assuming no visual run"
+                      echo "count=0" >> "$GITHUB_OUTPUT"
+                      exit 0
+                  fi
+                  count=$(jq '.regressed_count' visual/regressions.json)
+                  echo "count=$count" >> "$GITHUB_OUTPUT"
+
+            - name: Determine PR number
+              id: pr
+              run: |
+                  if [ -f visual/pr-number.txt ]; then
+                      echo "number=$(cat visual/pr-number.txt)" >> "$GITHUB_OUTPUT"
+                  else
+                      echo "number=${{ github.event.workflow_run.pull_requests[0].number }}" >> "$GITHUB_OUTPUT"
+                  fi
+
+            - name: Skip when no regressions
+              if: steps.manifest.outputs.count == '0'
+              run: echo "No visual regressions; nothing to comment."
+
+            # Push diff/actual/baseline PNGs to an orphan branch so raw.githubusercontent.com
+            # URLs render inline in the PR comment. One folder per (PR, run).
+            - name: Push diffs to gh-visual-diffs branch
+              if: steps.manifest.outputs.count != '0'
+              env:
+                  PR: ${{ steps.pr.outputs.number }}
+                  RUN: ${{ github.event.workflow_run.id }}
+              run: |
+                  set -euo pipefail
+                  git config user.name  "github-actions[bot]"
+                  git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+                  # Worktree off an orphan branch so we never touch the source tree.
+                  if git ls-remote --exit-code --heads origin gh-visual-diffs >/dev/null; then
+                      git fetch origin gh-visual-diffs
+                      git worktree add /tmp/visual gh-visual-diffs
+                  else
+                      git worktree add --detach /tmp/visual
+                      cd /tmp/visual
+                      git checkout --orphan gh-visual-diffs
+                      git rm -rf . 2>/dev/null || true
+                      cd -
+                  fi
+
+                  DEST="/tmp/visual/pr-${PR}/server-ui/run-${RUN}"
+                  mkdir -p "$DEST"
+                  cp -r visual/diffs       "$DEST/" 2>/dev/null || true
+                  cp -r visual/screenshots "$DEST/" 2>/dev/null || true
+                  cp -r visual/baselines   "$DEST/" 2>/dev/null || true
+
+                  cd /tmp/visual
+                  git add -A
+                  git -c user.name=github-actions -c user.email=github-actions@github.com \
+                      commit -m "Server UI visual diffs for PR #${PR} run ${RUN}"
+
+                  # The launcher workflow pushes to the same branch for the same PR; retry on a race
+                  for attempt in 1 2 3; do
+                      git push origin gh-visual-diffs && break
+                      git pull --rebase origin gh-visual-diffs
+                  done
+
+            - name: Post / update PR comment
+              if: steps.manifest.outputs.count != '0'
+              env:
+                  GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+                  PR: ${{ steps.pr.outputs.number }}
+                  RUN: ${{ github.event.workflow_run.id }}
+                  REPO: ${{ github.repository }}
+                  MARKER: '<!-- server-ui-visual-diff-comment -->'
+              run: |
+                  set -euo pipefail
+                  base="https://raw.githubusercontent.com/${REPO}/gh-visual-diffs/pr-${PR}/server-ui/run-${RUN}"
+
+                  body=$(mktemp)
+                  {
+                      echo "$MARKER"
+                      echo "## :art: Server UI visual regressions"
+                      echo
+                      echo "$(jq '.regressed_count' visual/regressions.json) baseline(s) drifted in [run ${RUN}](https://github.com/${REPO}/actions/runs/${RUN})."
+                      echo
+                      jq -r '.regressions[] | .name' visual/regressions.json | while read -r name; do
+                          echo "<details><summary><strong>${name}</strong></summary>"
+                          echo
+                          echo "| Baseline | Actual | Diff |"
+                          echo "| --- | --- | --- |"
+                          echo "| ![baseline](${base}/baselines/${name}.png) | ![actual](${base}/screenshots/${name}.png) | ![diff](${base}/diffs/${name}.diff.png) |"
+                          echo
+                          echo "</details>"
+                          echo
+                      done
+                      echo "_If these changes are intentional, run the **Server UI Tests — Update Visual Baselines** workflow on this branch to refresh._"
+                  } >> "$body"
+
+                  # Find an existing comment with our marker; update it if present.
+                  existing=$(gh api repos/${REPO}/issues/${PR}/comments --paginate \
+                      --jq ".[] | select(.body | startswith(\"${MARKER}\")) | .id" | head -1)
+
+                  if [ -n "$existing" ]; then
+                      gh api -X PATCH "repos/${REPO}/issues/comments/${existing}" --field "body=@${body}"
+                  else
+                      gh api -X POST "repos/${REPO}/issues/${PR}/comments" --field "body=@${body}"
+                  fi

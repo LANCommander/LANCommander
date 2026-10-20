@@ -4,10 +4,12 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using System.Runtime.InteropServices
 @using LANCommander.SDK.Enums
+@using LANCommander.Server.Models
 @using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
+@using LANCommander.Server.UI.Components
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using Microsoft.Extensions.Options
 @inject ServerService ServerService
@@ -16,143 +18,118 @@
 @inject RemoteServerEngine RemoteServerEngine
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ModalService ModalService
-@inject ILogger<General> Logger
+@inject NotificationService Notifications
+@inject DialogService Dialogs
 
-<ServerEditView Id="Id">
+<ServerEditView @ref="_view" Id="Id" OnLoaded="OnServerLoaded" ContentClass="edit-form-content">
     <TitleTemplate>
-        @if (context.Id == Guid.Empty)
-        {
-            <Text>Add New Server</Text>
-        }
-        else
-        {
-            <Text>General</Text>
-        }
+        @(context.Id == Guid.Empty ? "Add new server" : "General")
     </TitleTemplate>
     <TitleExtraTemplate>
-        <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-            @if (context != null && context.Id != Guid.Empty)
-            {
-                <ServerControl ServerId="context.Id"/>
+        @if (IsDirty(context))
+        {
+            <span class="edit-unsaved" role="status">
+                <span class="edit-unsaved-dot" aria-hidden="true"></span>
+                Unsaved changes
+            </span>
+        }
 
-                @if (context != null && context.Id != Guid.Empty)
-                {
-                    <Button OnClick="OpenExportDialog" Loading="_openingExportDialog">Export</Button>
-                }
-            }
-            
-            <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-        </Flex>
+        @if (context.Id != Guid.Empty)
+        {
+            <Button Text Icon="IconType.Export" OnClick="() => OpenExportDialogAsync(context)">Export</Button>
+        }
+
+        <Button Disabled="@(!IsDirty(context) || _saving)" OnClick="DiscardAsync">Discard</Button>
+        <Button Primary Loading="_saving" OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
-    
+
     <ChildContent>
-        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
-            <FormItem Label="Name">
-                <Input @bind-Value="@context.Name" AutoFocus="context.Id == Guid.Empty" />
-            </FormItem>
-            <FormItem Label="Game">
-                <Select TItem="Game"
-                        TItemValue="Guid?"
-                        DataSource="@Games.OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)"
-                        @bind-Value="@context.GameId"
-                        LabelName="Title"
-                        ValueName="Id"
-                        Placeholder="Select a Game"
-                        DefaultActiveFirstOption="false"
-                        EnableSearch>
-                    <ItemTemplate Context="game">
-                        @game.Title
-                    </ItemTemplate>
-                </Select>
-            </FormItem>
-            
+        @* As drawn: identity, then the engine and where it runs, then the network and how the process is managed *@
+        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)" Class="edit-form">
+            <div class="edit-form-pair">
+                <FormItem Label="Name" Required>
+                    <TextInput @bind-Value="context.Name" AutoFocus="context.Id == Guid.Empty" />
+                </FormItem>
+                <FormItem Label="Game" Help="Links this server to a game so it can be launched from it.">
+                    <Select TValue="Guid?" Items="GameItems" @bind-Value="context.GameId" Placeholder="Select a game" Searchable Clearable />
+                </FormItem>
+            </div>
+
             <FormItem Label="Engine">
                 <EnumSelect TEnum="ServerEngine" @bind-Value="context.Engine" />
             </FormItem>
-            
+
             @if (context.Engine == ServerEngine.Docker)
             {
-                <FormItem Label="Docker Host">
-                    <Select
-                        TItem="ServerEngineConfiguration"
-                        TItemValue="Guid?"
-                        DataSource="Settings.Value.Server.GameServers.ServerEngines"
-                        LabelName="Name"
-                        ValueName="Id"
-                        @bind-Value="context.DockerHostId"
-                        OnSelectedItemChanged="ChangeDockerHost"></Select>
-                </FormItem>
-
-                <FormItem Label="Container">
-                    <Select
-                        TItem="DockerContainer"
-                        TItemValue="string"
-                        DataSource="Containers"
-                        Disabled="!Containers.Any()"
-                        LabelName="Name"
-                        ValueName="Id"
-                        @bind-Value="context.ContainerId"></Select>
-                </FormItem>
+                <div class="edit-form-pair">
+                    <FormItem Label="Docker host">
+                        <Select TValue="Guid?" Items="HostItems(ServerEngine.Docker)" @bind-Value="context.DockerHostId" @bind-Value:after="() => LoadContainersAsync(context)" />
+                    </FormItem>
+                    <FormItem Label="Container" Class="edit-form-mono">
+                        <Select TValue="string" Items="ContainerItems" Disabled="!ContainerItems.Any()" @bind-Value="context.ContainerId" />
+                    </FormItem>
+                </div>
             }
 
             @if (context.Engine == ServerEngine.Remote)
             {
-                <FormItem Label="Remote Host">
-                    <Select TItem="ServerEngineConfiguration"
-                            TItemValue="Guid?"
-                            DataSource="@Settings.Value.Server.GameServers.ServerEngines.Where(e => e.Type == ServerEngine.Remote)"
-                            LabelName="Name"
-                            ValueName="Id"
-                            @bind-Value="context.RemoteHostId"
-                            OnSelectedItemChanged="ChangeRemoteHost" />
-                </FormItem>
-
-                <FormItem Label="Remote Server">
-                    <Select TItem="SDK.Models.Server"
-                            TItemValue="Guid?"
-                            DataSource="RemoteServers"
-                            Disabled="!RemoteServers.Any()"
-                            LabelName="Name"
-                            ValueName="Id"
-                            @bind-Value="context.RemoteServerId" />
-                </FormItem>
+                <div class="edit-form-pair">
+                    <FormItem Label="Remote host">
+                        <Select TValue="Guid?" Items="HostItems(ServerEngine.Remote)" @bind-Value="context.RemoteHostId" @bind-Value:after="() => LoadRemoteServersAsync(context)" />
+                    </FormItem>
+                    <FormItem Label="Remote server">
+                        <Select TValue="Guid?" Items="RemoteServerItems" Disabled="!RemoteServerItems.Any()" @bind-Value="context.RemoteServerId" />
+                    </FormItem>
+                </div>
             }
 
             @if (context.Engine != ServerEngine.Remote)
             {
-                <FormItem Label="Executable Path">
-                    <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="@context.Path" OnSelected="(path) => context.WorkingDirectory = Path.GetDirectoryName(path)" />
+                <Divider Class="edit-form-divider" />
+
+                <FormItem Label="Executable path" Class="edit-form-mono">
+                    <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerFile" @bind-Value="context.Path" OnSelected="path => context.WorkingDirectory = Path.GetDirectoryName(path)" />
                 </FormItem>
-                <FormItem Label="Arguments">
-                    <Input @bind-Value="@context.Arguments" />
-                </FormItem>
-                <FormItem Label="Working Directory">
-                    <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.WorkingDirectory" />
-                </FormItem>
+                <div class="edit-form-pair">
+                    <FormItem Label="Arguments" Class="edit-form-mono">
+                        <TextInput @bind-Value="context.Arguments" />
+                    </FormItem>
+                    <FormItem Label="Working directory" Help="Defaults to the folder of the executable you choose." Class="edit-form-mono">
+                        <FilePicker Root="@RootPath" Title="Choose Working Directory" OkText="Select Directory" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="context.WorkingDirectory" />
+                    </FormItem>
+                </div>
             }
-            <FormItem Label="Host">
-                <Input @bind-Value="@context.Host" />
-            </FormItem>
-            <FormItem Label="Port" HasFeedback="@PortInUse" Help="@(PortInUse ? "Another server may already be bound to this port" : "")" ValidateStatus="@(PortInUse ? FormValidateStatus.Warning : FormValidateStatus.Default)">
-                <ServerPortInput @bind-Value="@context.Port" @bind-PortInUse="PortInUse" ServerId="context.Id" />
-            </FormItem>
-            @if (context.Engine != ServerEngine.Remote)
-            {
-                <FormItem>
-                    <LabelTemplate>
-                        Use Shell Execute
-                        <Tooltip Title="This option specifies whether you would like to run the server using the shell. Some servers may require this as they will have a UI or won't output logs to stdout">
-                            <Icon Type="@IconType.Outline.QuestionCircle" Theme="@IconThemeType.Outline" />
-                        </Tooltip>
-                    </LabelTemplate>
+
+            <Divider Class="edit-form-divider" />
+
+            <div class="edit-form-pair">
+                <FormItem Label="Host" Class="edit-form-mono">
+                    <TextInput @bind-Value="context.Host" />
+                </FormItem>
+                <FormItem Label="Port" Class="edit-form-mono">
                     <ChildContent>
-                        <Switch @bind-Checked="context.UseShellExecute" />
+                        <ServerPortInput @bind-Value="context.Port" @bind-PortInUse="PortInUse" ServerId="context.Id" />
                     </ChildContent>
+                    <HelpTemplate>
+                        @if (PortInUse)
+                        {
+                            <Typography Warning>Another server may already be bound to this port</Typography>
+                        }
+                    </HelpTemplate>
                 </FormItem>
-                <FormItem Label="Termination Method">
-                    <Select @bind-Value="context.ProcessTerminationMethod" TItem="ProcessTerminationMethod" TItemValue="ProcessTerminationMethod" DataSource="AllowedProcessTerminationMethods" />
+            </div>
+
+            @if (context.Engine != ServerEngine.Remote)
+            {
+                <Divider Class="edit-form-divider" />
+
+                <Switch @bind-Value="context.UseShellExecute" Class="edit-form-switch">
+                    <span class="edit-form-switch-title">Use shell execute</span>
+                    <span class="edit-form-switch-help">Run the server through the shell. Some servers need this because they have a UI or don't write their logs to stdout.</span>
+                </Switch>
+
+                <FormItem Label="Termination method">
+                    <EnumSelect TEnum="ProcessTerminationMethod" @bind-Value="context.ProcessTerminationMethod" Only="AllowedProcessTerminationMethods" />
                 </FormItem>
             }
         </Form>
@@ -161,117 +138,140 @@
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
-    IEnumerable<Game> Games = new List<Game>();
-    IEnumerable<DockerContainer> Containers = new List<DockerContainer>();
-    IEnumerable<SDK.Models.Server> RemoteServers = new List<SDK.Models.Server>();
 
-    Guid GameId;
-    
+    IEnumerable<SelectItem<Guid?>> GameItems = [];
+    IEnumerable<SelectItem<string>> ContainerItems = [];
+    IEnumerable<SelectItem<Guid?>> RemoteServerItems = [];
+
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
-    bool PortInUse = false;
+    bool PortInUse;
 
-    bool _openingExportDialog;
-    
-    IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods
-    {
-        get
-        {
-            if (RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
-                return new ProcessTerminationMethod[]
-                {
-                    ProcessTerminationMethod.SIGHUP,
-                    ProcessTerminationMethod.SIGINT,
-                    ProcessTerminationMethod.SIGKILL,
-                    ProcessTerminationMethod.SIGTERM
-                };
-            else
-                return new ProcessTerminationMethod[]
-                {
-                    ProcessTerminationMethod.Close,
-                    ProcessTerminationMethod.Kill
-                };
-        }
-    }
+    bool _saving;
+
+    ServerEditView? _view;
+    Form? _form;
+
+    /// <summary>The fields as loaded or last saved; the header's "Unsaved changes" compares against it.</summary>
+    ServerEditSnapshot? _saved;
+
+    static IEnumerable<ProcessTerminationMethod> AllowedProcessTerminationMethods =>
+        RuntimeInformation.IsOSPlatform(OSPlatform.Linux) || RuntimeInformation.IsOSPlatform(OSPlatform.OSX)
+            ? [ProcessTerminationMethod.SIGHUP, ProcessTerminationMethod.SIGINT, ProcessTerminationMethod.SIGKILL, ProcessTerminationMethod.SIGTERM]
+            : [ProcessTerminationMethod.Close, ProcessTerminationMethod.Kill];
+
+    IEnumerable<SelectItem<Guid?>> HostItems(ServerEngine type) =>
+        Settings.Value.Server.GameServers.ServerEngines
+            .Where(e => e.Type == type)
+            .Select(e => new SelectItem<Guid?>(e.Id, e.Name))
+            .ToList();
 
     protected override async Task OnInitializedAsync()
     {
-        Games = await GameService.Include(g => g.Media).GetAsync();
+        var games = await GameService.Include(g => g.Media).GetAsync();
+
+        GameItems = games
+            .OrderBy(g => String.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
+            .ToSelectItems(g => (Guid?)g.Id, g => g.Title, image: GetIcon)
+            .ToList();
     }
 
-    async Task ChangeDockerHost(ServerEngineConfiguration hostConfiguration)
+    void OnServerLoaded(Server server)
     {
-        Containers = await DockerServerEngine.GetContainersAsync(hostConfiguration.Id);
+        _saved = ServerEditSnapshot.Of(server);
+        _form?.MarkAsUnmodified();
     }
 
-    async Task ChangeRemoteHost(ServerEngineConfiguration hostConfiguration)
+    bool IsDirty(Server server) => _saved != null && ServerEditSnapshot.Of(server) != _saved;
+
+    async Task DiscardAsync()
     {
-        RemoteServers = await RemoteServerEngine.GetRemoteServersAsync(hostConfiguration.Id);
+        _saved = null;
+
+        if (_view != null)
+            await _view.ReloadAsync();
     }
-    
-    async Task Save(Server server)
+
+    static string? GetIcon(Game game)
     {
+        var media = game.Media?.FirstOrDefault(m => m.Type == MediaType.Icon);
+
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : null;
+    }
+
+    async Task LoadContainersAsync(Server server)
+    {
+        try
+        {
+            ContainerItems = server.DockerHostId is { } hostId
+                ? (await DockerServerEngine.GetContainersAsync(hostId)).ToSelectItems(c => c.Id, c => c.Name).ToList()
+                : [];
+        }
+        catch (Exception ex)
+        {
+            ContainerItems = [];
+            Notifications.Error(ex, "The Docker host's containers could not be listed");
+        }
+    }
+
+    async Task LoadRemoteServersAsync(Server server)
+    {
+        try
+        {
+            RemoteServerItems = server.RemoteHostId is { } hostId
+                ? (await RemoteServerEngine.GetRemoteServersAsync(hostId)).ToSelectItems(s => (Guid?)s.Id, s => s.Name).ToList()
+                : [];
+        }
+        catch (Exception ex)
+        {
+            RemoteServerItems = [];
+            Notifications.Error(ex, "The remote host's servers could not be listed");
+        }
+    }
+
+    async Task SaveAsync(Server server)
+    {
+        if (_form?.Validate() == false)
+        {
+            Notifications.Error("Could not save! Check fields and try again");
+            return;
+        }
+
+        _saving = true;
+
         try
         {
             if (server.Id != Guid.Empty)
             {
-                server = await ServerService.UpdateAsync(server);
+                await ServerService.UpdateAsync(server);
 
-                await MessageService.SuccessAsync("Server updated!");
+                _saved = ServerEditSnapshot.Of(server);
+                _form?.MarkAsUnmodified();
+
+                Notifications.Success("Server updated!");
             }
             else
             {
                 server = await ServerService.AddAsync(server);
 
-                NavigationManager.LocationChanged += NotifyServerAdded;
+                Notifications.Success("Server added!");
 
                 NavigationManager.NavigateTo($"/Servers/{server.Id}");
             }
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
+            Notifications.Error(ex, "Could not save!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 
-    void NotifyServerAdded(object? sender, LocationChangedEventArgs e)
-    {
-        NavigationManager.LocationChanged -= NotifyServerAdded;
-
-        MessageService.Success("Server added!");
-    }
-    
-    private async Task OpenExportDialog()
-    {
-        _openingExportDialog = true;
-
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        var server = await ServerService.GetAsync(Id);
-
-        var modalOptions = new ModalOptions()
+    Task OpenExportDialogAsync(Server server) =>
+        Dialogs.OpenAsync<ExportDialog, ExportDialogOptions, bool>($"Export {server.Name}", new ExportDialogOptions
         {
-            Title = $"Export {server.Name}",
-            Maximizable = false,
-            DefaultMaximized = false,
-            Closable = true,
-            OkText = "Add",
-            Footer = null,
-        };
-
-        var options = new ExportDialogOptions()
-        {
-            RecordId = Id,
-            RecordType = ImportExportRecordType.Server
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<ExportDialog, ExportDialogOptions>(modalOptions, options);
-
-        _openingExportDialog = false;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-    }
+            RecordId = server.Id,
+            RecordType = ImportExportRecordType.Server,
+        }, new DialogSettings { OkText = "Export" });
 }

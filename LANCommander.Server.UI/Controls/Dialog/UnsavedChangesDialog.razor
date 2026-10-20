@@ -1,0 +1,14 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+@using LANCommander.Server.UI.Services
+@inherits Dialog<string, UnsavedChangesChoice>
+
+<Flex Gap="Gap.Medium" Align="Align.Start" Class="lc-confirm">
+    <Icon Type="IconType.WarningCircle" Fill Class="lc-confirm-icon lc-confirm-icon-warning" />
+    <div class="lc-confirm-message">@Options</div>
+</Flex>
+
+<div class="lc-dialog-footer lc-dialog-footer-inline">
+    <Button Text OnClick="() => CloseAsync(UnsavedChangesChoice.Cancel)">Cancel</Button>
+    <Button OnClick="() => CloseAsync(UnsavedChangesChoice.Discard)">Discard</Button>
+    <Button Primary OnClick="() => CloseAsync(UnsavedChangesChoice.Save)">Save</Button>
+</div>

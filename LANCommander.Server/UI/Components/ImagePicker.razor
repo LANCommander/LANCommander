@@ -1,20 +1,26 @@
+@*
+    Thumbnails to pick one (or, with MultiSelect, several) of: fixed-size crops Size wide at Aspect,
+    ringed and ticked when picked. Double-clicking one picks it outright.
+*@
 <div class="media-picker">
     <div class="media-picker-items">
-        @foreach (var image in Images)
+        @foreach (var (image, index) in Images.Select((image, index) => (image, index)))
         {
-            var id = Guid.NewGuid();
+            var id = $"{_idPrefix}-{index}";
+            var selected = MultiSelect ? SelectedValues.Contains(image.Key) : Value == image.Key;
 
-            <div class="media-picker-item" style="width: @(Size)px; max-height: @(Size)px">
+            <div class="@(Contain ? "media-picker-item media-picker-item-contain" : "media-picker-item")" style="width: @(Size)px; aspect-ratio: @Aspect" @key="image.Key">
                 @if (MultiSelect)
                 {
-                    <input type="checkbox" id="media-picker-item-@id" checked="@(SelectedValues.Contains(image.Key))" name="SelectedResult" @onchange="@(() => ToggleSelection(image.Key))" />
+                    <input type="checkbox" id="@id" checked="@selected" aria-label="Pick" @onchange="@(() => ToggleSelection(image.Key))" />
                 }
                 else
                 {
-                    <input type="radio" id="media-picker-item-@id" checked="@(Value == image.Key)" name="SelectedResult" @onchange="@(() => SelectionChanged(image.Key))" />
+                    <input type="radio" id="@id" checked="@selected" name="@_idPrefix" aria-label="Pick" @onchange="@(() => SelectionChanged(image.Key))" />
                 }
-                <label for="media-picker-item-@id" @ondblclick="@(() => Pick(image.Key))"></label>
-                <img src="@image.Value" />
+                <label for="@id" @ondblclick="@(() => Pick(image.Key))"></label>
+                <img src="@image.Value" alt="" loading="lazy" />
+                <span class="media-picker-check" aria-hidden="true"><Icon Type="IconType.Check" Bold /></span>
             </div>
         }
     </div>
@@ -22,13 +28,22 @@
 
 @code {
     [Parameter] public double Size { get; set; }
-    [Parameter] public string Value { get; set; }
+
+    /// <summary>The tiles' shape as a CSS aspect ratio, e.g. "2 / 3" for covers.</summary>
+    [Parameter] public string Aspect { get; set; } = "2 / 3";
+
+    /// <summary>Fits the whole image in its tile instead of cropping it, for logos and icons.</summary>
+    [Parameter] public bool Contain { get; set; }
+
+    [Parameter] public string? Value { get; set; }
     [Parameter] public EventCallback<string> ValueChanged { get; set; }
     [Parameter] public EventCallback<string> OnPicked { get; set; }
-    [Parameter] public Dictionary<string, string> Images { get; set; }
+    [Parameter] public Dictionary<string, string> Images { get; set; } = new();
     [Parameter] public bool MultiSelect { get; set; }
     [Parameter] public HashSet<string> SelectedValues { get; set; } = new();
     [Parameter] public EventCallback<HashSet<string>> SelectedValuesChanged { get; set; }
+
+    readonly string _idPrefix = $"media-picker-{Guid.NewGuid():N}";
 
     async Task SelectionChanged(string key)
     {

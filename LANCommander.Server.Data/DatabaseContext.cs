@@ -75,6 +75,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Collection>();
             builder.ConfigureBaseRelationships<Company>();
             builder.ConfigureBaseRelationships<Game>();
+            builder.ConfigureBaseRelationships<GameVersion>();
             builder.ConfigureBaseRelationships<GameSave>();
             builder.ConfigureBaseRelationships<Genre>();
             builder.ConfigureBaseRelationships<Key>();
@@ -261,6 +262,59 @@ namespace LANCommander.Server.Data
                 .HasMany(g => g.ExternalIds)
                 .WithOne(e => e.Game)
                 .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
+            #region Game Version Relationships
+            builder.Entity<Game>()
+                .HasMany(g => g.Versions)
+                .WithOne(v => v.Game)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            // GameVersion owns the version-scoped config. The same Archive/Script/Action/SavePath
+            // rows are also referenced by the Game (dual-write during the transition), which already
+            // declares a cascade path. A second cascade path here would be rejected by MySQL
+            // (multiple cascade paths), so the GameVersion side uses ClientCascade instead.
+            builder.Entity<GameVersion>()
+                .HasOne(v => v.Archive)
+                .WithOne(a => a.GameVersion)
+                .HasForeignKey<Archive>(a => a.GameVersionId)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Scripts)
+                .WithOne(s => s.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Actions)
+                .WithOne(a => a.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.SavePaths)
+                .WithOne(p => p.GameVersion)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.ClientCascade);
+
+            // Unlike the rows above these belong only to the version, so the database can cascade them
+            builder.Entity<GameVersionRedistributable>()
+                .HasKey(r => new { r.GameVersionId, r.RedistributableId });
+
+            builder.Entity<GameVersion>()
+                .HasMany(v => v.Redistributables)
+                .WithOne(r => r.GameVersion)
+                .HasForeignKey(r => r.GameVersionId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<GameVersionRedistributable>()
+                .HasOne(r => r.Redistributable)
+                .WithMany()
+                .HasForeignKey(r => r.RedistributableId)
                 .OnDelete(DeleteBehavior.Cascade);
             #endregion
 
@@ -527,6 +581,10 @@ namespace LANCommander.Server.Data
         }
 
         public DbSet<Game>? Games { get; set; }
+
+        public DbSet<GameVersion>? GameVersions { get; set; }
+
+        public DbSet<GameVersionRedistributable>? GameVersionRedistributables { get; set; }
 
         public DbSet<Genre>? Genres { get; set; }
 

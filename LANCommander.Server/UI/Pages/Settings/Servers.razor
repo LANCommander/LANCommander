@@ -1,31 +1,31 @@
-﻿@page "/Settings/Servers"
+@page "/Settings/Servers"
 @using LANCommander.Server.Settings
+@using LANCommander.Server.UI.Components
 @using LANCommander.Server.UI.Pages.Settings.Components
 @using Microsoft.Extensions.Options
-@inject IMessageService MessageService
-@inject ILogger<Servers> Logger
+@inject NotificationService Notifications
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Servers">
-    <PageHeaderExtra>
-        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" OnSubmit="Save">
         <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@context.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="Settings.Value.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
         </FormItem>
         <FormItem Label="Autostop Delay" Help="Seconds to wait after the last player stops a game before stopping its on-player-activity servers. Debounces stop/start thrash when players relaunch.">
-            <AntDesign.InputNumber @bind-Value="@context.Server.GameServers.AutostopDelay" Min="0" DefaultValue="300" />
+            <NumberInput @bind-Value="Settings.Value.Server.GameServers.AutostopDelay" Min="0" />
         </FormItem>
     </Form>
-    
-    <Divider Text="Server Engines" />
-    
+
+    <Divider>Server Engines</Divider>
+
     <ServerEngineEditor @bind-Values="Settings.Value.Server.GameServers.ServerEngines" Save="Save" />
 </PageContent>
 
@@ -40,13 +40,12 @@
             {
                 s.Server.GameServers = Settings.Value.Server.GameServers;
             });
-            
-            MessageService.Success("Settings saved!");
+
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
         }
     }
 

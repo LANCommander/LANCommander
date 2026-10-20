@@ -1,0 +1,60 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <Icon Type="Icon" Class="lc-empty-icon" />
+    @if (Title != null)
+    {
+        <div class="lc-empty-title">@Title</div>
+    }
+    @if (DescriptionTemplate != null || Description != null || Title == null)
+    {
+        <div class="lc-empty-description">
+            @if (DescriptionTemplate != null)
+            {
+                @DescriptionTemplate
+            }
+            else
+            {
+                @(Description ?? "No data")
+            }
+        </div>
+    }
+    @if (ChildContent != null)
+    {
+        <div class="lc-empty-actions">@ChildContent</div>
+    }
+</div>
+
+@code {
+    /// <summary>A heading above the description, e.g. "No games yet".</summary>
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// What is missing, or with a <see cref="Title"/> what to do about it ("Add a title or import an
+    /// existing manifest to get started"). Defaults to "No data" when there is no title.
+    /// </summary>
+    [Parameter] public string? Description { get; set; }
+
+    /// <summary>Rich description content; replaces <see cref="Description"/>.</summary>
+    [Parameter] public RenderFragment? DescriptionTemplate { get; set; }
+
+    /// <summary>Actions that fill the gap, e.g. an "Add game" button.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public IconType Icon { get; set; } = IconType.Tray;
+
+    /// <summary>A compact version for inside tables, selects and cards: no box, a smaller icon.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-empty")
+            .If(Small, "lc-empty-small")
+            .Add(Class)
+            .Build();
+    }
+}

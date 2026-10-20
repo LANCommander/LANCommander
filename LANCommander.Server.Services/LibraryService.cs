@@ -2,7 +2,6 @@
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -14,11 +13,10 @@ namespace LANCommander.Server.Services
         ILogger<LibraryService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         GameService gameService,
-        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Library> AddAsync(Library entity)
         {
@@ -86,7 +84,8 @@ namespace LANCommander.Server.Services
                 addonIds ??= [];
                 foreach (var dependentGame in game.DependentGames)
                 {
-                    if (dependentGame.IsAddon || addonIds.Contains(dependentGame.Id))
+                    // Addons shown in the library are removed on their own
+                    if ((dependentGame.IsAddon && !dependentGame.ShowInLibrary) || addonIds.Contains(dependentGame.Id))
                     {
                         if (library.Games.Any(g => g.Id == dependentGame.Id) && dependentGame.Id != game.Id)
                             library.Games.Remove(dependentGame);

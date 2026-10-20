@@ -6,8 +6,6 @@ namespace LANCommander.Server.Data.Models
 {
     public class Archive : BaseModel
     {
-        public string? Changelog { get; set; }
-
         public string ObjectKey { get; set; }
 
         [Required]
@@ -36,6 +34,12 @@ namespace LANCommander.Server.Data.Models
         [ForeignKey(nameof(ToolId))]
         [InverseProperty("Archives")]
         public Tool? Tool { get; set; }
+
+        public Guid? GameVersionId { get; set; }
+        [JsonIgnore]
+        [ForeignKey(nameof(GameVersionId))]
+        [InverseProperty(nameof(GameVersion.Archive))]
+        public GameVersion? GameVersion { get; set; }
 
         [Display(Name = "Last Version")]
         public Archive? LastVersion { get; set; }

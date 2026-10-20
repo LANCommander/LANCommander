@@ -1,6 +1,6 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,7 +65,7 @@ public static class PlaySessionsEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] UserService userService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
 
@@ -77,7 +77,7 @@ public static class PlaySessionsEndpoints
             return q.AsNoTracking();
         }).GetAsync(ps => ps.UserId == user.Id);
 
-        return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
+        return TypedResults.Ok(sessions.Select(sdkMapper.ToSdk).ToList());
     }
 
     internal static async Task<IResult> GetByGameAsync(
@@ -85,7 +85,7 @@ public static class PlaySessionsEndpoints
         ClaimsPrincipal userPrincipal,
         [FromServices] PlaySessionService playSessionService,
         [FromServices] UserService userService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
 
@@ -97,7 +97,7 @@ public static class PlaySessionsEndpoints
             return q.AsNoTracking();
         }).GetAsync(ps => ps.UserId == user.Id && ps.GameId == id);
 
-        return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.PlaySession>>(sessions));
+        return TypedResults.Ok(sessions.Select(sdkMapper.ToSdk).ToList());
     }
 }
 

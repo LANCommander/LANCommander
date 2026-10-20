@@ -1,13 +1,24 @@
 ﻿@using Microsoft.AspNetCore.Components.Authorization
-@using LANCommander.UI
+@using System.Reflection
+@using LANCommander.Server.Plugins
+@inject IEnumerable<UIRouteAssembly> RouteAssemblies
+@inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
 
-<Router AppAssembly="@typeof(Program).Assembly">
+<Router AppAssembly="@typeof(Program).Assembly" AdditionalAssemblies="@_additionalAssemblies">
     <Found Context="routeData">
-        <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
-            <NotAuthorized>
-                <RedirectToLogin />
-            </NotAuthorized>
-        </AuthorizeRouteView>
+        @if (PluginRouteAccess.IsPluginPage(routeData.PageType, _pluginAssemblies))
+        {
+            @* Plugin routes are authorized by the server, not by the plugin's own attributes *@
+            <PluginAuthorizedRouteView RouteData="@routeData" />
+        }
+        else
+        {
+            <AuthorizeRouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)">
+                <NotAuthorized>
+                    <RedirectToLogin />
+                </NotAuthorized>
+            </AuthorizeRouteView>
+        }
     </Found>
     <NotFound>
         <LayoutView Layout="@typeof(MainLayout)">
@@ -15,3 +26,14 @@
         </LayoutView>
     </NotFound>
 </Router>
+
+@code {
+    Assembly[] _additionalAssemblies = [];
+    Assembly[] _pluginAssemblies = [];
+
+    protected override void OnInitialized()
+    {
+        _additionalAssemblies = UIRouteAssembly.Resolve(RouteAssemblies, PluginRouteAssemblies);
+        _pluginAssemblies = UIRouteAssembly.ResolvePluginAssemblies(PluginRouteAssemblies);
+    }
+}

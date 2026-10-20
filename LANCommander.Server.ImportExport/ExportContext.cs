@@ -1,5 +1,4 @@
-﻿using System.IO.Compression;
-using AutoMapper;
+using System.IO.Compression;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
@@ -7,6 +6,7 @@ using LANCommander.Server.ImportExport.Exporters;
 using LANCommander.Server.ImportExport.Importers;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZipArchive = System.IO.Compression.ZipArchive;
@@ -19,6 +19,7 @@ public class ExportContext(
     ServerExporter serverExporter,
     ToolExporter toolExporter,
     GameService gameService,
+    GameVersionService gameVersionService,
     RedistributableService redistributableService,
     ServerService serverService,
     ToolService toolService,
@@ -41,7 +42,7 @@ public class ExportContext(
     ServerConsoleExporter serverConsoleExporter,
     ServerHttpPathExporter serverHttpPathExporter,
     TagExporter tagExporter,
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     ILogger<ExportContext> logger) : IDisposable
 {
     public object Manifest { get; private set; }
@@ -186,7 +187,18 @@ public class ExportContext(
                 .Include(g => g.Tools);
         }).GetAsync(gameId);
         
-        var gameManifest = mapper.Map<SDK.Models.Manifest.Game>(game);
+        // Actions, scripts and save paths belong to versions and the game's own rows span every version;
+        // an export carries the latest version's
+        var latestVersionId = await gameVersionService.GetLatestIdAsync(game.Id);
+
+        if (latestVersionId != null)
+        {
+            game.Actions = game.Actions?.Where(a => a.GameVersionId == null || a.GameVersionId == latestVersionId).ToList();
+            game.Scripts = game.Scripts?.Where(s => s.GameVersionId == null || s.GameVersionId == latestVersionId).ToList();
+            game.SavePaths = game.SavePaths?.Where(p => p.GameVersionId == null || p.GameVersionId == latestVersionId).ToList();
+        }
+
+        var gameManifest = manifestMapper.ToManifest(game);
 
         DataRecord = game;
         Manifest = gameManifest;
@@ -228,7 +240,7 @@ public class ExportContext(
             .GetAsync(redistributableId);
         
         DataRecord = redistributable;
-        Manifest = mapper.Map<SDK.Models.Manifest.Redistributable>(redistributable);
+        Manifest = manifestMapper.ToManifest(redistributable);
         
         var exportItemInfo = new List<ExportItemInfo>();
         
@@ -255,7 +267,7 @@ public class ExportContext(
             .GetAsync(serverId);
 
         DataRecord = server;
-        Manifest = mapper.Map<SDK.Models.Manifest.Server>(server);
+        Manifest = manifestMapper.ToManifest(server);
         
         var exportItemInfo = new List<ExportItemInfo>();
         
@@ -282,7 +294,7 @@ public class ExportContext(
             .GetAsync(toolId);
 
         DataRecord = tool;
-        Manifest = mapper.Map<SDK.Models.Manifest.Tool>(tool);
+        Manifest = manifestMapper.ToManifest(tool);
         
         var exportItemInfo = new List<ExportItemInfo>();
         

@@ -1,0 +1,56 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<div @attributes="AdditionalAttributes" class="@_class" style="@_style">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Columns out of 24 at every width. Without a span the column is as wide as its content.</summary>
+    [Parameter] public int? Span { get; set; }
+
+    /// <summary>Columns out of 24 below 576px, overriding <see cref="Span"/>.</summary>
+    [Parameter] public int? Xs { get; set; }
+
+    /// <summary>Columns out of 24 from 576px.</summary>
+    [Parameter] public int? Sm { get; set; }
+
+    /// <summary>Columns out of 24 from 768px.</summary>
+    [Parameter] public int? Md { get; set; }
+
+    /// <summary>Columns out of 24 from 992px.</summary>
+    [Parameter] public int? Lg { get; set; }
+
+    /// <summary>Columns out of 24 from 1200px.</summary>
+    [Parameter] public int? Xl { get; set; }
+
+    /// <summary>Take up whatever width the other columns leave.</summary>
+    [Parameter] public bool Fill { get; set; }
+
+    string? _class;
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-col")
+            .Add(SpanClass("", Span))
+            .Add(SpanClass("-xs", Xs))
+            .Add(SpanClass("-sm", Sm))
+            .Add(SpanClass("-md", Md))
+            .Add(SpanClass("-lg", Lg))
+            .Add(SpanClass("-xl", Xl))
+            .Add(Class)
+            .Build();
+
+        _style = new StyleBuilder()
+            .If(Fill, "flex", "1 1 auto")
+            .Add(Style)
+            .Build();
+    }
+
+    static string? SpanClass(string breakpoint, int? span) =>
+        span is null ? null : $"lc-col{breakpoint}-{Math.Clamp(span.Value, 1, 24)}";
+}

@@ -1,0 +1,16 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Fixed text or an icon inside an InputGroup, e.g. a unit or a separator. *@
+<span @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    @ChildContent
+</span>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet() =>
+        _class = new ClassBuilder().Add("lc-input-addon").Add(Class).Build();
+}

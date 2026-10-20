@@ -194,9 +194,11 @@ public partial class LibraryRowView : UserControl
 
     // ── Layout ──────────────────────────────────────────────────────────
 
-    private void RightPanelScrollViewer_SizeChanged(object? sender, SizeChangedEventArgs e)
+    // The panel is the middle of the carousels' shared columns, so its width is the grid's usable width.
+    private void AllGamesPanel_SizeChanged(object? sender, SizeChangedEventArgs e)
     {
-        UpdateGridLayout(e.NewSize.Width);
+        if (e.WidthChanged)
+            UpdateGridLayout(e.NewSize.Width);
     }
 
     private void UpdateGridLayout(double availableWidth)
@@ -207,10 +209,9 @@ public partial class LibraryRowView : UserControl
         const int    maxCols    = 7;
         const double coverRatio = 9.0 / 6.0;
         const double colSpacing = 12.0;
-        const double hPadding   = 84.0; // outer StackPanel margin (10+10) + inner StackPanel margin (32+32)
         const double minWidth   = 105.0;
 
-        double usable = Math.Max(availableWidth - hPadding, minCols * (minWidth + colSpacing));
+        double usable = Math.Max(availableWidth, minCols * (minWidth + colSpacing));
 
         int cols = (int)Math.Clamp(
             Math.Floor((usable + colSpacing) / (minWidth + colSpacing)), minCols, maxCols);

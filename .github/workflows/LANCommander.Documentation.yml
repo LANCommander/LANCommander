@@ -7,9 +7,32 @@ on:
       - "LANCommander.Documentation/**"
 
 jobs:
-  dispatch:
+  publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "10.0.x"
+
+      - name: Regenerate plugin API reference
+        run: dotnet run --project LANCommander.PluginDocsGenerator
+
+      - name: Commit regenerated API reference
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if ! git diff --quiet -- "LANCommander.Documentation/Plugins/API Reference.md"; then
+            git add "LANCommander.Documentation/Plugins/API Reference.md"
+            git commit -m "docs: regenerate plugin API reference [skip ci]"
+            git push
+          fi
+
       - name: Dispatch to Docusaurus repo
         env:
           DISPATCH_TOKEN: ${{ secrets.DOCUMENTATION_DISPATCH_TOKEN }}
@@ -22,7 +45,7 @@ jobs:
               "event_type": "docs-sources-updated",
               "client_payload": {
                 "repo": "'"${GITHUB_REPOSITORY}"'",
-                "sha": "'"${GITHUB_SHA}"'",
+                "sha": "'"$(git rev-parse HEAD)"'",
                 "ref": "'"${GITHUB_REF}"'"
               }
             }'

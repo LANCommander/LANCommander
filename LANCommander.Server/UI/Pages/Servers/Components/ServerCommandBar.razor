@@ -1,0 +1,62 @@
+@* The bar under a server console for typing a command; Enter sends it *@
+@if (Enabled)
+{
+    @Bar
+}
+else
+{
+    <Tooltip Title="@DisabledReason" Class="server-command-tooltip">
+        @Bar
+    </Tooltip>
+}
+
+@code {
+    /// <summary>Whether the server can take a command right now.</summary>
+    [Parameter] public bool Enabled { get; set; }
+
+    /// <summary>Why it can't, shown on hover when disabled.</summary>
+    [Parameter] public string? DisabledReason { get; set; }
+
+    /// <summary>Called with the command when Enter is pressed; the field clears straight away.</summary>
+    [Parameter] public EventCallback<string> OnSend { get; set; }
+
+    readonly string _id = $"server-command-{Guid.NewGuid():N}";
+    string _text = "";
+    bool _sending;
+
+    RenderFragment Bar => @<div class="@(Enabled ? "server-command" : "server-command server-command-disabled")">
+        <span class="server-command-prompt" aria-hidden="true">&gt;</span>
+        <label for="@_id" class="server-command-label">Send a console command</label>
+        <input id="@_id"
+               type="text"
+               class="server-command-input"
+               placeholder="Send a command"
+               autocomplete="off"
+               spellcheck="false"
+               disabled="@(!Enabled)"
+               value="@_text"
+               @oninput="e => _text = e.Value?.ToString() ?? string.Empty"
+               @onkeydown="KeyDownAsync" />
+        <span class="server-command-key" aria-hidden="true">Enter</span>
+    </div>;
+
+    async Task KeyDownAsync(KeyboardEventArgs e)
+    {
+        if (e.Key != "Enter" || !Enabled || _sending || string.IsNullOrWhiteSpace(_text))
+            return;
+
+        var command = _text.Trim();
+
+        _text = string.Empty;
+        _sending = true;
+
+        try
+        {
+            await OnSend.InvokeAsync(command);
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+}

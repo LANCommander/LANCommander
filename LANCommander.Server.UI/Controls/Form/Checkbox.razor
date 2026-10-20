@@ -1,0 +1,30 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<bool>
+
+<span class="@BuildClass("lc-checkbox")" style="@Style">
+    <RadzenCheckBox TValue="bool"
+                    Name="@_id"
+                    Value="Value"
+                    ValueChanged="@((bool value) => SetValueAsync(value))"
+                    Disabled="IsDisabled"
+                    Attributes="AdditionalAttributes?.ToDictionary()" />
+    @if (ChildContent != null)
+    {
+        <label class="lc-checkbox-label" for="@_id">@ChildContent</label>
+    }
+</span>
+
+@code {
+    /// <summary>The checkbox's label, shown beside it.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    readonly string _ownId = $"lc-checkbox-{Guid.NewGuid():N}";
+    string _id = "";
+
+    protected override void OnParametersSet()
+    {
+        base.OnParametersSet();
+
+        _id = InputId ?? _ownId;
+    }
+}

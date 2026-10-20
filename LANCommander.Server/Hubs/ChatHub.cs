@@ -1,7 +1,7 @@
-using AutoMapper;
 using LANCommander.SDK.Hubs;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.SignalR;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -9,7 +9,7 @@ namespace LANCommander.Server.Hubs;
 
 public class ChatHub(
     IFusionCache cache,
-    IMapper mapper,
+    SdkMapper sdkMapper,
     ILogger<ChatHub> logger,
     ChatService chatService) : Hub<IChatHubClient>, IChatHub
 {
@@ -69,7 +69,7 @@ public class ChatHub(
                 var thread = await chatService.GetThreadAsync(threadId);
                 if (thread != null)
                 {
-                    await Clients.User(participantId).AddedToThreadAsync(mapper.Map<ChatThread>(thread));
+                    await Clients.User(participantId).AddedToThreadAsync(sdkMapper.ToSdk(thread));
                 }
             }
             
@@ -85,8 +85,8 @@ public class ChatHub(
     public async Task<ChatThread> GetThreadAsync(Guid threadId)
     {
         var thread = await chatService.GetThreadAsync(threadId);
-        
-        return mapper.Map<ChatThread>(thread);
+
+        return sdkMapper.ToSdk(thread);
     }
 
     public async Task<IEnumerable<SDK.Models.ChatThread>> GetThreadsAsync()
@@ -122,7 +122,7 @@ public class ChatHub(
                     await cache.SetAsync(cacheKey, threadToMap.Participants.Select(p => p.Id.ToString()).ToList());
             } 
             
-            return mapper.Map<IEnumerable<ChatThread>>(threadsWithParticipants);
+            return threadsWithParticipants.Select(sdkMapper.ToSdk).ToList();
         }
         
         return [];
@@ -139,7 +139,7 @@ public class ChatHub(
             await chatService.UpdateReadStatus(threadId, userId);
         }
         
-        await Clients.Users(participants).ReceiveMessageAsync(threadId, mapper.Map<ChatMessage>(message));
+        await Clients.Users(participants).ReceiveMessageAsync(threadId, sdkMapper.ToSdk(message));
     }
 
     public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int? count)
@@ -176,8 +176,8 @@ public class ChatHub(
     public async Task<IEnumerable<User>> GetUsersAsync()
     {
         var users = await chatService.GetUsersAsync();
-        
-        return mapper.Map<IEnumerable<User>>(users);
+
+        return users.Select(sdkMapper.ToSdk).ToList();
     }
 }
 

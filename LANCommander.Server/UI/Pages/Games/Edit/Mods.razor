@@ -1,47 +1,51 @@
-﻿@page "/Games/{id:guid}/Mods"
+@page "/Games/{id:guid}/Mods"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
-@inject IMessageService MessageService
-@inject NavigationManager NavigationManager
-@inject ILogger<Mods> Logger
+@inject NotificationService Notifications
 
-<GameEditView Id="Id" Title="Mods">
-    <Table TItem="Game" DataSource="@context.DependentGames.Where(g => g.Type == GameType.Mod)" Context="mod" Responsive>
-        <PropertyColumn Property="e => e.Title" Sortable Filterable />
-        <PropertyColumn Property="e => e.SortTitle" Sortable Filterable />
-        <PropertyColumn Property="e => e.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.CreatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.CreatedBy != null ? e.CreatedBy.UserName : String.Empty" Sortable Filterable Title="Created By" />
-        <PropertyColumn Property="e => e.UpdatedOn" Format="MM/dd/yyyy" Sortable Filterable />
-        <PropertyColumn Property="e => e.UpdatedBy != null ? e.UpdatedBy.UserName : String.Empty" Sortable Filterable Title="Created By" />
-        <ActionColumn Style="text-align: right">
-            <Space Direction="SpaceDirection.Horizontal">
-                <SpaceItem>
-                    <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{mod.Id}", true))">Edit</Button>
-                </SpaceItem>
-                <SpaceItem>
-                    <Popconfirm OnConfirm="() => Delete(mod)" Title="Are you sure you want to delete this mod?">
-                        <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger />
-                    </Popconfirm>
-                </SpaceItem>
-            </Space>
-        </ActionColumn>
-    </Table>
+<GameEditView Id="Id" Title="Mods" Context="game">
+    <DataTable TItem="Game" @ref="_table" Small SettingsKey="game-mods" Query="g => g.BaseGameId == Id && g.Type == GameType.Mod">
+        <Columns>
+            <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="g => g.SortTitle" Title="Sort Title" Sortable />
+            <BoundColumn Property="g => g.ReleasedOn" Title="Released On" Sortable FormatString="MM/dd/yyyy" />
+            <BoundColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+            <BoundColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Include="UpdatedBy" Sortable />
+            <ActionsColumn TItem="Game">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Games/{context.Id}")" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this mod?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    private async Task Delete(Game game)
+    DataTable<Game>? _table;
+
+    async Task DeleteAsync(Game game)
     {
         try
         {
             await GameService.DeleteAsync(game);
+
+            Notifications.Success($"Deleted {game.Title}");
+
+            if (_table != null)
+                await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
-            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Notifications.Error(ex, "Could not delete the mod!");
         }
     }
 }

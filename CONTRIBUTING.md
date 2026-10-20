@@ -42,6 +42,23 @@ dotnet run --project LANCommander.Server
 
 The server will be available at `http://localhost:1337` by default.
 
+To run the launcher:
+```bash
+dotnet run --project LANCommander.Launcher -f net10.0-windows10.0.19041.0
+```
+
+The launcher multi-targets `net10.0` and `net10.0-windows10.0.19041.0`, so `-f` is required. Each target framework keeps its own `bin/Debug/<framework>/Data` folder, meaning settings, database and login session don't carry over when you switch between them.
+
+#### Reporting a different version
+
+The launcher sends its version to the server on every request and refuses to talk to a server with a different major version. A source build reports the version in `LANCommander.Launcher.csproj`, which won't match a server on another release. Set `LANCOMMANDER_VERSION` to override what the launcher reports:
+
+```bash
+LANCOMMANDER_VERSION=2.1.11 dotnet run --project LANCommander.Launcher -f net10.0-windows10.0.19041.0
+```
+
+`LANCommander.Launcher/Properties/launchSettings.json` presets this for IDE debugging — edit the value there to match the server you're testing against. The variable is read at runtime, so no rebuild is needed.
+
 ## How to Contribute
 
 ### Reporting Bugs
@@ -79,7 +96,8 @@ Use the [GitHub Issues](https://github.com/LANCommander/LANCommander/issues) pag
 |-----------|-------------|
 | `LANCommander.Server` | ASP.NET Blazor web application (server/admin) |
 | `LANCommander.Launcher` | Avalonia desktop client (launcher) |
-| `LANCommander.Packager` | Game packaging tool |
+| `LANCommander.Packaging` | Packaging domain logic (LCX building, script generation) |
+| `LANCommander.Packaging.Worker` | Out-of-process API-hook monitor, published per architecture |
 | `LANCommander.SDK` | .NET SDK for building custom clients |
 | `LANCommander.Server.Data` | Entity Framework data models and migrations |
 | `LANCommander.Server.Services` | Server business logic |

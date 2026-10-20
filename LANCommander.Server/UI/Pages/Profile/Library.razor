@@ -3,74 +3,70 @@
 @inject LibraryService LibraryService
 @inject UserService UserService
 @inject AuthenticationStateProvider AuthenticationStateProvider
-@inject IMessageService MessageService
-@inject ILogger<Library> Logger
+@inject NotificationService Notifications
 @attribute [Authorize]
 
 <PageHeader Title="My Library" />
 
-<DataTable
-    @ref="Table"
-    TItem="Game"
-    Query="g => g.Libraries.Any(l => l.UserId == User.Id)"
-    Searchable
-    SearchProperty="g => g.Title">
-    <Columns>
-        <Selection Key="@(context.Id.ToString())" CheckStrictly="true" />
-
-        <DataColumn TData="string" Title="Icon" Include="Media">
-            <Image Src="@GetIcon(context)" Height="32" Width="32" Preview="false"></Image>
-        </DataColumn>
-        
-        <BoundDataColumn Property="g => g.Title" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <BoundDataColumn Property="g => g.PlaySessions.Count(ps => ps.UserId == User.Id)" Title="Play Sessions" Include="PlaySessions" Sortable />
-        <BoundDataColumn Property="g => g.GameSaves.Count(gs => gs.UserId == User.Id)" Title="Saves" Include="GameSaves" Sortable />
-
-        <DataActions TData="string">
-            <Popconfirm OnConfirm="() => RemoveFromLibrary(context)" Title="Are you sure you want to remove this game from your library?">
-                <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-            </Popconfirm>
-        </DataActions>
-    </Columns>
-</DataTable>
+<PageContent Loading="User == null">
+    @if (User != null)
+    {
+        <DataTable TItem="Game"
+                   @ref="_table"
+                   Query="g => g.Libraries.Any(l => l.UserId == User.Id)"
+                   SearchProperty="g => g.Title">
+            <Columns>
+                <TemplateColumn TItem="Game" Title="Icon" Include="Media" Width="64px">
+                    <Image Src="@GetIcon(context)" Width="32" Height="32" />
+                </TemplateColumn>
+                <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
+                <BoundColumn Property="g => g.PlaySessions.Count(ps => ps.UserId == User.Id)" Title="Play Sessions" Include="PlaySessions" Sortable />
+                <BoundColumn Property="g => g.GameSaves.Count(gs => gs.UserId == User.Id)" Title="Saves" Include="GameSaves" Sortable />
+                <ActionsColumn TItem="Game">
+                    <Popconfirm OnConfirm="() => RemoveFromLibraryAsync(context)" Title="Are you sure you want to remove this game from your library?" OkText="Remove" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Remove from library" />
+                    </Popconfirm>
+                </ActionsColumn>
+            </Columns>
+        </DataTable>
+    }
+</PageContent>
 
 @code {
-    DataTable<Game> Table;
-    User User;
+    DataTable<Game>? _table;
+    User? User;
 
     protected override async Task OnInitializedAsync()
     {
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-        
-        if (authState.User.Identity.IsAuthenticated)
-            User = await UserService
-                .GetAsync(authState.User.Identity.Name);
+
+        if (authState.User.Identity?.IsAuthenticated == true)
+            User = await UserService.GetAsync(authState.User.Identity.Name);
+
+        User ??= new();
     }
 
-    async Task RemoveFromLibrary(Game game)
+    async Task RemoveFromLibraryAsync(Game game)
     {
         try
         {
-            await LibraryService.RemoveFromLibraryAsync(User.Id, game.Id);
+            await LibraryService.RemoveFromLibraryAsync(User!.Id, game.Id);
 
-            MessageService.Success($"Removed {game.Title} from your library!");
+            Notifications.Success($"Removed {game.Title} from your library!");
 
-            await Table.ReloadAsync();
+            if (_table != null)
+                await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not remove from your library!");
-            Logger.LogError(ex, "Could not remove from library");
+            Notifications.Error(ex, "Could not remove from your library!");
         }
     }
-    
-    string GetIcon(Game game)
-    {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
+    static string GetIcon(Game game)
+    {
+        var media = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
     }
 }

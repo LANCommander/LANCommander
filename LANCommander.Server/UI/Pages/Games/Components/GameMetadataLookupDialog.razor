@@ -1,0 +1,4 @@
+@inherits Dialog<GameMetadataLookupOptions, Guid?>
+
+@* Looks up metadata for a game and closes with its Id once imported *@
+<MetadataLookupPanel GameId="Options.GameId" Search="@Options.Search" AutoFocus OnImported="id => CloseAsync(id)" OnCancel="CancelAsync" />

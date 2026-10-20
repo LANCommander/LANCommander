@@ -1,56 +1,36 @@
-<Space>
-    @if (!Editing)
-    {
-        <SpaceItem>
-            <a href="/@FullRoute" target="_blank">@ParentRoute<strong>@Page.Slug</strong></a>
-        </SpaceItem>
+@inject PageService PageService
 
-        <SpaceItem>
-            <Button Size="ButtonSize.Small" OnClick="Edit">Edit</Button>
-        </SpaceItem>
+<Flex Gap="Gap.Small" Align="Align.Center">
+    @if (!_editing)
+    {
+        <a href="/@FullRoute" target="_blank">@ParentRoute<strong>@Page.Slug</strong></a>
+        <Button Small Icon="IconType.PencilSimple" OnClick="() => _editing = true">Edit</Button>
     }
     else
     {
-        <SpaceItem>
-            <AntDesign.Input @bind-Value="Page.Slug" OnBlur="GenerateSlug" Size="@InputSize.Small">
-                <AddOnBefore>@ParentRoute</AddOnBefore>
-            </AntDesign.Input>
-        </SpaceItem>
-
-        <SpaceItem>
-            <Button Size="ButtonSize.Small" OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </SpaceItem>
+        <TextInput Small @bind-Value="Page.Slug" Prefix="@ParentRoute" OnEnter="SaveAsync" AutoFocus />
+        <Button Small Primary OnClick="SaveAsync">Save</Button>
     }
-</Space>
+</Flex>
 
 @code {
-    [Parameter] public Page Page { get; set; }
+    [Parameter, EditorRequired] public Page Page { get; set; } = default!;
+
     [Parameter] public EventCallback<Page> PageChanged { get; set; }
 
-    bool Editing { get; set; } = false;
+    bool _editing;
 
     string ParentRoute => "/" + (Page.Parent?.Route ?? "Pages") + "/";
 
     string FullRoute => (Page.Parent?.Route ?? "Pages") + "/" + Page.Slug;
 
-    void Edit()
+    async Task SaveAsync()
     {
-        Editing = true;
-    }
-
-    void GenerateSlug()
-    {
-        Page.Slug = Page.Slug.ToRouteSlug();
+        Page.Slug = (Page.Slug ?? "").ToRouteSlug();
         Page.Route = PageService.RenderRoute(Page);
-    }
 
-    async Task Save()
-    {
-        GenerateSlug();
+        await PageChanged.InvokeAsync(Page);
 
-        if (PageChanged.HasDelegate)
-            await PageChanged.InvokeAsync(Page);
-
-        Editing = false;
+        _editing = false;
     }
 }

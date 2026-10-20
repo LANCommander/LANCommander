@@ -1,31 +1,26 @@
 .page-editor-body {
     flex-grow: 1;
+    min-height: 600px;
 }
 
 .page-editor-tree-pane {
-    .ant-tree-node-content-wrapper {
-        display: flex;
-    }
-
-    .ant-tree-title {
-        flex: 1 1 auto;
-    }
+    padding: 0 8px 16px 16px;
 
     .page-editor-tree-title {
         display: block;
-        width: 100% !important;
+        width: 100%;
     }
 
-    // Reveal the row's ellipsis action only while hovering that row.
+    // Reveal a row's action button only while hovering that row
     .page-editor-tree-action {
         visibility: hidden;
     }
 
-    .ant-tree-node-content-wrapper:hover .page-editor-tree-action {
+    .lc-tree-node:hover .page-editor-tree-action {
         visibility: visible;
     }
 }
 
 .page-editor-markdown-pane {
-    padding: 0 16px;
+    padding: 0 24px 24px 16px;
 }

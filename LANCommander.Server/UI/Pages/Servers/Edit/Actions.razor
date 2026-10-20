@@ -1,27 +1,18 @@
 @page "/Servers/{id:guid}/Actions"
 @using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <ServerEditView Id="Id" Title="Actions">
     <TitleExtraTemplate>
-        <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-            @if (context != null && context.Id != Guid.Empty)
-            {
-                <ServerControl ServerId="context.Id"/>
-                
-                <Button Type="ButtonType.Primary" OnClick="() => _actionEditor?.Save()">Save</Button>
-            }
-        </Flex>
+        <Button Primary OnClick="() => _actionEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
-        <CascadingValue Name="ServerId" Value="context.Id">
-            <ActionEditor @ref="_actionEditor" />
-        </CascadingValue>
+        <ActionEditor @ref="_actionEditor" />
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    ActionEditor _actionEditor;
+    ActionEditor? _actionEditor;
 }

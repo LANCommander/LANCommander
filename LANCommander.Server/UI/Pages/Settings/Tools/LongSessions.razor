@@ -1,7 +1,6 @@
 @page "/Settings/Tools/LongSessions"
 @inject PlaySessionService PlaySessionService
-@inject IMessageService MessageService
-@inject ILogger<LongSessions> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Long Sessions" />
@@ -11,106 +10,107 @@
         These play sessions lasted longer than the threshold below. Extremely long sessions are usually the result of a session that was never properly ended, which can skew playtime statistics. Adjust the threshold and delete any sessions that look incorrect.
     </p>
 
-    <Space Align="SpaceAlign.Center" Style="margin-bottom: 16px">
-        <SpaceItem>Threshold (hours)</SpaceItem>
-        <SpaceItem>
-            <AntDesign.InputNumber @bind-Value="ThresholdHours" Min="1" />
-        </SpaceItem>
-        <SpaceItem>
-            <Button Type="ButtonType.Primary" OnClick="LoadData" Loading="@Loading">Search</Button>
-        </SpaceItem>
-        <SpaceItem>
-            <Popconfirm OnConfirm="DeleteAll" Title="Are you sure you want to delete all listed sessions?" Disabled="@(PlaySessions == null || !PlaySessions.Any())">
-                <Button Danger Disabled="@(PlaySessions == null || !PlaySessions.Any())">Delete All Listed</Button>
-            </Popconfirm>
-        </SpaceItem>
-    </Space>
+    <Flex Align="Align.Center" Gap="Gap.Small" Style="margin-bottom: 16px">
+        <span>Threshold (hours)</span>
+        <NumberInput @bind-Value="ThresholdHours" Min="1" OnEnter="LoadDataAsync" Style="width: 120px" />
+        <Button Primary OnClick="LoadDataAsync" Loading="Loading">Search</Button>
+        <Popconfirm OnConfirm="DeleteAllAsync" Title="Are you sure you want to delete all listed sessions?" OkText="Delete" Danger Disabled="@(!PlaySessions.Any())">
+            <Button Danger Disabled="@(!PlaySessions.Any())">Delete All Listed</Button>
+        </Popconfirm>
+    </Flex>
+
+    <Spin Loading="Loading">
+        <Table TItem="PlaySession" Items="PlaySessions" SettingsKey="settings-long-sessions">
+            <Columns>
+                <BoundColumn Property="ps => ps.Game != null ? ps.Game.Title : String.Empty" Title="Game" Sortable />
+                <BoundColumn Property="ps => ps.User != null ? ps.User.UserName : String.Empty" Title="User" Sortable />
+                <BoundColumn Property="ps => ps.Start" Title="Start" Sortable>
+                    <LocalTime Value="context.Start" />
+                </BoundColumn>
+                <BoundColumn Property="ps => ps.End" Title="End" Sortable>
+                    <LocalTime Value="context.End" />
+                </BoundColumn>
+                <BoundColumn Property="ps => ps.Duration" Title="Duration" Sortable DefaultSort="ColumnSort.Descending">
+                    @context.Duration?.ToString(@"d\.hh\:mm\:ss")
+                </BoundColumn>
+                <ActionsColumn TItem="PlaySession">
+                    <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this session?" OkText="Delete" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Delete" />
+                    </Popconfirm>
+                </ActionsColumn>
+            </Columns>
+        </Table>
+    </Spin>
 </PageContent>
 
-<Table TItem="PlaySession" DataSource="@PlaySessions" Loading="@Loading" Responsive>
-    <PropertyColumn Property="ps => ps.Game" Title="Game">
-        @context.Game?.Title
-    </PropertyColumn>
-    <PropertyColumn Property="ps => ps.User" Title="User">
-        @context.User?.UserName
-    </PropertyColumn>
-    <PropertyColumn Property="ps => ps.Start" Format="MM/dd/yyyy hh:mm tt" />
-    <PropertyColumn Property="ps => ps.End" Format="MM/dd/yyyy hh:mm tt" />
-    <Column TData="TimeSpan?" Title="Duration">
-        @context.Duration?.ToString(@"d\.hh\:mm\:ss")
-    </Column>
-    <ActionColumn Title="" Style="text-align: right">
-        <Space Direction="SpaceDirection.Horizontal">
-            <SpaceItem>
-                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this session?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
-                </Popconfirm>
-            </SpaceItem>
-        </Space>
-    </ActionColumn>
-</Table>
-
 @code {
-    ICollection<PlaySession> PlaySessions;
+    List<PlaySession> PlaySessions = new();
     bool Loading = true;
     int ThresholdHours = 24;
 
     protected override async Task OnInitializedAsync()
     {
-        await LoadData();
+        await LoadDataAsync();
     }
 
-    async Task LoadData()
+    async Task LoadDataAsync()
     {
         Loading = true;
 
-        var threshold = TimeSpan.FromHours(ThresholdHours);
+        try
+        {
+            var threshold = TimeSpan.FromHours(ThresholdHours);
 
-        var completedSessions = await PlaySessionService
-            .Include(ps => ps.Game)
-            .Include(ps => ps.User)
-            .GetAsync(ps => ps.Start.HasValue && ps.End.HasValue);
+            var completedSessions = await PlaySessionService
+                .Include(ps => ps.Game)
+                .Include(ps => ps.User)
+                .GetAsync(ps => ps.Start.HasValue && ps.End.HasValue);
 
-        PlaySessions = completedSessions
-            .Where(ps => ps.Duration.HasValue && ps.Duration.Value > threshold)
-            .OrderByDescending(ps => ps.Duration)
-            .ToList();
-
-        Loading = false;
+            PlaySessions = completedSessions
+                .Where(ps => ps.Duration.HasValue && ps.Duration.Value > threshold)
+                .OrderByDescending(ps => ps.Duration)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The sessions could not be loaded");
+        }
+        finally
+        {
+            Loading = false;
+        }
     }
 
-    async Task Delete(PlaySession playSession)
+    async Task DeleteAsync(PlaySession playSession)
     {
         try
         {
             await PlaySessionService.DeleteAsync(playSession);
 
-            await LoadData();
+            await LoadDataAsync();
 
-            MessageService.Success("Session deleted!");
+            Notifications.Success("Session deleted!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Session could not be deleted.");
-            Logger.LogError(ex, "Session could not be deleted.");
+            Notifications.Error(ex, "Session could not be deleted.");
         }
     }
 
-    async Task DeleteAll()
+    async Task DeleteAllAsync()
     {
         try
         {
             foreach (var playSession in PlaySessions.ToList())
                 await PlaySessionService.DeleteAsync(playSession);
 
-            await LoadData();
+            await LoadDataAsync();
 
-            MessageService.Success("Sessions deleted!");
+            Notifications.Success("Sessions deleted!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Sessions could not be deleted.");
-            Logger.LogError(ex, "Sessions could not be deleted.");
+            Notifications.Error(ex, "Sessions could not be deleted.");
         }
     }
 }

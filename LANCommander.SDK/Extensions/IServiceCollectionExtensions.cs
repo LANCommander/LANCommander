@@ -2,13 +2,11 @@ using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Clients;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
+using LANCommander.SDK.Plugins;
 using LANCommander.SDK.PowerShell;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Rpc.Client;
 using LANCommander.SDK.Services;
-using LANCommander.Steam.Abstractions;
-using LANCommander.Steam.Extensions;
-using LANCommander.Steam.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using RpcSubscriber = LANCommander.SDK.Rpc.Clients.RpcSubscriber;
@@ -46,7 +44,6 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IssueClient>();
         services.AddSingleton<LauncherClient>();
         services.AddSingleton<LibraryClient>();
-        services.AddSingleton<LobbyClient>();
         services.AddSingleton<MediaClient>();
         services.AddSingleton<ModuleClient>();
         services.AddSingleton<PlaySessionClient>();
@@ -61,8 +58,11 @@ public static class IServiceCollectionExtensions
 
         services.AddSingleton<MigrationHistoryService>();
         services.AddSingleton<MigrationService>();
-        
+
         services.TryAddSingleton<IChatClient, ChatClient>();
+
+        // Plugin framework: in-process event bus shared by both hosts so plugins can react to lifecycle events.
+        services.TryAddSingleton<IPluginEventBus, PluginEventBus>();
         
         return services;
     }

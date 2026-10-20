@@ -1,0 +1,26 @@
+@using LANCommander.Server.UI.Components
+@inherits Dialog<string>
+@inject ConfigToOptionSchemaService ConfigToOptionSchemaService
+
+@* Turns a pasted INI, JSON or XML configuration file into an option schema *@
+<Flex Vertical Gap="Gap.Medium">
+    <EnumSelect TEnum="ConfigFormat" @bind-Value="_format" Style="width: 200px" />
+
+    <CodeInput @bind-Value="_content" Language="Languages.PlainText" Height="400" />
+</Flex>
+
+@code {
+    ConfigFormat _format;
+    string? _content = "";
+
+    protected override Task<bool> OnOkAsync()
+    {
+        if (string.IsNullOrWhiteSpace(_content))
+            throw new InvalidOperationException("Paste the configuration file's contents first.");
+
+        // A parse failure shows in the dialog, which stays open to fix the content
+        Result = ConfigToOptionSchemaService.Convert(_content, _format.ServiceName());
+
+        return Task.FromResult(true);
+    }
+}

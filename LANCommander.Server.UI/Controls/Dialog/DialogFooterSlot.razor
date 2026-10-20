@@ -1,0 +1,13 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+
+@* The dialog's own footer content, re-rendered on its own whenever the dialog body renders *@
+@if (Content?.Invoke() is { } content)
+{
+    <div class="lc-dialog-footer-extra">@content</div>
+}
+
+@code {
+    [Parameter] public Func<RenderFragment?>? Content { get; set; }
+
+    public void Refresh() => InvokeAsync(StateHasChanged);
+}

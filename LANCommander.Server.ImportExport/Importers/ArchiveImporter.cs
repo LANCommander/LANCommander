@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
@@ -17,6 +16,7 @@ public class ArchiveImporter(
     ILogger<ArchiveImporter> logger,
     ArchiveService archiveService,
     GameService gameService,
+    GameVersionService gameVersionService,
     RedistributableService redistributableService,
     ToolService toolService,
     GameImporter gameImporter,
@@ -61,7 +61,6 @@ public class ArchiveImporter(
                 UpdatedOn = record.UpdatedOn,
                 StorageLocation = ImportContext.ArchiveStorageLocation,
                 Version = record.Version,
-                Changelog = record.Changelog,
                 ObjectKey = record.ObjectKey,
                 CompressedSize = record.CompressedSize,
                 UncompressedSize = record.UncompressedSize,
@@ -95,6 +94,9 @@ public class ArchiveImporter(
             
             archive = await archiveService.AddAsync(newArchive);
 
+            if (archive.GameId != null)
+                await gameVersionService.LinkArchiveAsync(archive.Id, changelog: record.Changelog);
+
             return true;
         }
         catch (Exception ex)
@@ -123,7 +125,6 @@ public class ArchiveImporter(
         try
         {
             existing.Version = archive.Version;
-            existing.Changelog = archive.Changelog;
             existing.StorageLocation = ImportContext.ArchiveStorageLocation;
             existing.CreatedOn = archive.CreatedOn;
             existing.UpdatedOn = archive.UpdatedOn;
@@ -151,6 +152,9 @@ public class ArchiveImporter(
             }
             
             await archiveService.UpdateAsync(existing);
+
+            if (existing.GameId != null && existing.GameVersionId == null)
+                await gameVersionService.LinkArchiveAsync(existing.Id, changelog: archive.Changelog);
 
             return true;
         }

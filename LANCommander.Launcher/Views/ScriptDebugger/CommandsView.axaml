@@ -1,0 +1,117 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             xmlns:items="using:LANCommander.Launcher.ViewModels.ScriptDebugger.Items"
+             xmlns:commands="using:LANCommander.SDK.PowerShell.Debugging.Commands"
+             x:Class="LANCommander.Launcher.Views.ScriptDebugger.CommandsView"
+             x:DataType="vm:CommandsViewModel">
+
+  <Grid RowDefinitions="Auto,*,Auto,220">
+
+    <!-- Filters -->
+    <StackPanel Grid.Row="0" Margin="0,0,0,6" Spacing="6">
+
+      <Grid ColumnDefinitions="*,Auto" Margin="0,0,8,0">
+        <TextBlock Grid.Column="0" Classes="Kicker PaneHeader" Text="COMMANDS" />
+        <Button Grid.Column="1" Classes="Secondary" Padding="6" VerticalAlignment="Center" Margin="0,6,0,0"
+                Command="{Binding RefreshCommand}" IsEnabled="{Binding !IsLoading}" ToolTip.Tip="Refresh">
+          <Icon Type="Regular" Value="ArrowClockwise" Width="14" Height="14" />
+        </Button>
+      </Grid>
+
+      <StackPanel Margin="8,0" Spacing="6">
+        <TextBox Text="{Binding SearchText, Mode=TwoWay}" Watermark="Filter by name, e.g. item" />
+
+        <Grid ColumnDefinitions="*,6,Auto">
+          <ComboBox Grid.Column="0" HorizontalAlignment="Stretch"
+                    ItemsSource="{Binding Modules}" SelectedItem="{Binding SelectedModule, Mode=TwoWay}" />
+          <ComboBox Grid.Column="2"
+                    ItemsSource="{Binding CommandTypes}" SelectedItem="{Binding SelectedCommandType, Mode=TwoWay}" />
+        </Grid>
+
+        <Grid ColumnDefinitions="*,Auto">
+          <TextBlock Grid.Column="0" Classes="Caption" VerticalAlignment="Center" Text="{Binding StatusText}" />
+          <Button Grid.Column="1" Classes="Text" Padding="6,2" Content="Clear" Command="{Binding ClearFiltersCommand}" />
+        </Grid>
+
+        <!--
+          The catalogue runspace knows only the default session state. Modules the script imports at
+          runtime are visible only to the debug runspace, and only while it is stopped.
+        -->
+        <Border Classes="Notice Warning" Padding="10,6" IsVisible="{Binding SessionRefreshAvailable}">
+          <TextBlock TextWrapping="Wrap" Text="Stopped. Refresh to include modules the script imported." />
+        </Border>
+      </StackPanel>
+    </StackPanel>
+
+    <!-- The list -->
+    <ListBox Grid.Row="1" Classes="Dense" Background="Transparent" Padding="4,0"
+             x:Name="CommandList"
+             ItemsSource="{Binding VisibleItems}"
+             SelectedItem="{Binding Selected, Mode=TwoWay}">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="items:CommandItemViewModel">
+          <Grid ColumnDefinitions="*,Auto" ToolTip.Tip="{Binding Tooltip}">
+            <TextBlock Grid.Column="0" Classes="Code" Text="{Binding Name}" Foreground="{Binding NameBrush}"
+                       TextTrimming="CharacterEllipsis" />
+            <TextBlock Grid.Column="1" Classes="TreeMeta" Text="{Binding TypeDisplay}" Margin="8,0,0,0" />
+          </Grid>
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+
+    <GridSplitter Grid.Row="2" Height="6" HorizontalAlignment="Stretch"
+                  BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,1,0,0" />
+
+    <!-- Details for the selected command -->
+    <Grid Grid.Row="3">
+
+      <TextBlock Classes="Caption" Text="Select a command to see its syntax." Margin="12"
+                 IsVisible="{Binding !HasSelection}" />
+
+      <TextBlock Classes="Caption" Text="Loading..." Margin="12"
+                 IsVisible="{Binding IsLoadingDetail}" />
+
+      <ScrollViewer IsVisible="{Binding Detail, Converter={x:Static ObjectConverters.IsNotNull}}">
+        <StackPanel Margin="12,8" Spacing="6" DataContext="{Binding Detail}"
+                    x:DataType="commands:CommandDetail">
+
+          <Grid ColumnDefinitions="*,Auto">
+            <TextBlock Grid.Column="0" Classes="Code" Text="{Binding Name}" Foreground="#DCDCAA" FontWeight="SemiBold"
+                       TextWrapping="Wrap" VerticalAlignment="Center" />
+            <Button Grid.Column="1" Classes="Secondary" Padding="10,3" Margin="8,0,0,0" Content="Insert"
+                    Command="{Binding $parent[UserControl].((vm:CommandsViewModel)DataContext).InsertCommand}" />
+          </Grid>
+
+          <TextBlock Classes="Caption" Text="{Binding ModuleName}"
+                     IsVisible="{Binding ModuleName, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <TextBlock Classes="Body" Text="{Binding Synopsis}" TextWrapping="Wrap"
+                     IsVisible="{Binding Synopsis, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <TextBlock Classes="Kicker" Margin="0,6,0,0" Text="SYNTAX"
+                     IsVisible="{Binding Syntax, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+          <SelectableTextBlock Classes="Code" Text="{Binding Syntax}" TextWrapping="Wrap"
+                               IsVisible="{Binding Syntax, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+          <TextBlock Classes="Kicker" Margin="0,6,0,0" Text="PARAMETERS"
+                     IsVisible="{Binding HasParameters}" />
+          <ItemsControl ItemsSource="{Binding Parameters}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate x:DataType="commands:CommandParameterSnapshot">
+                <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                  <StackPanel Grid.Column="0" Orientation="Horizontal" Spacing="6">
+                    <TextBlock Classes="Code" Text="{Binding Display}" Foreground="#9CDCFE" />
+                    <TextBlock Classes="Code" Text="{Binding TypeName}" Foreground="#4EC9B0" />
+                  </StackPanel>
+                  <TextBlock Grid.Column="1" Classes="TreeMeta" Text="{Binding Annotation}" />
+                </Grid>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+
+        </StackPanel>
+      </ScrollViewer>
+    </Grid>
+  </Grid>
+</UserControl>

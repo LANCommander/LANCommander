@@ -1,0 +1,240 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             x:Class="LANCommander.Launcher.Views.VerifyFilesView"
+             x:DataType="vm:VerifyFilesViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="Border.ProblemRow">
+            <Setter Property="MinHeight" Value="48" />
+            <Setter Property="Padding" Value="16,0" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+        <!-- Tally rows: label on the left, mono figure on the right, hairline between -->
+        <Style Selector="DockPanel.Tally">
+            <Setter Property="Margin" Value="0,9" />
+        </Style>
+        <Style Selector="DockPanel.Tally > TextBlock.TallyLabel">
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="Foreground" Value="{DynamicResource TextTertiaryBrush}" />
+        </Style>
+        <Style Selector="DockPanel.Tally > TextBlock.TallyValue">
+            <Setter Property="DockPanel.Dock" Value="Right" />
+            <Setter Property="FontFamily" Value="{DynamicResource MonoFontFamily}" />
+            <Setter Property="FontSize" Value="{DynamicResource FontSizeLabel}" />
+            <Setter Property="FontWeight" Value="Medium" />
+        </Style>
+    </UserControl.Styles>
+
+    <ScrollViewer HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="32,56,32,24" Spacing="18">
+
+            <!-- Header: back to the game, title, Stop while checking -->
+            <DockPanel>
+                <Button DockPanel.Dock="Right"
+                        Classes="Secondary"
+                        Content="Stop"
+                        Command="{Binding StopCommand}"
+                        MinHeight="36" Padding="16,0"
+                        VerticalContentAlignment="Center"
+                        VerticalAlignment="Bottom"
+                        IsVisible="{Binding IsChecking}" />
+                <StackPanel>
+                    <Button Classes="Text"
+                            Command="{Binding BackCommand}"
+                            Padding="0,2" Margin="0,0,0,4"
+                            HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal" Spacing="6">
+                            <Icon Type="Regular" Value="CaretLeft" Width="12" Height="12" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeLabel}"
+                                       VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <TextBlock Text="Verify files" Classes="Title" />
+                </StackPanel>
+            </DockPanel>
+
+            <!-- Progress -->
+            <Border Classes="Card" Padding="18,16">
+                <StackPanel>
+                    <DockPanel Margin="0,0,0,6">
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding PercentText}" Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeLabel}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   Margin="12,0,0,0" VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding CountText}" Classes="Mono"
+                                   FontSize="{DynamicResource FontSizeLabel}"
+                                   Foreground="{DynamicResource TextSecondaryBrush}"
+                                   VerticalAlignment="Center" />
+                        <TextBlock Text="{Binding StatusTitle}"
+                                   FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" />
+                    </DockPanel>
+                    <TextBlock Text="{Binding CurrentFile}" Classes="Mono"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               Foreground="{DynamicResource TextTertiaryBrush}"
+                               TextTrimming="CharacterEllipsis"
+                               MinHeight="16"
+                               Margin="0,0,0,12" />
+                    <ProgressBar Value="{Binding Progress}" Minimum="0" Maximum="1"
+                                 Height="6" MinHeight="6"
+                                 Background="{DynamicResource SurfaceCanvasBrush}"
+                                 IsIndeterminate="{Binding IsRepairing}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="Notice Error"
+                    IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                <DockPanel>
+                    <Icon DockPanel.Dock="Left" Type="Regular" Value="WarningCircle" Width="14" Height="14"
+                          Margin="0,1,10,0" VerticalAlignment="Top" />
+                    <TextBlock Text="{Binding ErrorMessage}" TextWrapping="Wrap" />
+                </DockPanel>
+            </Border>
+
+            <Grid ColumnDefinitions="*,24,296">
+
+                <!-- Problems -->
+                <StackPanel Grid.Column="0" Spacing="10">
+                    <DockPanel>
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding ProblemsNote}"
+                                   Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}"
+                                   VerticalAlignment="Center" />
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="PROBLEMS FOUND" Classes="Kicker" VerticalAlignment="Center" />
+                            <Border Classes="CountPill Neutral" IsVisible="{Binding !HasProblems}">
+                                <TextBlock Text="{Binding Problems.Count}" />
+                            </Border>
+                            <Border Classes="CountPill" Background="#2ED89614" BorderBrush="#57FFC53D" BorderThickness="1"
+                                    IsVisible="{Binding HasProblems}">
+                                <TextBlock Text="{Binding Problems.Count}" Foreground="{DynamicResource WarningTextBrush}" />
+                            </Border>
+                        </StackPanel>
+                    </DockPanel>
+
+                    <Border Classes="Card" ClipToBounds="True" IsVisible="{Binding HasProblems}">
+                        <ItemsControl ItemsSource="{Binding Problems}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:VerifyProblemViewModel">
+                                    <Border Classes="ProblemRow">
+                                        <Grid ColumnDefinitions="Auto,*,Auto,76,Auto" VerticalAlignment="Center">
+                                            <Panel Grid.Column="0" Width="16" Height="16" Margin="0,0,12,0">
+                                                <Icon Type="Regular" Value="WarningCircle" Width="16" Height="16"
+                                                      Foreground="{DynamicResource ErrorTextBrush}"
+                                                      IsVisible="{Binding ShowMissing}" />
+                                                <Icon Type="Regular" Value="Warning" Width="16" Height="16"
+                                                      Foreground="{DynamicResource WarningTextBrush}"
+                                                      IsVisible="{Binding ShowMismatch}" />
+                                                <Icon Type="Regular" Value="CheckCircle" Width="16" Height="16"
+                                                      Foreground="{DynamicResource SuccessTextBrush}"
+                                                      IsVisible="{Binding IsRepaired}" />
+                                            </Panel>
+                                            <TextBlock Grid.Column="1" Text="{Binding Path}" Classes="Mono"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       TextTrimming="CharacterEllipsis"
+                                                       VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="2" Text="{Binding Detail}" Classes="Mono"
+                                                       FontSize="{DynamicResource FontSizeKicker}"
+                                                       Foreground="{DynamicResource TextTertiaryBrush}"
+                                                       Margin="12,0" VerticalAlignment="Center" />
+                                            <TextBlock Grid.Column="3" Text="{Binding SizeText}" Classes="Mono"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}"
+                                                       HorizontalAlignment="Right" VerticalAlignment="Center" />
+                                            <Panel Grid.Column="4" Margin="12,0,0,0" VerticalAlignment="Center">
+                                                <Border Classes="StatusTag Error" IsVisible="{Binding ShowMissing}">
+                                                    <TextBlock Text="MISSING" />
+                                                </Border>
+                                                <Border Classes="StatusTag Warning" IsVisible="{Binding ShowMismatch}">
+                                                    <TextBlock Text="MISMATCH" />
+                                                </Border>
+                                                <Border Classes="StatusTag Success" IsVisible="{Binding IsRepaired}">
+                                                    <TextBlock Text="REPAIRED" />
+                                                </Border>
+                                            </Panel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
+
+                    <!-- Nothing wrong -->
+                    <Border Classes="Notice Success" IsVisible="{Binding IsClean}">
+                        <DockPanel>
+                            <Icon DockPanel.Dock="Left" Type="Regular" Value="CheckCircle" Width="14" Height="14"
+                                  Margin="0,1,10,0" VerticalAlignment="Top" />
+                            <TextBlock TextWrapping="Wrap"
+                                       Text="{Binding CheckedFiles, StringFormat='{}Every one of the {0:N0} files matches the archive. Nothing to repair.'}" />
+                        </DockPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- Tally and actions -->
+                <StackPanel Grid.Column="2" Spacing="14">
+                    <Border Classes="Card" Padding="16,4,16,4">
+                        <StackPanel>
+                            <DockPanel Classes="Tally">
+                                <TextBlock Classes="TallyValue" Text="{Binding CheckedFiles, StringFormat='{}{0:N0}'}" />
+                                <TextBlock Classes="TallyLabel" Text="Files checked" />
+                            </DockPanel>
+                            <Border Height="1" Background="{DynamicResource HairlineDividerBrush}" />
+                            <DockPanel Classes="Tally">
+                                <TextBlock Classes="TallyValue" Text="{Binding MatchedCount, StringFormat='{}{0:N0}'}"
+                                           Foreground="{DynamicResource SuccessTextBrush}" />
+                                <TextBlock Classes="TallyLabel" Text="Matched" />
+                            </DockPanel>
+                            <Border Height="1" Background="{DynamicResource HairlineDividerBrush}" />
+                            <DockPanel Classes="Tally">
+                                <TextBlock Classes="TallyValue" Text="{Binding MismatchCount, StringFormat='{}{0:N0}'}"
+                                           Foreground="{DynamicResource WarningTextBrush}" />
+                                <TextBlock Classes="TallyLabel" Text="Mismatched" />
+                            </DockPanel>
+                            <Border Height="1" Background="{DynamicResource HairlineDividerBrush}" />
+                            <DockPanel Classes="Tally">
+                                <TextBlock Classes="TallyValue" Text="{Binding MissingCount, StringFormat='{}{0:N0}'}"
+                                           Foreground="{DynamicResource ErrorTextBrush}" />
+                                <TextBlock Classes="TallyLabel" Text="Missing" />
+                            </DockPanel>
+                            <Border Height="1" Background="{DynamicResource HairlineDividerBrush}" />
+                            <DockPanel Classes="Tally">
+                                <TextBlock Classes="TallyValue" Text="{Binding RedownloadSizeText}" />
+                                <TextBlock Classes="TallyLabel" Text="To re-download" />
+                            </DockPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="Card" Padding="16,14">
+                        <StackPanel Spacing="8">
+                            <TextBlock Text="{Binding RepairNote}"
+                                       Classes="Caption" Foreground="{DynamicResource TextTertiaryBrush}"
+                                       TextWrapping="Wrap" Margin="0,0,0,4"
+                                       IsVisible="{Binding HasProblems}" />
+                            <Button Classes="Primary"
+                                    Command="{Binding RepairCommand}"
+                                    IsEnabled="{Binding CanRepair}"
+                                    IsVisible="{Binding ShowRepair}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    MinHeight="38">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Icon Type="Regular" Value="Wrench" Width="14" Height="14" VerticalAlignment="Center" />
+                                    <TextBlock Text="{Binding RepairLabel}" FontSize="{DynamicResource FontSizeLabel}"
+                                               FontWeight="SemiBold" VerticalAlignment="Center" />
+                                </StackPanel>
+                            </Button>
+                            <Button Classes="Text"
+                                    Content="Check again"
+                                    Command="{Binding CheckAgainCommand}"
+                                    IsEnabled="{Binding CanCheckAgain}"
+                                    HorizontalAlignment="Stretch"
+                                    HorizontalContentAlignment="Center"
+                                    MinHeight="34" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

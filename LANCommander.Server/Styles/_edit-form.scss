@@ -1,0 +1,145 @@
+// Edit forms as the game editor draws them (Game edit board), shared by the game and server editors:
+// a 900px column on the canvas with 18px between rows and 14px between the fields of a pair,
+// dividers between groups, switches with a line of description, mono for paths and addresses, and
+// the header's "Unsaved changes" beside Discard and Save.
+// Uses the --lc-* tokens from LANCommander.Server.UI's theme only. The game editor includes the
+// mixins under its own class names (_game-edit.scss); other editors use the classes below.
+
+// ── Mixins ──────────────────────────────────────────────────────
+// The section's body: the form sits on the canvas, padded like the header above it
+@mixin content {
+    padding: 22px var(--lc-layout-gutter);
+}
+
+@mixin form($pair: '.edit-form-pair', $divider: '.edit-form-divider') {
+    max-width: 900px;
+
+    > .lc-spin-container > .lc-spin-content {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+    }
+
+    .lc-form-item {
+        margin-bottom: 0;
+    }
+
+    #{$pair} {
+        gap: 18px 14px;
+    }
+
+    #{$divider} {
+        margin: 0;
+        border-top-color: var(--lc-border-subtle-color);
+    }
+}
+
+@mixin pair {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+
+    @media (max-width: 900px) {
+        grid-template-columns: minmax(0, 1fr);
+    }
+}
+
+// A switch with a title and a line of description beside it; the title is brighter while on
+@mixin switch($title, $help) {
+    align-items: center;
+
+    .lc-switch-label {
+        display: flex;
+        flex-direction: column;
+    }
+
+    #{$title} {
+        color: var(--lc-text-secondary-color);
+        font-size: 13px;
+    }
+
+    #{$help} {
+        color: var(--lc-text-tertiary-color);
+        font-size: 12px;
+    }
+
+    &.lc-switch-on #{$title} {
+        color: var(--lc-text-title-color);
+    }
+}
+
+@mixin unsaved {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    color: var(--lc-warning-text-color);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+@mixin unsaved-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 999px;
+    background: currentColor;
+}
+
+// A text button inside help text, e.g. "Open the Markdown editor"
+@mixin link {
+    padding: 0;
+    border: 0;
+    background: none;
+    color: var(--lc-accent-text-color);
+    font: inherit;
+    cursor: pointer;
+
+    &:hover {
+        color: #69B1FF;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 2px;
+    }
+}
+
+// ── Classes ─────────────────────────────────────────────────────
+.edit-form-content {
+    @include content;
+}
+
+.edit-form {
+    @include form;
+}
+
+.edit-form-pair {
+    @include pair;
+}
+
+// Paths, arguments, hosts and ports: the inputs inside take the mono face
+.edit-form-mono {
+    input,
+    textarea {
+        font-family: var(--lc-font-mono);
+    }
+}
+
+.edit-form-switch {
+    @include switch('.edit-form-switch-title', '.edit-form-switch-help');
+}
+
+// A paragraph above a list the section edits, e.g. what HTTP paths are for
+.edit-form-intro {
+    max-width: 900px;
+    margin: 0 0 18px;
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
+    line-height: 1.55;
+}
+
+.edit-unsaved {
+    @include unsaved;
+}
+
+.edit-unsaved-dot {
+    @include unsaved-dot;
+}

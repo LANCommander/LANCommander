@@ -11,6 +11,13 @@ namespace LANCommander.SDK.Models.Manifest
         public string Title { get; set; }
         public string SortTitle { get; set; }
         public string Version { get; set; }
+
+        /// <summary>
+        /// The server's id for the game version this manifest describes, so an install knows which
+        /// version's config it holds. Null for manifests written before versions existed.
+        /// </summary>
+        public Guid? VersionId { get; set; }
+
         public string DirectoryName { get; set; }
         public string Notes { get; set; }
         public string Description { get; set; }
@@ -18,9 +25,15 @@ namespace LANCommander.SDK.Models.Manifest
         public DateTime ReleasedOn { get; set; }
         public string InstallDirectory { get; set; }
         public GameType Type { get; set; }
+        // Nullable so manifests written before these fields existed can be detected and
+        // normalized from Type (see GameTypeHelper.Normalize)
+        public GameInstallLocation? InstallTo { get; set; }
+        public bool? ShowInLibrary { get; set; }
         public string BaseGame { get; set; }
         public Guid BaseGameId { get; set; }
         public Engine Engine { get; set; }
+        public string OptionSchema { get; set; }
+        public Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
         public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
         public virtual ICollection<Archive> Archives { get; set; } = new List<Archive>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();
@@ -46,7 +59,7 @@ namespace LANCommander.SDK.Models.Manifest
         {
             get
             {
-                return Type == GameType.Expansion || Type == GameType.Mod;
+                return Type != GameType.MainGame;
             }
         } 
     }

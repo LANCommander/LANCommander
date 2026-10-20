@@ -6,6 +6,8 @@ using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Helpers;
+using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Plugins.Events;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.DependencyInjection;
@@ -24,6 +26,7 @@ namespace LANCommander.Launcher.Services
         ToolService toolService,
         ToolClient toolClient,
         IConnectionClient connectionClient,
+        IPluginEventBus pluginEventBus,
         IServiceProvider serviceProvider) : BaseDatabaseService<Game>(dbContext, logger)
     {
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
@@ -96,16 +99,18 @@ namespace LANCommander.Launcher.Services
                 try
                 {
                     OnUninstall?.Invoke(game);
+                    await pluginEventBus.PublishAsync(new GameUninstallingEvent(game.Id, game.InstallDirectory));
 
                     var installService = serviceProvider.GetService<InstallService>();
                     installService?.ClearCompleted(game.Id);
 
                     await gameClient.UninstallAsync(game.InstallDirectory, game.Id);
 
-                    // Only addons that share the base game's install directory (Mod/Expansion)
-                    // may clean up orphaned base game files. Standalone types keep an independent
-                    // lifecycle, so uninstalling them must leave the base game installed.
-                    if (game.BaseGameId.HasValue && (game.Type == GameType.Mod || game.Type == GameType.Expansion))
+                    // Only addons that are extracted into the base game's install directory and
+                    // aren't shown in the library may clean up orphaned base game files. Addons
+                    // shown in the library keep an independent lifecycle, so uninstalling them
+                    // must leave the base game installed.
+                    if (game.BaseGameId.HasValue && game.Type != GameType.MainGame && game.InstallTo == GameInstallLocation.BaseGameDirectory && !game.ShowInLibrary)
                     {
                         var libraryService = serviceProvider.GetService<LibraryService>();
                         var isInstalled = await libraryService!.IsInstalledAsync(game.BaseGameId.Value);
@@ -144,6 +149,7 @@ namespace LANCommander.Launcher.Services
                     await UpdateAsync(game);
 
                     OnUninstallComplete?.Invoke(game);
+                    await pluginEventBus.PublishAsync(new GameUninstalledEvent(game.Id));
 
                     operation.Complete();
                 }
@@ -175,6 +181,8 @@ namespace LANCommander.Launcher.Services
 
                 await playSessionService.StartSession(game.Id, userId);
 
+                await WriteOptionsToManifestAsync(game);
+
                 await gameClient.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.End);
             }
             catch (Exception ex)
@@ -188,6 +196,60 @@ namespace LANCommander.Launcher.Services
             }
         }
 
+        /// <summary>
+        /// The option schema that applies to a game: an installed game's comes from its on-disk manifest,
+        /// which describes the version it's on; otherwise the latest version's, from the library.
+        /// </summary>
+        public static string? GetOptionSchema(Game game)
+        {
+            if (game.Installed && !string.IsNullOrWhiteSpace(game.InstallDirectory))
+            {
+                try
+                {
+                    var manifest = ManifestHelper.Read<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
+
+                    if (manifest != null)
+                        return manifest.OptionSchema;
+                }
+                catch
+                {
+                    // An unreadable manifest falls back to the library's schema
+                }
+            }
+
+            return game.OptionSchema;
+        }
+
+        /// <summary>
+        /// Persists the user's locally-chosen game option values into the on-disk game manifestso that
+        /// before-start scripts can read them via the <c>Get-GameOptions</c> cmdlet. Option values are
+        /// stored per-game in the launcher database (never on the server), so the manifest must be
+        /// updated immediately before launch.
+        /// </summary>
+        private async Task WriteOptionsToManifestAsync(Game game)
+        {
+            if (string.IsNullOrWhiteSpace(game.InstallDirectory) || string.IsNullOrWhiteSpace(GetOptionSchema(game)))
+                return;
+
+            try
+            {
+                var options = new Dictionary<string, string>();
+
+                if (!string.IsNullOrWhiteSpace(game.Options))
+                    options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(game.Options) ?? new();
+
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
+
+                manifest.Options = options;
+
+                await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not write game options to manifest for {GameTitle} ({GameId})", game.Title, game.Id);
+            }
+        }
+
         protected void ClearGameState(Game game, bool skipAddons = false)
         {
             if (game == null)
@@ -197,6 +259,10 @@ namespace LANCommander.Launcher.Services
             game.Installed = false;
             game.InstalledOn = null;
             game.InstalledVersion = null;
+            game.InstalledVersionId = null;
+
+            // Freezing pins an installed version; a fresh install starts on the latest again
+            game.AutoUpdate = true;
 
             if (!skipAddons)
             {

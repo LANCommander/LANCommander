@@ -1,0 +1,70 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A section with a header that can be expanded and collapsed, e.g. advanced settings. Group several in a Collapse. *@
+<section @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <div class="lc-panel-header">
+        <button type="button" class="lc-panel-toggle" aria-expanded="@(_open ? "true" : "false")" @onclick="ToggleAsync">
+            <Icon Type="IconType.CaretRight" Class="lc-panel-caret" />
+            <span class="lc-panel-title">
+                @if (HeaderTemplate != null)
+                {
+                    @HeaderTemplate
+                }
+                else
+                {
+                    @Header
+                }
+            </span>
+        </button>
+        @if (Extra != null)
+        {
+            <div class="lc-panel-extra">@Extra</div>
+        }
+    </div>
+    @if (_open)
+    {
+        <div class="lc-panel-body">@ChildContent</div>
+    }
+</section>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Header { get; set; }
+
+    /// <summary>Rich header content; replaces <see cref="Header"/>.</summary>
+    [Parameter] public RenderFragment? HeaderTemplate { get; set; }
+
+    /// <summary>Content at the end of the header, e.g. actions. Clicking it doesn't toggle the panel.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    /// <summary>Whether the panel is expanded. Bind with <c>@@bind-Open</c> to control it.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    [Parameter] public EventCallback<bool> OpenChanged { get; set; }
+
+    bool _open;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _open = Open;
+
+        _class = new ClassBuilder()
+            .Add("lc-panel")
+            .If(_open, "lc-panel-open")
+            .Add(Class)
+            .Build();
+    }
+
+    async Task ToggleAsync()
+    {
+        _open = !_open;
+        Open = _open;
+
+        _class = new ClassBuilder().Add("lc-panel").If(_open, "lc-panel-open").Add(Class).Build();
+
+        await OpenChanged.InvokeAsync(_open);
+    }
+}

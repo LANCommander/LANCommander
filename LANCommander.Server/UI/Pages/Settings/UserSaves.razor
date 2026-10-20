@@ -1,47 +1,51 @@
-﻿@page "/Settings/UserSaves"
+@page "/Settings/UserSaves"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings
+@using LANCommander.Server.UI.Components
 @using Microsoft.Extensions.Options
 @inject StorageLocationService StorageLocationService
-@inject IMessageService MessageService
-@inject ILogger<UserSaves> Logger
+@inject NotificationService Notifications
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="User Saves" />
 
-<PageContent>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
-        <FormItem Label="Storage Path">
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SaveStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
-        </FormItem>
+<PageContent Loading="SaveStorageLocation == null">
+    @if (SaveStorageLocation != null)
+    {
+        <Form Model="Settings.Value" OnSubmit="SaveAsync">
+            <FormItem Label="Storage Path">
+                <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="SaveStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            </FormItem>
 
-        <FormItem Label="Max Size (MB)">
-            <AntDesign.InputNumber @bind-Value="context.Server.UserSaves.MaxSize" Min="1" DefaultValue="25" />
-        </FormItem>
+            <FormItem Label="Max Size (MB)">
+                <NumberInput @bind-Value="Settings.Value.Server.UserSaves.MaxSize" Min="1" />
+            </FormItem>
 
-        <FormItem Label="Maximum Number of Saves">
-            <AntDesign.InputNumber @bind-Value="context.Server.UserSaves.MaxSaves" Min="0" DefaultValue="0" />
-        </FormItem>
+            <FormItem Label="Maximum Number of Saves">
+                <NumberInput @bind-Value="Settings.Value.Server.UserSaves.MaxSaves" Min="0" />
+            </FormItem>
 
-        <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-        </FormItem>
-    </Form>
+            <FormItem>
+                <Button Primary Submit>Save</Button>
+            </FormItem>
+        </Form>
+    }
 </PageContent>
 
 @code {
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    StorageLocation SaveStorageLocation = new();
+    StorageLocation? SaveStorageLocation;
 
     protected override async Task OnInitializedAsync()
     {
-        SaveStorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == StorageLocationType.Save);
+        SaveStorageLocation = await StorageLocationService.FirstOrDefaultAsync(l => l.Default && l.Type == StorageLocationType.Save)
+                              ?? new StorageLocation { Type = StorageLocationType.Save, Default = true };
     }
 
-    async Task Save()
+    async Task SaveAsync()
     {
         try
         {
@@ -49,15 +53,17 @@
             {
                 s.Server.UserSaves = Settings.Value.Server.UserSaves;
             });
-            
-            await StorageLocationService.UpdateAsync(SaveStorageLocation);
-            
-            MessageService.Success("Settings saved!");
+
+            if (SaveStorageLocation!.Id == Guid.Empty)
+                SaveStorageLocation = await StorageLocationService.AddAsync(SaveStorageLocation);
+            else
+                await StorageLocationService.UpdateAsync(SaveStorageLocation);
+
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
         }
     }
 
@@ -68,6 +74,6 @@
         if (path != null && path.StartsWith(appPath))
             path = path.Substring(appPath.Length).TrimStart(Path.DirectorySeparatorChar).TrimEnd(Path.DirectorySeparatorChar);
 
-        SaveStorageLocation.Path = path;
+        SaveStorageLocation!.Path = path;
     }
 }

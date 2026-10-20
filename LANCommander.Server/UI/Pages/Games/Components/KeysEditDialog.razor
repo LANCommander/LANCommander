@@ -1,0 +1,18 @@
+@using LANCommander.Server.UI.Components
+@inherits Dialog<string, string>
+
+@* Every key of a game, one per line; lines added or removed become keys added or removed *@
+<CodeInput @bind-Value="_text" Language="Languages.PlainText" Height="500" />
+
+@code {
+    string? _text;
+
+    protected override void OnInitialized() => _text = Options;
+
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = _text ?? "";
+
+        return Task.FromResult(true);
+    }
+}

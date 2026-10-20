@@ -1,0 +1,444 @@
+// Menu, SubMenu, MenuItem, Tabs, Steps, Breadcrumb
+
+.lc-menu-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-menu-horizontal > .lc-menu-list {
+    display: flex;
+    gap: 4px;
+}
+
+.lc-menu-item-content {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    padding: 8px 16px;
+    border: 0;
+    border-radius: var(--lc-radius-md);
+    background: transparent;
+    color: var(--rz-text-color);
+    font: inherit;
+    text-align: start;
+    text-decoration: none;
+    cursor: pointer;
+
+    &:hover {
+        background: var(--lc-hover-background);
+        color: var(--rz-text-title-color);
+        text-decoration: none;
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-accent-text-color);
+        outline-offset: -2px;
+    }
+}
+
+.lc-menu-item-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.lc-menu-item-icon {
+    font-size: 1.15em;
+}
+
+// Counts and status at the end of an item: figures in mono so they line up down the menu
+.lc-menu-item-extra {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 6px;
+    margin-inline-start: auto;
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+}
+
+// Active is Raised plus the accent rail; hover stays an overlay so the two never read alike
+.lc-menu-item-active {
+    background: var(--lc-raised);
+    box-shadow: inset var(--lc-selection-rail) 0 0 var(--rz-primary);
+    color: var(--rz-text-title-color);
+
+    &:hover {
+        background: var(--lc-raised);
+        color: var(--rz-text-title-color);
+    }
+}
+
+.lc-menu-item-disabled .lc-menu-item-content {
+    color: var(--lc-text-disabled-color);
+    cursor: not-allowed;
+
+    &:hover {
+        background: transparent;
+    }
+}
+
+.lc-menu-item-danger .lc-menu-item-content {
+    color: var(--lc-danger-text-color);
+}
+
+.lc-submenu-caret {
+    transition: transform 0.15s;
+}
+
+.lc-submenu-open > .lc-submenu-title .lc-submenu-caret {
+    transform: rotate(180deg);
+}
+
+.lc-submenu-active > .lc-submenu-title {
+    color: var(--lc-accent-text-color);
+}
+
+.lc-submenu-list .lc-menu-item-content {
+    padding-inline-start: 42px;
+}
+
+.lc-menu-divider {
+    height: 1px;
+    margin: 4px 0;
+    background: var(--lc-border-subtle-color);
+}
+
+// Sidebar and Section menus, as drawn on the boards. Scoped to their variant classes so
+// dropdown menus (Overlay.scss) keep their own metrics.
+
+.lc-menu-sidebar,
+.lc-menu-section {
+    .lc-menu-list {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+
+        // display: flex would otherwise override a closed SubMenu's hidden attribute
+        &[hidden] {
+            display: none;
+        }
+    }
+
+    .lc-submenu-list {
+        position: relative;
+
+        &:not([hidden]) {
+            margin-top: 1px;
+        }
+
+        // A faint rail down each open group, sitting in the gutter left of its children's text,
+        // stepping in with depth so a nested group's rail clears its parent's
+        &::before {
+            content: "";
+            position: absolute;
+            inset-block: var(--lc-menu-rail-inset);
+            inset-inline-start: calc(12px + var(--lc-menu-depth, 1) * var(--lc-menu-indent-step) - var(--lc-menu-guide-back));
+            width: 1px;
+            background: var(--lc-border-subtle-color);
+        }
+    }
+
+    .lc-menu-item-content {
+        position: relative;
+        padding: 0 12px;
+        border-radius: var(--lc-radius-md);
+        color: var(--rz-text-secondary-color);
+        line-height: 1.2;
+
+        &:hover {
+            background: var(--lc-hover-background);
+            color: var(--rz-text-title-color);
+        }
+    }
+
+    // The rail is a short bar inset from the item's ends, not a full-height box-shadow
+    .lc-menu-item-active {
+        background: var(--lc-raised);
+        box-shadow: none;
+        color: var(--rz-text-title-color);
+
+        &::before {
+            content: "";
+            position: absolute;
+            inset-inline-start: 0;
+            top: var(--lc-menu-rail-inset);
+            bottom: var(--lc-menu-rail-inset);
+            width: var(--lc-selection-rail);
+            border-radius: 1px;
+            background: var(--lc-selection-rail-color);
+        }
+
+        &:hover {
+            background: var(--lc-raised);
+        }
+    }
+
+    .lc-menu-item-extra {
+        gap: 7px;
+        color: var(--lc-text-tertiary-color);
+        font-family: var(--lc-font-mono);
+        font-size: 11px;
+        font-weight: 400;
+    }
+
+    // A group containing the open page reads as plain text; the rail on the item marks the page
+    .lc-submenu-active > .lc-submenu-title {
+        color: var(--rz-text-secondary-color);
+
+        &:hover {
+            color: var(--rz-text-title-color);
+        }
+    }
+
+    .lc-submenu-caret {
+        flex-shrink: 0;
+        color: var(--lc-text-tertiary-color);
+        font-size: 13px;
+    }
+
+    .lc-menu-divider {
+        margin: 10px 12px;
+        background: var(--lc-border-subtle-color);
+    }
+}
+
+// The main navigation: 36px items, 17px icons, 14/500
+.lc-menu-sidebar {
+    --lc-menu-rail-inset: 8px;
+    // One step is the parent's icon + gap (17 + 11), so a sub-item's text lines up under the label
+    --lc-menu-indent-step: 28px;
+    --lc-menu-guide-back: 20px;
+
+    .lc-menu-item-content {
+        gap: 11px;
+        height: 36px;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    .lc-menu-item-icon {
+        font-size: 17px;
+    }
+
+    // Sub-items step in one level per depth: level 1 = 40px (12 + 28), level 2 = 68px, ...
+    .lc-submenu-list .lc-menu-item-content {
+        padding-inline-start: calc(12px + var(--lc-menu-depth, 1) * var(--lc-menu-indent-step));
+    }
+}
+
+// An edit page's sections: 32px text items under GAME / CONTENT / BEHAVIOUR kickers
+.lc-menu-section {
+    --lc-menu-rail-inset: 7px;
+    --lc-menu-indent-step: 12px;
+    --lc-menu-guide-back: 10px;
+
+    .lc-menu-item-content {
+        gap: 8px;
+        height: 32px;
+        font-size: 13px;
+        font-weight: 400;
+    }
+
+    .lc-menu-item-active {
+        font-weight: 500;
+    }
+
+    .lc-menu-item-icon {
+        font-size: 14px;
+    }
+
+    // Sub-items step in one level per depth: level 1 = 24px (12 + 12), level 2 = 36px, ...
+    .lc-submenu-list .lc-menu-item-content {
+        padding-inline-start: calc(12px + var(--lc-menu-depth, 1) * var(--lc-menu-indent-step));
+    }
+}
+
+// Kicker above a MenuGroup: 11/600 at 0.08em
+.lc-menu-group-title {
+    padding: 14px 12px 8px;
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.lc-menu-list > .lc-menu-group:first-child > .lc-menu-group-title {
+    padding-top: 0;
+}
+
+// Tabs
+
+.lc-tab-title {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+// Steps: 22px markers with mono figures, joined by 20px connectors that turn accent once passed
+
+.lc-steps {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 12px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.lc-step {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    &:not(:last-child)::after {
+        content: "";
+        flex-shrink: 0;
+        width: 20px;
+        height: 1px;
+        margin: 0 9px 0 1px;
+        background: var(--lc-pressed-background);
+    }
+}
+
+.lc-step-marker {
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border: 1px solid var(--lc-pressed-background);
+    border-radius: 50%;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+
+    .lc-icon {
+        font-size: 11px;
+    }
+}
+
+.lc-step-text {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.lc-step-title {
+    color: var(--lc-text-disabled-color);
+    font-size: 12px;
+    white-space: nowrap;
+}
+
+.lc-step-description {
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+}
+
+.lc-step-current {
+    .lc-step-marker {
+        border-color: var(--rz-primary);
+        background: var(--rz-primary);
+        box-shadow: 0 0 0 3px var(--rz-primary-lighter);
+        color: #FFFFFF;
+    }
+
+    .lc-step-title {
+        color: var(--rz-text-title-color);
+        font-weight: 600;
+    }
+}
+
+.lc-step-done {
+    .lc-step-marker {
+        border-color: var(--rz-primary);
+        color: var(--lc-accent-text-color);
+    }
+
+    .lc-step-title {
+        color: var(--rz-text-secondary-color);
+    }
+
+    &::after {
+        background: var(--rz-primary);
+    }
+}
+
+// Kept for callers that ask for it; the drawn markers are already the small size
+.lc-steps-small .lc-step-marker {
+    width: 22px;
+    height: 22px;
+}
+
+// Breadcrumb: 12px, links tertiary, the current page secondary, a 12px chevron between each
+
+.lc-breadcrumb-list {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 7px;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+.lc-breadcrumb-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    min-width: 0;
+    color: var(--lc-text-tertiary-color);
+
+    &:not(:last-child)::after {
+        content: "";
+        flex-shrink: 0;
+        width: 12px;
+        height: 12px;
+        background: var(--lc-text-disabled-color);
+        mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none'%3E%3Cpath d='M9 5.5 15.5 12 9 18.5' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") center / contain no-repeat;
+    }
+
+    &:last-child {
+        color: var(--rz-text-secondary-color);
+    }
+
+    a,
+    .lc-breadcrumb-button {
+        display: inline-flex;
+        align-items: center;
+        gap: 5px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: inherit;
+        font: inherit;
+        text-decoration: none;
+        cursor: pointer;
+
+        &:hover {
+            color: var(--rz-text-title-color);
+            text-decoration: none;
+        }
+    }
+
+    .lc-icon {
+        font-size: 13px;
+    }
+}
+
+// A path root, e.g. an archive's file name or a drive, in mono
+.lc-breadcrumb-item-mono {
+    font-family: var(--lc-font-mono);
+}

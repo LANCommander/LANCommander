@@ -37,12 +37,18 @@
             <Setter Property="controls:GameContextMenu.IsEnabled" Value="True" />
         </Style>
         <Style Selector="ListBox.GamesList ListBoxItem:pointerover Border.ListRowInner">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         </Style>
+        <Style Selector="ListBox.GamesList Border.ListRowInner">
+            <Setter Property="Padding" Value="8,6" />
+        </Style>
+        <!-- Selected: 2px accent rail as a left border, with the padding trimmed by the same 2px so the
+             content doesn't shift -->
         <Style Selector="ListBox.GamesList ListBoxItem:selected Border.ListRowInner">
-            <Setter Property="Background" Value="{DynamicResource SystemControlBackgroundChromeMediumBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource SystemAccentColor}" />
-            <Setter Property="BorderThickness" Value="2" />
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="2,0,0,0" />
+            <Setter Property="Padding" Value="6,6,8,6" />
         </Style>
     </UserControl.Styles>
 
@@ -62,8 +68,8 @@
         </ListBox.ItemsPanel>
         <ListBox.ItemTemplate>
             <DataTemplate DataType="vmComponents:GameItemViewModel">
-                <Border Classes="ListRowInner" Padding="8,6" CornerRadius="0"
-                        Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                <Border Classes="ListRowInner" CornerRadius="0"
+                        Background="{DynamicResource SurfaceRaisedBrush}">
                     <DockPanel>
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                     Spacing="8" VerticalAlignment="Center">
@@ -72,7 +78,7 @@
                                 <Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
                             </Border>
                             <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
-                                       FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
+                                       FontSize="{DynamicResource FontSizeCaption}" Opacity="0.55" VerticalAlignment="Center" />
                         </StackPanel>
                         <components:Cover Source="{Binding CoverPath}"
                                           MimeType="{Binding CoverMimeType}"
@@ -81,9 +87,9 @@
                                           Margin="0,0,12,0" />
                         <StackPanel VerticalAlignment="Center" Spacing="2">
                             <TextBlock Text="{Binding Title}"
-                                       FontSize="14" FontWeight="SemiBold"
+                                       FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                        TextTrimming="CharacterEllipsis" />
-                            <TextBlock Text="{Binding Genres}" FontSize="12" Opacity="0.6"
+                            <TextBlock Text="{Binding Genres}" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.6"
                                        TextTrimming="CharacterEllipsis"
                                        IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         </StackPanel>

@@ -1,0 +1,33 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.InstallDirectoryStepView"
+             x:DataType="vm:InstallDirectoryStepViewModel">
+
+    <StackPanel Spacing="10">
+        <TextBlock Text="Where was the game installed?"
+                   FontSize="{DynamicResource FontSizeSection}"
+                   FontWeight="SemiBold" />
+
+        <TextBlock Text="Files in the package are stored relative to this folder."
+                   FontSize="{DynamicResource FontSizeCaption}"
+                   Opacity="0.7"
+                   TextWrapping="Wrap" />
+
+        <DockPanel>
+            <Button Classes="Secondary" DockPanel.Dock="Right"
+                    Content="Browse..."
+                    Click="OnBrowseClick"
+                    Margin="8,0,0,0"
+                    Padding="14,6" />
+
+            <TextBox Text="{Binding InstallDirectory}"
+                     Watermark="Install folder" />
+        </DockPanel>
+
+        <TextBlock Text="{Binding DetectionSummary}"
+                   FontSize="{DynamicResource FontSizeCaption}"
+                   Opacity="0.7"
+                   TextWrapping="Wrap" />
+    </StackPanel>
+</UserControl>

@@ -1,0 +1,208 @@
+@inherits Dialog<OptionKind, string>
+
+@* Builds the YAML for one option of a redistributable's option schema *@
+<Form @ref="_form" Model="_model">
+    <FormItem Label="Name" Required RequiredMessage="Name is required">
+        <TextInput @bind-Value="_model.Name" Placeholder="e.g. PROTONPATH" AutoFocus />
+    </FormItem>
+
+    <FormItem Label="Display Name">
+        <TextInput @bind-Value="_model.DisplayName" Placeholder="e.g. Proton Path" />
+    </FormItem>
+
+    <FormItem Label="Description">
+        <TextInput @bind-Value="_model.Description" Placeholder="Description of this option" />
+    </FormItem>
+
+    <FormItem Label="Type">
+        <EnumSelect TEnum="OptionKind" @bind-Value="_model.Kind" />
+    </FormItem>
+
+    @if (_model.Kind != OptionKind.List)
+    {
+        <FormItem Label="Default Value">
+            <TextInput @bind-Value="_model.Default" Placeholder="Default value" />
+        </FormItem>
+    }
+
+    @if (_model.Kind == OptionKind.Choice)
+    {
+        <FormItem Label="Choices" Help="One per line; use Value|Display Name to give a choice a display name">
+            <TextArea @bind-Value="_choicesText" Rows="4" Placeholder="@("value1|Display Name 1\nvalue2|Display Name 2\nvalue3")" />
+        </FormItem>
+    }
+
+    @if (_model.Kind == OptionKind.List)
+    {
+        <FormItem Label="Item Shape">
+            <EnumSelect TEnum="OptionListShape" @bind-Value="_model.ListShape" />
+        </FormItem>
+
+        @if (_model.ListShape == OptionListShape.Scalar)
+        {
+            <FormItem Label="Item Type">
+                <EnumSelect TEnum="OptionKind" @bind-Value="_model.ItemKind" Only="ScalarKinds" />
+            </FormItem>
+        }
+        else
+        {
+            <FormItem Label="Fields" Help="@(_model.Fields.Any() ? null : "No fields. Add at least one.")">
+                <Flex Vertical Gap="Gap.Small">
+                    @foreach (var field in _model.Fields)
+                    {
+                        <Flex @key="field" Gap="Gap.Small" Align="Align.Center">
+                            <TextInput @bind-Value="field.Name" Placeholder="Field name (e.g. Address)" Style="flex: 2" />
+                            <EnumSelect TEnum="OptionKind" @bind-Value="field.Kind" Only="ScalarKinds" Style="flex: 1" />
+                            <TextInput @bind-Value="field.Default" Placeholder="Default (optional)" Style="flex: 2" />
+                            <Button Text Small Danger Icon="IconType.X" title="Remove" OnClick="() => _model.Fields.Remove(field)" />
+                        </Flex>
+                    }
+                    <div>
+                        <Button Small Icon="IconType.Plus" OnClick="() => _model.Fields.Add(new FieldModel())">Add Field</Button>
+                    </div>
+                </Flex>
+            </FormItem>
+        }
+
+        <Row Gap="Gap.Medium">
+            <Column Fill>
+                <FormItem Label="Min Items">
+                    <NumberInput TValue="int?" @bind-Value="_model.MinItems" Min="0" />
+                </FormItem>
+            </Column>
+            <Column Fill>
+                <FormItem Label="Max Items">
+                    <NumberInput TValue="int?" @bind-Value="_model.MaxItems" Min="0" />
+                </FormItem>
+            </Column>
+        </Row>
+    }
+
+    <FormItem>
+        <Checkbox @bind-Value="_model.Required">Required</Checkbox>
+    </FormItem>
+
+    <FormItem Help="@(_model.Kind == OptionKind.List ? "Lists can't be set as a single environment variable; read them with Get-RedistributableOptions in a script." : null)">
+        <Checkbox @bind-Value="_model.IsEnvironmentVariable" Disabled="_model.Kind == OptionKind.List">Environment Variable</Checkbox>
+    </FormItem>
+</Form>
+
+@code {
+    static readonly OptionKind[] ScalarKinds = [OptionKind.String, OptionKind.Int, OptionKind.Bool];
+
+    Form? _form;
+    OptionModel _model = new();
+    string? _choicesText = "";
+
+    protected override void OnInitialized() => _model.Kind = Options;
+
+    protected override Task<bool> OnOkAsync()
+    {
+        if (_form?.Validate() == false)
+            return Task.FromResult(false);
+
+        if (_model.Kind == OptionKind.List && _model.ListShape == OptionListShape.Composite && !_model.Fields.Any(f => !string.IsNullOrWhiteSpace(f.Name)))
+            throw new InvalidOperationException("A list of records needs at least one named field.");
+
+        Result = GenerateYaml();
+
+        return Task.FromResult(true);
+    }
+
+    string GenerateYaml()
+    {
+        const string indent = "    ";
+
+        var lines = new List<string>
+        {
+            $"  {_model.Name}:",
+            $"{indent}Type: {_model.Kind.YamlName()}",
+        };
+
+        if (!string.IsNullOrWhiteSpace(_model.DisplayName))
+            lines.Add($"{indent}DisplayName: {_model.DisplayName}");
+
+        if (!string.IsNullOrWhiteSpace(_model.Description))
+            lines.Add($"{indent}Description: {_model.Description}");
+
+        if (_model.Kind != OptionKind.List && !string.IsNullOrWhiteSpace(_model.Default))
+            lines.Add($"{indent}Default: {_model.Default}");
+
+        if (_model.Required)
+            lines.Add($"{indent}Required: true");
+
+        if (_model.IsEnvironmentVariable && _model.Kind != OptionKind.List)
+            lines.Add($"{indent}IsEnvironmentVariable: true");
+
+        if (_model.Kind == OptionKind.Choice && !string.IsNullOrWhiteSpace(_choicesText))
+        {
+            lines.Add($"{indent}Choices:");
+
+            foreach (var line in _choicesText.Split('\n', StringSplitOptions.RemoveEmptyEntries))
+            {
+                var trimmed = line.Trim();
+                var parts = trimmed.Split('|', 2);
+
+                if (parts.Length == 2)
+                {
+                    lines.Add($"{indent}  - Value: {parts[0].Trim()}");
+                    lines.Add($"{indent}    DisplayName: {parts[1].Trim()}");
+                }
+                else
+                    lines.Add($"{indent}  - {trimmed}");
+            }
+        }
+
+        if (_model.Kind == OptionKind.List)
+        {
+            if (_model.ListShape == OptionListShape.Composite)
+            {
+                lines.Add($"{indent}Fields:");
+
+                foreach (var field in _model.Fields.Where(f => !string.IsNullOrWhiteSpace(f.Name)))
+                {
+                    lines.Add($"{indent}  {field.Name!.Trim()}:");
+                    lines.Add($"{indent}    Type: {field.Kind.YamlName()}");
+
+                    if (!string.IsNullOrWhiteSpace(field.Default))
+                        lines.Add($"{indent}    Default: {field.Default}");
+                }
+            }
+            else if (_model.ItemKind != OptionKind.String)
+                lines.Add($"{indent}ItemType: {_model.ItemKind.YamlName()}");
+
+            if (_model.MinItems.HasValue)
+                lines.Add($"{indent}MinItems: {_model.MinItems.Value}");
+
+            if (_model.MaxItems.HasValue)
+                lines.Add($"{indent}MaxItems: {_model.MaxItems.Value}");
+        }
+
+        return string.Join("\n", lines) + "\n";
+    }
+
+    class OptionModel
+    {
+        public string? Name { get; set; } = "";
+        public string? DisplayName { get; set; } = "";
+        public string? Description { get; set; } = "";
+        public OptionKind Kind { get; set; }
+        public string? Default { get; set; } = "";
+        public bool Required { get; set; }
+        public bool IsEnvironmentVariable { get; set; }
+
+        // Lists only
+        public OptionListShape ListShape { get; set; }
+        public OptionKind ItemKind { get; set; }
+        public List<FieldModel> Fields { get; set; } = new();
+        public int? MinItems { get; set; }
+        public int? MaxItems { get; set; }
+    }
+
+    class FieldModel
+    {
+        public string? Name { get; set; } = "";
+        public OptionKind Kind { get; set; }
+        public string? Default { get; set; } = "";
+    }
+}

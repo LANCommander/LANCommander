@@ -14,7 +14,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
-using System.Windows.Input;
+using ICommand = System.Windows.Input.ICommand;
 
 namespace LANCommander.Launcher.Controls;
 
@@ -26,6 +26,16 @@ namespace LANCommander.Launcher.Controls;
 public interface ICarouselPlaybackItem
 {
     void SetCarouselActive(bool active);
+}
+
+/// <summary>
+/// Implemented by carousel item content that is expensive to load (e.g. cover art). The carousel
+/// reports when an item is within a page of the viewport, regardless of window focus, so long
+/// carousels only load what's near the screen instead of everything at once.
+/// </summary>
+public interface ICarouselLazyItem
+{
+    void SetCarouselNearViewport(bool near);
 }
 
 public class CarouselControl : TemplatedControl
@@ -47,6 +57,10 @@ public class CarouselControl : TemplatedControl
 
     public static readonly StyledProperty<string?> TitleProperty =
         AvaloniaProperty.Register<CarouselControl, string?>(nameof(Title));
+
+    /// <summary>Optional small uppercase label above <see cref="Title"/> (e.g. "ON THIS SERVER").</summary>
+    public static readonly StyledProperty<string?> KickerProperty =
+        AvaloniaProperty.Register<CarouselControl, string?>(nameof(Kicker));
 
     public static readonly StyledProperty<IDataTemplate?> ItemTemplateProperty =
         AvaloniaProperty.Register<CarouselControl, IDataTemplate?>(nameof(ItemTemplate));
@@ -99,6 +113,12 @@ public class CarouselControl : TemplatedControl
         set => SetValue(TitleProperty, value);
     }
 
+    public string? Kicker
+    {
+        get => GetValue(KickerProperty);
+        set => SetValue(KickerProperty, value);
+    }
+
     public IDataTemplate? ItemTemplate
     {
         get => GetValue(ItemTemplateProperty);
@@ -140,6 +160,9 @@ public class CarouselControl : TemplatedControl
     private double _currentOffsetX = 0;
     private WindowBase? _hostWindow;
     private bool _windowActive = true;
+    private int _scrollGeneration;
+
+    private static readonly TimeSpan ScrollDuration = TimeSpan.FromMilliseconds(350);
 
     static CarouselControl()
     {
@@ -180,7 +203,7 @@ public class CarouselControl : TemplatedControl
                 new TransformOperationsTransition
                 {
                     Property = RenderTransformProperty,
-                    Duration = TimeSpan.FromMilliseconds(350),
+                    Duration = ScrollDuration,
                     Easing = new CubicEaseOut()
                 }
             };
@@ -433,16 +456,27 @@ public class CarouselControl : TemplatedControl
         _currentOffsetX = offsetX;
         _itemsContainer.RenderTransform = TranslateX(offsetX);
         UpdateItemVisibility();
+
+        // Tight sides while items slide past the edges; re-evaluate once the last scroll has landed
+        var generation = ++_scrollGeneration;
+        UpdateClipGeometry(tightSides: true);
+        DispatcherTimer.RunOnce(() =>
+        {
+            if (generation == _scrollGeneration)
+                UpdateClipGeometry();
+        }, ScrollDuration);
     }
 
     private void ScrollInstant(double offsetX)
     {
         if (_itemsContainer == null) return;
         _currentOffsetX = offsetX;
+        _scrollGeneration++;
         _itemsContainer.Transitions = null;
         _itemsContainer.RenderTransform = TranslateX(offsetX);
         _itemsContainer.Transitions = _transitions;
         UpdateItemVisibility();
+        UpdateClipGeometry();
     }
 
     private static ITransform TranslateX(double x) =>
@@ -480,14 +514,44 @@ public class CarouselControl : TemplatedControl
         {
             var itemLeft = i * step;
             var itemRight = itemLeft + ItemWidth;
-            var visible = _windowActive && itemRight > scroll && itemLeft < scroll + viewportWidth;
+            var inViewport = itemRight > scroll && itemLeft < scroll + viewportWidth;
+            var visible = _windowActive && inViewport;
+
+            // A page either side, so paging lands on items that have already loaded.
+            var near = itemRight > scroll - viewportWidth && itemLeft < scroll + 2 * viewportWidth;
 
             var container = _itemsControl.ContainerFromIndex(i);
             if (container == null) continue;
 
-            foreach (var item in container.GetVisualDescendants().OfType<ICarouselPlaybackItem>())
-                item.SetCarouselActive(visible);
+            foreach (var item in container.GetVisualDescendants())
+            {
+                if (item is ICarouselPlaybackItem playback)
+                    playback.SetCarouselActive(visible);
+
+                if (item is ICarouselLazyItem lazy)
+                    lazy.SetCarouselNearViewport(near);
+            }
         }
+    }
+
+    private bool _visibilityUpdateQueued;
+
+    /// <summary>
+    /// Asks for a visibility pass once layout settles. Item content calls this when it attaches,
+    /// since containers can be prepared before their templates (and so their lazy items) exist.
+    /// </summary>
+    public void QueueVisibilityUpdate()
+    {
+        if (_visibilityUpdateQueued)
+            return;
+
+        _visibilityUpdateQueued = true;
+
+        Dispatcher.UIThread.Post(() =>
+        {
+            _visibilityUpdateQueued = false;
+            UpdateItemVisibility();
+        }, DispatcherPriority.Loaded);
     }
 
     private void SnapToCurrentIndex()
@@ -501,34 +565,67 @@ public class CarouselControl : TemplatedControl
     private void ApplyItemOverflow()
     {
         if (_clipPanel == null) return;
+        // Horizontal only: vertical room for hover growth comes from the clip geometry, so padding here
+        // would just push the items away from the header and the next section
         if (_itemsContainer is Border border)
-            border.Padding = new Thickness(ItemOverflow);
+            border.Padding = new Thickness(ItemOverflow, 0);
+
         UpdateClipGeometry();
         SnapToCurrentIndex();
     }
 
-    // Replaces ClipToBounds with a geometry clip that is tight on left/right
-    // but extended by 2*ItemOverflow top and bottom, giving hovered items room
-    // to scale without being clipped while scrolled-off items still are.
-    private void UpdateClipGeometry()
+    // Replaces ClipToBounds with a geometry clip extended well past the top and bottom, giving hovered
+    // items room to scale and cast their shadow without being clipped while scrolled-off items still are. Left and right extend
+    // by ItemOverflow only when no item intrudes into that strip (i.e. the edge falls in a gap), so a fully
+    // visible edge item can grow into the arrow column while a partially scrolled-off one stays cut at the
+    // edge. While a scroll animates the sides stay tight, since items slide through those strips.
+    private void UpdateClipGeometry() => UpdateClipGeometry(tightSides: false);
+
+    private void UpdateClipGeometry(bool tightSides)
     {
         if (_clipPanel == null) return;
 
-        if (ItemOverflow > 0 || WrapItems)
+        // Always applied: it's the only thing hiding scrolled-off items, since the control doesn't clip to bounds
+        _clipGeometry ??= new RectangleGeometry();
+        var b = _clipPanel.Bounds;
+        // Items never scroll vertically, so the clip only has to leave room for hover growth and the
+        // popover shadow (which reaches ~44px below a cover); a panel height either way is ample
+        var vPad = b.Height;
+        var leftPad = 0.0;
+        var rightPad = 0.0;
+
+        if (!tightSides && ItemOverflow > 0)
         {
-            _clipGeometry ??= new RectangleGeometry();
-            var b = _clipPanel.Bounds;
-            // Extend clip vertically by ItemOverflow to allow hover-scale effects, but
-            // keep left/right tight so scrolled-off items don't bleed behind the nav buttons.
-            var vPad = ItemOverflow * 2;
-            _clipGeometry.Rect = new Rect(-ItemOverflow, -vPad, b.Width + 2 * ItemOverflow, b.Height + 2 * vPad);
-            _clipPanel.Clip = _clipGeometry;
+            var scroll = -_currentOffsetX - ItemOverflow;
+            if (!AnyItemIntersects(scroll - ItemOverflow, scroll))
+                leftPad = ItemOverflow;
+            if (!AnyItemIntersects(scroll + b.Width, scroll + b.Width + ItemOverflow))
+                rightPad = ItemOverflow;
         }
-        else
+
+        _clipGeometry.Rect = new Rect(-leftPad, -vPad, b.Width + leftPad + rightPad, b.Height + 2 * vPad);
+        _clipPanel.Clip = _clipGeometry;
+    }
+
+    /// <summary>Whether any item overlaps the item-space span [<paramref name="from"/>, <paramref name="to"/>).</summary>
+    private bool AnyItemIntersects(double from, double to)
+    {
+        var count = _itemsControl?.ItemCount ?? 0;
+        var step = ItemWidth + Gap;
+        if (count == 0 || step <= 0) return false;
+
+        // Only the items nearest the span can reach it
+        var first = Math.Max(0, (int)Math.Floor(from / step));
+        var last = Math.Min(count - 1, (int)Math.Floor(to / step));
+
+        for (var i = first; i <= last; i++)
         {
-            _clipPanel.Clip = null;
-            _clipGeometry = null;
+            var itemLeft = i * step;
+            if (itemLeft + ItemWidth > from && itemLeft < to)
+                return true;
         }
+
+        return false;
     }
 
     // Compensates for the Border padding on PART_ItemsContainer: the padding

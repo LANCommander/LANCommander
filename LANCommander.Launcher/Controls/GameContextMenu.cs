@@ -1,5 +1,7 @@
+using System;
 using System.Collections.Generic;
 using System.Collections.Specialized;
+using System.Linq;
 using System.Runtime.CompilerServices;
 using Avalonia;
 using Avalonia.Controls;
@@ -8,8 +10,10 @@ using Avalonia.Data.Converters;
 using Avalonia.Input;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
+using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
+using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Launcher.Controls;
 
@@ -195,17 +199,69 @@ public static class GameContextMenu
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Browse Files", vm, "BrowseFilesCommand", visiblePath: "IsInstalled"));
         items.Add(Item("View Manual", vm, "OpenFirstManualCommand", visiblePath: "HasManuals"));
-        items.Add(Item("Modify", vm, "ModifyCommand", visiblePath: "IsInstalled"));
+        items.Add(Item("Manage", vm, "ManageCommand", visiblePath: "CanManage"));
+        items.Add(Item("Debug Scripts", vm, "OpenScriptDebuggerCommand", visiblePath: "IsScriptDebuggingEnabled"));
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Verify Files", vm, "VerifyFilesCommand", visiblePath: "IsInstalled", enabledPath: "IsVerifyingFiles", enabledInvert: true));
-        items.Add(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true));
+        items.Add(Destructive(Item("Uninstall", vm, "UninstallCommand", visiblePath: "IsInstalled", enabledPath: "IsUninstalling", enabledInvert: true)));
         items.Add(Item("Add to Library", vm, "AddToLibraryCommand", visiblePath: "IsInLibrary", visibleInvert: true));
-        items.Add(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary"));
+        items.Add(Destructive(Item("Remove from Library", vm, "RemoveFromLibraryCommand", enabledPath: "IsInLibrary")));
+
+        AppendPluginItems(items, vm.GameId);
 
         flyout.Items.Clear();
         
         foreach (var item in items)
             flyout.Items.Add(item);
+    }
+
+    /// <summary>
+    /// Appends items added by plugins (via <see cref="IContextMenuExtension"/>) after the
+    /// built-in items, separated by a divider. A failing extension is skipped so the core menu
+    /// still renders.
+    /// </summary>
+    private static void AppendPluginItems(List<Control> items, Guid gameId)
+    {
+        var extensions = App.Services?
+            .GetServices<IContextMenuExtension>()
+            .OrderBy(c => c.Order)
+            .ToList();
+
+        if (extensions == null || extensions.Count == 0)
+            return;
+
+        var added = false;
+
+        foreach (var extension in extensions)
+        {
+            IEnumerable<Control>? extensionItems;
+
+            try
+            {
+                extensionItems = extension.BuildMenuItems(gameId);
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (extensionItems == null)
+                continue;
+
+            foreach (var control in extensionItems)
+            {
+                if (control == null)
+                    continue;
+
+                if (!added)
+                {
+                    items.Add(new Separator());
+                    added = true;
+                }
+
+                items.Add(control);
+            }
+        }
     }
 
     private static MenuItem Item(
@@ -235,6 +291,13 @@ public static class GameContextMenu
                 Converter = enabledInvert ? Invert : null,
             });
 
+        return item;
+    }
+
+    /// <summary>Marks a row that removes something; the theme gives these the error colour.</summary>
+    private static MenuItem Destructive(MenuItem item)
+    {
+        item.Classes.Add("Destructive");
         return item;
     }
 

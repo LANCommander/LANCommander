@@ -1,0 +1,68 @@
+// PowerShellConsole: a 32px header (the CONSOLE kicker, the run's elapsed time, Clear and Stop)
+// above the terminal, whose own colours come from ConsolePalette (the launcher's console palette).
+.console {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.console-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 10px;
+    height: 32px;
+    padding: 0 8px 0 12px;
+    border-bottom: 1px solid var(--lc-border-card-color);
+
+    // Clear and Stop: 24px with 11px text
+    .lc-button.lc-button {
+        height: 24px;
+        padding: 0 8px;
+        font-size: 11px;
+    }
+}
+
+.console-title {
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    text-transform: uppercase;
+}
+
+.console-elapsed {
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+.console-header-spacer {
+    flex: 1;
+}
+
+.console-body {
+    position: relative;
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+    padding: 7px 0 0 12px;
+
+    > div {
+        flex: 1;
+        min-height: 0;
+    }
+}
+
+.console-placeholder {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
+    pointer-events: none;
+}

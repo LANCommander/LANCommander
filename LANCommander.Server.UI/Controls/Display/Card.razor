@@ -1,0 +1,90 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<RadzenCard Attributes="_attributes" Style="@Style" Variant="@(Borderless ? Variant.Flat : Variant.Outlined)">
+    @if (Title != null || TitleTemplate != null || Extra != null || Count != null)
+    {
+        <div class="lc-card-header">
+            <div class="lc-card-title">
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate
+                }
+                else
+                {
+                    @Title
+                }
+            </div>
+            @if (!String.IsNullOrEmpty(Subtitle))
+            {
+                <span class="lc-card-subtitle">@Subtitle</span>
+            }
+            @if (Count != null)
+            {
+                <Badge Count="Count" Neutral Class="lc-card-count" />
+            }
+            @if (Extra != null)
+            {
+                <div class="lc-card-extra">@Extra</div>
+            }
+        </div>
+    }
+    <div class="lc-card-body">
+        <Spin Loading="Loading">
+            @ChildContent
+        </Spin>
+    </div>
+    @if (Footer != null)
+    {
+        <div class="lc-card-footer">@Footer</div>
+    }
+</RadzenCard>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    /// <summary>Content at the end of the header, typically actions.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    /// <summary>12px tertiary text on the title's baseline, e.g. "last 7 days".</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>
+    /// A panel: the title becomes a kicker (11px uppercase), a hairline divides the header from the
+    /// body, and the body has no padding so lists run edge to edge. As in "ACTIVE SESSIONS (14)".
+    /// </summary>
+    [Parameter] public bool Panel { get; set; }
+
+    /// <summary>A figure in a neutral chip at the end of the header, e.g. how many rows the panel lists.</summary>
+    [Parameter] public object? Count { get; set; }
+
+    /// <summary>A strip under the body behind a hairline, e.g. a "See all sessions" link.</summary>
+    [Parameter] public RenderFragment? Footer { get; set; }
+
+    /// <summary>Tighter padding.</summary>
+    [Parameter] public bool Small { get; set; }
+
+    /// <summary>No outline; the card is only set apart by its background.</summary>
+    [Parameter] public bool Borderless { get; set; }
+
+    /// <summary>Covers the body with a spinner.</summary>
+    [Parameter] public bool Loading { get; set; }
+
+    Dictionary<string, object> _attributes = new();
+
+    protected override void OnParametersSet()
+    {
+        _attributes = AdditionalAttributes?.ToDictionary() ?? new();
+        _attributes["class"] = new ClassBuilder()
+            .Add("lc-card")
+            .If(Small, "lc-card-small")
+            .If(Panel, "lc-card-panel")
+            .Add(Class)
+            .Build()!;
+    }
+}

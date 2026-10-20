@@ -1,0 +1,31 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:packaging="using:LANCommander.Launcher.Views.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.MonitorStepView"
+             x:DataType="vm:MonitorStepViewModel">
+
+    <Grid RowDefinitions="Auto,*">
+
+        <!-- Installer picker. Browsing starts the capture on its own; Enter does the same for a
+             typed path, so there is no separate Start button. -->
+        <DockPanel Grid.Row="0" Margin="0,0,0,10">
+            <Button Classes="Secondary" DockPanel.Dock="Right"
+                    Content="Browse..."
+                    Click="OnBrowseClick"
+                    IsEnabled="{Binding !IsMonitoring}"
+                    Margin="8,0,0,0"
+                    Padding="14,6" />
+
+            <TextBox Text="{Binding InstallerPath}"
+                     Watermark="Choose the installer to monitor"
+                     IsEnabled="{Binding !IsMonitoring}">
+                <TextBox.KeyBindings>
+                    <KeyBinding Gesture="Enter" Command="{Binding StartCommand}" />
+                </TextBox.KeyBindings>
+            </TextBox>
+        </DockPanel>
+
+        <packaging:CapturePanelView Grid.Row="1" />
+    </Grid>
+</UserControl>

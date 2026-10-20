@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 using Avalonia.Media.Imaging;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.Launcher.Helpers;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Services;
@@ -31,6 +32,10 @@ public partial class GameDetailViewModel : ViewModelBase
     private readonly IServiceProvider _serviceProvider;
     private readonly INavigationService _navigationService;
     private readonly ILogger<GameDetailViewModel> _logger;
+
+    // Reopening a game (or opening another) while a previous load is still awaiting would let the
+    // stale load append its tools/media into the new game's lists; stale loads bail on mismatch
+    private int _loadVersion;
 
     [ObservableProperty]
     private Guid _id;
@@ -63,7 +68,11 @@ public partial class GameDetailViewModel : ViewModelBase
     private string? _iconPath;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ReleasedText))]
     private DateTime _releasedOn;
+
+    /// <summary>ISO date for the Details card; empty when the server has no release date.</summary>
+    public string ReleasedText => ReleasedOn.Year > 1 ? ReleasedOn.ToString("yyyy-MM-dd") : string.Empty;
 
     [ObservableProperty]
     private string _releaseYear = string.Empty;
@@ -93,29 +102,31 @@ public partial class GameDetailViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(TagList))]
     [NotifyPropertyChangedFor(nameof(VisibleTagList))]
+    [NotifyPropertyChangedFor(nameof(HasTags))]
     [NotifyPropertyChangedFor(nameof(HasMoreTags))]
-    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
     [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
     private string _tags = string.Empty;
 
-    // ── Tags expand/collapse ─────────────���────────────────────────────────────
+    // ── Tag chips (under the description), expand/collapse ───────────────────
+    // Genres are listed in the Details card instead, alongside developer and publisher.
 
-    private const int TagsVisibleLimit = 5;
+    private const int TagsVisibleLimit = 8;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(VisibleTagList))]
     [NotifyPropertyChangedFor(nameof(HasMoreTags))]
-    [NotifyPropertyChangedFor(nameof(ExtraTagCount))]
     [NotifyPropertyChangedFor(nameof(ShowMoreTagsLabel))]
     private bool _tagsExpanded;
 
     public IEnumerable<string> VisibleTagList =>
-        TagsExpanded ? TagList : TagList.Take(TagsVisibleLimit);
+        TagsExpanded || !HasMoreTags ? TagList : TagList.Take(TagsVisibleLimit);
 
-    public bool HasMoreTags    => TagList.Count() > TagsVisibleLimit;
-    public int  ExtraTagCount  => Math.Max(0, TagList.Count() - TagsVisibleLimit);
+    public bool HasTags      => TagList.Any();
+
+    /// <summary>Only collapse when it hides a few tags; "+1 more" costs as much room as the tag.</summary>
+    public bool HasMoreTags  => TagList.Count() > TagsVisibleLimit + 2;
     public string ShowMoreTagsLabel =>
-        TagsExpanded ? "Show less" : $"+{ExtraTagCount} more";
+        TagsExpanded ? "Show less" : $"+{TagList.Count() - TagsVisibleLimit} more";
 
     [RelayCommand]
     private void ToggleTagsExpanded() => TagsExpanded = !TagsExpanded;
@@ -142,7 +153,17 @@ public partial class GameDetailViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(BackLabel))]
     private bool _fromLibrary;
 
-    public string BackLabel => FromLibrary ? "Back to Library" : "Back to Depot";
+    public string BackLabel => FromLibrary ? "Library" : "Depot";
+
+    /// <summary>Players row of the Details card: one line per mode, e.g. "Single-player" and "2–24 LAN".</summary>
+    [ObservableProperty]
+    private string _playersText = string.Empty;
+
+    /// <summary>Total size of the install folder; filled in the background once the game is known to be installed.</summary>
+    [ObservableProperty]
+    private string _sizeOnDiskText = string.Empty;
+
+    private string? _measuredDirectory;
 
     // Split list properties for chip rendering
     public IEnumerable<string> GenreList     => SplitCsv(Genres);
@@ -192,6 +213,46 @@ public partial class GameDetailViewModel : ViewModelBase
         ActionBar = new GameActionBarViewModel(serviceProvider);
         ActionBar.LibraryChanged += (_, _) => LibraryChanged?.Invoke(this, EventArgs.Empty);
         ActionBar.InstallRequested += (_, _) => InstallRequested?.Invoke(this, EventArgs.Empty);
+
+        // Install, uninstall and move all change the folder; re-measure whenever it does.
+        ActionBar.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName is nameof(GameActionBarViewModel.InstallDirectory) or nameof(GameActionBarViewModel.IsInstalled))
+                _ = MeasureInstallSizeAsync();
+        };
+    }
+
+    /// <summary>
+    /// Sums the install folder off the UI thread. Large installs can take a moment, so the row
+    /// stays empty until the figure is ready rather than blocking the page.
+    /// </summary>
+    private async Task MeasureInstallSizeAsync()
+    {
+        var directory = ActionBar.IsInstalled ? ActionBar.InstallDirectory : null;
+
+        if (directory == _measuredDirectory)
+            return;
+
+        _measuredDirectory = directory;
+        SizeOnDiskText = string.Empty;
+
+        if (string.IsNullOrEmpty(directory) || !Directory.Exists(directory))
+            return;
+
+        try
+        {
+            var bytes = await Task.Run(() => new DirectoryInfo(directory)
+                .EnumerateFiles("*", new EnumerationOptions { RecurseSubdirectories = true, IgnoreInaccessible = true })
+                .Sum(f => f.Length));
+
+            // A newer measurement started while this one ran; let it win.
+            if (directory == _measuredDirectory)
+                SizeOnDiskText = ByteSizeLib.ByteSize.FromBytes(bytes).ToString("0.##");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not measure install size for {GameId} at {Directory}", Id, directory);
+        }
     }
 
     /// <summary>
@@ -214,6 +275,8 @@ public partial class GameDetailViewModel : ViewModelBase
     /// </summary>
     public async Task LoadGameAsync(SDK.Models.Game game)
     {
+        var version = ++_loadVersion;
+
         Id = game.Id;
         Title = game.Title ?? "Unknown";
         Description = game.Description ?? string.Empty;
@@ -267,12 +330,25 @@ public partial class GameDetailViewModel : ViewModelBase
         else
             MultiplayerModes = string.Empty;
 
+        var playerLines = new List<string>();
+
+        if (game.Singleplayer)
+            playerLines.Add("Single-player");
+
+        foreach (var mode in game.MultiplayerModes ?? [])
+            playerLines.Add(FormatPlayerCount(mode.Type, mode.MinPlayers, mode.MaxPlayers));
+
+        PlayersText = string.Join("\n", playerLines.Distinct());
+
         // Tools
         Tools.Clear();
-        await LoadToolsAsync(game);
+        await LoadToolsAsync(game, version);
         OnPropertyChanged(nameof(HasTools));
 
-        // Reset media items and tags state while we re-load
+        if (version != _loadVersion)
+            return;
+
+        // Reset media items and tag state while we re-load
         MediaItems.Clear();
         TagsExpanded = false;
 
@@ -306,11 +382,16 @@ public partial class GameDetailViewModel : ViewModelBase
         // Load action bar state
         await ActionBar.LoadFromSdkGameAsync(game);
 
+        if (version != _loadVersion)
+            return;
+
+        _ = MeasureInstallSizeAsync();
+
         if (game.Media != null && game.Media.Any())
         {
             // Start loading screenshots/videos in the background immediately so videos
             // begin streaming without waiting on the essential media downloads below.
-            _ = LoadCarouselMediaAsync(game);
+            _ = LoadCarouselMediaAsync(game, version);
 
             // Load essential media (cover, logo, background, icon) — needed for page layout
             try
@@ -337,7 +418,7 @@ public partial class GameDetailViewModel : ViewModelBase
     /// are downloaded/decoded concurrently and pop in as each one finishes, so no item
     /// blocks the others.
     /// </summary>
-    private async Task LoadCarouselMediaAsync(SDK.Models.Game game)
+    private async Task LoadCarouselMediaAsync(SDK.Models.Game game, int version)
     {
         if (game.Media == null)
             return;
@@ -365,20 +446,24 @@ public partial class GameDetailViewModel : ViewModelBase
                 {
                     // Videos only need a stream URL — set them immediately so they don't
                     // wait behind screenshot downloads.
-                    ReplaceMediaItem(index, new GameMediaItemViewModel
+                    ReplaceMediaItem(version, index, new GameMediaItemViewModel
                     {
                         IsVideo  = true,
+                        Name     = media.Name ?? string.Empty,
                         MimeType = media.MimeType ?? string.Empty,
                         Path     = mediaClient.GetAbsoluteStreamUrl(media)
                     });
                 }
                 else
                 {
-                    screenshotTasks.Add(LoadScreenshotAsync(index, media, mediaClient));
+                    screenshotTasks.Add(LoadScreenshotAsync(version, index, media, mediaClient));
                 }
             }
 
             await Task.WhenAll(screenshotTasks);
+
+            if (version != _loadVersion)
+                return;
 
             // Remove any remaining skeletons (e.g. if some items failed to load)
             for (var i = MediaItems.Count - 1; i >= 0; i--)
@@ -403,7 +488,7 @@ public partial class GameDetailViewModel : ViewModelBase
     /// Downloads (if needed) and decodes a single screenshot, then swaps it into the
     /// carousel in place of its skeleton. Runs concurrently with other screenshots.
     /// </summary>
-    private async Task LoadScreenshotAsync(int index, SDK.Models.Media media, MediaClient mediaClient)
+    private async Task LoadScreenshotAsync(int version, int index, SDK.Models.Media media, MediaClient mediaClient)
     {
         try
         {
@@ -415,18 +500,20 @@ public partial class GameDetailViewModel : ViewModelBase
                 localPath = fileInfo.FullName;
             }
 
-            // Decode downscaled: the carousel slot is 384 logical px, so ~2x covers
-            // HiDPI/UniformToFill without holding the full-resolution source in memory.
+            // Decode downscaled to the carousel slot (384 logical px) at the display's scaling,
+            // without holding the full-resolution source in memory.
             // The lightbox loads the full-res image from Path when it needs it.
+            var decodeWidth = DisplayScaling.ToPixels(384);
             var bitmap = await Task.Run(() =>
             {
                 using var stream = File.OpenRead(localPath);
-                return Bitmap.DecodeToWidth(stream, 768, BitmapInterpolationMode.HighQuality);
+                return Bitmap.DecodeToWidth(stream, decodeWidth, BitmapInterpolationMode.HighQuality);
             });
 
-            ReplaceMediaItem(index, new GameMediaItemViewModel
+            ReplaceMediaItem(version, index, new GameMediaItemViewModel
             {
                 IsVideo     = false,
+                Name        = media.Name ?? string.Empty,
                 MimeType    = media.MimeType ?? string.Empty,
                 Path        = localPath,
                 ImageSource = bitmap
@@ -443,14 +530,36 @@ public partial class GameDetailViewModel : ViewModelBase
     /// it if the index no longer points at a skeleton. Always invoked on the UI thread via
     /// awaited continuations, so collection access is serialized.
     /// </summary>
-    private void ReplaceMediaItem(int index, GameMediaItemViewModel item)
+    private void ReplaceMediaItem(int version, int index, GameMediaItemViewModel item)
     {
+        if (version != _loadVersion)
+            return;
+
         if (index < MediaItems.Count && MediaItems[index].IsSkeleton)
             MediaItems[index] = item;
         else
             MediaItems.Add(item);
 
         OnPropertyChanged(nameof(HasMedia));
+    }
+
+    /// <summary>Compact form for the Details card: "2–24 LAN", "up to 8 Online", or just "LAN".</summary>
+    private static string FormatPlayerCount(SDK.Enums.MultiplayerType type, int minPlayers, int maxPlayers)
+    {
+        var typeLabel = type switch
+        {
+            SDK.Enums.MultiplayerType.Local => "Local",
+            SDK.Enums.MultiplayerType.LAN => "LAN",
+            SDK.Enums.MultiplayerType.Online => "Online",
+            _ => type.ToString()
+        };
+
+        if (maxPlayers <= 0)
+            return typeLabel;
+
+        return minPlayers > 1 && minPlayers < maxPlayers
+            ? $"{minPlayers}–{maxPlayers} {typeLabel}"
+            : $"up to {maxPlayers} {typeLabel}";
     }
 
     private static string FormatMultiplayerMode(Data.Models.MultiplayerMode mode) =>
@@ -486,7 +595,7 @@ public partial class GameDetailViewModel : ViewModelBase
     private static string? ResolveEssentialMediaPath(System.Collections.Generic.IEnumerable<SDK.Models.Media> mediaCollection, MediaType type, MediaClient mediaClient)
         => MediaSourceResolver.Resolve(mediaCollection.FirstOrDefault(m => m.Type == type), mediaClient);
 
-    private async Task LoadToolsAsync(SDK.Models.Game game)
+    private async Task LoadToolsAsync(SDK.Models.Game game, int version)
     {
         try
         {
@@ -503,11 +612,19 @@ public partial class GameDetailViewModel : ViewModelBase
 
             if (tools != null)
             {
+                var items = new List<ToolItemViewModel>();
+
                 foreach (var tool in tools)
                 {
                     var isInstalled = await toolService.IsToolInstalledForGameAsync(game.Id, tool.Id);
-                    Tools.Add(new ToolItemViewModel(tool, isInstalled));
+                    items.Add(new ToolItemViewModel(tool, isInstalled));
                 }
+
+                if (version != _loadVersion)
+                    return;
+
+                foreach (var item in items)
+                    Tools.Add(item);
             }
         }
         catch (Exception ex)

@@ -31,15 +31,16 @@
                     <DataTemplate DataType="vm:GameGroupViewModel">
                         <StackPanel Margin="0,0,0,24">
 
-                            <!-- Group header -->
-                            <Border Padding="4,8,4,6">
+                            <!-- Group header (the horizontal layout's carousel carries its own title) -->
+                            <Border Padding="4,8,4,6"
+                                    IsVisible="{Binding !$parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
                                 <DockPanel>
                                     <Border DockPanel.Dock="Right"
-                                            Width="1" Background="{DynamicResource SystemControlForegroundBaseMediumLowBrush}"
+                                            Width="1" Background="{DynamicResource HairlineBorderBrush}"
                                             VerticalAlignment="Center" Height="1"
                                             HorizontalAlignment="Stretch" Margin="8,0,0,0" />
                                     <TextBlock Text="{Binding Name}"
-                                               FontSize="13" FontWeight="SemiBold"
+                                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold"
                                                Opacity="0.7" LetterSpacing="1" />
                                 </DockPanel>
                             </Border>
@@ -82,7 +83,7 @@
                                                 HorizontalContentAlignment="Stretch"
                                                 Padding="4,2" Cursor="Hand">
                                             <Border Padding="8,6" CornerRadius="0"
-                                                    Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+                                                    Background="{DynamicResource SurfaceRaisedBrush}">
                                                 <DockPanel>
                                                     <StackPanel DockPanel.Dock="Right" Orientation="Horizontal"
                                                                 Spacing="8" VerticalAlignment="Center">
@@ -91,7 +92,7 @@
                                                             <Icon Type="Regular" Value="Check" Width="10" Height="10" Color="White" />
                                                         </Border>
                                                         <TextBlock Text="{Binding ReleasedOn, StringFormat='{}{0:yyyy}'}"
-                                                                   FontSize="12" Opacity="0.55" VerticalAlignment="Center" />
+                                                                   FontSize="{DynamicResource FontSizeCaption}" Opacity="0.55" VerticalAlignment="Center" />
                                                     </StackPanel>
                                                     <components:Cover Source="{Binding CoverPath}"
                                                                       MimeType="{Binding CoverMimeType}"
@@ -100,9 +101,9 @@
                                                                       Margin="0,0,12,0" />
                                                     <StackPanel VerticalAlignment="Center" Spacing="2">
                                                         <TextBlock Text="{Binding Title}"
-                                                                   FontSize="14" FontWeight="SemiBold"
+                                                                   FontSize="{DynamicResource FontSizeBody}" FontWeight="SemiBold"
                                                                    TextTrimming="CharacterEllipsis" />
-                                                        <TextBlock Text="{Binding Genres}" FontSize="12" Opacity="0.6"
+                                                        <TextBlock Text="{Binding Genres}" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.6"
                                                                    TextTrimming="CharacterEllipsis"
                                                                    IsVisible="{Binding Genres, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                                                     </StackPanel>
@@ -113,25 +114,24 @@
                                 </ItemsRepeater.ItemTemplate>
                             </ItemsRepeater>
 
-                            <!-- Horizontal shelf layout inside group -->
-                            <ScrollViewer HorizontalScrollBarVisibility="Auto"
-                                          VerticalScrollBarVisibility="Disabled"
-                                          IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
-                                <ItemsRepeater ItemsSource="{Binding Items}" Margin="0,10,0,16" ClipToBounds="False"
-                                               controls:DirectionalNavigation.IsEnabled="True">
-                                    <ItemsRepeater.Layout>
-                                        <StackLayout Orientation="Horizontal" Spacing="8" />
-                                    </ItemsRepeater.Layout>
-                                    <ItemsRepeater.ItemTemplate>
-                                        <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                            <components:CoverButton
-                                                Width="120" Height="180"
-                                                Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
-                                                CommandParameter="{Binding}" />
-                                        </DataTemplate>
-                                    </ItemsRepeater.ItemTemplate>
-                                </ItemsRepeater>
-                            </ScrollViewer>
+                            <!-- Horizontal layout inside group: a carousel per group, titled with the group -->
+                            <CarouselControl Title="{Binding Name}"
+                                             ItemsSource="{Binding Items}"
+                                             ItemWidth="160"
+                                             VisibleItems="6"
+                                             Gap="16"
+                                             ItemOverflow="14"
+                                             Margin="0,8,0,0"
+                                             IsVisible="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).IsHorizontalView}">
+                                <CarouselControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                                        <components:CoverButton
+                                            Width="160" Height="240"
+                                            Command="{Binding $parent[ItemsControl].((vm:GamesCollectionViewModel)DataContext).ViewGameDetailsCommand}"
+                                            CommandParameter="{Binding}" />
+                                    </DataTemplate>
+                                </CarouselControl.ItemTemplate>
+                            </CarouselControl>
 
                         </StackPanel>
                     </DataTemplate>
@@ -158,7 +158,7 @@
                                 Background="Transparent"
                                 BorderThickness="0"
                                 Padding="6,3"
-                                FontSize="11"
+                                FontSize="{DynamicResource FontSizeKicker}"
                                 HorizontalContentAlignment="Center"
                                 Width="28" />
                     </DataTemplate>

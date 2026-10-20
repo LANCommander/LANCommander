@@ -1,9 +1,9 @@
 ﻿using LANCommander.Server.Data;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -15,11 +15,12 @@ namespace LANCommander.Server.Services
         PowerShellScriptFactory powerShellScriptFactory,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
+        SdkMapper sdkMapper,
+        ManifestMapper manifestMapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ServerManager serverManager,
-        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
         {
@@ -76,7 +77,7 @@ namespace LANCommander.Server.Services
                 })
                 .GetAsync(serverId);
 
-            return mapper.Map<SDK.Models.Manifest.Server>(server);
+            return manifestMapper.ToManifest(server);
         }
 
         public async Task RunGameStartedScriptsAsync(Guid serverId, Guid userId)
@@ -93,9 +94,9 @@ namespace LANCommander.Server.Services
                 {
                     var scriptContext = powerShellScriptFactory.Create(ScriptType.GameStarted);
 
-                    scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
-                    scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));
-                    scriptContext.AddVariable("User", mapper.Map<SDK.Models.User>(user));
+                    scriptContext.AddVariable("Server", sdkMapper.ToSdk(server));
+                    scriptContext.AddVariable("Game", sdkMapper.ToSdk(server.Game));
+                    scriptContext.AddVariable("User", sdkMapper.ToSdk(user));
 
                     scriptContext.UseWorkingDirectory(server.WorkingDirectory);
                     scriptContext.UseInline(script.Contents);
@@ -126,9 +127,9 @@ namespace LANCommander.Server.Services
                 {
                     var scriptContext = powerShellScriptFactory.Create(ScriptType.GameStopped);
 
-                    scriptContext.AddVariable("Server", mapper.Map<SDK.Models.Server>(server));
-                    scriptContext.AddVariable("Game", mapper.Map<SDK.Models.Game>(server.Game));
-                    scriptContext.AddVariable("User", mapper.Map<SDK.Models.User>(user));
+                    scriptContext.AddVariable("Server", sdkMapper.ToSdk(server));
+                    scriptContext.AddVariable("Game", sdkMapper.ToSdk(server.Game));
+                    scriptContext.AddVariable("User", sdkMapper.ToSdk(user));
 
                     scriptContext.UseWorkingDirectory(server.WorkingDirectory);
                     scriptContext.UseInline(script.Contents);

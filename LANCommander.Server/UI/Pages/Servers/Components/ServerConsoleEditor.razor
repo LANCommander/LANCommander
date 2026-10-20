@@ -1,103 +1,73 @@
-﻿@using System.Collections.ObjectModel
 @using LANCommander.SDK.Enums
 @inject ServerConsoleService ServerConsoleService
-@inject IMessageService MessageService
-@inject ILogger<ServerConsoleEditor> Logger
+@inject NotificationService Notifications
 
-<Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    @if (_consoles == null || _consoles.Count == 0)
+@* A server's extra consoles: log files to follow, or RCON connections *@
+<Flex Vertical Gap="Gap.Large">
+    @if (!_consoles.Any())
     {
-        <Empty />
+        <Empty Description="No consoles have been added" />
     }
 
     @foreach (var console in _consoles)
     {
-        @if (console.Type == ServerConsoleType.RCON)
-        {
-            <Card Size="CardSize.Small" Title="@console.Name">
-                <Extra>
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
-                </Extra>
-                <Body>
-                    <Form Layout="@FormLayout.Vertical" Model="@console">
-                        <GridRow Gutter="16">
-                            <GridCol Span="8">
-                                <FormItem Label="Type">
-                                    <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
-                                        <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                                        <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                                    </Select>
-                                </FormItem>
-                                <FormItem Label="Name">
-                                    <Input @bind-Value="context.Name" BindOnInput />
-                                </FormItem>
-                            </GridCol>
+        <Card Small Title="@(String.IsNullOrWhiteSpace(console.Name) ? "New Console" : console.Name)" @key="console">
+            <Extra>
+                <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveAsync(console)" />
+            </Extra>
+            <ChildContent>
+                <Form Model="console">
+                    <Row Gap="Gap.Medium">
+                        <Column Span="8">
+                            <FormItem Label="Type">
+                                <EnumSelect TEnum="ServerConsoleType" @bind-Value="console.Type" />
+                            </FormItem>
+                            <FormItem Label="Name">
+                                <TextInput @bind-Value="console.Name" Immediate />
+                            </FormItem>
+                        </Column>
 
-                            <GridCol Span="16">
+                        <Column Span="16">
+                            @if (console.Type == ServerConsoleType.RCON)
+                            {
                                 <FormItem Label="Server">
-                                    <InputGroup Compact>
-                                        <Input @bind-Value="context.Host" Placeholder="Host" />
-                                        <Input @bind-Value="context.Port" Placeholder="Port" Style="width: 25%" />
+                                    <InputGroup Block>
+                                        <TextInput @bind-Value="console.Host" Placeholder="Host" Style="flex: 3" />
+                                        <NumberInput TValue="int?" @bind-Value="console.Port" Placeholder="Port" Min="0" Max="65535" NoButtons Style="flex: 1" />
                                     </InputGroup>
                                 </FormItem>
                                 <FormItem Label="Password">
-                                    <InputPassword @bind-Value="context.Password" Placeholder="Password" />
+                                    <PasswordInput @bind-Value="console.Password" Placeholder="Password" />
                                 </FormItem>
-                            </GridCol>
-                        </GridRow>
-                    </Form>
-                </Body>
-            </Card>
-        }
-        else if (console.Type == ServerConsoleType.LogFile)
-        {
-            <Card Size="CardSize.Small" Title="@console.Name">
-                <Extra>
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger OnClick="() => Remove(console)" />
-                </Extra>
-                <Body>
-                    <Form Layout="@FormLayout.Vertical" Model="@console">
-                        <GridRow Gutter="16">
-                            <GridCol Span="8">
-                                <FormItem Label="Type">
-                                    <Select @bind-Value="context.Type" TItem="ServerConsoleType" TItemValue="ServerConsoleType" DataSource="Enum.GetValues<ServerConsoleType>()">
-                                        <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                                        <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                                    </Select>
-                                </FormItem>
-                                <FormItem Label="Name">
-                                    <Input Type="InputType.Text" @bind-Value="context.Name" />
-                                </FormItem>
-                            </GridCol>
-                            <GridCol Span="16">
+                            }
+                            else
+                            {
                                 <FormItem Label="Path">
-                                    <Input Type="InputType.Text" @bind-Value="context.Path" />
+                                    <TextInput @bind-Value="console.Path" />
                                 </FormItem>
-                            </GridCol>
-                        </GridRow>
-                    </Form>
-                </Body>
-            </Card>
-        }
+                            }
+                        </Column>
+                    </Row>
+                </Form>
+            </ChildContent>
+        </Card>
     }
-    
-    <Flex Justify="FlexJustify.End">
-        <Button OnClick="Add" Type="@ButtonType.Primary">Add Console</Button>
+
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Console</Button>
     </Flex>
 </Flex>
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
 
-    ObservableCollection<ServerConsole> _consoles = new();
+    List<ServerConsole> _consoles = new();
 
-    protected override async Task OnInitializedAsync() => await LoadConsoles();
+    protected override Task OnInitializedAsync() => LoadAsync();
 
-    async Task LoadConsoles()
-    {
-        _consoles = new ObservableCollection<ServerConsole>(await ServerConsoleService.GetAsync(c => c.ServerId == ServerId));
-    }
-    
+    async Task LoadAsync() =>
+        _consoles = (await ServerConsoleService.GetAsync(c => c.ServerId == ServerId)).ToList();
+
     public async Task Save()
     {
         try
@@ -110,27 +80,31 @@
                     await ServerConsoleService.UpdateAsync(console);
             }
 
-            await LoadConsoles();
+            await LoadAsync();
 
-            MessageService.Success("Consoles updated!");
+            Notifications.Success("Consoles updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not update consoles!");
-            Logger.LogError(ex, "Could not update consoles!");
+            Notifications.Error(ex, "Could not update consoles!");
         }
     }
 
-    private void Add()
-    {
-        _consoles.Add(new ServerConsole
-        {
-            ServerId = ServerId,
-        });
-    }
+    void Add() => _consoles.Add(new ServerConsole { ServerId = ServerId });
 
-    private void Remove(ServerConsole console)
+    async Task RemoveAsync(ServerConsole console)
     {
-        _consoles.Remove(console);
+        try
+        {
+            // Saved consoles are deleted straight away, like removed HTTP paths
+            if (console.Id != Guid.Empty)
+                await ServerConsoleService.DeleteAsync(console);
+
+            _consoles.Remove(console);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The console could not be removed");
+        }
     }
 }

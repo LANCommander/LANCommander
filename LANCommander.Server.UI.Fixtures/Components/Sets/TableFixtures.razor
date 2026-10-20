@@ -1,0 +1,81 @@
+@implements IComponentFixtureSet
+
+@code {
+    public sealed record GameRow(Guid Id, string Title, string[] Genres, int Keys, int KeysAllocated, DateTime Updated, GameRow[]? Dlc = null);
+
+    static readonly GameRow[] Games =
+    [
+        new(Guid.Parse("00000000-0000-0000-0000-000000000001"), "Arena Blitz", ["Action", "First-Person Shooter"], 8, 3, new(2025, 5, 30),
+            [new(Guid.Parse("00000000-0000-0000-0000-000000000011"), "Arena Blitz: Map Pack", ["Action"], 0, 0, new(2025, 4, 2))]),
+        new(Guid.Parse("00000000-0000-0000-0000-000000000002"), "Dungeon Delvers", ["Role-Playing"], 2, 0, new(2025, 3, 14)),
+        new(Guid.Parse("00000000-0000-0000-0000-000000000003"), "Neon Drift", ["Racing"], 0, 0, new(2025, 1, 9)),
+        new(Guid.Parse("00000000-0000-0000-0000-000000000004"), "Starfall Tactics", ["Real-Time Strategy"], 4, 4, new(2024, 12, 24)),
+    ];
+
+    static readonly IList<GameRow> Selected = [Games[1]];
+
+    RenderFragment GameColumns => @<text>
+        <BoundColumn Property="(GameRow g) => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
+        <TemplateColumn TItem="GameRow" Title="Genres">
+            @foreach (var genre in context.Genres)
+            {
+                <Tag>@genre</Tag>
+            }
+        </TemplateColumn>
+        <BoundColumn Property="(GameRow g) => g.Keys" Title="Total Keys" Sortable AlignEnd />
+        <BoundColumn Property="(GameRow g) => g.KeysAllocated" Title="Keys Allocated" Sortable AlignEnd />
+        <BoundColumn Property="(GameRow g) => g.Updated" Title="Updated On" FormatString="MM/dd/yyyy" Sortable />
+        <ActionsColumn TItem="GameRow">
+            <Button Small Text Icon="IconType.PencilSimple" title="Edit" />
+            <Button Small Text Danger Icon="IconType.X" title="Delete" />
+        </ActionsColumn>
+    </text>;
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("Table.Default", "A table with a toolbar, selection, child rows, tags and row actions",
+            @<Table TItem="GameRow"
+                    Items="Games"
+                    Children="g => g.Dlc ?? []"
+                    Selectable
+                    Values="Selected"
+                    Searchable
+                    SearchText="g => g.Title"
+                    SettingsKey="fixture-table-default"
+                    Columns="GameColumns">
+                <RightToolbar>
+                    <Button>Import</Button>
+                    <Button Primary Icon="IconType.Plus">Add Game</Button>
+                </RightToolbar>
+            </Table>)
+        {
+            Width = 960,
+            WaitFor = ".rz-data-row",
+            Covers = [typeof(Table<>), typeof(BoundColumn<,>), typeof(TemplateColumn<>), typeof(ActionsColumn<>)],
+        },
+        new("Table.Small", "A compact table without paging",
+            @<Table TItem="GameRow" Items="Games" Small NoPaging SettingsKey="fixture-table-small" Columns="GameColumns" />)
+        {
+            Width = 960,
+            WaitFor = ".rz-data-row",
+            Covers = [typeof(Table<>)],
+        },
+        new("Table.Empty", "A table with no rows",
+            @<Table TItem="GameRow" Items="Array.Empty<GameRow>()" EmptyText="No games yet" SettingsKey="fixture-table-empty" Columns="GameColumns" />)
+        {
+            Width = 960,
+            WaitFor = ".lc-empty",
+            Covers = [typeof(Table<>)],
+        },
+        new("Table.Error", "A table whose rows failed to load",
+            @<Table TItem="GameRow"
+                    Provider="@(_ => Task.FromException<TableResult<GameRow>>(new TimeoutException("The database did not respond in time.")))"
+                    SettingsKey="fixture-table-error"
+                    Columns="GameColumns" />)
+        {
+            Width = 960,
+            WaitFor = ".lc-alert",
+            Covers = [typeof(Table<>)],
+        },
+    ];
+}

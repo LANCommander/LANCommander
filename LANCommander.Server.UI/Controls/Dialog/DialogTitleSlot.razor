@@ -1,0 +1,21 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+
+@* The title bar's content: the title, then any chips or status the caller and the dialog add, then a muted subtitle *@
+<span class="lc-dialog-title">
+    <span class="lc-dialog-title-text">@State.Title</span>
+    @State.Settings.TitleContent
+    @State.DialogContent?.Invoke()
+    @if (!String.IsNullOrEmpty(State.Settings.Subtitle))
+    {
+        <span class="@(State.Settings.MonoSubtitle ? "lc-dialog-subtitle lc-dialog-subtitle-mono" : "lc-dialog-subtitle")">@State.Settings.Subtitle</span>
+    }
+</span>
+
+@code {
+    [Parameter, EditorRequired] public DialogTitleState State { get; set; } = default!;
+
+    protected override void OnParametersSet()
+    {
+        State.Refresh = () => InvokeAsync(StateHasChanged);
+    }
+}

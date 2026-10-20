@@ -6,6 +6,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.ViewModels.Packaging;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
@@ -25,7 +26,6 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ContentViewTitle))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     [NotifyPropertyChangedFor(nameof(IsTitlebarTinted))]
     private ViewModelBase? _contentView;
 
@@ -34,7 +34,6 @@ public partial class ShellViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanGoOnline))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     private bool _isOfflineMode;
 
     public string ContentViewTitle => ContentView switch
@@ -47,11 +46,11 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel gd   => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
         SettingsViewModel _      => "Settings",
         DownloadQueueViewModel _ => "Downloads",
+        VerifyFilesViewModel _   => "Verify Files",
+        PackagingWizardViewModel _ => "Package a Game",
         _ => string.Empty
     };
 
-    public bool IsRefreshVisible =>
-        (ContentView is GamesCollectionViewModel || ContentView is DepotViewModel) && !IsOfflineMode && !IsSyncing;
     public bool IsTitlebarTinted => true;
 
     partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
@@ -65,6 +64,12 @@ public partial class ShellViewModel : ViewModelBase
             oldBrowse.PropertyChanged -= OnDepotBrowsePropertyChanged;
         if (newValue is DepotBrowseViewModel newBrowse)
             newBrowse.PropertyChanged += OnDepotBrowsePropertyChanged;
+
+        // Navigating away from the wizard ends any capture in progress. A forgotten session
+        // would otherwise keep workers injecting into the user's machine indefinitely.
+        // This only fires when the view actually changed, so the new view is never the wizard.
+        if (oldValue is PackagingWizardViewModel wizard)
+            _ = wizard.ShutdownAsync();
     }
 
     private void OnGameDetailPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -83,7 +88,6 @@ public partial class ShellViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsSyncing))]
     [NotifyPropertyChangedFor(nameof(IsImportIndeterminate))]
     [NotifyPropertyChangedFor(nameof(ImportProgress))]
-    [NotifyPropertyChangedFor(nameof(IsRefreshVisible))]
     private bool _isImportRunning;
 
     [ObservableProperty]
@@ -126,6 +130,18 @@ public partial class ShellViewModel : ViewModelBase
     public SettingsViewModel        SettingsViewModel        { get; private set; } = null!;
     public ProfileViewModel         Profile                  { get; private set; } = null!;
     public ChatWindowViewModel      Chat                     { get; private set; } = null!;
+    public PackagingWizardViewModel PackagingWizardViewModel { get; private set; } = null!;
+
+    /// <summary>
+    /// Whether the packaging entry point is offered.
+    /// </summary>
+    /// <remarks>
+    /// Gated on the same Administrator role the server's upload and import endpoints enforce, so
+    /// the UI cannot offer something the server will refuse. Also requires a platform where
+    /// packaging can actually run, and a live connection to publish to.
+    /// </remarks>
+    [ObservableProperty]
+    private bool _canPackageGames;
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnreadChat))]
@@ -137,7 +153,7 @@ public partial class ShellViewModel : ViewModelBase
     private bool _isNavigating;
 
     // Tracks the most recent depot browse filter so the view can be refreshed after library changes
-    private (string? Genre, string? Tag, string? Collection, string? Search) _lastDepotBrowseFilter;
+    private (string? Genre, string? Tag, string? Collection, string? Search, DepotBrowsePreset Preset) _lastDepotBrowseFilter;
 
     public event EventHandler? LogoutRequested;
 
@@ -179,6 +195,14 @@ public partial class ShellViewModel : ViewModelBase
         GameDetailViewModel      = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
+        PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
+
+        var authenticationService = _serviceProvider.GetRequiredService<AuthenticationService>();
+
+        CanPackageGames =
+            PackagingWizardViewModel.Session.IsSupported &&
+            !IsOfflineMode &&
+            authenticationService.CanManageGames();
         // Profile is already created in the constructor; reuse it here
 
         Chat = new ChatWindowViewModel(_serviceProvider);
@@ -204,6 +228,7 @@ public partial class ShellViewModel : ViewModelBase
         DepotViewModel.BrowseByTagRequested        += OnDepotBrowseByTag;
         DepotViewModel.BrowseByCollectionRequested += OnDepotBrowseByCollection;
         DepotViewModel.BrowseAllRequested          += OnDepotBrowseAll;
+        DepotViewModel.BrowsePresetRequested       += OnDepotBrowsePreset;
 
         DepotBrowseViewModel.GameSelected += OnDepotGameSelected;
 
@@ -311,6 +336,16 @@ public partial class ShellViewModel : ViewModelBase
                 importService.OnImportComplete.EventRaised += OnImportCompleted;
 
                 await importService.ImportLibraryAsync();
+
+                // Queue updates for installed games that take them now the library knows the latest versions
+                try
+                {
+                    await scope.ServiceProvider.GetRequiredService<AutoUpdateService>().CheckAllAsync();
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Automatic update check failed");
+                }
             });
         }
         catch (Exception ex)
@@ -589,12 +624,18 @@ public partial class ShellViewModel : ViewModelBase
         NavigateToDepotBrowse();
     }
 
-    /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
-    private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null)
+    private void OnDepotBrowsePreset(object? sender, DepotBrowsePreset preset)
     {
-        _lastDepotBrowseFilter = (genre, tag, collection, search);
+        NavigateToDepotBrowse(preset: preset);
+    }
+
+    /// <summary>Initialize and navigate to the depot-only browse grid with an optional pre-filter.</summary>
+    private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null,
+        DepotBrowsePreset preset = DepotBrowsePreset.None)
+    {
+        _lastDepotBrowseFilter = (genre, tag, collection, search, preset);
         
-        DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search);
+        DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search, preset);
         IsDepotActive = true;
         
         _navigationService.NavigateTo(DepotBrowseViewModel);
@@ -613,7 +654,8 @@ public partial class ShellViewModel : ViewModelBase
                 _lastDepotBrowseFilter.Genre,
                 _lastDepotBrowseFilter.Tag,
                 _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search);
+                _lastDepotBrowseFilter.Search,
+                _lastDepotBrowseFilter.Preset);
     }
 
     private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
@@ -631,7 +673,8 @@ public partial class ShellViewModel : ViewModelBase
                 _lastDepotBrowseFilter.Genre,
                 _lastDepotBrowseFilter.Tag,
                 _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search);
+                _lastDepotBrowseFilter.Search,
+                _lastDepotBrowseFilter.Preset);
 
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();
@@ -653,8 +696,21 @@ public partial class ShellViewModel : ViewModelBase
     private void ShowSettings()
     {
         SettingsViewModel.Load();
-        
+
         _navigationService.NavigateTo(SettingsViewModel);
+    }
+
+    [RelayCommand]
+    private async Task ShowPackagingAsync()
+    {
+        if (!CanPackageGames)
+            return;
+
+        // Start from a clean package each time; a half-finished capture from a previous visit
+        // would silently contaminate the next one.
+        await PackagingWizardViewModel.ResetAsync();
+
+        _navigationService.NavigateTo(PackagingWizardViewModel);
     }
 
     [RelayCommand]

@@ -1,4 +1,5 @@
 ﻿@using LANCommander.Server.Data
+@using LANCommander.Server.UI.Controls
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Services.Abstractions
 @inject NavigationManager NavigationManager
@@ -11,11 +12,11 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <base href="/" />
     
-    <link href="/_content/AntDesign/css/ant-design-blazor.dark.css?v=@v" rel="stylesheet" />
+    <Theme />
     <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css?v=@v"  />
     <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css?v=@v" />
     <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css?v=@v" />
-    <link rel="stylesheet" href="_content/LANCommander.UI/ui.css?v=@v" />
+    <link rel="stylesheet" href="_content/LANCommander.Server.UI/ui.css?v=@v" />
     <link rel="stylesheet" href="css/app.css?v=@v" />
     <link rel="stylesheet" href="css/custom.css?v=@v" />
 </head>
@@ -23,18 +24,16 @@
 
 
     <div class="page-wrapper">
-        <AntContainer @rendermode="InteractiveServer" />
+        <ComponentHost @rendermode="InteractiveServer" />
         <LocalTimeInitializer @rendermode="InteractiveServer" />
 
         <Routes @rendermode="new InteractiveServerRenderMode(prerender: false)" />
     </div>
 
-    <script antblazor-js></script>
-    <script src="lib/antv/g2plot/dist/g2plot.js?v=@v"></script>
-    <script src="_content/AntDesign.Charts/ant-design-charts-blazor.js?v=@v"></script>
     <script src="_framework/blazor.web.js?v=@v"></script>
+    <ThemeScripts />
 
-    <script type="module" src="@LANCommander.UI.UIAssets.BundleUrl"></script>
+    <script type="module" src="@LANCommander.Server.UI.UIAssets.BundleUrl"></script>
     <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js?v=@v"></script>
     <script src="_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js?v=@v"></script>
 

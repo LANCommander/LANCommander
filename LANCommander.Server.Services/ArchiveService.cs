@@ -3,7 +3,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using System.IO.Compression;
 using System.Linq.Expressions;
-using AutoMapper;
+using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 using LANCommander.Server.Services.Extensions;
 using YamlDotNet.Serialization;
@@ -21,10 +21,9 @@ namespace LANCommander.Server.Services
         ILogger<ArchiveService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, mapper, httpContextAccessor, dbContextFactory), IArchiveClient
+        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, httpContextAccessor, dbContextFactory), IArchiveClient
     {
         public async Task<Archive> GetLatestArchiveAsync(Expression<Func<Archive, bool>> predicate)
         {
@@ -34,6 +33,23 @@ namespace LANCommander.Server.Services
             }).FirstOrDefaultAsync(predicate);
         }
         
+        /// <summary>
+        /// The library's size on disk as the Games list reports it: each game's latest archive (by
+        /// creation date), compressed, summed. Older versions of a game aren't counted.
+        /// </summary>
+        public async Task<long> GetLibrarySizeAsync()
+        {
+            await using var context = await dbContextFactory.CreateDbContextAsync();
+
+            var archives = context.Set<Archive>().AsNoTracking();
+
+            // Queried from the archives' side as NOT EXISTS (a newer one for the same game), which
+            // every provider translates, including the in-memory one the service tests use
+            return await archives
+                .Where(a => a.GameId != null && !archives.Any(newer => newer.GameId == a.GameId && newer.CreatedOn > a.CreatedOn))
+                .SumAsync(a => a.CompressedSize);
+        }
+
         public string GetArchiveFileLocation(Archive archive, StorageLocation storageLocation)
         {
             return AppPaths.ResolveStorageLocationPath(storageLocation.Path, archive.ObjectKey);
@@ -73,6 +89,52 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(a => a.Tool);
                 await context.UpdateRelationshipAsync(a => a.StorageLocation);
             });
+        }
+
+        /// <summary>
+        /// Records a finished chunked upload as an archive. The row /api/Upload/Init created for the object
+        /// key is filled in (or a new one added), and an archive matched by <paramref name="replaces"/> is
+        /// deleted along with its file. Returns the version the replaced archive was linked to, if any.
+        /// </summary>
+        public async Task<(Archive Archive, Guid? ReplacedGameVersionId)> CompleteUploadAsync(
+            Guid objectKey,
+            Guid? storageLocationId,
+            string version,
+            Action<Archive> assignOwner,
+            Expression<Func<Archive, bool>> replaces)
+        {
+            var key = objectKey.ToString();
+
+            var archive = await Include(a => a.StorageLocation).FirstOrDefaultAsync(a => a.ObjectKey == key);
+
+            if (archive == null)
+            {
+                var storageLocation = await storageLocationService.GetOrDefaultAsync(storageLocationId, StorageLocationType.Archive);
+
+                archive = new Archive
+                {
+                    ObjectKey = key,
+                    StorageLocationId = storageLocation.Id,
+                    StorageLocation = storageLocation,
+                };
+            }
+
+            var replaced = (await Include(a => a.StorageLocation).GetAsync(replaces))
+                .FirstOrDefault(a => a.ObjectKey != key);
+
+            assignOwner(archive);
+            archive.Version = version ?? string.Empty;
+            archive.CompressedSize = await GetCompressedSizeAsync(archive);
+            archive.UncompressedSize = await GetUncompressedSizeAsync(archive);
+
+            archive = archive.Id == Guid.Empty
+                ? await AddAsync(archive)
+                : await UpdateAsync(archive);
+
+            if (replaced != null)
+                await DeleteAsync(replaced);
+
+            return (archive, replaced?.GameVersionId);
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)

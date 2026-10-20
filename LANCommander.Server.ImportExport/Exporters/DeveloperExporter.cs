@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class DeveloperExporter(
+    ManifestMapper manifestMapper,
     CompanyService companyService) : BaseExporter<Company, Data.Models.Company>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Company record)
@@ -23,6 +24,6 @@ public class DeveloperExporter(
 
     public override async Task<Company> ExportAsync(Guid id)
     {
-        return await companyService.GetAsync<Company>(id);
+        return await companyService.GetAsync(id, manifestMapper.ProjectToManifestCompany);
     }
 } 

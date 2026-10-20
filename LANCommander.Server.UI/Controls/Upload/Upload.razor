@@ -1,0 +1,206 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.UI.Providers
+@inherits ControlBase
+@implements IAsyncDisposable
+@inject ScriptProvider ScriptProvider
+
+@*
+    A click-or-drop area that posts each file to Action as multipart form data (the file under
+    Name, plus Data as extra fields) and lists the uploads with their progress.
+*@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <label id="@_dropZoneId" for="@_inputId" class="@(Disabled ? "lc-upload-drop lc-upload-drop-disabled" : "lc-upload-drop")">
+        <input id="@_inputId" type="file" class="lc-visually-hidden" multiple="@Multiple" accept="@Accept" disabled="@Disabled" />
+        @if (ChildContent != null)
+        {
+            @ChildContent
+        }
+        else
+        {
+            <Icon Type="IconType.UploadSimple" Class="lc-upload-icon" />
+            <span class="lc-upload-text">@Text</span>
+            @if (!String.IsNullOrWhiteSpace(Hint))
+            {
+                <span class="lc-upload-hint">@Hint</span>
+            }
+        }
+    </label>
+
+    @if (_files.Count > 0)
+    {
+        <ul class="lc-upload-list">
+            @foreach (var file in _files)
+            {
+                <li class="@FileClass(file)">
+                    <Icon Type="@FileIcon(file)" />
+                    <span class="lc-upload-file-name" title="@file.Error">@file.Name</span>
+                    @if (file.Status == UploadFileStatus.Uploading)
+                    {
+                        <Progress Small NoValue Value="file.Percent" />
+                        <Button Text Small Icon="IconType.X" title="Cancel" OnClick="() => CancelAsync(file)" />
+                    }
+                    else
+                    {
+                        <ByteSize Value="file.Size" />
+                    }
+                </li>
+            }
+        </ul>
+    }
+</div>
+
+@code {
+    /// <summary>The URL each file is posted to.</summary>
+    [Parameter, EditorRequired] public string Action { get; set; } = "";
+
+    /// <summary>The form field the file is sent under.</summary>
+    [Parameter] public string Name { get; set; } = "file";
+
+    /// <summary>Extra form fields sent with every file.</summary>
+    [Parameter] public IDictionary<string, string>? Data { get; set; }
+
+    [Parameter] public bool Multiple { get; set; }
+
+    /// <summary>File types the picker offers, e.g. ".zip" or "image/*".</summary>
+    [Parameter] public string? Accept { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string Text { get; set; } = "Click or drag files here to upload";
+
+    [Parameter] public string? Hint { get; set; }
+
+    /// <summary>Replaces the default icon and text in the drop area.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Called after each file uploads successfully.</summary>
+    [Parameter] public EventCallback<UploadedFile> OnUploaded { get; set; }
+
+    /// <summary>Called when a file fails to upload.</summary>
+    [Parameter] public EventCallback<UploadedFile> OnError { get; set; }
+
+    /// <summary>Called once no uploads are in progress any more.</summary>
+    [Parameter] public EventCallback OnCompleted { get; set; }
+
+    readonly string _inputId = $"lc-upload-{Guid.NewGuid():N}";
+    readonly string _dropZoneId = $"lc-upload-drop-{Guid.NewGuid():N}";
+    readonly List<UploadedFile> _files = [];
+    DotNetObjectReference<Upload>? _reference;
+    IJSObjectReference? _module;
+    string? _class;
+    string? _configured;
+
+    /// <summary>The uploads started so far, most recent last.</summary>
+    public IReadOnlyList<UploadedFile> Files => _files;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-upload")
+            .Add(Class)
+            .Build();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            _reference = DotNetObjectReference.Create(this);
+            _module = await ScriptProvider.ImportModuleAsync(nameof(Upload), _reference, _inputId, _dropZoneId);
+        }
+
+        // Only reconfigure when the request actually changed
+        var configuration = $"{Action}|{Name}|{String.Join("&", Data?.Select(d => $"{d.Key}={d.Value}") ?? [])}";
+
+        if (_module != null && configuration != _configured)
+        {
+            _configured = configuration;
+
+            await _module.InvokeVoidAsync("Configure", Action, Name, Data);
+        }
+    }
+
+    [JSInvokable]
+    public Task OnStarted(string id, string name, long size)
+    {
+        _files.Add(new UploadedFile(id, name, size));
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public Task OnProgress(string id, long loaded, long total)
+    {
+        if (Find(id) is { } file)
+            file.Percent = total > 0 ? Math.Round(loaded * 100d / total, 1) : 0;
+
+        return InvokeAsync(StateHasChanged);
+    }
+
+    [JSInvokable]
+    public async Task OnFinished(string id, bool success, string? error)
+    {
+        if (Find(id) is not { } file)
+            return;
+
+        file.Status = success ? UploadFileStatus.Done : UploadFileStatus.Failed;
+        file.Error = error;
+
+        if (success)
+            file.Percent = 100;
+
+        await InvokeAsync(StateHasChanged);
+
+        await (success ? OnUploaded : OnError).InvokeAsync(file);
+
+        if (_files.All(f => f.Status != UploadFileStatus.Uploading))
+            await OnCompleted.InvokeAsync();
+    }
+
+    /// <summary>Forgets finished uploads, e.g. when the upload dialog reopens.</summary>
+    public void Clear()
+    {
+        _files.RemoveAll(f => f.Status != UploadFileStatus.Uploading);
+
+        StateHasChanged();
+    }
+
+    async Task CancelAsync(UploadedFile file)
+    {
+        if (_module != null)
+            await _module.InvokeVoidAsync("Cancel", file.Id);
+    }
+
+    UploadedFile? Find(string id) => _files.FirstOrDefault(f => f.Id == id);
+
+    static string FileClass(UploadedFile file) => file.Status switch
+    {
+        UploadFileStatus.Failed => "lc-upload-file lc-upload-file-failed",
+        UploadFileStatus.Done => "lc-upload-file lc-upload-file-done",
+        _ => "lc-upload-file",
+    };
+
+    static IconType FileIcon(UploadedFile file) => file.Status switch
+    {
+        UploadFileStatus.Failed => IconType.WarningCircle,
+        UploadFileStatus.Done => IconType.CheckCircle,
+        _ => IconType.File,
+    };
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_module != null)
+            {
+                await _module.InvokeVoidAsync("Dispose");
+                await _module.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+
+        _reference?.Dispose();
+    }
+}

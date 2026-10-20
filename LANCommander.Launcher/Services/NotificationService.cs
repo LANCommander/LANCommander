@@ -132,16 +132,61 @@ public class NotificationService(
         }
     }
 
+    /// <summary>
+    /// A packaging capture has run into an installer that wants administrator rights.
+    /// </summary>
+    public void NotifyElevationRequired(string installerName, Action onRestartElevated)
+    {
+        if (!notificationService.IsSupported)
+        {
+            logger.LogWarning("The notification service is not supported on this platform.");
+
+            return;
+        }
+
+        var settings = GetNotificationSettings();
+
+        if (!settings.NotifyOnElevationRequired)
+            return;
+
+        try
+        {
+            var builder = NotificationBuilder.Create(Localize("ElevationRequired"))
+                .WithBody(Localize("ElevationRequiredBody", installerName))
+                .AddButton(
+                    Localize("RestartAsAdministrator"),
+                    _ => Dispatcher.UIThread.InvokeAsync(() =>
+                    {
+                        ActivateMainWindow();
+
+                        onRestartElevated();
+                    }));
+
+            builder = ApplySoundTheme(builder, settings.SoundTheme);
+
+            notificationService.ShowAsync(builder.Build());
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Failed to send elevation-required notification for {Installer}", installerName);
+        }
+    }
+
     // ── Navigation helpers ───────────────────────────────────────────────────
+
+    private static void ActivateMainWindow()
+    {
+        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
+            desktop.MainWindow?.Activate();
+    }
 
     private async Task NavigateToGameAsync(Guid gameId)
     {
         var shell = serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
         
         await shell.NavigateToGameByIdAsync(gameId);
-        
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow?.Activate();
+
+        ActivateMainWindow();
     }
 
     private async Task NavigateAndPlayAsync(Guid gameId)
@@ -149,10 +194,9 @@ public class NotificationService(
         var shell = serviceProvider.GetRequiredService<MainWindowViewModel>().ShellViewModel;
         
         await shell.NavigateToGameByIdAsync(gameId);
-        
-        if (Application.Current?.ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
-            desktop.MainWindow?.Activate();
-        
+
+        ActivateMainWindow();
+
         await shell.GameDetailViewModel.ActionBar.PlayCommand.ExecuteAsync(null);
     }
 }

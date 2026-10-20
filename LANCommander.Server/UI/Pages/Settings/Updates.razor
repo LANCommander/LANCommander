@@ -1,146 +1,162 @@
-﻿@page "/Settings/Updates"
+@page "/Settings/Updates"
 @using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
-@using Markdig
 @using Microsoft.Extensions.Options
 @using Octokit
 @using Semver
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject UpdateService UpdateService
 @inject IGitHubService GitHubService
 @inject IVersionProvider VersionProvider
-@inject ILogger<Updates> Logger
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Updates">
-    <PageHeaderExtra>
-        <Flex Justify="FlexJustify.End" Align="FlexAlign.Center" Gap="FlexGap.Small">
+    <Extra>
+        <Flex Justify="Justify.End" Align="Align.Center" Gap="Gap.Small">
             Release Channel:
-            <EnumSelect TEnum="ReleaseChannel" OnSelectedItemChanged="ReleaseChannelChanged" @bind-Value="Settings.Value.Server.Update.ReleaseChannel" Disabled="Loading" />
-            <Button Type="@ButtonType.Primary" OnClick="Update" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
+            <EnumSelect TEnum="ReleaseChannel" @bind-Value="Settings.Value.Server.Update.ReleaseChannel" @bind-Value:after="ReleaseChannelChanged" Disabled="Loading" />
+            <Button Primary OnClick="UpdateAsync" Disabled="@(!UpdateAvailable || Updating)" Loading="Updating">Update</Button>
         </Flex>
-    </PageHeaderExtra>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Small">
-        @if (!Loading && !UpdateAvailable)
+    <Flex Vertical Gap="Gap.Small">
+        @if (_error != null)
         {
-            <Alert Type="@AlertType.Success" Message="You are on the latest version!" ShowIcon="true" />
+            <Alert Danger Title="Release information could not be loaded">
+                <div>@_error</div>
+                <Button Small Icon="IconType.ArrowClockwise" OnClick="CheckForUpdateAsync" Style="margin-top: 8px">Retry</Button>
+            </Alert>
+        }
+        else if (!Loading && !UpdateAvailable)
+        {
+            <Alert Success>You are on the latest version!</Alert>
         }
         else if (!Loading && UpdateAvailable)
         {
-            <Alert Type="@AlertType.Info" Message="A newer version of LANCommander is available" ShowIcon="true" />
+            <Alert Info>A newer version of LANCommander is available</Alert>
         }
         else
         {
-            <Alert Type="@AlertType.Warning" Message="Loading release information..." ShowIcon="true" />
+            <Alert Warning>Loading release information...</Alert>
         }
-        
-        @if (Releases != null && Releases.Count() > 0)
+
+        @if (Releases.Any())
         {
             foreach (var release in Releases)
             {
-                <Card Title="@release.Name">
+                <Card>
                     <TitleTemplate>
-                        @release.Name <span style="font-size: 70%; margin-right: 6px;">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
+                        @release.Name <span class="release-date">@release.PublishedAt.GetValueOrDefault().ToString("MMMM d yyyy")</span>
 
                         @if (Releases.First().Equals(release))
                         {
-                            <Tag Color="@PresetColor.Gold.ToString()">Latest</Tag>
+                            <Tag Warning>Latest</Tag>
                         }
 
                         @if (release.TagName == $"v{CurrentVersion}")
                         {
-                            <Tag Color="@PresetColor.Blue.ToString()">Current</Tag>
+                            <Tag Primary>Current</Tag>
                         }
                     </TitleTemplate>
                     <Extra>
                         <a href="@release.HtmlUrl" target="_blank">View Release</a>
                     </Extra>
-                    <Body>
+                    <ChildContent>
                         <Markdown Content="@release.Body" />
-                    </Body>
+                    </ChildContent>
                 </Card>
             }
         }
-        else
+        else if (Loading)
         {
             for (var i = 0; i < 5; i++)
             {
-                <Card Loading="true" Style="width: 100%;"></Card>
+                <Card Loading Style="min-height: 120px" />
             }
         }
     </Flex>
 </PageContent>
 
 @code {
-    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
-
     bool Loading { get; set; } = true;
-    bool Updating { get; set; } = false;
-    bool UpdateAvailable { get; set; } = false;
-    SemVersion LatestVersion { get; set; }
-    SemVersion CurrentVersion { get; set; }
+    bool Updating { get; set; }
+    bool UpdateAvailable { get; set; }
+    SemVersion? CurrentVersion { get; set; }
     IEnumerable<Release> Releases { get; set; } = new List<Release>();
+    string? _error;
 
     protected override async Task OnInitializedAsync()
     {
-        await CheckForUpdate();
+        await CheckForUpdateAsync();
     }
 
-    async Task CheckForUpdate()
+    async Task CheckForUpdateAsync()
     {
         Loading = true;
+        _error = null;
 
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
-        
-        CurrentVersion = VersionProvider.GetCurrentVersion();
-        UpdateAvailable = await UpdateService.UpdateAvailableAsync();
-        LatestVersion = await GitHubService.GetLatestVersionAsync(Settings.Value.Server.Update.ReleaseChannel);
-        Releases = await GitHubService.GetReleasesAsync(5);
-
-        Loading = false;
-        
-        await InvokeAsync(StateHasChanged);
-        await Task.Yield();
+        try
+        {
+            CurrentVersion = VersionProvider.GetCurrentVersion();
+            UpdateAvailable = await UpdateService.UpdateAvailableAsync();
+            Releases = await GitHubService.GetReleasesAsync(5);
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+        finally
+        {
+            Loading = false;
+        }
     }
 
-    async Task ReleaseChannelChanged(ReleaseChannel releaseChannel)
+    void ReleaseChannelChanged()
     {
-        if (!Loading)
+        try
         {
+            var releaseChannel = Settings.Value.Server.Update.ReleaseChannel;
+
             SettingsProvider.Update(s =>
             {
                 s.Server.Update.ReleaseChannel = releaseChannel;
             });
 
-            MessageService.Success($"Changed release channel to {releaseChannel}!");
+            Notifications.Success($"Changed release channel to {releaseChannel}!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The release channel could not be changed");
         }
     }
 
-    async Task Update()
+    async Task UpdateAsync()
     {
-        try {
-            Updating = true;
+        Updating = true;
 
+        try
+        {
             if (Settings.Value.Server.Launcher.HostUpdates)
                 await UpdateService.DownloadLauncherReleaseAsync(Releases.First());
 
             await UpdateService.DownloadServerReleaseAsync(Releases.First());
         }
-        catch (NotImplementedException ex) {
-            MessageService.Error(ex.Message);
-            Logger.LogError(ex, "An unknown error occurred.");
+        catch (NotImplementedException ex)
+        {
+            Notifications.Error(ex, ex.Message);
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred while updating. Please check the logs");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "An unknown error occurred while updating. Please check the logs");
+        }
+        finally
+        {
+            Updating = false;
         }
     }
 }

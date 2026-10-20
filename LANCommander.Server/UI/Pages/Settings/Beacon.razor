@@ -1,49 +1,53 @@
-﻿@page "/Settings/Beacon"
+@page "/Settings/Beacon"
 @using LANCommander.SDK.Services
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
 @inject BeaconClient BeaconClient
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IMessageService MessageService
-@inject ILogger<Beacon> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Beacon" />
 
 <PageContent>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" OnSubmit="SaveAsync" Loading="_saving">
         <FormItem Label="Enable">
-            <Text Type="@TextElementType.Secondary">Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Text>
-            <Switch @bind-Checked="context.Server.Beacon.Enabled" />
+            <Typography Secondary>Enabling the beacon will allow clients on the same network to auto-discover the LANCommander address.</Typography>
+            <Switch @bind-Value="Settings.Value.Server.Beacon.Enabled" />
         </FormItem>
 
         <FormItem Label="Name">
-            <Text Type="@TextElementType.Secondary">Use this to customize the name that is broadcasted to clients.</Text>
-            <Input @bind-Value="context.Server.Beacon.Name" />
+            <Typography Secondary>Use this to customize the name that is broadcasted to clients.</Typography>
+            <TextInput @bind-Value="Settings.Value.Server.Beacon.Name" />
         </FormItem>
 
         <FormItem Label="Address">
-            <Text Type="@TextElementType.Secondary">Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@context.Server.Beacon.Port</Text>
-            <Input @bind-Value="context.Server.Beacon.Address" />
+            <Typography Secondary>Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@Settings.Value.Server.Beacon.Port</Typography>
+            <TextInput @bind-Value="Settings.Value.Server.Beacon.Address" />
         </FormItem>
 
         <FormItem>
-            <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
+            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>
 
 @code {
-    async Task Save()
+    bool _saving;
+
+    async Task SaveAsync()
     {
+        _saving = true;
+
         try
         {
             SettingsProvider.Update(s =>
             {
                 s.Server.Beacon = Settings.Value.Server.Beacon;
             });
-            MessageService.Success("Settings saved!");
+
+            Notifications.Success("Settings saved!");
 
             if (Settings.Value.Server.Beacon.Enabled)
                 await BeaconClient.StartBeaconAsync(Settings.Value.Server.Beacon.Port, Settings.Value.Server.Beacon.Address, Settings.Value.Server.Beacon.Name);
@@ -52,8 +56,11 @@
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The beacon could not be updated");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 }

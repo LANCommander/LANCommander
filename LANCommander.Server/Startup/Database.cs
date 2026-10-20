@@ -106,6 +106,12 @@ public static class Database
             }
             else
                 logger.LogDebug("No pending migrations are available. Skipping database migration.");
+
+            // Backfill GameVersions for games that predate first-class versioning. This is
+            // idempotent (skips games that already have versions), so it runs unconditionally
+            // and is robust across restarts even if a prior run was interrupted.
+            var contextFactory = scope.ServiceProvider.GetRequiredService<IDbContextFactory<DatabaseContext>>();
+            await GameVersionBackfill.RunAsync(contextFactory, logger);
         }
     }
 }

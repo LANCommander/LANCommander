@@ -1,11 +1,56 @@
-.file-picker-dialog .ant-modal-body {
+.file-picker {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+
+    .file-picker-input {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+// FilePickerDialog, opened as a picker: the file manager fills the dialog, and the footer says what
+// OK hands back
+.file-picker-dialog {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.file-picker-footer {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    white-space: nowrap;
+}
+
+.file-picker-verb {
+    flex-shrink: 0;
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.file-picker-value {
+    min-width: 0;
+    overflow: hidden;
     padding: 0;
+    background: none;
+    color: var(--lc-text-title-color);
+    font-family: var(--lc-font-mono);
+    font-size: 12px;
+    text-overflow: ellipsis;
 }
 
-.file-picker-dialog .file-manager {
-    height: calc(100vh - 55px - 53px);
+.file-picker-footer-spacer {
+    flex: 1;
 }
 
-.file-manager-selector-hidden .ant-radio-wrapper {
-    display: none;
+.file-picker-hint {
+    flex-shrink: 0;
+    color: var(--lc-text-disabled-color);
+    font-size: 12px;
 }

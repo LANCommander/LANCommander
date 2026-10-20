@@ -85,7 +85,7 @@
                                x:Name="TimeLabel"
                                Text="0:00 / 0:00"
                                VerticalAlignment="Center"
-                               FontSize="12"
+                               FontSize="{DynamicResource FontSizeCaption}"
                                Opacity="0.7"
                                Margin="8,0" />
 

@@ -1,0 +1,76 @@
+using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.ComponentModel;
+using LANCommander.Packaging.Models;
+
+namespace LANCommander.Launcher.ViewModels.Packaging;
+
+/// <summary>
+/// One step of the packaging wizard.
+/// </summary>
+/// <remarks>
+/// Steps share a single <see cref="PackageDefinition"/> rather than passing values between
+/// themselves, so going back and forward does not lose edits.
+/// </remarks>
+public abstract partial class PackagingStepViewModel : ViewModelBase
+{
+    protected PackagingStepViewModel(PackagingWizardViewModel wizard)
+    {
+        Wizard = wizard;
+    }
+
+    protected PackagingWizardViewModel Wizard { get; }
+
+    /// <summary>
+    /// The package every step shares. Virtual so a step can be exercised on a package of its
+    /// own, without standing up the wizard and the service graph behind it.
+    /// </summary>
+    protected virtual PackageDefinition Package => Wizard.Package;
+
+    /// <summary>Shown in the step indicator.</summary>
+    public abstract string Title { get; }
+
+    [ObservableProperty]
+    private bool _canGoNext = true;
+
+    /// <summary>1-based position among the applicable steps. Assigned by the wizard.</summary>
+    [ObservableProperty]
+    private int _displayNumber;
+
+    [ObservableProperty]
+    private bool _isCurrent;
+
+    /// <summary>Already passed through; drawn with a check instead of a number.</summary>
+    [ObservableProperty]
+    private bool _isComplete;
+
+    /// <summary>Suppresses the leading connector line on the first step.</summary>
+    [ObservableProperty]
+    private bool _isFirst;
+
+    /// <summary>Whether Back is meaningful here. Monitoring cannot be re-entered.</summary>
+    public virtual bool CanGoBack => true;
+
+    /// <summary>
+    /// Whether this step has anything to offer for the current package. Steps that return false
+    /// are skipped in both directions rather than shown empty.
+    /// </summary>
+    public virtual bool IsApplicable => true;
+
+    /// <summary>Label for the forward button, so the last step can say "Finish".</summary>
+    public virtual string NextLabel => "Next";
+
+    /// <summary>
+    /// Clears everything the step holds about the package that was just abandoned.
+    /// </summary>
+    public virtual void Reset()
+    {
+    }
+
+    /// <summary>Called when the step becomes visible.</summary>
+    public virtual Task OnEnterAsync() => Task.CompletedTask;
+
+    /// <summary>
+    /// Called before leaving forward. Persists the step's edits into the shared package.
+    /// </summary>
+    public virtual Task OnLeaveAsync() => Task.CompletedTask;
+}

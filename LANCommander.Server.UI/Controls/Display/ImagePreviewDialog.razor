@@ -1,0 +1,16 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+@inherits Dialog<ImagePreview, bool>
+
+@* The full-size image behind an Image with PreviewSrc *@
+<div class="lc-image-preview">
+    <img src="@Options.Src" alt="@Options.Alt" />
+</div>
+
+@code {
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = true;
+
+        return Task.FromResult(true);
+    }
+}

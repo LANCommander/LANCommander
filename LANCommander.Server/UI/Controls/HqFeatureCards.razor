@@ -1,0 +1,35 @@
+@* What a LANCommander HQ account offers, Basic beside Premium *@
+<Flex Gap="Gap.Medium" Justify="Justify.Center" Wrap>
+    <Card Title="Basic" Class="hq-feature-card hq-feature-card-basic">
+        <Flex Vertical Gap="Gap.Small">
+            @foreach (var feature in BasicFeatures)
+            {
+                <Flex Gap="Gap.Small" Align="Align.Center">
+                    <Icon Type="IconType.Check" />
+                    <Typography>@feature</Typography>
+                </Flex>
+            }
+        </Flex>
+    </Card>
+
+    <Card Title="Premium" Class="hq-feature-card hq-feature-card-premium">
+        <Extra>$5/mo</Extra>
+        <ChildContent>
+            <Flex Vertical Gap="Gap.Small">
+                @foreach (var feature in PremiumFeatures)
+                {
+                    <Flex Gap="Gap.Small" Align="Align.Center">
+                        <Icon Type="IconType.Check" />
+                        <Typography>@feature</Typography>
+                    </Flex>
+                }
+            </Flex>
+        </ChildContent>
+    </Card>
+</Flex>
+
+@code {
+    static readonly string[] BasicFeatures = ["Access more metadata providers", "Faster metadata lookups", "One-time authentication", "No additional server setup"];
+
+    static readonly string[] PremiumFeatures = ["Everything in Basic", "Premium metadata providers", "Curated & enhanced metadata", "Supports LANCommander development"];
+}

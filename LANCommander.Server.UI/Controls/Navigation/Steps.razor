@@ -1,0 +1,37 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Progress through a multi-step flow; the steps before Current are done *@
+<ol @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <CascadingValue Value="this" IsFixed>
+        @ChildContent
+    </CascadingValue>
+</ol>
+
+@code {
+    /// <summary>The Step components, in order.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Zero-based index of the step in progress.</summary>
+    [Parameter] public int Current { get; set; }
+
+    [Parameter] public bool Small { get; set; }
+
+    readonly List<Step> _steps = [];
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-steps").If(Small, "lc-steps-small").Add(Class).Build();
+    }
+
+    internal int Register(Step step)
+    {
+        if (!_steps.Contains(step))
+            _steps.Add(step);
+
+        return _steps.IndexOf(step);
+    }
+
+    internal void Unregister(Step step) => _steps.Remove(step);
+}

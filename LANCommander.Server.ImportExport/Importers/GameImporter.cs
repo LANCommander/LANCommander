@@ -1,4 +1,5 @@
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
@@ -9,6 +10,7 @@ namespace LANCommander.Server.ImportExport.Importers;
 public class GameImporter(
     ILogger<GameImporter> logger,
     GameService gameService,
+    GameVersionService gameVersionService,
     RedistributableService redistributableService,
     UserService userService) : BaseImporter<Game>
 {
@@ -26,6 +28,20 @@ public class GameImporter(
     }
 
     public override async Task<bool> CanImportAsync(Game record) => true;
+
+    /// <summary>
+    /// Records exported before InstallTo/ShowInLibrary existed only carry a (possibly legacy)
+    /// Type; derive the install behavior from it the same way the database migration does.
+    /// </summary>
+    private static void ApplyInstallBehavior(Data.Models.Game game, Game record)
+    {
+        var hasBaseGame = record.BaseGameId != Guid.Empty || !String.IsNullOrWhiteSpace(record.BaseGame);
+        var resolved = GameTypeHelper.FromLegacyType(record.Type, hasBaseGame);
+
+        game.Type = resolved.Type;
+        game.InstallTo = record.InstallTo ?? resolved.InstallTo;
+        game.ShowInLibrary = record.ShowInLibrary ?? resolved.ShowInLibrary;
+    }
 
     public override async Task<bool> AddAsync(Game record)
     {
@@ -48,7 +64,9 @@ public class GameImporter(
             UpdatedOn = record.UpdatedOn,
             DirectoryName = record.DirectoryName,
         };
-        
+
+        ApplyInstallBehavior(game, record);
+
         if (!String.IsNullOrWhiteSpace(record.CreatedBy))
             game.CreatedBy = await userService.GetAsync(record.CreatedBy);
         
@@ -77,6 +95,7 @@ public class GameImporter(
 
         try
         {
+            record.Id = existing.Id;
             existing.Title = record.Title;
             existing.SortTitle = record.SortTitle;
             existing.Description = record.Description;
@@ -91,7 +110,9 @@ public class GameImporter(
             }).ToList();
             existing.CreatedOn = record.CreatedOn;
             existing.DirectoryName = record.DirectoryName;
-            
+
+            ApplyInstallBehavior(existing, record);
+
             if (!String.IsNullOrWhiteSpace(record.CreatedBy))
                 existing.CreatedBy = await userService.GetAsync(record.CreatedBy);
         
@@ -177,20 +198,31 @@ public class GameImporter(
                 manifest.Redistributables,
                 r => rd => rd.Id == r.Id || rd.Name == r.Name);
 
+            // Redistributables and their options belong to the latest version; the game's own list mirrors it
+            var versionId = await gameVersionService.GetOrCreateLatestIdAsync(game.Id);
+            var options = new Dictionary<Guid, string>();
+
             foreach (var redistributable in manifest.Redistributables)
             {
-                if (redistributable.Options != null && redistributable.Options.Any())
-                {
-                    var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == redistributable.Id || r.Name == redistributable.Name);
+                var existing = await redistributableService.FirstOrDefaultAsync(r => r.Id == redistributable.Id || r.Name == redistributable.Name);
 
-                    if (existing != null)
-                    {
-                        var optionsJson = System.Text.Json.JsonSerializer.Serialize(redistributable.Options);
-                        await gameService.SetRedistributableOptionsAsync(game.Id, existing.Id, optionsJson);
-                    }
-                }
+                if (existing == null)
+                    continue;
+
+                options[existing.Id] = redistributable.Options != null && redistributable.Options.Any()
+                    ? System.Text.Json.JsonSerializer.Serialize(redistributable.Options)
+                    : null;
             }
+
+            await gameVersionService.SetRedistributablesAsync(versionId, options.Keys);
+
+            foreach (var (redistributableId, optionsJson) in options.Where(o => o.Value != null))
+                await gameVersionService.SetRedistributableOptionsAsync(versionId, redistributableId, optionsJson);
         }
+
+        // The option schema was dropped on import before it belonged to versions
+        if (!string.IsNullOrWhiteSpace(manifest.OptionSchema))
+            await gameVersionService.SetOptionSchemaAsync(await gameVersionService.GetOrCreateLatestIdAsync(game.Id), manifest.OptionSchema);
 
         if (!string.IsNullOrWhiteSpace(manifest.BaseGame) || manifest.BaseGameId != Guid.Empty)
         {

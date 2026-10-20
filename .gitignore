@@ -369,13 +369,18 @@ LANCommander.Server/wwwroot/css/main.js
 
 .aspire
 LANCommander.Server/config/
-LANCommander.UI/wwwroot/
-LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+LANCommander.Server.UI/wwwroot/
+LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 LANCommander.Server/Data/
 
 LANCommander.Launcher.Avalonia/Data/
 
 Data/
+
+# Source folders that the broad Upload/ and Data/ rules above would otherwise hide
+!LANCommander.Server.UI/Controls/Upload/
+!LANCommander.Server.Tests/Data/
+!LANCommander.Server.UI.Fixtures/Data/
 
 # Visual test output — screenshots & diffs are CI artifacts, not committed.
 # Baselines/ is committed; everything else is transient.

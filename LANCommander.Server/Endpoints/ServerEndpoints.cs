@@ -1,5 +1,5 @@
-using AutoMapper;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -20,9 +20,9 @@ public static class ServerEndpoints
     
     public static async Task<IResult> GetAsync(
         [FromServices] ServerService serverService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
-        var servers = mapper.Map<IEnumerable<SDK.Models.Server>>(await serverService.GetAsync());
+        var servers = (await serverService.GetAsync()).Select(sdkMapper.ToSdk).ToList();
 
         return TypedResults.Ok(servers);
     }
@@ -30,14 +30,14 @@ public static class ServerEndpoints
     public static async Task<IResult> GetByIdAsync(
         Guid id,
         [FromServices] ServerService serverService,
-        [FromServices] IMapper mapper)
+        [FromServices] SdkMapper sdkMapper)
     {
         var server = await serverService.GetAsync(id);
-        
+
         if (server == null)
             return TypedResults.NotFound();
-        
-        return TypedResults.Ok(mapper.Map<SDK.Models.Server>(server));
+
+        return TypedResults.Ok(sdkMapper.ToSdk(server));
     }
 
     public static async Task<IResult> GetStatusAsync(

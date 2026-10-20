@@ -1,5 +1,6 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
 using SortDirection = LANCommander.Server.Data.Enums.SortDirection;
@@ -102,34 +103,34 @@ public class BaseDatabaseServiceTests(ApplicationFixture fixture) : DalTest(fixt
     }
 
     /// <summary>
-    /// GetAsync&lt;U&gt;(id) maps in memory while the predicate overloads project in the query, so both
-    /// halves are covered. The entity types here are the ones the API endpoints actually project.
+    /// Every projection overload takes an explicit Mapperly projector, so each one is exercised
+    /// against a type the API endpoints actually project.
     /// </summary>
     [Fact]
     public async Task ProjectionOverloadsStillMap()
     {
-        var tagService = GetService<TagService>();
+        var archiveService = GetService<ArchiveService>();
+        var sdkMapper = GetService<SdkMapper>();
 
-        var name = Unique("Tag");
-        var tag = await tagService.AddAsync(new Tag { Name = name });
+        var game = await AddGameAsync();
+        var archive = await AddArchiveAsync(game.Id);
 
-        var single = await tagService.GetAsync<SDK.Models.Tag>(tag.Id);
+        var single = await archiveService.GetAsync(archive.Id, sdkMapper.ProjectToSdkArchive);
         single.ShouldNotBeNull();
-        single.Id.ShouldBe(tag.Id);
-        single.Name.ShouldBe(name);
+        single.Id.ShouldBe(archive.Id);
 
-        var many = await tagService.GetAsync<SDK.Models.Tag>(t => t.Name == name);
+        var many = await archiveService.GetAsync(a => a.Id == archive.Id, sdkMapper.ProjectToSdkArchive);
         many.Count.ShouldBe(1);
-        many.First().Id.ShouldBe(tag.Id);
+        many.First().Id.ShouldBe(archive.Id);
 
-        var first = await tagService.FirstAsync<SDK.Models.Tag>(t => t.Name == name);
-        first.Id.ShouldBe(tag.Id);
+        var first = await archiveService.FirstAsync(a => a.Id == archive.Id, sdkMapper.ProjectToSdkArchive);
+        first.Id.ShouldBe(archive.Id);
 
-        var firstOrDefault = await tagService.FirstOrDefaultAsync<SDK.Models.Tag>(t => t.Name == name);
-        firstOrDefault.Id.ShouldBe(tag.Id);
+        var firstOrDefault = await archiveService.FirstOrDefaultAsync(a => a.Id == archive.Id, sdkMapper.ProjectToSdkArchive);
+        firstOrDefault.Id.ShouldBe(archive.Id);
 
-        var all = await tagService.GetAsync<SDK.Models.Tag>();
-        all.ShouldContain(t => t.Id == tag.Id);
+        var all = await archiveService.GetAsync(sdkMapper.ProjectToSdkArchive);
+        all.ShouldContain(a => a.Id == archive.Id);
     }
 
     [Fact]
@@ -137,18 +138,19 @@ public class BaseDatabaseServiceTests(ApplicationFixture fixture) : DalTest(fixt
     {
         var archiveService = GetService<ArchiveService>();
         var scriptService = GetService<ScriptService>();
+        var sdkMapper = GetService<SdkMapper>();
 
         var game = await AddGameAsync();
         var archive = await AddArchiveAsync(game.Id);
         var script = await AddScriptAsync(game.Id);
 
-        var archives = await archiveService.GetAsync<SDK.Models.Archive>(a => a.Id == archive.Id);
+        var archives = await archiveService.GetAsync(a => a.Id == archive.Id, sdkMapper.ProjectToSdkArchive);
         archives.Count.ShouldBe(1);
         archives.First().Id.ShouldBe(archive.Id);
 
-        (await archiveService.GetAsync<SDK.Models.Archive>(archive.Id)).Id.ShouldBe(archive.Id);
+        (await archiveService.GetAsync(archive.Id, sdkMapper.ProjectToSdkArchive)).Id.ShouldBe(archive.Id);
 
-        var scripts = await scriptService.GetAsync<SDK.Models.Script>(s => s.Id == script.Id);
+        var scripts = await scriptService.GetAsync(s => s.Id == script.Id, sdkMapper.ProjectToSdkScript);
         scripts.Count.ShouldBe(1);
         scripts.First().Id.ShouldBe(script.Id);
     }
@@ -169,7 +171,7 @@ public class BaseDatabaseServiceTests(ApplicationFixture fixture) : DalTest(fixt
         included.Archives.ShouldNotBeEmpty();
 
         var omitted = await gameService.GetAsync(game.Id);
-        omitted.Archives.ShouldBeEmpty();
+        omitted.Archives.ShouldBeNull();
     }
 
     /// <summary>
@@ -293,7 +295,7 @@ public class BaseDatabaseServiceTests(ApplicationFixture fixture) : DalTest(fixt
         // Modifiers are cleared in a finally block after each call. A leak here would silently
         // change every later query on the same scoped service instance.
         var plain = await gameService.GetAsync(game.Id);
-        plain.Archives.ShouldBeEmpty();
+        plain.Archives.ShouldBeNull();
     }
 
     [Fact]
@@ -312,7 +314,7 @@ public class BaseDatabaseServiceTests(ApplicationFixture fixture) : DalTest(fixt
             async () => await gameService.FirstAsync(g => g.Title == Unique("Nothing")));
 
         var plain = await gameService.GetAsync(game.Id);
-        plain.Archives.ShouldBeEmpty();
+        plain.Archives.ShouldBeNull();
     }
 
     #endregion

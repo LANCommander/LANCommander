@@ -1,59 +1,97 @@
 @page "/Servers/{id:guid}/Autostart"
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
-@inject IMessageService MessageService
-@inject ILogger<General> Logger
+@inject NotificationService Notifications
 
-<ServerEditView Id="Id" Title="Autostart">
+<ServerEditView @ref="_view" Id="Id" Title="Autostart" OnLoaded="OnServerLoaded" ContentClass="edit-form-content">
     <TitleExtraTemplate>
-        <Flex Align="FlexAlign.Center" Justify="FlexJustify.End" Wrap="FlexWrap.NoWrap" Gap="FlexGap.Small">
-            @if (context != null && context.Id != Guid.Empty)
-            {
-                <ServerControl ServerId="context.Id"/>
-                
-                <Button Type="ButtonType.Primary" OnClick="() => Save(context)">Save</Button>
-            }
-        </Flex>
+        @if (IsDirty(context))
+        {
+            <span class="edit-unsaved" role="status">
+                <span class="edit-unsaved-dot" aria-hidden="true"></span>
+                Unsaved changes
+            </span>
+        }
+
+        <Button Disabled="@(!IsDirty(context) || _saving)" OnClick="DiscardAsync">Discard</Button>
+        <Button Primary Loading="_saving" OnClick="() => SaveAsync(context)">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
-        <Form Model="@context" Layout="@FormLayout.Vertical" Context="formContext">
-            <FormItem Label="Enable">
-                <Switch @bind-Checked="context.Autostart" />
-            </FormItem>
+        <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)" Class="edit-form">
+            <Switch @bind-Value="context.Autostart" Class="edit-form-switch">
+                <span class="edit-form-switch-title">Autostart</span>
+                <span class="edit-form-switch-help">Start this server automatically instead of by hand.</span>
+            </Switch>
 
-            <FormItem Label="Method">
-                <Select @bind-Value="context.AutostartMethod" TItem="ServerAutostartMethod" TItemValue="ServerAutostartMethod" DataSource="Enum.GetValues<ServerAutostartMethod>()">
-                    <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                    <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-                </Select>
-            </FormItem>
+            @if (context.Autostart)
+            {
+                <Divider Class="edit-form-divider" />
 
-            <FormItem Label="Delay">
-                <AntDesign.Input @bind-Value="context.AutostartDelay" Placeholder="0">
-                    <Suffix>Seconds</Suffix>
-                </AntDesign.Input>
-            </FormItem>
+                <div class="edit-form-pair">
+                    <FormItem Label="Method">
+                        <EnumSelect TEnum="ServerAutostartMethod" @bind-Value="context.AutostartMethod" />
+                    </FormItem>
+                    <FormItem Label="Delay">
+                        <InputGroup>
+                            <NumberInput @bind-Value="context.AutostartDelay" Min="0" Placeholder="0" />
+                            <InputAddon>seconds</InputAddon>
+                        </InputGroup>
+                    </FormItem>
+                </div>
+            }
         </Form>
     </ChildContent>
 </ServerEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
-    
-    async Task Save(Server server)
+
+    bool _saving;
+
+    ServerEditView? _view;
+    Form? _form;
+
+    /// <summary>The fields as loaded or last saved; the header's "Unsaved changes" compares against it.</summary>
+    ServerEditSnapshot? _saved;
+
+    void OnServerLoaded(Server server)
     {
+        _saved = ServerEditSnapshot.Of(server);
+        _form?.MarkAsUnmodified();
+    }
+
+    bool IsDirty(Server server) => _saved != null && ServerEditSnapshot.Of(server) != _saved;
+
+    async Task DiscardAsync()
+    {
+        _saved = null;
+
+        if (_view != null)
+            await _view.ReloadAsync();
+    }
+
+    async Task SaveAsync(Server server)
+    {
+        _saving = true;
+
         try
         {
-            server = await ServerService.UpdateAsync(server);
+            await ServerService.UpdateAsync(server);
 
-            await MessageService.SuccessAsync("Autostart configuration updated!");
+            _saved = ServerEditSnapshot.Of(server);
+            _form?.MarkAsUnmodified();
+
+            Notifications.Success("Autostart configuration updated!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not save!");
-            Logger.LogError(ex, "Could not save!");
+            Notifications.Error(ex, "Could not save!");
+        }
+        finally
+        {
+            _saving = false;
         }
     }
 }

@@ -1,0 +1,21 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits FormInputBase<string>
+
+@* A text input that suggests matching Options as the user types; any text is allowed. *@
+<RadzenAutoComplete Name="@InputId"
+                    Data="Options"
+                    Value="@Value"
+                    ValueChanged="@((string value) => SetValueAsync(value))"
+                    FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
+                    FilterOperator="StringFilterOperator.Contains"
+                    MinLength="0"
+                    OpenOnFocus="true"
+                    Disabled="IsDisabled"
+                    Placeholder="@Placeholder"
+                    Style="@Style"
+                    Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-auto-complete"))' />
+
+@code {
+    /// <summary>The suggestions.</summary>
+    [Parameter] public IEnumerable<string> Options { get; set; } = [];
+}

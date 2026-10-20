@@ -1,5 +1,5 @@
-﻿@page "/Settings/Appearance"
-@inject ModalService ModalService
+@page "/Settings/Appearance"
+@inject DialogService Dialogs
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Appearance" />
@@ -7,27 +7,20 @@
 <PageContent>
     <h3>Custom Stylesheet</h3>
     <p>Modify the appearance of the web UI using a custom stylesheet.</p>
-    <Button Type="@ButtonType.Primary" OnClick="@(() => EditStylesheet("custom.css", "Custom Stylesheet"))">Edit</Button>
+    <Button Primary OnClick="@(() => EditStylesheetAsync("custom.css", "Custom Stylesheet"))">Edit</Button>
 
     <Divider />
 
     <h3>Pages Stylesheet</h3>
     <p>Define a custom stylesheet to be used in <a href="/Pages/Edit">Pages</a>.</p>
-    <Button Type="@ButtonType.Primary" OnClick="@(() => EditStylesheet("pages.css", "Pages Stylesheet"))">Edit</Button>
+    <Button Primary OnClick="@(() => EditStylesheetAsync("pages.css", "Pages Stylesheet"))">Edit</Button>
 </PageContent>
 
 @code {
-    async void EditStylesheet(string fileName, string title)
-    {
-        var modalOptions = new ModalOptions()
+    Task EditStylesheetAsync(string fileName, string title) =>
+        Dialogs.OpenAsync<StylesheetEditorDialog, string, bool>(title, fileName, new DialogSettings
         {
-            Title = title,
-            Maximizable = false,
-            DefaultMaximized = true,
-            Closable = true,
-            OkText = "Save"
-        };
-
-        var modalRef = await ModalService.CreateModalAsync<StylesheetEditorDialog, string>(modalOptions, fileName);
-    }
+            Size = DialogSize.Full,
+            OkText = "Save",
+        });
 }

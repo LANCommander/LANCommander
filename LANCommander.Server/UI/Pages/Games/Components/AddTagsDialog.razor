@@ -1,0 +1,78 @@
+@using LANCommander.Server.Models
+@inherits Dialog<AddToCollectionOptions, IEnumerable<LANCommander.Server.Data.Models.Tag>>
+@inject TagService TagService
+@inject GameService GameService
+@inject NotificationService Notifications
+
+@* Tags the games in Options with one or more tags, which can also be created here *@
+<Flex Vertical Gap="Gap.Medium">
+    <Select TValue="Guid" Multiple Clearable Searchable Items="_tagItems" @bind-Values="_selected" Placeholder="Select tags" />
+
+    <InputGroup Block>
+        <TextInput @bind-Value="_newTagName" Immediate Placeholder="New tag name" OnEnter="AddTagAsync" Style="flex: 1" />
+        <Button Icon="IconType.Plus" Disabled="@(String.IsNullOrWhiteSpace(_newTagName))" OnClick="AddTagAsync">Add New Tag</Button>
+    </InputGroup>
+</Flex>
+
+@code {
+    IEnumerable<SelectItem<Guid>> _tagItems = [];
+    IEnumerable<Guid> _selected = [];
+    string? _newTagName;
+
+    protected override bool CanConfirm => _selected.Any();
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    async Task LoadAsync()
+    {
+        var tags = await TagService.SortBy(t => t.Name).GetAsync();
+
+        _tagItems = tags.ToSelectItems(t => t.Id, t => t.Name).ToList();
+    }
+
+    async Task AddTagAsync()
+    {
+        if (String.IsNullOrWhiteSpace(_newTagName))
+            return;
+
+        try
+        {
+            var tag = await TagService.AddAsync(new LANCommander.Server.Data.Models.Tag { Name = _newTagName });
+
+            await LoadAsync();
+
+            // Most likely the games should get the tag just made
+            _selected = [.. _selected, tag.Id];
+            _newTagName = null;
+
+            Notifications.Success("Tag added!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not add a new tag!");
+        }
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        var tags = await TagService
+            .Include(t => t.Games)
+            .GetAsync(t => _selected.Contains(t.Id));
+
+        foreach (var tag in tags)
+        {
+            tag.Games ??= new List<Game>();
+
+            foreach (var gameId in Options.GameIds.Where(id => !tag.Games.Any(g => g.Id == id)))
+                tag.Games.Add(await GameService.GetAsync(gameId));
+
+            await TagService.UpdateAsync(tag);
+        }
+
+        Notifications.Success(tags.Count > 1 ? "Tags added!" : "Tag added!");
+
+        Result = tags;
+
+        return true;
+    }
+}

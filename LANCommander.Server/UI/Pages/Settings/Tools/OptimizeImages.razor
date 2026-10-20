@@ -3,8 +3,7 @@
 @using LANCommander.Server.Jobs.Background
 @using LANCommander.Server.Services.Models
 @inject MediaService MediaService
-@inject IMessageService MessageService
-@inject ILogger<OptimizeImages> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Optimize Images" />
@@ -14,69 +13,66 @@
         Reclaim disk space while preserving art quality. Opaque PNG art (backgrounds, covers, screenshots) is converted to high-quality JPEG, oversized images are downscaled, and metadata is stripped. Images with transparency (icons, logos) are never converted. Optimization replaces the original files in place and runs in the background.
     </p>
 
-    <Form Layout="@FormLayout.Vertical" Model="@Options">
+    <Form Model="Options" OnSubmit="ScanAsync">
         <FormItem Label="Convert opaque PNG to JPEG">
-            <Switch @bind-Value="@Options.ConvertPngToJpeg" />
+            <Switch @bind-Value="Options.ConvertPngToJpeg" />
         </FormItem>
         <FormItem Label="Downscale oversized images">
-            <Switch @bind-Value="@Options.Downscale" />
+            <Switch @bind-Value="Options.Downscale" />
         </FormItem>
         <FormItem Label="Recompress existing JPEGs (lossy)">
-            <Switch @bind-Value="@Options.RecompressJpeg" />
+            <Switch @bind-Value="Options.RecompressJpeg" />
         </FormItem>
         <FormItem Label="Recompress existing WebP (lossy)">
-            <Switch @bind-Value="@Options.RecompressWebp" />
+            <Switch @bind-Value="Options.RecompressWebp" />
         </FormItem>
         <FormItem Label="Strip metadata (EXIF/ICC/XMP)">
-            <Switch @bind-Value="@Options.StripMetadata" />
+            <Switch @bind-Value="Options.StripMetadata" />
         </FormItem>
         <FormItem Label="JPEG quality">
-            <AntDesign.InputNumber @bind-Value="@Options.JpegQuality" Min="1" Max="100" />
+            <NumberInput @bind-Value="Options.JpegQuality" Min="1" Max="100" />
         </FormItem>
         <FormItem Label="WebP quality">
-            <AntDesign.InputNumber @bind-Value="@Options.WebpQuality" Min="1" Max="100" />
+            <NumberInput @bind-Value="Options.WebpQuality" Min="1" Max="100" />
         </FormItem>
         <FormItem Label="Max long edge (px)">
-            <AntDesign.InputNumber @bind-Value="@Options.MaxLongEdge" Min="256" />
+            <NumberInput @bind-Value="Options.MaxLongEdge" Min="256" />
         </FormItem>
     </Form>
 
-    <Space Align="SpaceAlign.Center" Style="margin-bottom: 16px">
-        <SpaceItem>
-            <Button Type="ButtonType.Primary" OnClick="Scan" Loading="@Loading">Scan</Button>
-        </SpaceItem>
-        <SpaceItem>
-            <Popconfirm OnConfirm="Optimize" Title="Optimize all listed images? Originals will be replaced in place." Disabled="@(Candidates == null || !Candidates.Any())">
-                <Button Disabled="@(Candidates == null || !Candidates.Any())">Optimize Listed</Button>
-            </Popconfirm>
-        </SpaceItem>
-    </Space>
-</PageContent>
+    <Flex Align="Align.Center" Gap="Gap.Small" Style="margin-bottom: 16px">
+        <Button Primary OnClick="ScanAsync" Loading="Loading">Scan</Button>
+        <Popconfirm OnConfirm="Optimize" Title="Optimize all listed images? Originals will be replaced in place." OkText="Optimize" Disabled="@(!Candidates.Any())">
+            <Button Disabled="@(!Candidates.Any())">Optimize Listed</Button>
+        </Popconfirm>
+    </Flex>
 
-<Table TItem="MediaOptimizationCandidate" DataSource="@Candidates" Loading="@Loading" PageSize="25" Responsive>
-    <PropertyColumn Property="c => c.GameTitle" Title="Game" />
-    <PropertyColumn Property="c => c.Type" Title="Type" />
-    <PropertyColumn Property="c => c.MimeType" Title="Format" />
-    <Column TData="string" Title="Dimensions">
-        @context.Width x @context.Height
-    </Column>
-    <PropertyColumn Property="c => c.Size" Title="Size" Sortable>
-        <ByteSize Value="context.Size" />
-    </PropertyColumn>
-    <PropertyColumn Property="c => c.PlannedAction" Title="Planned Action" />
-</Table>
+    <Spin Loading="Loading">
+        <Table TItem="MediaOptimizationCandidate" Items="Candidates" Key="c => c" EmptyText="Scan to list the images that can be optimized" SettingsKey="settings-optimize-images">
+            <Columns>
+                <BoundColumn Property="c => c.GameTitle" Title="Game" Sortable />
+                <BoundColumn Property="c => c.Type" Title="Type" Sortable />
+                <BoundColumn Property="c => c.MimeType" Title="Format" Sortable />
+                <TemplateColumn TItem="MediaOptimizationCandidate" Title="Dimensions">
+                    @context.Width x @context.Height
+                </TemplateColumn>
+                <BoundColumn Property="c => c.Size" Title="Size" Sortable>
+                    <ByteSize Value="context.Size" />
+                </BoundColumn>
+                <BoundColumn Property="c => c.PlannedAction" Title="Planned Action" />
+            </Columns>
+        </Table>
+    </Spin>
+</PageContent>
 
 @code {
     MediaOptimizationOptions Options = new();
-    ICollection<MediaOptimizationCandidate> Candidates;
-    bool Loading = false;
+    ICollection<MediaOptimizationCandidate> Candidates = new List<MediaOptimizationCandidate>();
+    bool Loading;
 
-    async Task Scan()
+    async Task ScanAsync()
     {
         Loading = true;
-
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
 
         try
         {
@@ -84,20 +80,25 @@
         }
         catch (Exception ex)
         {
-            Logger.LogError(ex, "Could not scan media for optimization candidates");
-            MessageService.Error("Could not scan media.");
+            Notifications.Error(ex, "Could not scan media.");
         }
-
-        Loading = false;
-
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
+        finally
+        {
+            Loading = false;
+        }
     }
 
     void Optimize()
     {
-        BackgroundJob.Enqueue<OptimizeImagesJob>(x => x.ExecuteAsync(Options));
+        try
+        {
+            BackgroundJob.Enqueue<OptimizeImagesJob>(x => x.ExecuteAsync(Options));
 
-        MessageService.Success("Optimization is running in the background.");
+            Notifications.Success("Optimization is running in the background.");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Optimization could not be started");
+        }
     }
 }

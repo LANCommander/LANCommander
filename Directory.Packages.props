@@ -17,17 +17,14 @@
     <PackageVersion Include="Svrooij.PowerShell.DI" Version="1.3.4" />
     <PackageVersion Include="StreamJsonRpc" Version="2.25.29" />
   </ItemGroup>
-  <ItemGroup Label="AutoMapper">
-    <PackageVersion Include="AutoMapper" Version="15.1.3" />
-  </ItemGroup>
-  <ItemGroup Label="AntDesign">
-    <PackageVersion Include="AntDesign" Version="1.6.2" />
-    <PackageVersion Include="AntDesign.Charts" Version="0.9.0" />
+  <ItemGroup Label="Mapperly">
+    <PackageVersion Include="Riok.Mapperly" Version="4.3.1" />
   </ItemGroup>
   <ItemGroup Label="Blazor">
     <PackageVersion Include="BlazorMonaco" Version="3.4.0" />
     <PackageVersion Include="BootstrapBlazor.PdfReader" Version="9.0.1" />
     <PackageVersion Include="PSC.Blazor.Components.MarkdownEditor" Version="8.0.8" />
+    <PackageVersion Include="Radzen.Blazor" Version="11.5.0" />
     <PackageVersion Include="Razor.Templating.Core" Version="2.1.0" />
     <PackageVersion Include="XtermBlazor" Version="2.1.2" />
   </ItemGroup>
@@ -52,7 +49,7 @@
   <ItemGroup Label="ASP.NET Core">
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="9.0.9" />
-    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.0" />
+    <PackageVersion Include="Microsoft.AspNetCore.Components.Web" Version="10.0.12" />
     <PackageVersion Include="Microsoft.AspNetCore.Diagnostics.EntityFrameworkCore" Version="9.0.9" />
     <PackageVersion Include="Microsoft.AspNetCore.Http.Abstractions" Version="2.3.0" />
     <PackageVersion Include="Microsoft.AspNetCore.Identity.EntityFrameworkCore" Version="9.0.1" />
@@ -97,7 +94,6 @@
     <PackageVersion Include="craftersmine.SteamGridDB.Net" Version="1.1.7" />
     <PackageVersion Include="YoutubeExplode" Version="6.6.2" />
     <PackageVersion Include="Docker.DotNet.Enhanced" Version="3.129.0" />
-    <PackageVersion Include="Facepunch.Steamworks" Version="2.3.3" />
     <PackageVersion Include="IGDB" Version="6.1.0" />
     <PackageVersion Include="IPXRelayDotNet" Version="1.1.3" />
     <PackageVersion Include="LANCommander.Interposer" Version="1.0.7" />
@@ -172,6 +168,7 @@
     <PackageVersion Include="Avalonia.Fonts.Inter" Version="11.2.3" />
     <PackageVersion Include="Avalonia.ReactiveUI" Version="11.2.3" />
     <PackageVersion Include="Avalonia.Controls.ItemsRepeater" Version="11.1.5" />
+    <PackageVersion Include="Avalonia.AvaloniaEdit" Version="11.1.0" />
     <PackageVersion Include="Avalonia.Svg.Skia" Version="11.2.0.2" />
     <PackageVersion Include="CommunityToolkit.Mvvm" Version="8.4.0" />
     <PackageVersion Include="PDFtoImage" Version="4.1.1" />

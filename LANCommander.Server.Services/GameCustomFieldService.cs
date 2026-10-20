@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
 using System.Linq.Expressions;
@@ -15,9 +14,8 @@ namespace LANCommander.Server.Services
         ILogger<GameCustomFieldService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameCustomField>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameCustomField>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<GameCustomField> AddAsync(GameCustomField entity)
         {

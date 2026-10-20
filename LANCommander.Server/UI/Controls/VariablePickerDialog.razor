@@ -1,0 +1,79 @@
+@using LANCommander.Server.Models
+@inherits Dialog<VariablePickerOptions, string>
+
+@* Edits an action field, with clickable variables that are appended to it *@
+<Flex Vertical Gap="Gap.Large">
+    <TextInput @bind-Value="_value" Immediate AutoFocus />
+
+    <Collapse>
+        <Panel Header="Variables" Open>
+            <Flex Gap="Gap.Small" Wrap>
+                @foreach (var variable in LanCommanderVariables)
+                {
+                    <Tooltip Title="@variable.Description">
+                        <Tag OnClick="() => Insert(variable.Value)">@variable.Value</Tag>
+                    </Tooltip>
+                }
+            </Flex>
+        </Panel>
+
+        <Panel Header="Environment Variables">
+            <Flex Gap="Gap.Small" Wrap>
+                @foreach (var variable in EnvironmentVariables)
+                {
+                    <Tag OnClick="() => Insert(variable)">@variable</Tag>
+                }
+            </Flex>
+        </Panel>
+
+        <Panel Header="Special Folders">
+            <Flex Gap="Gap.Small" Wrap>
+                @foreach (var variable in SpecialFolderVariables)
+                {
+                    <Tag OnClick="() => Insert(variable)">@variable</Tag>
+                }
+            </Flex>
+        </Panel>
+    </Collapse>
+</Flex>
+
+@code {
+    string? _value = "";
+
+    static readonly (string Value, string Description)[] LanCommanderVariables =
+    [
+        ("{InstallDir}", "The game's installation directory"),
+        ("{DisplayWidth}", "Primary display width in pixels"),
+        ("{DisplayHeight}", "Primary display height in pixels"),
+        ("{DisplayRefreshRate}", "Primary display refresh rate in Hz"),
+        ("{DisplayBitDepth}", "Primary display bit depth in bpp"),
+        ("{ServerAddress}", "LANCommander server address"),
+        ("{IPXRelayHost}", "IPX relay host address"),
+        ("{IPXRelayPort}", "IPX relay port"),
+    ];
+
+    static readonly string[] EnvironmentVariables =
+    [
+        "%TEMP%", "%TMP%", "%LOCALAPPDATA%", "%APPDATA%", "%USERPROFILE%", "%PUBLIC%", "%ProgramData%",
+        "%CommonProgramFiles(x86)%", "%CommonProgramFiles%", "%ProgramFiles(x86)%", "%ProgramFiles%",
+        "%SystemRoot%", "%windir%", "%USERNAME%", "%SystemDrive%",
+    ];
+
+    static readonly string[] SpecialFolderVariables =
+    [
+        "%MyDocuments%", "%Desktop%", "%MyMusic%", "%MyPictures%", "%MyVideos%", "%CommonApplicationData%",
+        "%CommonDesktopDirectory%", "%CommonDocuments%", "%CommonMusic%", "%CommonPictures%", "%CommonPrograms%",
+        "%CommonStartMenu%", "%CommonStartup%", "%CommonVideos%", "%Fonts%", "%StartMenu%",
+    ];
+
+    protected override void OnInitialized() => _value = Options?.Value ?? "";
+
+    void Insert(string variable) => _value += variable;
+
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = _value ?? "";
+
+        return Task.FromResult(true);
+    }
+}

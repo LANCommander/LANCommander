@@ -1,71 +1,62 @@
-﻿@inject MultiplayerModeService MultiplayerModeService
-@inject IMessageService MessageService
-@inject ILogger<MultiplayerModeEditor> Logger
+@inject MultiplayerModeService MultiplayerModeService
+@inject NotificationService Notifications
 
- <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
-    <Table TItem="MultiplayerMode" DataSource="@_multiplayerModes" HidePagination="true" Responsive>
-        <PropertyColumn Property="m => m.Type">
-            <Select @bind-Value="context.Type" TItem="MultiplayerType" TItemValue="MultiplayerType" DataSource="Enum.GetValues<MultiplayerType>()">
-                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-            </Select>
-        </PropertyColumn>
-        <PropertyColumn Property="m => m.MinPlayers" Title="Min Players">
-            <AntDesign.InputNumber @bind-Value="context.MinPlayers" DefaultValue="2" Min="2" />
-        </PropertyColumn>
-        <PropertyColumn Property="m => m.MaxPlayers" Title="Max Players">
-            <AntDesign.InputNumber @bind-Value="context.MaxPlayers" DefaultValue="2" Min="2" />
-        </PropertyColumn>
-        <PropertyColumn Property="m => m.NetworkProtocol" Title="Protocol">
-            <Select @bind-Value="@context.NetworkProtocol" TItem="NetworkProtocol" TItemValue="NetworkProtocol" DataSource="Enum.GetValues<NetworkProtocol>()">
-                <LabelTemplate Context="Value">@Value.GetDisplayName()</LabelTemplate>
-                <ItemTemplate Context="Value">@Value.GetDisplayName()</ItemTemplate>
-            </Select>
-        </PropertyColumn>
-        <PropertyColumn Property="m => m.Description">
-            <Input Type="InputType.Text" @bind-Value="context.Description" />
-        </PropertyColumn>
-        <ActionColumn>
-            <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-                <Button OnClick="() => RemoveMode(context)" Type="@ButtonType.Text" Danger Icon="@IconType.Outline.Close"/>
-            </Flex>
-        </ActionColumn>
+@* The ways the game whose Id is cascaded can be played together *@
+<Flex Vertical Gap="Gap.Large">
+    <Table TItem="MultiplayerMode" Items="_multiplayerModes" Key="m => m" NoPaging EmptyText="No multiplayer modes" SettingsKey="game-multiplayer-modes">
+        <Columns>
+            <TemplateColumn TItem="MultiplayerMode" Title="Type">
+                <EnumSelect TEnum="MultiplayerType" @bind-Value="context.Type" />
+            </TemplateColumn>
+            <TemplateColumn TItem="MultiplayerMode" Title="Min Players" Width="130px">
+                <NumberInput @bind-Value="context.MinPlayers" Min="2" />
+            </TemplateColumn>
+            <TemplateColumn TItem="MultiplayerMode" Title="Max Players" Width="130px">
+                <NumberInput @bind-Value="context.MaxPlayers" Min="2" />
+            </TemplateColumn>
+            <TemplateColumn TItem="MultiplayerMode" Title="Protocol">
+                <EnumSelect TEnum="NetworkProtocol" @bind-Value="context.NetworkProtocol" />
+            </TemplateColumn>
+            <TemplateColumn TItem="MultiplayerMode" Title="Description">
+                <TextInput @bind-Value="context.Description" />
+            </TemplateColumn>
+            <ActionsColumn TItem="MultiplayerMode" Width="64px">
+                <Button Text Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveAsync(context)" />
+            </ActionsColumn>
+        </Columns>
     </Table>
 
-    <Flex Justify="FlexJustify.End">
-        <Button OnClick="AddMode" Type="@ButtonType.Primary">Add Mode</Button>
+    <Flex Justify="Justify.End">
+        <Button Primary Icon="IconType.Plus" OnClick="Add">Add Mode</Button>
     </Flex>
 </Flex>
 
 @code {
     [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
 
-    ICollection<MultiplayerMode> _multiplayerModes = new List<MultiplayerMode>();
+    // Replaced rather than changed in place, so the table notices additions and removals
+    List<MultiplayerMode> _multiplayerModes = new();
 
-    protected override async Task OnInitializedAsync()
-    {
-        await LoadMultiplayerModes();
-    }
+    protected override Task OnInitializedAsync() => LoadAsync();
 
-    async Task LoadMultiplayerModes()
+    async Task LoadAsync() =>
+        _multiplayerModes = (await MultiplayerModeService.GetAsync(mm => mm.GameId == GameId)).ToList();
+
+    void Add() => _multiplayerModes = [.. _multiplayerModes, new MultiplayerMode { GameId = GameId, MinPlayers = 2, MaxPlayers = 2 }];
+
+    async Task RemoveAsync(MultiplayerMode mode)
     {
-        _multiplayerModes = await MultiplayerModeService.GetAsync(mm => mm.GameId == GameId);
-    }
-    
-    async Task AddMode()
-    {
-        _multiplayerModes.Add(new MultiplayerMode
+        try
         {
-            GameId = GameId,
-        });
-    }
+            if (mode.Id != Guid.Empty)
+                await MultiplayerModeService.DeleteAsync(mode);
 
-    async Task RemoveMode(MultiplayerMode mode)
-    {
-        if (mode.Id != Guid.Empty)
-            await MultiplayerModeService.DeleteAsync(mode);
-        
-        _multiplayerModes.Remove(mode);
+            _multiplayerModes = _multiplayerModes.Where(m => m != mode).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The multiplayer mode could not be removed");
+        }
     }
 
     public async Task Save()
@@ -80,14 +71,13 @@
                     await MultiplayerModeService.UpdateAsync(mode);
             }
 
-            MessageService.SuccessAsync("Multiplayer modes updated!");
+            Notifications.Success("Multiplayer modes updated!");
         }
         catch (Exception ex)
         {
-            MessageService.ErrorAsync("Could not save multiplayer modes!");
-            Logger.LogError(ex, "Could not update multiplayer modes!");
+            Notifications.Error(ex, "Could not save multiplayer modes!");
         }
-        
-        await LoadMultiplayerModes();
+
+        await LoadAsync();
     }
 }

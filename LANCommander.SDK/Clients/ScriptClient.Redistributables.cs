@@ -81,6 +81,10 @@ public partial class ScriptClient
 
                     if (!handled)
                     {
+                        // A script sitting at a breakpoint is not hung; don't time it out from under the debugger.
+                        if (script.IsDebuggerAttached)
+                            return await script.ExecuteAsync<bool>();
+
                         using (var timeoutCancellationTokenSource = new CancellationTokenSource())
                         {
                             var task = script.ExecuteAsync<bool>();
@@ -96,8 +100,11 @@ public partial class ScriptClient
                             }
                         }
                     }
-                    
-                    result = await script.ExecuteAsync<bool>();
+
+                    // An interceptor ran the script out of process, which can't report a result back.
+                    // Running it again here would execute it twice.
+                    logger?.LogWarning("Detect Install script was handled externally; its result is unavailable and it is treated as not installed");
+                    result = false;
 
                     op.Complete();
                 }

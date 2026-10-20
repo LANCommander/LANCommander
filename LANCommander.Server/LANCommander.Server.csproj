@@ -1,9 +1,11 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
   <PropertyGroup>
     <UserSecretsId>aspnet-LANCommander-C1F79CFA-9767-4AD7-BD5A-2549F8328A2D</UserSecretsId>
     <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
     <TypeScriptModuleKind>none</TypeScriptModuleKind>
 	<Product>Server</Product>
+    <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
+    <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -43,9 +45,13 @@
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
 
-	<Target Name="CompileGlobalSass" BeforeTargets="Compile">
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
 		<Message Text="Compiling global SCSS files" Importance="high" />
 		<Exec Command="npm run package" />
+		<!-- The wwwroot glob is evaluated before this runs, so on a clean checkout app.css would be left out of the static web assets -->
+		<ItemGroup>
+			<Content Include="wwwroot\css\**" Exclude="@(Content)" />
+		</ItemGroup>
 	</Target>
 
     <ItemGroup>
@@ -59,6 +65,7 @@
 
     <ItemGroup>
       <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+      <InternalsVisibleTo Include="LANCommander.Server.UI.Tests" />
     </ItemGroup>
 
     <PropertyGroup Condition="$([System.Runtime.InteropServices.RuntimeInformation]::IsOSPlatform($([System.Runtime.InteropServices.OSPlatform]::Windows)))">
@@ -72,7 +79,6 @@
     </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="AntDesign.Charts" />
     <PackageReference Include="CaseConverter" />
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="Hangfire.AspNetCore" />
@@ -115,11 +121,13 @@
     <ProjectReference Include="..\LANCommander.Server.Data.SQLite\LANCommander.Server.Data.SQLite.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.ImportExport\LANCommander.Server.ImportExport.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
-    <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
-    <ProjectReference Include="..\LANCommander.UI\LANCommander.UI.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.UI\LANCommander.Server.UI.csproj" />
+    <!-- Control gallery (/_fixtures) and seeded data for development; never shipped -->
+    <ProjectReference Include="..\LANCommander.Server.UI.Fixtures\LANCommander.Server.UI.Fixtures.csproj" Condition="'$(Configuration)' == 'Debug'" />
   </ItemGroup>
 
   <ItemGroup>

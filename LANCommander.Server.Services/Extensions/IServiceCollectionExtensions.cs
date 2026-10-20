@@ -34,6 +34,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<CategoryService>();
         services.AddScoped<CollectionService>();
         services.AddScoped<GameService>();
+        services.AddScoped<GameVersionService>();
         services.AddScoped<LibraryService>();
         services.AddScoped<ScriptService>();
         services.AddScoped<ModuleService>();
@@ -108,7 +109,6 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<HqAuthorizationStateStore>();
         services.AddHostedService<HqConnectionMonitor>();
         services.AddScoped<HqMediaGrabber>();
-        services.AddScoped<SteamMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();
         services.AddScoped<YouTubeMediaGrabber>();
         services.AddScoped<IMediaGrabberService, CompositeMediaGrabberService>();
@@ -144,7 +144,11 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<RemoteServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
 
+        services.AddSingleton<RconService>();
+        services.AddSingleton<IRconCommandSender>(provider => provider.GetRequiredService<RconService>());
+
         services.AddSingleton<ServerManager>();
+        services.AddScoped<DashboardService>();
 
         services.AddSingleton<PlaySessionKeepAliveTracker>();
         services.AddHostedService<PlaySessionSweepService>();
@@ -156,7 +160,10 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<IPXRelayService>();
         services.AddSingleton<IBeaconMessageInterceptor, BeaconMessageInterceptor>();
 
-        services.AddAutoMapper(cfg => { }, typeof(MappingProfile));
+        // Mapperly mappers (stateless, thread-safe compile-time source generators).
+        services.AddSingleton<Mappers.SdkMapper>();
+        services.AddSingleton<Mappers.ManifestMapper>();
+
         services.AddFusionCache();
 
         return services;

@@ -263,6 +263,112 @@ public class ElevatedScriptInterceptorTests
         Assert.False(handled);
     }
 
+    /// <summary>
+    /// A DetectInstall script returns whether something is installed, which an elevated child process
+    /// cannot hand back, so it always runs in-process.
+    /// </summary>
+    [Fact]
+    public async Task DetectInstallScript_IsNeverElevated()
+    {
+        var launcher = new RecordingElevatedProcessLauncher();
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, new FakeCurrentProcessInfo(), launcher);
+
+        var script = CreateScript(ScriptType.DetectInstall).AsAdmin();
+        script.AddVariable("GameManifest", new ManifestGame { Id = Guid.NewGuid() });
+        script.AddVariable("InstallDirectory", "InstallDir");
+
+        Assert.False(await interceptor.ExecuteAsync(script));
+        Assert.Equal(0, launcher.LaunchCount);
+    }
+
+    /// <summary>
+    /// A redistributable's admin script used to be forwarded as the game's script of the same type, so the
+    /// elevated child ran the wrong script. It now carries the redistributable's id.
+    /// </summary>
+    [Fact]
+    public async Task RedistributableScript_ForwardsTheRedistributableId()
+    {
+        var gameId = Guid.NewGuid();
+        var redistributableId = Guid.NewGuid();
+        var launcher = new RecordingElevatedProcessLauncher();
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, new FakeCurrentProcessInfo(), launcher);
+
+        using var install = new TemporaryInstall();
+        var path = install.WriteScript(redistributableId, ScriptType.Install, "#Requires -RunAsAdministrator\r\n\r\n$Return = 0");
+
+        var script = CreateScript(ScriptType.Install);
+        script.AddVariable("InstallDirectory", install.Directory);
+        script.AddVariable("GameManifest", new ManifestGame { Id = gameId });
+        script.AddVariable("RedistributableManifest", new SDK.Models.Manifest.Redistributable { Id = redistributableId });
+        script.UseFile(path);
+
+        Assert.True(await interceptor.ExecuteAsync(script));
+
+        var request = Assert.Single(launcher.Requests);
+        Assert.Contains("--RedistributableId", request.Arguments);
+        Assert.Contains(redistributableId.ToString(), request.Arguments);
+        Assert.Contains(gameId.ToString(), request.Arguments);
+    }
+
+    /// <summary>When the script debugger is watching, the elevated child is told where to find it.</summary>
+    [Fact]
+    public async Task WatchedScript_PassesTheDebugPipeToTheElevatedProcess()
+    {
+        var gameId = Guid.NewGuid();
+        var launcher = new RecordingElevatedProcessLauncher();
+        var broker = new FakeBroker(new SDK.PowerShell.Debugging.ScriptDebugRemoteEndpoint("LANCommander.ScriptDebug.test", "secret-token"));
+        var interceptor = new ElevatedScriptInterceptor(NullLogger<ElevatedScriptInterceptor>.Instance, new FakeCurrentProcessInfo(), launcher, broker);
+
+        using var install = new TemporaryInstall();
+        var path = install.WriteScript(gameId, ScriptType.Install, "#Requires -RunAsAdministrator\r\n\r\n$Return = 0");
+
+        var script = CreateScript(ScriptType.Install);
+        script.AddVariable("InstallDirectory", install.Directory);
+        script.AddVariable("GameManifest", new ManifestGame { Id = gameId });
+        script.UseFile(path);
+
+        Assert.True(await interceptor.ExecuteAsync(script));
+
+        var request = Assert.Single(launcher.Requests);
+        Assert.Contains("--DebugPipe", request.Arguments);
+        Assert.Contains("LANCommander.ScriptDebug.test", request.Arguments);
+        Assert.Contains("secret-token", request.Arguments);
+    }
+
+    private sealed class TemporaryInstall : IDisposable
+    {
+        public string Directory { get; } = System.IO.Path.Combine(System.IO.Path.GetTempPath(), $"lc-elevation-{Guid.NewGuid():N}");
+
+        public string WriteScript(Guid ownerId, ScriptType type, string contents)
+        {
+            var path = SDK.Helpers.ScriptHelper.GetScriptFilePath(Directory, ownerId, type);
+
+            System.IO.Directory.CreateDirectory(System.IO.Path.GetDirectoryName(path)!);
+            System.IO.File.WriteAllText(path, contents);
+
+            return path;
+        }
+
+        public void Dispose()
+        {
+            try { System.IO.Directory.Delete(Directory, recursive: true); }
+            catch (Exception) { }
+        }
+    }
+
+    private sealed class FakeBroker(SDK.PowerShell.Debugging.ScriptDebugRemoteEndpoint endpoint) : SDK.PowerShell.Debugging.IScriptDebugBroker
+    {
+        public bool IsAttached(SDK.PowerShell.Debugging.ScriptIdentity identity) => true;
+
+        public void PrepareScriptFile(SDK.PowerShell.Debugging.ScriptIdentity identity, string path) { }
+
+        public ValueTask<SDK.PowerShell.Debugging.ScriptDebugAttachment?> TryAttachAsync(
+            SDK.PowerShell.Debugging.ScriptIdentity identity, System.Threading.CancellationToken cancellationToken = default) =>
+            new((SDK.PowerShell.Debugging.ScriptDebugAttachment?)null);
+
+        public SDK.PowerShell.Debugging.ScriptDebugRemoteEndpoint? GetRemoteEndpoint(SDK.PowerShell.Debugging.ScriptIdentity identity) => endpoint;
+    }
+
     private sealed class FakeCurrentProcessInfo : ICurrentProcessInfo
     {
         public string ExecutablePath { get; init; } = @"C:\LANCommander\LANCommander.Launcher.exe";

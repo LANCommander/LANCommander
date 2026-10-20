@@ -1,0 +1,65 @@
+@using BlazorMonaco.Editor
+@inherits Dialog<string, bool>
+@inject NotificationService Notifications
+
+@* Edits one of the stylesheets in wwwroot/css; Options is the file name. Ctrl+S saves without closing. *@
+<StandaloneCodeEditor @ref="_editor" Id="@_id" ConstructionOptions="ConstructionOptions" OnDidInit="InitializeAsync" CssClass="stylesheet-editor" />
+
+@code {
+    readonly string _id = $"stylesheet-editor-{Guid.NewGuid():N}";
+    string _contents = "";
+    StandaloneCodeEditor? _editor;
+
+    string FilePath => Path.Combine("wwwroot", "css", Path.GetFileName(Options));
+
+    StandaloneEditorConstructionOptions ConstructionOptions(StandaloneCodeEditor editor) => new()
+    {
+        AutomaticLayout = true,
+        Language = "css",
+        Value = _contents,
+        Theme = "vs-dark",
+        Minimap = new EditorMinimapOptions { Enabled = false },
+        BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+        WordWrap = "on",
+    };
+
+    protected override void OnParametersSet()
+    {
+        if (File.Exists(FilePath))
+            _contents = File.ReadAllText(FilePath);
+    }
+
+    async Task InitializeAsync()
+    {
+        if (_editor != null)
+            await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async _ => await SaveFromShortcutAsync());
+    }
+
+    async Task SaveFromShortcutAsync()
+    {
+        try
+        {
+            await SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Stylesheet could not be saved!");
+        }
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        await SaveAsync();
+
+        Result = true;
+
+        return true;
+    }
+
+    async Task SaveAsync()
+    {
+        await File.WriteAllTextAsync(FilePath, await _editor!.GetValue());
+
+        Notifications.Success("Stylesheet saved!");
+    }
+}

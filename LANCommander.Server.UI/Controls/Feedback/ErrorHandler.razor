@@ -1,0 +1,82 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.UI.Providers
+@using Microsoft.AspNetCore.Components.Routing
+@implements IDisposable
+@inject IJSRuntime JS
+@inject NavigationManager NavigationManager
+
+@*
+    Catches exceptions thrown while rendering (or from event handlers) inside it and shows them in
+    place of the content, so one broken area doesn't take the whole circuit down and the user never
+    needs to reload. Navigating away, or pressing Retry, renders the content again.
+*@
+<ErrorBoundary @ref="_boundary">
+    <ChildContent>
+        @ChildContent
+    </ChildContent>
+    <ErrorContent>
+        @if (Inline)
+        {
+            <Alert Danger Title="@(Title ?? "This section could not be displayed")" Class="lc-error-inline">
+                <div class="lc-error-message">@context.Message</div>
+                <Flex Gap="Gap.Small" Style="margin-top: 8px">
+                    <Button Small OnClick="Retry" Icon="IconType.ArrowClockwise">Retry</Button>
+                    <Button Small Text OnClick="() => CopyAsync(context)" Icon="IconType.Copy">Copy error</Button>
+                </Flex>
+            </Alert>
+        }
+        else
+        {
+            <Result Danger Title="@(Title ?? "Something went wrong")" SubTitle="@_quip" Class="lc-error-page">
+                <Content>
+                    <pre class="lc-error-details">@context.Message
+@context.StackTrace</pre>
+                </Content>
+                <ChildContent>
+                    <Button OnClick="GoBackAsync" Icon="IconType.ArrowLeft">Back</Button>
+                    <Button OnClick="() => CopyAsync(context)" Icon="IconType.Copy">Copy error</Button>
+                    <Button Primary OnClick="Retry" Icon="IconType.ArrowClockwise">Retry</Button>
+                </ChildContent>
+            </Result>
+        }
+    </ErrorContent>
+</ErrorBoundary>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>
+    /// A compact alert for one section of a page, instead of a page-sized error. Use it around
+    /// panels, cards and tabs so the rest of the page keeps working.
+    /// </summary>
+    [Parameter] public bool Inline { get; set; }
+
+    ErrorBoundary? _boundary;
+    string _quip = "";
+
+    protected override void OnInitialized()
+    {
+        _quip = QuipProvider.GetCrashQuip();
+
+        NavigationManager.LocationChanged += OnLocationChanged;
+    }
+
+    /// <summary>Clears the error and renders the content again.</summary>
+    public void Retry()
+    {
+        _quip = QuipProvider.GetCrashQuip();
+
+        _boundary?.Recover();
+    }
+
+    void OnLocationChanged(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(Retry);
+
+    async Task GoBackAsync() => await JS.InvokeVoidAsync("history.back");
+
+    async Task CopyAsync(Exception exception) =>
+        await JS.InvokeVoidAsync("navigator.clipboard.writeText", $"{exception.Message}\n{exception.StackTrace}");
+
+    public void Dispose() => NavigationManager.LocationChanged -= OnLocationChanged;
+}

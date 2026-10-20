@@ -1,0 +1,57 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@if (Type != IconType.None)
+{
+    <svg @attributes="AdditionalAttributes"
+         class="@_class"
+         style="@Style"
+         viewBox="0 0 256 256"
+         fill="currentColor"
+         focusable="false"
+         role="@(Title == null ? null : "img")"
+         aria-hidden="@(Title == null ? "true" : null)">
+        @if (Title != null)
+        {
+            <title>@Title</title>
+        }
+        @((MarkupString)IconData.Get(Type, _weight))
+    </svg>
+}
+
+@code {
+    /// <summary>The icon to draw. Sized to the surrounding font size and coloured with the text colour.</summary>
+    [Parameter] public IconType Type { get; set; }
+
+    /// <summary>Heavier strokes. Ignored when <see cref="Fill"/> or <see cref="DuoTone"/> is set.</summary>
+    [Parameter] public bool Bold { get; set; }
+
+    /// <summary>Solid shapes. Takes precedence over the other weights.</summary>
+    [Parameter] public bool Fill { get; set; }
+
+    /// <summary>Regular strokes over a translucent fill. Ignored when <see cref="Fill"/> is set.</summary>
+    [Parameter] public bool DuoTone { get; set; }
+
+    /// <summary>Rotates continuously, for loading indicators.</summary>
+    [Parameter] public bool Spin { get; set; }
+
+    /// <summary>Accessible name. Without one the icon is treated as decoration and hidden from assistive tech.</summary>
+    [Parameter] public string? Title { get; set; }
+
+    IconWeight _weight;
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _weight = Fill ? IconWeight.Fill
+            : DuoTone ? IconWeight.DuoTone
+            : Bold ? IconWeight.Bold
+            : IconWeight.Regular;
+
+        _class = new ClassBuilder()
+            .Add("lc-icon")
+            .If(Spin, "lc-icon-spin")
+            .Add(Class)
+            .Build();
+    }
+}

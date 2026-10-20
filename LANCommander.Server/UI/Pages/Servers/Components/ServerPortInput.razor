@@ -1,6 +1,7 @@
 @inject ServerService ServerService
 
-<AntDesign.InputNumber Value="Value" ValueChanged="(val) => ValueChanged.InvokeAsync(val)" TValue="int" OnChange="OnPortNumberChanged" Min="0" Max="65535"/>
+@* A port number, checked against the other servers' ports as it changes *@
+<NumberInput TValue="int" Value="Value" ValueChanged="ChangedAsync" Min="0" Max="65535" />
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
@@ -9,19 +10,23 @@
     [Parameter] public bool PortInUse { get; set; }
     [Parameter] public EventCallback<bool> PortInUseChanged { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    protected override Task OnInitializedAsync() => CheckAsync(Value);
+
+    async Task ChangedAsync(int value)
     {
-        await OnPortNumberChanged(Value);
+        Value = value;
+
+        await ValueChanged.InvokeAsync(value);
+        await CheckAsync(value);
     }
 
-    async Task OnPortNumberChanged(int value)
+    async Task CheckAsync(int value)
     {
-        if (value > 0)
-        {
-            PortInUse = await ServerService.ExistsAsync(s => s.Port == value && s.Id != ServerId);
+        if (value <= 0)
+            return;
 
-            if (PortInUseChanged.HasDelegate)
-                await PortInUseChanged.InvokeAsync(PortInUse);
-        }
+        PortInUse = await ServerService.ExistsAsync(s => s.Port == value && s.Id != ServerId);
+
+        await PortInUseChanged.InvokeAsync(PortInUse);
     }
 }

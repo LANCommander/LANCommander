@@ -1,0 +1,57 @@
+@implements IComponentFixtureSet
+
+@code {
+    public sealed record Playtime(string Name, double Seconds);
+
+    static readonly Playtime[] Players = [new("jordan", 26_100), new("alex", 22_500), new("sam", 20_700)];
+
+    static readonly Playtime[] Games =
+    [
+        new("Neon Drift", 16_200), new("Starfall Tactics", 14_400), new("Arena Blitz", 11_700), new("Dungeon Delvers", 9_000),
+    ];
+
+    static string Duration(double seconds)
+    {
+        var time = TimeSpan.FromSeconds(seconds);
+
+        return time.TotalHours >= 1 ? $"{(int)time.TotalHours}h {time.Minutes}m" : $"{time.Minutes}m";
+    }
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("BarChart.Columns", "Vertical columns, one colour per item, with axis titles and value labels",
+            @<BarChart Items="Games" Label="g => g.Name" Value="g => g.Seconds" ValueFormat="Duration" ValueTitle="Average Session Playtime" CategoryTitle="Game" DataLabels />)
+        {
+            Width = 720,
+            WaitFor = ".rz-chart svg path",
+            Covers = [typeof(BarChart<>)],
+        },
+        new("BarChart.Horizontal", "Horizontal bars in a single colour",
+            @<BarChart Items="Players" Label="p => p.Name" Value="p => p.Seconds" ValueFormat="Duration" Horizontal SingleColor Height="220" />)
+        {
+            Width = 480,
+            WaitFor = ".rz-chart svg path",
+            Covers = [typeof(BarChart<>)],
+        },
+        new("PieChart.Pie", "A pie with a legend",
+            @<PieChart Items="Games" Label="g => g.Name" Value="g => g.Seconds" ValueFormat="Duration" />)
+        {
+            Width = 480,
+            WaitFor = ".rz-chart svg path",
+            Covers = [typeof(PieChart<>)],
+        },
+        new("PieChart.Donut", "A donut with value labels and no legend",
+            @<PieChart Items="Games" Label="g => g.Name" Value="g => g.Seconds" ValueFormat="Duration" Donut DataLabels NoLegend Height="240" />)
+        {
+            Width = 320,
+            WaitFor = ".rz-chart svg path",
+            Covers = [typeof(PieChart<>)],
+        },
+        new("Chart.Empty", "A chart without data shows an empty state",
+            @<BarChart Items="Array.Empty<Playtime>()" Label="p => p.Name" Value="p => p.Seconds" EmptyText="No sessions have been played yet" />)
+        {
+            Width = 320,
+            Covers = [typeof(BarChart<>)],
+        },
+    ];
+}

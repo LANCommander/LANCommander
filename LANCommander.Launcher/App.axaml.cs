@@ -10,15 +10,20 @@ using Avalonia.Markup.Xaml;
 using Avalonia.Rendering;
 using LANCommander.Launcher.Input;
 using LANCommander.Launcher.Helpers;
+using LANCommander.Launcher.Plugins;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.Launcher.Services.Platform;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
+using LANCommander.Launcher.ViewModels.Packaging;
+using LANCommander.Launcher.Views.Packaging;
+using LANCommander.Launcher.Services.Packaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -29,7 +34,7 @@ namespace LANCommander.Launcher;
 
 public partial class App : Application
 {
-    public static IServiceProvider? Services { get; private set; }
+    public static IServiceProvider? Services { get; internal set; }
     private static ILogger<App>? _logger;
 
     public override void Initialize()
@@ -39,6 +44,16 @@ public partial class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+#if DEBUG
+        // Previewing fixtures replaces the launcher entirely: no settings, server or database.
+        if (Fixtures.FixturePreview.IsRequested && ApplicationLifetime is IClassicDesktopStyleApplicationLifetime previewDesktop)
+        {
+            Fixtures.FixturePreview.Start(previewDesktop);
+            base.OnFrameworkInitializationCompleted();
+            return;
+        }
+#endif
+
         try
         {
             // Configure services
@@ -222,16 +237,54 @@ public partial class App : Application
                 _logger?.LogInformation("Database migrations complete");
             }
 
+            // Report which packaging workers were found. Worker discovery works under
+            // `dotnet run` and can silently fail in a packaged build where the files were never
+            // copied; without this the only symptom is a menu entry that never appears.
+            (Services!.GetService<IPackagingWorkerFactory>() as PackagingWorkerFactory)?.LogDiscovery();
+
             // Initialize the view model on the UI thread
             var mainViewModel = Services!.GetRequiredService<MainWindowViewModel>();
             _logger?.LogInformation("Initializing view model...");
             await mainViewModel.InitializeAsync().ConfigureAwait(false);
             _logger?.LogInformation("View model initialized, application ready");
+
+            // Initialize plugins now that the service provider and core services are ready.
+            await Services!.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>()
+                .InitializeAllAsync(Services!).ConfigureAwait(false);
+
+            // Register plugin navigable views with the shared registry so the shell's
+            // content control can render them. The registry's data template reads its registration
+            // list live, so mappings added here are picked up even though the template was attached
+            // when the shell view was constructed.
+            RegisterPluginNavigationViews();
         }
         catch (Exception ex)
         {
             _logger?.LogCritical(ex, "Fatal error during async initialization");
             Console.Error.WriteLine($"Fatal error during async initialization: {ex}");
+        }
+    }
+
+    private static void RegisterPluginNavigationViews()
+    {
+        if (Services is null)
+            return;
+
+        var registry = Services.GetService<IViewRegistry>();
+
+        if (registry is null)
+            return;
+
+        foreach (var extension in Services.GetServices<Plugins.Extensions.INavigationPageExtension>())
+        {
+            try
+            {
+                registry.Register(extension.ViewModelType, extension.BuildView);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Could not register navigation view for plugin extension {Extension}", extension.GetType().FullName);
+            }
         }
     }
 
@@ -281,8 +334,34 @@ public partial class App : Application
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
 
+        // One script debugger window per game, opened from the game's action bar or context menu.
+        services.AddSingleton<ScriptDebuggerWindowService>();
+
         // Input
         services.AddSingleton<GamepadService>();
+
+        // Big screen status bar (battery/volume) — platform backend selected by OS. Only invoked
+        // while in big screen mode.
+        if (OperatingSystem.IsWindows())
+        {
+            services.AddSingleton<IBatteryService, WindowsBatteryService>();
+            services.AddSingleton<IVolumeService, WindowsVolumeService>();
+        }
+        else if (OperatingSystem.IsLinux())
+        {
+            services.AddSingleton<IBatteryService, LinuxBatteryService>();
+            services.AddSingleton<IVolumeService, LinuxVolumeService>();
+        }
+        else if (OperatingSystem.IsMacOS())
+        {
+            services.AddSingleton<IBatteryService, MacBatteryService>();
+            services.AddSingleton<IVolumeService, MacVolumeService>();
+        }
+        else
+        {
+            services.AddSingleton<IBatteryService, NullBatteryService>();
+            services.AddSingleton<IVolumeService, NullVolumeService>();
+        }
 
         // Platform services
         services.AddNotifications(opts =>
@@ -298,8 +377,59 @@ public partial class App : Application
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<SingleInstanceService>();
         services.AddSingleton<INavigationService, NavigationService>();
+
+        // View registry: seed the built-in view model -> view mappings that were previously declared
+        // as inline DataTemplates in MainWindow.axaml / ShellView.axaml. Plugins may append further
+        // mappings during initialization. Ordering preserves the DepotGameDetailViewModel-before-
+        // GameDetailViewModel rule via most-derived-first matching in ViewRegistry.
+        services.AddSingleton<IViewRegistry>(_ => CreateViewRegistry());
+
+        // Plugin framework: discover drop-in plugins and let them register services. Must be the last
+        // registration step because the service provider is built immediately after this method returns.
+        LANCommander.SDK.Plugins.PluginBootstrap.ConfigurePlugins(services, LANCommander.SDK.Plugins.PluginHost.Launcher);
     }
     
+    /// <summary>
+    /// The built-in view model to view mappings. Shared with the debug fixture host so fixtures
+    /// resolve views exactly as the running app does.
+    /// </summary>
+    internal static ViewRegistry CreateViewRegistry()
+    {
+        var registry = new ViewRegistry();
+
+        // App-level shell hosted in MainWindow's ContentControl
+        registry.Register<SplashViewModel>(() => new SplashView());
+        registry.Register<ServerSelectionViewModel>(() => new ServerSelectionView());
+        registry.Register<LoginViewModel>(() => new LoginView());
+        registry.Register<ShellViewModel>(() => new ShellView());
+
+        // Shell content hosted in ShellView's TransitioningContentControl
+        registry.Register<DepotViewModel>(() => new DepotView());
+        registry.Register<DepotBrowseViewModel>(() => new DepotBrowseView());
+        registry.Register<DepotGameDetailViewModel>(() => new GameDetailView());
+        registry.Register<GamesListViewModel>(() => new GamesListView());
+        registry.Register<LibraryViewModel>(() => new GamesListView());
+        registry.Register<GameDetailViewModel>(() => new GameDetailView());
+        registry.Register<SettingsViewModel>(() => new SettingsView());
+        registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
+        registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
+
+        // Packaging wizard, plus each of its steps. Registering the steps in the same
+        // registry is what lets the wizard host them in a ContentControl, and leaves room
+        // for a plugin to replace an individual step later.
+        registry.Register<PackagingWizardViewModel>(() => new PackagingWizardView());
+        registry.Register<MonitorStepViewModel>(() => new MonitorStepView());
+        registry.Register<InstallDirectoryStepViewModel>(() => new InstallDirectoryStepView());
+        registry.Register<PostInstallStepViewModel>(() => new PostInstallStepView());
+        registry.Register<FileSelectionStepViewModel>(() => new FileSelectionStepView());
+        registry.Register<RegistrySelectionStepViewModel>(() => new RegistrySelectionStepView());
+        registry.Register<MetadataStepViewModel>(() => new MetadataStepView());
+        registry.Register<ActionStepViewModel>(() => new ActionStepView());
+        registry.Register<OutputStepViewModel>(() => new OutputStepView());
+
+        return registry;
+    }
+
     private static OSPlatform GetOSPlatform()
     {
         if (RuntimeInformation.IsOSPlatform(OSPlatform.Windows))

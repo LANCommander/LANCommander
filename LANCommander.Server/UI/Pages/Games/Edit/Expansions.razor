@@ -1,51 +1,51 @@
-﻿@page "/Games/{id:guid}/Expansions"
+@page "/Games/{id:guid}/Expansions"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
-@inject IMessageService MessageService
-@inject NavigationManager NavigationManager
-@inject ILogger<Expansions> Logger
+@inject NotificationService Notifications
 
-<GameEditView Id="Id" Title="Expansions">
-    <DataTable
-        TItem="Game"
-        Context="expansion"
-        Query="g => g.BaseGameId == Id && g.Type == GameType.Expansion">
-        <BoundDataColumn Property="e => e.Title" Sortable Filterable />
-        <BoundDataColumn Property="e => e.SortTitle" Sortable Filterable />
-        <BoundDataColumn Property="s => s.ReleasedOn" Format="MM/dd/yyyy" Sortable Filterable>
-            <LocalTime Value="context.ReleasedOn" Format="MM/dd/yyyy" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="s => s.CreatedOn" Sortable Filterable>
-            <LocalTime Value="context.CreatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="e => e.CreatedBy.UserName" Sortable Filterable Include="CreatedBy" />
-        <BoundDataColumn Property="s => s.UpdatedOn" Sortable Filterable>
-            <LocalTime Value="context.UpdatedOn" />
-        </BoundDataColumn>
-        <BoundDataColumn Property="e => e.UpdatedBy.UserName" Sortable Filterable Include="CreatedBy" />
-        <DataActions TData="string">
-            <Button Type="ButtonType.Primary" OnClick="@(() => NavigationManager.NavigateTo($"/Games/{expansion.Id}", true))">Edit</Button>
-
-            <Popconfirm OnConfirm="() => Delete(expansion)" Title="Are you sure you want to delete this expansion?">
-                <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
-            </Popconfirm>
-        </DataActions>
+<GameEditView Id="Id" Title="Expansions" Context="game">
+    <DataTable TItem="Game" @ref="_table" Small SettingsKey="game-expansions" Query="g => g.BaseGameId == Id && g.Type == GameType.Expansion">
+        <Columns>
+            <BoundColumn Property="g => g.Title" Sortable DefaultSort="ColumnSort.Ascending" />
+            <BoundColumn Property="g => g.SortTitle" Title="Sort Title" Sortable />
+            <BoundColumn Property="g => g.ReleasedOn" Title="Released On" Sortable FormatString="MM/dd/yyyy" />
+            <BoundColumn Property="g => g.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="g => g.CreatedBy != null ? g.CreatedBy.UserName : String.Empty" Title="Created By" Include="CreatedBy" Sortable />
+            <BoundColumn Property="g => g.UpdatedOn" Title="Updated On" Sortable>
+                <LocalTime Value="context.UpdatedOn" />
+            </BoundColumn>
+            <BoundColumn Property="g => g.UpdatedBy != null ? g.UpdatedBy.UserName : String.Empty" Title="Updated By" Include="UpdatedBy" Sortable />
+            <ActionsColumn TItem="Game">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Games/{context.Id}")" title="Edit" />
+                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this expansion?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
     </DataTable>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    async Task Delete(Game game)
+    DataTable<Game>? _table;
+
+    async Task DeleteAsync(Game game)
     {
         try
         {
             await GameService.DeleteAsync(game);
+
+            Notifications.Success($"Deleted {game.Title}");
+
+            if (_table != null)
+                await _table.ReloadAsync();
         }
         catch (Exception ex)
         {
-            MessageService.Error($"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
-            Logger.LogError(ex, $"Could not delete the {game.Type.GetDisplayName().ToLower()}!");
+            Notifications.Error(ex, "Could not delete the expansion!");
         }
     }
 }

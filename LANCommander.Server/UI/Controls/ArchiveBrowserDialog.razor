@@ -1,0 +1,9 @@
+@using LANCommander.Server.UI.Components
+@inherits Dialog<Guid, bool>
+
+@* Browses the contents of the archive whose Id is passed as the options *@
+<FileManager ArchiveId="Options"
+             Features="FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.ColumnPicker"
+             SelectMultiple="false"
+             EntrySelectable="_ => false"
+             Style="height: 70vh" />

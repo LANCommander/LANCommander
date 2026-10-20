@@ -1,0 +1,92 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.SDK.Services
+@inject IChatClient ChatClient
+@inject ProfileClient ProfileClient
+@implements IDisposable
+
+@* One thread in the list: who is in it, its title and how many messages are unread *@
+<button type="button" class="@_class" role="listitem" aria-current="@(Active ? "true" : null)" @onclick="SelectAsync">
+    @if (Thread.Participants.Count == 2)
+    {
+        var participant = Thread.Participants.First();
+
+        <Avatar Square Large Name="@participant.Name" Src="@ProfileClient.GetAvatarUri(participant.Name).ToString()" />
+    }
+    else
+    {
+        <AvatarGroup Overflow="@Math.Max(0, Thread.Participants.Count - 3)">
+            @foreach (var participant in Thread.Participants.Take(3))
+            {
+                <Avatar Name="@participant.Name" Src="@ProfileClient.GetAvatarUri(participant.Name).ToString()" />
+            }
+        </AvatarGroup>
+    }
+
+    <span class="chat-list-thread-title">@Thread.Title</span>
+
+    @if (_unreadCount > 0)
+    {
+        <Tag Primary Class="chat-list-thread-unread">@(_unreadCount > 99 ? "99+" : _unreadCount.ToString())</Tag>
+    }
+</button>
+
+@code {
+    [Parameter, EditorRequired] public SDK.Models.ChatThread Thread { get; set; } = default!;
+    [Parameter] public EventCallback<SDK.Models.ChatThread> OnSelected { get; set; }
+    [Parameter] public bool Active { get; set; }
+
+    int _unreadCount;
+    string? _class;
+    bool _subscribed;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _class = new ClassBuilder()
+            .Add("chat-list-thread")
+            .If(Active, "chat-list-thread-active")
+            .Build();
+
+        if (!_subscribed)
+        {
+            Thread.OnMessageReceivedAsync = _ => RefreshUnreadCountAsync();
+            Thread.OnMessagesReceivedAsync = _ => RefreshUnreadCountAsync();
+            _subscribed = true;
+        }
+
+        // Opening a thread marks its messages read, so the count can change with any parameter
+        await RefreshUnreadCountAsync();
+    }
+
+    async Task RefreshUnreadCountAsync()
+    {
+        try
+        {
+            var count = await ChatClient.GetUnreadMessageCountAsync(Thread.Id);
+
+            if (count != _unreadCount)
+            {
+                _unreadCount = count;
+                await InvokeAsync(StateHasChanged);
+            }
+        }
+        catch
+        {
+            // The count is a hint; a failed refresh keeps the last one
+        }
+    }
+
+    async Task SelectAsync()
+    {
+        await OnSelected.InvokeAsync(Thread);
+        await RefreshUnreadCountAsync();
+    }
+
+    public void Dispose()
+    {
+        if (_subscribed)
+        {
+            Thread.OnMessageReceivedAsync = null;
+            Thread.OnMessagesReceivedAsync = null;
+        }
+    }
+}

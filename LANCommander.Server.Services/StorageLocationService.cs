@@ -1,5 +1,4 @@
-﻿using AutoMapper;
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
@@ -13,9 +12,8 @@ namespace LANCommander.Server.Services
         ILogger<StorageLocationService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<StorageLocation>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<StorageLocation> AddAsync(StorageLocation entity)
         {

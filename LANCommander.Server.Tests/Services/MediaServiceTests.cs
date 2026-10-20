@@ -5,6 +5,8 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.PE;
 using Microsoft.EntityFrameworkCore;
 using Shouldly;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.PixelFormats;
 
 namespace LANCommander.Server.Tests.Services;
 
@@ -165,6 +167,124 @@ public class MediaServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
 
         await Should.ThrowAsync<InvalidDataException>(
             () => mediaService.WriteIconFromExecutableAsync(media, executable));
+    }
+
+    [Theory]
+    [InlineData(0, 0)]
+    [InlineData(1, 64)]
+    [InlineData(64, 64)]
+    [InlineData(65, 128)]
+    [InlineData(400, 512)]
+    [InlineData(3840, 3840)]
+    [InlineData(10000, 3840)]
+    public void SizedThumbnailRequestsSnapToAFixedLadder(int requested, int expected)
+    {
+        MediaService.SnapThumbnailSize(requested).ShouldBe(expected);
+    }
+
+    // Scaled displays ask for thumbnails at device-pixel size; the default thumbnail is half the source.
+    [Fact]
+    public async Task SizedThumbnailIsRenderedAtTheSnappedWidth()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+        var media = await AddCoverMediaAsync("Sized Thumbnail", 1200, 1800);
+
+        var path = await mediaService.GetThumbnailPathAsync(media, 400, 0);
+
+        path.ShouldEndWith(".w512.Thumb");
+        (await Image.IdentifyAsync(path)).Width.ShouldBe(512);
+    }
+
+    [Fact]
+    public async Task SizedThumbnailNeverEnlargesPastTheSource()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+        var media = await AddCoverMediaAsync("Sized Thumbnail Small Source", 300, 450);
+
+        var info = await Image.IdentifyAsync(await mediaService.GetThumbnailPathAsync(media, 0, 1000));
+
+        info.Width.ShouldBe(300);
+        info.Height.ShouldBe(450);
+    }
+
+    [Fact]
+    public async Task UnsizedThumbnailRequestServesTheDefaultThumbnail()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+        var media = await AddCoverMediaAsync("Unsized Thumbnail", 600, 900);
+
+        (await mediaService.GetThumbnailPathAsync(media, 0, 0)).ShouldBe(mediaService.GetThumbnailPath(media));
+    }
+
+    [Fact]
+    public async Task RewritingTheSourceDiscardsSizedThumbnails()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+        var media = await AddCoverMediaAsync("Sized Thumbnail Invalidation", 1200, 1800);
+
+        var variant = await mediaService.GetThumbnailPathAsync(media, 512, 0);
+
+        File.Exists(variant).ShouldBeTrue();
+
+        using var replacement = CreateJpeg(800, 1200);
+
+        await mediaService.WriteToFileAsync(media, replacement, overwrite: true);
+
+        File.Exists(variant).ShouldBeFalse();
+    }
+
+    [Fact]
+    public async Task DeletingTheLocalFileDiscardsSizedThumbnails()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+        var media = await AddCoverMediaAsync("Sized Thumbnail Delete", 1200, 1800);
+
+        var variant = await mediaService.GetThumbnailPathAsync(media, 256, 0);
+
+        mediaService.DeleteLocalMediaFile(media);
+
+        File.Exists(variant).ShouldBeFalse();
+    }
+
+    private async Task<Media> AddCoverMediaAsync(string gameTitle, int width, int height)
+    {
+        var gameService = GetService<GameService>();
+        var mediaService = GetService<MediaService>();
+
+        var game = await gameService.AddAsync(new Game { Title = gameTitle });
+
+        using var image = CreateJpeg(width, height);
+
+        return await mediaService.WriteToFileAsync(new Media
+        {
+            GameId = game.Id,
+            Type = MediaType.Cover,
+            MimeType = "image/jpeg",
+            Crc32 = string.Empty,
+            StorageLocation = await mediaService.GetDefaultStorageLocationAsync(),
+        }, image);
+    }
+
+    private static MemoryStream CreateJpeg(int width, int height)
+    {
+        using var image = new Image<Rgba32>(width, height, new Rgba32(40, 90, 160));
+
+        var stream = new MemoryStream();
+
+        image.SaveAsJpeg(stream);
+        stream.Position = 0;
+
+        return stream;
     }
 
     private static readonly string NotepadPath =

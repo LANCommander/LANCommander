@@ -16,11 +16,11 @@
         <meta name="viewport" content="width=device-width, initial-scale=1.0" />
         <base href="~/" />
         
-        <link href="_content/AntDesign/css/ant-design-blazor.dark.css?v=@v" rel="stylesheet" />
+        <component type="typeof(LANCommander.Server.UI.Controls.Theme)" render-mode="Static" />
         <link rel="stylesheet" href="_content/XtermBlazor/XtermBlazor.min.css?v=@v"  />
         <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/markdowneditor.css?v=@v" />
         <link rel="stylesheet" href="_content/PSC.Blazor.Components.MarkdownEditor/css/easymde.min.css?v=@v" />
-        <link rel="stylesheet" href="_content/LANCommander.UI/ui.css?v=@v" />
+        <link rel="stylesheet" href="_content/LANCommander.Server.UI/ui.css?v=@v" />
         <link rel="stylesheet" href="~/css/site.css?v=@v" />
         <link rel="stylesheet" href="~/css/custom.css?v=@v" />
     </head>
@@ -31,12 +31,10 @@
             @RenderBody()
         </div>
 
-        <script src="~/lib/antv/g2plot/dist/g2plot.js?v=@v"></script>
-        <script src="~/_content/AntDesign/js/ant-design-blazor.js?v=@v"></script>
-        <script src="~/_content/AntDesign.Charts/ant-design-charts-blazor.js?v=@v"></script>
         <script src="~/_framework/blazor.server.js?v=@v"></script>
+        <component type="typeof(LANCommander.Server.UI.Controls.ThemeScripts)" render-mode="Static" />
 
-        <script type="module" src="@LANCommander.UI.UIAssets.BundleUrl"></script>
+        <script type="module" src="@LANCommander.Server.UI.UIAssets.BundleUrl"></script>
         <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/easymde.min.js?v=@v"></script>
         <script src="~/_content/PSC.Blazor.Components.MarkdownEditor/js/markdownEditor.js?v=@v"></script>
 

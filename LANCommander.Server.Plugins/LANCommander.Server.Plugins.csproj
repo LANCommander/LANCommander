@@ -1,0 +1,30 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+    <Authors>pathartl</Authors>
+    <Company>LANCommander</Company>
+    <Description>The contracts a LANCommander server plugin builds against: navigation, routes, page access, and the services the server provides to plugins</Description>
+    <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
+    <PackageIcon>package-icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>lancommander;plugins</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LANCommander.SDK\package-icon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+</Project>

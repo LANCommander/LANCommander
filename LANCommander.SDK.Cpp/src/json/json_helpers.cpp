@@ -170,6 +170,7 @@ Game parse_game(cJSON* obj)
     g.notes       = get_string(obj, "notes", "Notes");
     g.in_library  = get_bool(obj, "inLibrary", "InLibrary", false);
     g.base_game_id = get_string(obj, "baseGameId", "BaseGameId");
+    g.directory_name = get_string(obj, "directoryName", "DirectoryName");
 
     // Parse released year from date string
     std::string released = get_string(obj, "releasedOn", "ReleasedOn");
@@ -184,6 +185,12 @@ Game parse_game(cJSON* obj)
     cJSON* gt = get_child(obj, "type", "Type");
     if (gt && gt->type == cJSON_Number)
         g.type = static_cast<GameType>(gt->valueint);
+
+    cJSON* it = get_child(obj, "installTo", "InstallTo");
+    if (it && it->type == cJSON_Number)
+        g.install_to = static_cast<GameInstallLocation>(it->valueint);
+
+    g.show_in_library = get_bool(obj, "showInLibrary", "ShowInLibrary", true);
 
     // Related names
     g.developers = collect_names(get_child(obj, "developers", "Developers"));
@@ -570,6 +577,8 @@ DepotGame parse_depot_game(cJSON* obj)
     cJSON* gt = get_child(obj, "type", "Type");
     if (gt && gt->type == cJSON_Number)
         dg.type = static_cast<GameType>(gt->valueint);
+
+    dg.show_in_library = get_bool(obj, "showInLibrary", "ShowInLibrary", true);
 
     cJSON* cover = get_child(obj, "cover", "Cover");
     if (cover && cover->type == cJSON_Object)

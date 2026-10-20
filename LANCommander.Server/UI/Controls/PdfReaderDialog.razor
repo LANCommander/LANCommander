@@ -1,0 +1,6 @@
+@inherits Dialog<Media, bool>
+
+@* Reads a PDF manual stored as game media *@
+<div class="pdf-reader">
+    <BootstrapBlazor.Components.PdfReader FileName="@($"/api/Media/{Options.Id}/Download?fileId={Options.FileId}")" Height="100%" />
+</div>

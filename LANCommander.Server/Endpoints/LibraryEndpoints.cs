@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Data;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
@@ -24,7 +24,7 @@ public static class LibraryEndpoints
 
     internal static async Task<IResult> GetAsync(
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
         [FromServices] LibraryService libraryService,
@@ -51,14 +51,20 @@ public static class LibraryEndpoints
                             .AsSplitQuery()
                             .GetAsync();
 
-                        return mapper.Map<IEnumerable<SDK.Models.Game>>(entities);
+                        return entities.Select(sdkMapper.ToSdk).ToList();
                     },
                     TimeSpan.MaxValue,
                     tags: ["Games"]);
 
-                var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+                // The "Games" cache entry is shared with /api/Games and holds every game, so hidden
+                // (unpublished) games are filtered out here rather than in the factory.
+                var unpublishedIds = await gameService.GetUnpublishedGameIdsAsync();
 
-                return TypedResults.Ok(ordered.Select(g => mapper.Map<SDK.Models.EntityReference>(g)));
+                var ordered = games
+                    .Where(g => !unpublishedIds.Contains(g.Id))
+                    .OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
+
+                return TypedResults.Ok(ordered.Select(sdkMapper.ToEntityReference));
             }
 
             if (userPrincipal.Identity?.Name is null)
@@ -81,12 +87,12 @@ public static class LibraryEndpoints
                     var games = await databaseContext.Games
                         .AsNoTracking()
                         .AsSplitQuery()
-                        .Where(g => libraryGameIds.Contains(g.Id))
+                        .Where(g => libraryGameIds.Contains(g.Id) && g.Published)
                         .ToListAsync();
 
                     var ordered = games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
 
-                    return mapper.Map<IEnumerable<SDK.Models.EntityReference>>(ordered);
+                    return ordered.Select(sdkMapper.ToEntityReference).ToList();
                 },
                 TimeSpan.MaxValue,
                 tags: ["Library", "Games"]);
@@ -102,7 +108,7 @@ public static class LibraryEndpoints
 
     internal static async Task<IResult> GetGamesAsync(
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] IFusionCache cache,
         [FromServices] GameService gameService,
         [FromServices] LibraryService libraryService,
@@ -128,9 +134,9 @@ public static class LibraryEndpoints
             {
                 logger.LogDebug("User libraries are disabled; returning all games with media");
 
-                var allGames = await cache.GetOrSetAsync(
+                var allGames = await cache.GetOrSetAsync<IEnumerable<SDK.Models.Game>>(
                     "Library/Games",
-                    async _ => mapper.Map<IEnumerable<SDK.Models.Game>>(await LoadGamesWithMediaAsync(gameService, null)),
+                    async _ => (await LoadGamesWithMediaAsync(gameService, null)).Select(sdkMapper.ToSdk).ToList(),
                     TimeSpan.MaxValue,
                     tags: ["Library", "Games"]);
 
@@ -148,7 +154,7 @@ public static class LibraryEndpoints
 
                     var games = await LoadGamesWithMediaAsync(gameService, libraryGameIds);
 
-                    var mapped = mapper.Map<IEnumerable<SDK.Models.Game>>(games).ToList();
+                    var mapped = games.Select(sdkMapper.ToSdk).ToList();
 
                     foreach (var game in mapped)
                         game.InLibrary = true;
@@ -187,9 +193,10 @@ public static class LibraryEndpoints
             .AsNoTracking()
             .AsSplitQuery();
 
+        // Unpublished games are hidden from launcher users, even when already in their library.
         var games = libraryGameIds is null
-            ? await query.GetAsync()
-            : await query.GetAsync(g => libraryGameIds.Contains(g.Id));
+            ? await query.GetAsync(g => g.Published)
+            : await query.GetAsync(g => g.Published && libraryGameIds.Contains(g.Id));
 
         return games.OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle);
     }

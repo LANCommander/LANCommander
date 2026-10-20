@@ -1,0 +1,70 @@
+@using LANCommander.Server.UI.Components
+@inject DialogService Dialogs
+
+@* Edits a redistributable's option schema (YAML), with helpers to add options or build one from a config file *@
+<Flex Gap="Gap.Small" Wrap Align="Align.Center" Style="margin-bottom: 16px">
+    <Dropdown>
+        <Overlay>
+            <Menu>
+                @foreach (var kind in Enum.GetValues<OptionKind>())
+                {
+                    <MenuItem OnClick="() => AddOptionAsync(kind)">@DisplayName(kind) Option</MenuItem>
+                }
+            </Menu>
+        </Overlay>
+        <ChildContent>
+            <Button Primary Icon="IconType.Plus">Add Option</Button>
+        </ChildContent>
+    </Dropdown>
+
+    <Button Text Icon="IconType.UploadSimple" OnClick="ImportConfigAsync">Import Config</Button>
+</Flex>
+
+<CodeInput @ref="_codeInput" Value="@Value" ValueChanged="ValueChangedAsync" Language="Languages.YAML" OnSave="_ => OnSave.InvokeAsync()" Height="500" />
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    /// <summary>Ctrl+S in the editor.</summary>
+    [Parameter] public EventCallback OnSave { get; set; }
+
+    CodeInput? _codeInput;
+
+    static string DisplayName(OptionKind kind) => kind switch
+    {
+        OptionKind.Bool => "Boolean",
+        OptionKind.Int => "Integer",
+        _ => kind.ToString(),
+    };
+
+    async Task AddOptionAsync(OptionKind kind)
+    {
+        var yaml = await Dialogs.OpenAsync<AddOptionDialog, OptionKind, string>($"Add {DisplayName(kind)} Option", kind, new DialogSettings
+        {
+            OkText = "Insert",
+        });
+
+        if (yaml != null && _codeInput != null)
+            await _codeInput.InsertText(yaml);
+    }
+
+    async Task ImportConfigAsync()
+    {
+        var yaml = await Dialogs.OpenAsync<ConfigImportDialog, string>("Import Configuration", new DialogSettings
+        {
+            Size = DialogSize.Large,
+            OkText = "Import",
+        });
+
+        if (yaml != null)
+            await ValueChangedAsync(yaml);
+    }
+
+    async Task ValueChangedAsync(string? value)
+    {
+        Value = value;
+
+        await ValueChanged.InvokeAsync(value);
+    }
+}

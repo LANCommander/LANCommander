@@ -1,13 +1,10 @@
-﻿@page "/Games/{id:guid}/CustomFields"
+@page "/Games/{id:guid}/CustomFields"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <GameEditView Id="Id" Title="Custom Fields">
     <TitleExtraTemplate>
-        <Flex Gap="FlexGap.Small" Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" OnClick="() => _customFieldEditor?.Save()">Save</Button>
-        </Flex>
+        <Button Primary OnClick="() => _customFieldEditor?.Save() ?? Task.CompletedTask">Save</Button>
     </TitleExtraTemplate>
-    
     <ChildContent>
         <CustomFieldEditor @ref="_customFieldEditor" />
     </ChildContent>
@@ -16,5 +13,5 @@
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    CustomFieldEditor _customFieldEditor;
+    CustomFieldEditor? _customFieldEditor;
 }

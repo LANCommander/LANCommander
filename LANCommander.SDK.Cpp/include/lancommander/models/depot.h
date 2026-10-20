@@ -28,6 +28,7 @@ struct DepotGame {
     std::string released_on;
     bool in_library = false;
     GameType type = GameType::MainGame;
+    bool show_in_library = true;
     Media cover;
     std::vector<Collection> collections;
     std::vector<Company> developers;

@@ -1,0 +1,83 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
+    <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
+    <Version>1.1.0</Version>
+    <Authors>pathartl</Authors>
+    <Company>LANCommander</Company>
+    <Description>A Blazor component library for building UIs on the LANCommander platform</Description>
+    <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
+    <PackageIcon>package-icon.png</PackageIcon>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+    <RepositoryUrl>https://github.com/LANCommander/LANCommander</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageTags>lancommander;blazor;components</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+  </PropertyGroup>
+
+  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
+    <Message Text="Generating PowerShell completion data" Importance="high" />
+    <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
+  </Target>
+
+  <Target Name="CompileFrontendResources" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
+    <Message Text="Compiling frontend" Importance="high" />
+    <Exec Command="npm run package" />
+    <!-- The wwwroot glob is evaluated before this runs, so on a clean checkout the bundle would be left out of the static web assets -->
+    <ItemGroup>
+      <Content Include="wwwroot\**" Exclude="@(Content)" />
+    </ItemGroup>
+  </Target>
+	
+  <ItemGroup>
+    <SupportedPlatform Include="browser" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- For the tag helpers that style the server's MVC views and Razor Pages -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="BlazorMonaco" />
+    <PackageReference Include="BootstrapBlazor.PdfReader" />
+    <PackageReference Include="ByteSize" />
+    <PackageReference Include="EasyMDE.Blazor" />
+    <PackageReference Include="Microsoft.AspNetCore.Components.Web" />
+    <PackageReference Include="PSC.Blazor.Components.MarkdownEditor" />
+    <!-- Compile assets stay private: consumers of LANCommander.Server.UI must use its Controls, never Radzen directly -->
+    <PackageReference Include="Radzen.Blazor" PrivateAssets="compile" />
+    <PackageReference Include="XtermBlazor" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Content Remove="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Folder Include="wwwroot\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Server.UI.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Icon geometry, written by Controls/Icon/generate-icons.py and read by IconData -->
+    <EmbeddedResource Include="Controls\Icon\Resources\*.tsv.gz" LogicalName="LANCommander.Server.UI.Icons.%(Filename)%(Extension)" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Include="..\LANCommander.SDK\package-icon.png" Pack="true" PackagePath="\" />
+    <None Include="README.md" Pack="true" PackagePath="\" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+</Project>

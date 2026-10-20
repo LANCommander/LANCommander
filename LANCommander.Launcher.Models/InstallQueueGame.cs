@@ -17,6 +17,7 @@ namespace LANCommander.Launcher.Models
         public DateTime QueuedOn { get; set; }
         public DateTime? CompletedOn { get; set; }
         public bool IsUpdate { get; set; }
+        public SDK.Models.GameVersion? TargetVersion { get; set; }
         public bool State {
             get
             {

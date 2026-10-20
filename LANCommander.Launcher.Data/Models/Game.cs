@@ -11,7 +11,6 @@ namespace LANCommander.Launcher.Data.Models
         public string Title { get; set; }
         [Display(Name = "Sort Title")]
         public string? SortTitle { get; set; }
-        [Display(Name = "Directory Name")]
         public string? Description { get; set; }
         public string? Notes { get; set; }
 
@@ -21,10 +20,35 @@ namespace LANCommander.Launcher.Data.Models
         public DateTime? InstalledOn { get; set; }
         public string? LatestVersion { get; set; }
 
+        /// <summary>The server's id for the installed version, when the install was made against a known version.</summary>
+        public Guid? InstalledVersionId { get; set; }
+
+        /// <summary>
+        /// Queue updates as soon as they're found. Turned off to keep the game on its current version,
+        /// and turned off automatically when the game is rolled back.
+        /// </summary>
+        public bool AutoUpdate { get; set; } = true;
+
+        /// <summary>
+        /// Whether the library knows of a newer version than the one installed and the game takes updates.
+        /// A quick local check; the server's CheckForUpdate is authoritative.
+        /// </summary>
+        public bool IsUpdateAvailable()
+            => Installed
+                && AutoUpdate
+                && !string.IsNullOrWhiteSpace(LatestVersion)
+                && InstalledVersion != LatestVersion;
+
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }
 
         public GameType Type { get; set; }
+        public GameInstallLocation InstallTo { get; set; }
+        public bool ShowInLibrary { get; set; } = true;
+
+        public string? OptionSchema { get; set; }
+        public string? Options { get; set; }
+
         public Guid? BaseGameId { get; set; }
         [ForeignKey(nameof(BaseGameId))]
         public virtual Game? BaseGame { get; set; }

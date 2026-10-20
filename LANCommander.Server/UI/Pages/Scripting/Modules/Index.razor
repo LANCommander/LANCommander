@@ -1,47 +1,45 @@
 @page "/Scripting/Modules"
-@using AntDesign.TableModels
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ModuleService ModuleService
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
 
 <PageHeader Title="Modules">
-    <PageHeaderExtra>
-        <Button OnClick="@(() => NavigationManager.NavigateTo("/Scripting/Modules/Add"))" Type="@ButtonType.Primary">Add Module</Button>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary Icon="IconType.Plus" Href="/Scripting/Modules/Add">Add Module</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Table TItem="Module" DataSource="@Modules" Size="@TableSize.Small" Context="module" Responsive OnRow="RowAttributes">
-        <PropertyColumn Property="m => m.Name" Title="Name" Sortable DefaultSortOrder="SortDirection.Ascending" />
-        <ActionColumn Title="" Style="text-align: right">
-            <Flex Gap="FlexGap.Small" Align="FlexAlign.Center" Justify="FlexJustify.End">
-                <a href="@($"/Scripting/Modules/{module.Name}")" class="ant-btn ant-btn-text ant-btn-icon-only"><Icon Type="@IconType.Outline.Edit" /></a>
-                <Popconfirm OnConfirm="() => Delete(module)" Title="Are you sure you want to delete this module?">
-                    <Button Icon="@IconType.Outline.Close" Type="@ButtonType.Text" Danger />
+    <Table TItem="Module" Items="_modules" Small NoPaging EmptyText="No modules yet"
+           OnRowDoubleClick="@(module => NavigationManager.NavigateTo($"/Scripting/Modules/{module.Name}"))">
+        <Columns>
+            <BoundColumn Property="m => m.Name" Title="Name" Sortable DefaultSort="ColumnSort.Ascending" />
+            <ActionsColumn TItem="Module">
+                <Button Text Icon="IconType.PencilSimple" Href="@($"/Scripting/Modules/{context.Name}")" title="Edit" />
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this module?" OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
                 </Popconfirm>
-            </Flex>
-        </ActionColumn>
+            </ActionsColumn>
+        </Columns>
     </Table>
 </PageContent>
 
 @code {
-    IEnumerable<Module> Modules { get; set; } = new List<Module>();
+    List<Module> _modules = [];
 
-    Dictionary<string, object> RowAttributes(RowData<Module> row) => new()
-    {
-        ["ondblclick"] = EventCallback.Factory.Create<MouseEventArgs>(this, () => NavigationManager.NavigateTo($"/Scripting/Modules/{row.Data.Name}")),
-    };
-
-    protected override void OnInitialized()
-    {
-        Load();
-    }
+    protected override void OnInitialized() => Load();
 
     void Load()
     {
-        Modules = ModuleService.GetModules().ToList();
+        try
+        {
+            _modules = ModuleService.GetModules().ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load modules!");
+        }
     }
 
     void Delete(Module module)
@@ -52,12 +50,11 @@
 
             Load();
 
-            MessageService.Success("Module deleted!");
+            Notifications.Success("Module deleted!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("Could not delete module!");
-            Logger?.LogError(ex, "Could not delete module");
+            Notifications.Error(ex, "Could not delete module!");
         }
     }
 }

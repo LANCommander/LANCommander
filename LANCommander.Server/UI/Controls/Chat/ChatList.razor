@@ -1,0 +1,22 @@
+@namespace LANCommander.Server.UI.Controls
+
+@* The chat threads, one of which is selected *@
+<div class="chat-list-threads" role="list">
+    @foreach (var thread in Threads)
+    {
+        <ChatListThread @key="thread.Id" Thread="thread" OnSelected="SelectAsync" Active="@(SelectedThread?.Id == thread.Id)" />
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public IEnumerable<SDK.Models.ChatThread> Threads { get; set; } = [];
+    [Parameter] public SDK.Models.ChatThread? SelectedThread { get; set; }
+    [Parameter] public EventCallback<SDK.Models.ChatThread> SelectedThreadChanged { get; set; }
+
+    async Task SelectAsync(SDK.Models.ChatThread thread)
+    {
+        SelectedThread = thread;
+
+        await SelectedThreadChanged.InvokeAsync(thread);
+    }
+}

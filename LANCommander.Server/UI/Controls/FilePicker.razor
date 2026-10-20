@@ -1,0 +1,60 @@
+@using LANCommander.Server.UI.Components
+
+@*
+    A path input with a button that browses an archive (ArchiveId) or the server's disk (Root) for
+    it. The browse button only appears when there is something to browse.
+*@
+<div class="file-picker">
+    <TextInput Value="@Value" ValueChanged="ValueChangedAsync" ValueExpression="ValueExpression" Immediate Disabled="Disabled" Placeholder="@Placeholder" Class="file-picker-input" />
+    @Before
+    <FilePickerButton Primary
+                      ArchiveId="ArchiveId"
+                      Title="@Title"
+                      OkText="@OkText"
+                      Prefix="@Prefix"
+                      Root="@Root"
+                      Disabled="Disabled"
+                      EntrySelectable="EntrySelectable"
+                      EntryVisible="EntryVisible"
+                      OnSelected="SelectedAsync" />
+    @After
+</div>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+    [Parameter] public System.Linq.Expressions.Expression<Func<string?>>? ValueExpression { get; set; }
+
+    /// <summary>Called when a path is picked in the browser (not when it is typed).</summary>
+    [Parameter] public EventCallback<string> OnSelected { get; set; }
+
+    [Parameter] public Guid? ArchiveId { get; set; }
+    [Parameter] public string Title { get; set; } = "Choose File";
+    [Parameter] public string OkText { get; set; } = "Select File";
+
+    /// <summary>Accepted for compatibility; which entries can be picked is set by <see cref="EntrySelectable"/>.</summary>
+    [Parameter] public bool AllowDirectories { get; set; }
+
+    [Parameter] public string? Prefix { get; set; }
+    [Parameter] public string? Root { get; set; }
+    [Parameter] public string? Placeholder { get; set; }
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public Func<IFileManagerEntry, bool> EntrySelectable { get; set; } = _ => true;
+    [Parameter] public Func<IFileManagerEntry, bool> EntryVisible { get; set; } = _ => true;
+    [Parameter] public RenderFragment? Before { get; set; }
+    [Parameter] public RenderFragment? After { get; set; }
+
+    async Task ValueChangedAsync(string? value)
+    {
+        Value = value;
+
+        await ValueChanged.InvokeAsync(value);
+    }
+
+    async Task SelectedAsync(string path)
+    {
+        await ValueChangedAsync(path);
+
+        await OnSelected.InvokeAsync(path);
+    }
+}

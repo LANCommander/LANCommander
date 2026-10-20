@@ -40,32 +40,18 @@
             <Border x:Name="ResizeSE" Grid.Row="2" Grid.Column="2" Cursor="BottomRightCorner" Background="Transparent" PointerPressed="ResizeGrip_PointerPressed" />
         </Grid>
 
-        <!-- Main Content (fills full window height) -->
-        <ContentControl Content="{Binding CurrentView}" ZIndex="0">
-            <ContentControl.DataTemplates>
-                <DataTemplate DataType="vm:SplashViewModel">
-                    <views:SplashView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:ServerSelectionViewModel">
-                    <views:ServerSelectionView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:LoginViewModel">
-                    <views:LoginView />
-                </DataTemplate>
-                <DataTemplate DataType="vm:ShellViewModel">
-                    <views:ShellView />
-                </DataTemplate>
-            </ContentControl.DataTemplates>
-        </ContentControl>
+        <!-- Main Content (fills full window height). Data templates are supplied in code-behind from
+             the IViewRegistry so plugins can add view mappings. -->
+        <ContentControl x:Name="MainContent" Content="{Binding CurrentView}" ZIndex="0" />
 
         <!-- Floating Title Bar (overlays content) -->
         <Grid VerticalAlignment="Top"
               Height="40"
               ZIndex="10"
-              ColumnDefinitions="Auto,Auto,*,Auto,Auto,Auto">
+              ColumnDefinitions="Auto,Auto,*,Auto,Auto">
 
             <!-- Translucent tint — hidden on depot/library so covers show through -->
-            <Border Grid.ColumnSpan="6"
+            <Border Grid.ColumnSpan="5"
                     IsHitTestVisible="False"
                     Background="#80000000"
                     IsVisible="{Binding ShowTitlebarTint}" />
@@ -82,7 +68,7 @@
                     VerticalAlignment="Center"
                     Padding="4,0,12,0">
                 <TextBlock Text="{Binding ShellViewModel.ContentViewTitle}"
-                           FontSize="13"
+                           FontSize="{DynamicResource FontSizeLabel}"
                            FontWeight="SemiBold"
                            VerticalAlignment="Center" />
             </Border>
@@ -94,32 +80,8 @@
                     PointerPressed="TitleBarDragRegion_PointerPressed"
                     DoubleTapped="TitleBarDragRegion_DoubleTapped" />
 
-            <!-- Refresh button (visible when a games collection is active and not syncing) -->
-            <Border Grid.Column="3"
-                    IsVisible="{Binding ShellViewModel.IsRefreshVisible}"
-                    Padding="0,0,2,0"
-                    VerticalAlignment="Center">
-                <IconButton Classes="Text"
-                            Command="{Binding ShellViewModel.RefreshCommand}"
-                            IconType="Regular"
-                            IconValue="ArrowsClockwise"
-                            Width="40" Height="40" />
-            </Border>
-
-            <!-- Import progress bar (replaces refresh button while syncing) -->
-            <Border Grid.Column="3"
-                    IsVisible="{Binding ShellViewModel.IsSyncing}"
-                    Padding="4,0,4,0"
-                    VerticalAlignment="Center">
-                <ProgressBar Value="{Binding ShellViewModel.ImportProgress}"
-                             IsIndeterminate="{Binding ShellViewModel.IsImportIndeterminate}"
-                             Minimum="0" Maximum="1"
-                             Width="100" Height="4"
-                             VerticalAlignment="Center" />
-            </Border>
-
             <!-- Profile button + offline indicator (visible only when shell is active) -->
-            <Border Grid.Column="4"
+            <Border Grid.Column="3"
                     IsVisible="{Binding IsShellActive}"
                     Padding="0,0,4,0"
                     VerticalAlignment="Center">
@@ -136,8 +98,8 @@
                         VerticalAlignment="Center"
                         ToolTip.Tip="Offline Mode — click to reconnect">
                     <StackPanel Orientation="Horizontal" Spacing="6">
-                        <TextBlock Text="⚠" Foreground="#FFA500" VerticalAlignment="Center" />
-                        <TextBlock Text="Offline Mode" Foreground="#FFA500" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                        <Icon Type="Regular" Value="Warning" Width="14" Height="14" Foreground="#FFA500" VerticalAlignment="Center" />
+                        <TextBlock Text="Offline Mode" Foreground="#FFA500" FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold" VerticalAlignment="Center" />
                     </StackPanel>
                 </Button>
 
@@ -145,6 +107,11 @@
                         Padding="8,4">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <!-- Only shown to accounts that may create games on the server, and
+                                 only where packaging can actually run. -->
+                            <MenuItem Header="Package a Game..."
+                                      Command="{Binding ShellViewModel.ShowPackagingCommand}"
+                                      IsVisible="{Binding ShellViewModel.CanPackageGames}" />
                             <MenuItem Header="Settings"
                                       Command="{Binding ShellViewModel.ShowSettingsCommand}" />
                             <MenuItem Header="Big Screen Mode"
@@ -170,7 +137,7 @@
                         <Panel Width="22" Height="22">
                             <!-- Fallback: shown when no avatar is available -->
                             <Border CornerRadius="2"
-                                    Background="#1A7AC4"
+                                    Background="{DynamicResource AccentFillBrush}"
                                     IsVisible="{Binding !ShellViewModel.Profile.HasAvatar}">
                                 <Icon Type="Regular" Value="User" Width="13" Height="13" Color="White" />
                             </Border>
@@ -186,45 +153,90 @@
                         <TextBlock Text="{Binding ShellViewModel.Profile.Alias}"
                                    VerticalAlignment="Center"
                                    Foreground="White"
-                                   FontSize="13" />
+                                   FontSize="{DynamicResource FontSizeLabel}" />
                     </StackPanel>
                 </Button>
 
               </StackPanel>
             </Border>
 
+            <!-- Big Screen status items (battery / volume / time) — shown only in big screen mode,
+                 where the window controls are hidden, so the two panels never overlap. -->
+            <StackPanel Grid.Column="4"
+                        Orientation="Horizontal"
+                        Spacing="16"
+                        VerticalAlignment="Center"
+                        Margin="0,0,16,0"
+                        DataContext="{Binding StatusBar}"
+                        IsVisible="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).IsBigScreenMode}">
+
+                <!-- Battery (hidden on devices without a battery) -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center"
+                            IsVisible="{Binding HasBattery}">
+                    <Icon Type="Regular" Value="{Binding BatteryIcon}" Width="18" Height="18" Color="White" />
+                    <TextBlock Text="{Binding BatteryPercent, StringFormat='{}{0}%'}"
+                               Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+
+                <!-- Volume (interactive: click opens a slider that changes system volume) -->
+                <Button Classes="Text"
+                        Padding="4,2"
+                        VerticalAlignment="Center"
+                        IsVisible="{Binding IsVolumeSupported}"
+                        ToolTip.Tip="Volume">
+                    <Button.Flyout>
+                        <Flyout Placement="Bottom">
+                            <StackPanel Spacing="8" Width="60">
+                                <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
+                                           HorizontalAlignment="Center" FontSize="{DynamicResource FontSizeCaption}" />
+                                <Slider Orientation="Vertical"
+                                        Height="140"
+                                        HorizontalAlignment="Center"
+                                        Minimum="0" Maximum="100"
+                                        Value="{Binding Volume, Mode=TwoWay}" />
+                            </StackPanel>
+                        </Flyout>
+                    </Button.Flyout>
+                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                        <Icon Type="Regular" Value="{Binding VolumeIcon}" Width="18" Height="18" Color="White" />
+                        <TextBlock Text="{Binding Volume, StringFormat='{}{0}%'}"
+                                   Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
+                    </StackPanel>
+                </Button>
+
+                <!-- Time -->
+                <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                    <Icon Type="Regular" Value="Clock" Width="18" Height="18" Color="White" />
+                    <TextBlock Text="{Binding Time}" Foreground="White" FontSize="{DynamicResource FontSizeLabel}" VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+
             <!-- Window Controls (hidden in big screen mode) -->
-            <StackPanel Grid.Column="5" Orientation="Horizontal"
+            <StackPanel Grid.Column="4" Orientation="Horizontal"
                         IsVisible="{Binding IsNotBigScreenMode}">
                 <Button x:Name="MinimizeButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="MinimizeButton_Click">
-                    <TextBlock Text="—" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <!-- Minus as a Rectangle: the Icon control stretches geometry to its bounds, and a lone horizontal line has none -->
+                    <Rectangle Width="12" Height="1.6" Fill="{Binding $parent[Button].Foreground}" />
                 </Button>
                 <Button x:Name="MaximizeButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="MaximizeButton_Click">
-                    <TextBlock Text="□" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Icon Type="Regular" Value="Square" Width="12" Height="12" />
                 </Button>
                 <Button x:Name="CloseButton"
                         Width="46"
                         Height="40"
-                        Background="Transparent"
-                        BorderThickness="0"
+                        Classes="Text"
                         HorizontalContentAlignment="Center"
                         VerticalContentAlignment="Center"
                         Click="CloseButton_Click">
@@ -233,9 +245,7 @@
                             <Setter Property="Background" Value="#C42B1C" />
                         </Style>
                     </Button.Styles>
-                    <TextBlock Text="✕" FontSize="12"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Center" />
+                    <Icon Type="Regular" Value="X" Width="13" Height="13" />
                 </Button>
             </StackPanel>
         </Grid>

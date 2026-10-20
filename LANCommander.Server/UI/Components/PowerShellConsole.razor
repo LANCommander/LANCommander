@@ -9,16 +9,30 @@
 @inject ToolService ToolService
 @inject RedistributableService RedistributableService
 
-<div class="terminal @(Active ? "" : "hidden")">
-    @if (Active)
-    {
-        <div style="display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; background: #1e1e1e; border-bottom: 1px solid #333; color: #ccc; font-size: 12px; font-family: monospace;">
-            <span>@FormatElapsed()</span>
-            <button @onclick="Stop" title="Stop script" style="background: #c0392b; color: white; border: none; padding: 2px 10px; cursor: pointer; font-size: 12px;">Stop</button>
-        </div>
-    }
+@*
+    Streams a script run over the debugger hub: output coloured by stream in the launcher's palette,
+    under a header with the time the run has taken and Clear and Stop. The owner starts runs; this
+    shows them.
+*@
+<div class="console">
+    <div class="console-header">
+        <span class="console-title">Console</span>
+        @if (_startTime.HasValue)
+        {
+            <span class="console-elapsed">@FormatTimeSpan(Elapsed) elapsed</span>
+        }
+        <span class="console-header-spacer"></span>
+        <Button Text ExtraSmall OnClick="ClearAsync">Clear</Button>
+        <Button Danger ExtraSmall Disabled="@(State != ConsoleRunState.Running)" OnClick="StopAsync">Stop</Button>
+    </div>
 
-    <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" />
+    <div class="console-body">
+        <Terminal @ref="_terminal" Id="@Id.ToString()" Options="_options" />
+        @if (Placeholder != null && State == ConsoleRunState.Idle)
+        {
+            <div class="console-placeholder">@Placeholder</div>
+        }
+    </div>
 </div>
 
 @code {
@@ -26,16 +40,28 @@
     [Parameter] public bool Active { get; set; }
     [Parameter] public EventCallback<bool> ActiveChanged { get; set; }
 
+    /// <summary>A run started, finished or was stopped.</summary>
+    [Parameter] public EventCallback<ConsoleRunState> StateChanged { get; set; }
+
+    /// <summary>Called every second while a run is going, e.g. to redraw an elapsed time elsewhere.</summary>
+    [Parameter] public EventCallback OnTick { get; set; }
+
+    /// <summary>Shown over the empty console before anything has run.</summary>
+    [Parameter] public string? Placeholder { get; set; }
+
+    public ConsoleRunState State { get; private set; } = ConsoleRunState.Idle;
+
+    /// <summary>How long the current or last run took; zero before any.</summary>
+    public TimeSpan Elapsed => _startTime.HasValue ? (_endTime ?? DateTime.UtcNow) - _startTime.Value : TimeSpan.Zero;
+
+    private DateTime? _endTime;
+
     private Terminal? _terminal;
     private CancellationTokenSource? _cts;
     private DateTime? _startTime;
     private System.Threading.Timer? _elapsedTimer;
 
-    private readonly TerminalOptions _options = new()
-    {
-        CursorBlink = true,
-        CursorStyle = CursorStyle.Bar,
-    };
+    private readonly TerminalOptions _options = ConsolePalette.CreateOptions(CursorStyle.Block);
 
     async Task SetActive(bool active)
     {
@@ -43,6 +69,14 @@
 
         if (ActiveChanged.HasDelegate)
             await ActiveChanged.InvokeAsync(Active);
+    }
+
+    async Task SetStateAsync(ConsoleRunState state)
+    {
+        State = state;
+
+        if (StateChanged.HasDelegate)
+            await StateChanged.InvokeAsync(state);
     }
 
     private void InitializeDebugger()
@@ -57,9 +91,10 @@
         _cts?.Dispose();
         _cts = new CancellationTokenSource();
         _startTime = DateTime.UtcNow;
+        _endTime = null;
 
         _elapsedTimer = new System.Threading.Timer(
-            _ => InvokeAsync(StateHasChanged),
+            _ => InvokeAsync(TickAsync),
             null,
             TimeSpan.Zero,
             TimeSpan.FromSeconds(1));
@@ -90,10 +125,26 @@
 
         await _terminal.Clear();
         await SetActive(true);
+        await SetStateAsync(ConsoleRunState.Running);
         await InvokeAsync(StateHasChanged);
 
         await _terminal.Focus();
         await _terminal.FitAsync();
+    }
+
+    async Task TickAsync()
+    {
+        StateHasChanged();
+
+        if (OnTick.HasDelegate)
+            await OnTick.InvokeAsync();
+    }
+
+    /// <summary>Empties the console.</summary>
+    public async Task ClearAsync()
+    {
+        if (_terminal != null)
+            await _terminal.Clear();
     }
 
     public async Task End(IScriptDebugContext context)
@@ -101,12 +152,13 @@
         StopTimer();
 
         if (_terminal != null && _startTime.HasValue)
-        {
-            var elapsed = DateTime.UtcNow - _startTime.Value;
-            await _terminal.WriteLine($"\nCompleted in {FormatTimeSpan(elapsed)}", LogLevel.Information);
-        }
+            await _terminal.WriteLine($"\nCompleted in {FormatTimeSpan(Elapsed)}", ConsoleLineKind.System);
 
         await SetActive(false);
+
+        if (State == ConsoleRunState.Running)
+            await SetStateAsync(ConsoleRunState.Completed);
+
         await InvokeAsync(StateHasChanged);
     }
 
@@ -117,7 +169,7 @@
 
         while (true)
         {
-            var input = await _terminal.ReadLineAsync();
+            var input = await _terminal.ReadLineAsync(ConsolePalette.Format("> ", ConsoleLineKind.Prompt).First());
 
             if (input.Trim().Equals("exit", StringComparison.OrdinalIgnoreCase))
                 break;
@@ -138,21 +190,23 @@
         {
             await _terminal.WriteLine(message, level);
         }
-        catch (Exception ex)
+        catch (Exception)
         {
-
+            // The terminal went away mid-run, e.g. the dialog closed; the run itself carries on
         }
     }
 
-    async Task Stop()
+    /// <summary>Stops the run in progress.</summary>
+    public async Task StopAsync()
     {
         _cts?.Cancel();
         StopTimer();
 
         if (_terminal != null)
-            await _terminal.WriteLine("\nScript stopped by user.", LogLevel.Warning);
+            await _terminal.WriteLine("\nScript stopped by user.", ConsoleLineKind.System);
 
         await SetActive(false);
+        await SetStateAsync(ConsoleRunState.Stopped);
         await InvokeAsync(StateHasChanged);
     }
 
@@ -160,22 +214,17 @@
     {
         _elapsedTimer?.Dispose();
         _elapsedTimer = null;
+
+        if (_startTime.HasValue)
+            _endTime ??= DateTime.UtcNow;
     }
 
-    string FormatElapsed()
-    {
-        if (!_startTime.HasValue)
-            return "";
-
-        var elapsed = DateTime.UtcNow - _startTime.Value;
-        return FormatTimeSpan(elapsed);
-    }
-
-    static string FormatTimeSpan(TimeSpan ts)
+    /// <summary>A run's length as the console and the running pill show it: 00:12, 1:02:03.</summary>
+    public static string FormatTimeSpan(TimeSpan ts)
     {
         if (ts.TotalHours >= 1)
             return ts.ToString(@"h\:mm\:ss");
 
-        return ts.ToString(@"m\:ss");
+        return ts.ToString(@"mm\:ss");
     }
 }

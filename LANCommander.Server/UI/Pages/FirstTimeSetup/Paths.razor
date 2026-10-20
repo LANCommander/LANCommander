@@ -1,99 +1,88 @@
-﻿@page "/FirstTimeSetup/Paths"
+@page "/FirstTimeSetup/Paths"
 @using LANCommander.SDK
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings
+@using LANCommander.Server.UI.Components
 @using Microsoft.Extensions.Options
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
 @inject StorageLocationService StorageLocationService
-@inject SettingsProvider<Settings> SettingsProvider
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
+@inject NotificationService Notifications
+@inject ILogger<Paths> Logger
 
 <PageTitle>Configure Paths - First Time Setup</PageTitle>
 
-<Form Model="@this" Loading="Loading" OnFinish="ValidatePaths" Layout="@FormLayout.Vertical">
-    <FormItem>
-        Configure where archives, saves, and media get stored.
-    </FormItem>
+<Form Model="this" Loading="Loading" OnSubmit="SaveAsync">
+    <p>Configure where archives, saves, and media get stored.</p>
 
-    <Divider Text="Archives" />
+    <Divider>Archives</Divider>
 
     <FormItem>
-        <Flex Vertical Gap="FlexGap.Middle">
-            <Table TItem="StorageLocation" DataSource="@ArchiveStorageLocations" HidePagination="true" Responsive Context="storageLocation" Size="TableSize.Small">
-                <PropertyColumn Property="l => l.Path">
-                    <FilePicker @bind-Value="storageLocation.Path" AllowDirectories="true" Title="Select Storage Location" Root="@RootPath" OnSelected="(path) => OnPathSelected(storageLocation, path)"/>
-                </PropertyColumn>
-                <PropertyColumn Property="l => l.Default" Title="Default" Align="ColumnAlign.Right">
-                    <Radio TValue="bool" Checked="storageLocation.Default" CheckedChanged="() => SetDefault(storageLocation)"/>
-                </PropertyColumn>
-                <ActionColumn>
-                    <Flex Justify="FlexJustify.End">
-                        <Popconfirm OnConfirm="() => RemoveArchiveStorageLocation(storageLocation)" Title="Are you sure you want to remove this storage location?">
-                            <Button Icon="@IconType.Outline.Close" Type="ButtonType.Text" Danger/>
+        <Flex Vertical Gap="Gap.Medium">
+            <Table TItem="StorageLocation" Items="ArchiveStorageLocations" Key="l => l" Small NoPaging SettingsKey="setup-archive-paths">
+                <Columns>
+                    <TemplateColumn TItem="StorageLocation" Title="Path">
+                        <FilePicker @bind-Value="context.Path" Title="Select Storage Location" Root="@RootPath" OnSelected="path => OnPathSelected(context, path)" />
+                    </TemplateColumn>
+                    <TemplateColumn TItem="StorageLocation" Title="Default" Width="100px">
+                        <Checkbox Value="context.Default" ValueChanged="_ => SetDefault(context)" aria-label="Default" />
+                    </TemplateColumn>
+                    <ActionsColumn TItem="StorageLocation" Width="64px">
+                        <Popconfirm OnConfirm="() => RemoveArchiveStorageLocation(context)" Title="Are you sure you want to remove this storage location?" OkText="Remove" Danger>
+                            <Button Text Danger Icon="IconType.X" title="Remove" />
                         </Popconfirm>
-                    </Flex>
-                </ActionColumn>
+                    </ActionsColumn>
+                </Columns>
             </Table>
 
-            <Flex Justify="FlexJustify.End">
-                <Button OnClick="AddArchiveStorageLocation" Type="@ButtonType.Primary">Add Path</Button>
+            <Flex Justify="Justify.End">
+                <Button Primary Icon="IconType.Plus" OnClick="AddArchiveStorageLocation">Add Path</Button>
             </Flex>
         </Flex>
     </FormItem>
 
-    @if (SavesStorageLocation != null)
-    {
-        <Divider Text="Saves" />
-
-        <FormItem>
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@SavesStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(SavesStorageLocation, path)" />
-        </FormItem>
-    }
-
-    @if (MediaStorageLocation != null)
-    {
-        <Divider Text="Media" />
-
-        <FormItem>
-            <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="(path) => OnPathSelected(MediaStorageLocation, path)" />
-        </FormItem>
-    }
-
-    <Divider Text="Backups" />
+    <Divider>Saves</Divider>
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.Backups.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="SavesStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="path => OnPathSelected(SavesStorageLocation, path)" />
     </FormItem>
 
-    <Divider Text="Launchers" />
+    <Divider>Media</Divider>
 
     <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.Launcher.StoragePath = OnPathSelected(path)" />
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="MediaStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="path => OnPathSelected(MediaStorageLocation, path)" />
     </FormItem>
 
-    <Divider Text="Servers" />
-
-    <FormItem>
-        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="@Settings.Value.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="(path) => Settings.Value.Server.GameServers.StoragePath = OnPathSelected(path)" />
-    </FormItem>
+    <Divider>Backups</Divider>
 
     <FormItem>
-        <Flex Justify="FlexJustify.End">
-            <Button Type="ButtonType.Primary" HtmlType="submit">
-                Next
-            </Button>
-        </Flex>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="Settings.Value.Server.Backups.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="path => Settings.Value.Server.Backups.StoragePath = RelativePath(path)" />
     </FormItem>
+
+    <Divider>Launchers</Divider>
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="Settings.Value.Server.Launcher.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="path => Settings.Value.Server.Launcher.StoragePath = RelativePath(path)" />
+    </FormItem>
+
+    <Divider>Servers</Divider>
+
+    <FormItem>
+        <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="Settings.Value.Server.GameServers.StoragePath" OkText="Select Path" Title="Choose Path" OnSelected="path => Settings.Value.Server.GameServers.StoragePath = RelativePath(path)" />
+    </FormItem>
+
+    <Flex Justify="Justify.End" Class="first-time-setup-actions">
+        <Button Primary Submit Loading="Loading">Next</Button>
+    </Flex>
 </Form>
 
 @code {
-    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; }
+    [CascadingParameter] FirstTimeSetupLayout Layout { get; set; } = default!;
 
-    ICollection<StorageLocation> ArchiveStorageLocations = new List<StorageLocation>();
+    // Replaced rather than changed in place, so the table notices additions and removals
+    List<StorageLocation> ArchiveStorageLocations = new();
 
     StorageLocation MediaStorageLocation = new()
     {
@@ -109,15 +98,14 @@
         Default = true,
     };
 
-    bool Loading = false;
-    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
+    bool Loading;
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
 
     protected override async Task OnInitializedAsync()
     {
         await Layout.ChangeCurrentStep(FirstTimeSetupStep.Paths);
 
-        var isSetupInitialized = await SetupService.IsSetupInitialized();
-        if (isSetupInitialized)
+        if (await SetupService.IsSetupInitialized())
         {
             NavigationManager.NavigateTo("/");
             return;
@@ -125,83 +113,63 @@
 
         try
         {
-            ArchiveStorageLocations = await StorageLocationService
+            ArchiveStorageLocations = (await StorageLocationService
+                    .AsNoTracking()
+                    .GetAsync(l => l.Type == StorageLocationType.Archive))
+                .ToList();
+
+            SavesStorageLocation = await StorageLocationService
                 .AsNoTracking()
-                .GetAsync(l => l.Type == StorageLocationType.Archive);
+                .FirstOrDefaultAsync(l => l.Type == StorageLocationType.Save && l.Default) ?? SavesStorageLocation;
+
+            MediaStorageLocation = await StorageLocationService
+                .AsNoTracking()
+                .FirstOrDefaultAsync(l => l.Type == StorageLocationType.Media && l.Default) ?? MediaStorageLocation;
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, "Couldn't retrieve existing archive storage locations");
-        }
-        finally
-        {
-            if (!ArchiveStorageLocations.Any())
-                ArchiveStorageLocations.Add(new StorageLocation
-                {
-                    Path = Path.Join(AppPaths.GetConfigDirectory(), "Uploads"),
-                    Type = StorageLocationType.Archive,
-                    Default = true,
-                });
+            Logger.LogError(ex, "Couldn't retrieve existing storage locations");
         }
 
-        try
+        if (!ArchiveStorageLocations.Any())
         {
-            var existingSaves = await StorageLocationService
-                .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Type == StorageLocationType.Save && l.Default);
-
-            if (existingSaves != null)
-                SavesStorageLocation = existingSaves;
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
-        }
-
-        try
-        {
-            var existingMedia = await StorageLocationService
-                .AsNoTracking()
-                .FirstOrDefaultAsync(l => l.Type == SDK.Enums.StorageLocationType.Media && l.Default);
-
-            if (existingMedia != null)
-                MediaStorageLocation = existingMedia;
-        }
-        catch (Exception ex)
-        {
-            Logger?.LogError(ex, "Couldn't retrieve existing store locations");
+            ArchiveStorageLocations.Add(new StorageLocation
+            {
+                Path = Path.Join(AppPaths.GetConfigDirectory(), "Uploads"),
+                Type = StorageLocationType.Archive,
+                Default = true,
+            });
         }
     }
 
-    async Task ValidatePaths()
+    async Task SaveAsync()
     {
+        Loading = true;
+
         try
         {
-            var locations = new List<StorageLocation>(ArchiveStorageLocations);
-            
-            locations.Add(SavesStorageLocation);
-            locations.Add(MediaStorageLocation);
+            await SetupService.UpdatePaths([.. ArchiveStorageLocations, SavesStorageLocation, MediaStorageLocation]);
 
-            await SetupService.UpdatePaths(locations);
-            
             NavigationManager.NavigateTo("/FirstTimeSetup/Metadata");
         }
         catch (Exception ex)
         {
-            Logger?.LogError(ex, $"Error validating path");
-            MessageService.Error($"Error validating path: {ex.Message}", 10);
+            Notifications.Error(ex, "Error validating path");
+        }
+        finally
+        {
+            Loading = false;
         }
     }
 
+    // New locations have no Id yet, so compare the objects themselves
     void SetDefault(StorageLocation storageLocation)
     {
-        foreach (var archiveStorageLocation in ArchiveStorageLocations)
-        {
-            archiveStorageLocation.Default = archiveStorageLocation.Id == storageLocation.Id;
-        }
+        foreach (var location in ArchiveStorageLocations)
+            location.Default = location == storageLocation;
     }
-    
-    string OnPathSelected(string path)
+
+    static string? RelativePath(string? path)
     {
         var appPath = Directory.GetCurrentDirectory();
 
@@ -211,20 +179,11 @@
         return path;
     }
 
-    void OnPathSelected(StorageLocation storageLocation, string path)
-    {
-        storageLocation.Path = OnPathSelected(path);
-    }
+    static void OnPathSelected(StorageLocation storageLocation, string path) => storageLocation.Path = RelativePath(path);
 
-    void AddArchiveStorageLocation()
-    {
-        ArchiveStorageLocations.Add(new StorageLocation());
+    void AddArchiveStorageLocation() =>
+        ArchiveStorageLocations = [.. ArchiveStorageLocations, new StorageLocation { Type = StorageLocationType.Archive, Default = !ArchiveStorageLocations.Any(l => l.Default) }];
 
-        StateHasChanged();
-    }
-
-    void RemoveArchiveStorageLocation(StorageLocation storageLocation)
-    {
-        ArchiveStorageLocations.Remove(storageLocation);
-    }
+    void RemoveArchiveStorageLocation(StorageLocation storageLocation) =>
+        ArchiveStorageLocations = ArchiveStorageLocations.Where(l => l != storageLocation).ToList();
 }

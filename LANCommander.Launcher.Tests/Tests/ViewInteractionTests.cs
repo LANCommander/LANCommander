@@ -1,6 +1,5 @@
 using System;
 using System.Collections.ObjectModel;
-using System.IO;
 using Avalonia.Controls;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
@@ -22,8 +21,8 @@ namespace LANCommander.Launcher.Tests.Tests;
 /// can miss — e.g. an [ObservableProperty] that no longer notifies, or a converter
 /// that drops updates after the first render.
 ///
-/// Each scenario emits its own baseline. First run saves the screenshot and fails;
-/// inspect, accept, commit to Baselines/ and CI is green from then on.
+/// Each scenario has its own baseline; see <see cref="VisualAssert"/> for creating and
+/// refreshing them.
 /// </summary>
 public class ViewInteractionTests
 {
@@ -55,19 +54,7 @@ public class ViewInteractionTests
         // Drain queued binding/render jobs the mutation generated.
         Dispatcher.UIThread.RunJobs();
 
-        var actualPath   = ScreenshotHelper.Capture(window, screenshotName);
-        var baselinePath = ScreenshotHelper.GetBaselinePath(screenshotName);
-        var diffPath     = ScreenshotHelper.GetDiffPath(screenshotName);
-
-        var result = VisualComparer.Compare(actualPath, baselinePath, diffPath);
-
-        if (!result.BaselineExists)
-        {
-            Directory.CreateDirectory(ScreenshotHelper.BaselinesDirectory);
-            File.Copy(actualPath, baselinePath, overwrite: true);
-        }
-
-        Assert.True(result.Passed, result.Summary);
+        VisualAssert.MatchesBaseline(window, screenshotName);
     }
 
     // -------------------------------------------------------------------------

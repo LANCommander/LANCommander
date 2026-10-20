@@ -1,14 +1,14 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class ScriptExporter(
-    IMapper mapper,
+    ManifestMapper manifestMapper,
     ScriptService scriptService) : BaseExporter<Script, Data.Models.Script>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Script record)
@@ -50,7 +50,7 @@ public class ScriptExporter(
                 }
             }
 
-            return mapper.Map<Script>(entity);
+            return manifestMapper.ToManifest(entity);
         }
         catch (Exception ex)
         {

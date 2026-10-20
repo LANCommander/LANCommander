@@ -77,14 +77,14 @@ jobs:
 
             - name: Install Node packages
               run: |
-                  npm install --prefix ./LANCommander.UI
+                  npm install --prefix ./LANCommander.Server.UI
                   npm install --prefix ./LANCommander.Server
 
             # The Monaco editor's PowerShell completions are generated (gitignored) and
             # required by the frontend webpack build. The in-build MSBuild target uses
             # Windows-style paths, so generate explicitly here for the Linux runner.
             - name: Generate PowerShell Completions
-              run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+              run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 
             - name: Restore dependencies
               run: dotnet restore LANCommander.Server.UI.Tests
@@ -99,6 +99,60 @@ jobs:
               run: dotnet test LANCommander.Server.UI.Tests --no-build --configuration Release --logger "trx;LogFileName=ui-test-results.trx" --results-directory ./TestResults
               env:
                   SCREENSHOT_DIR: ${{ github.workspace }}/TestResults/Screenshots
+                  VISUAL_SCREENSHOTS_DIR: ${{ github.workspace }}/visual/screenshots
+                  VISUAL_DIFFS_DIR: ${{ github.workspace }}/visual/diffs
+
+            # ---- Visual artifact collection --------------------------------------
+            # Same layout as the launcher's so LANCommander.Server.UI.Tests.PRComment.yml can
+            # post baseline / actual / diff tables for regressed captures.
+
+            - name: Collect visual artifacts
+              if: always()
+              run: |
+                  mkdir -p visual/screenshots visual/diffs visual/baselines
+                  cp -r LANCommander.Server.UI.Tests/Baselines/. visual/baselines/ 2>/dev/null || true
+
+                  shopt -s nullglob
+                  diffs=(visual/diffs/*.diff.png)
+                  count=${#diffs[@]}
+
+                  echo "## Server UI visual summary" >> "$GITHUB_STEP_SUMMARY"
+                  echo "" >> "$GITHUB_STEP_SUMMARY"
+                  echo "$count baseline(s) regressed." >> "$GITHUB_STEP_SUMMARY"
+
+                  python3 - "$count" <<'PY' > visual/regressions.json
+                  import json, os, sys
+                  count = int(sys.argv[1])
+                  diffs = sorted(os.listdir("visual/diffs")) if os.path.isdir("visual/diffs") else []
+                  print(json.dumps({
+                      "regressed_count": count,
+                      "regressions": [
+                          {
+                              "name": d.replace(".diff.png", ""),
+                              "diff": f"visual/diffs/{d}",
+                              "actual": f"visual/screenshots/{d.replace('.diff.png', '.png')}",
+                              "baseline": f"visual/baselines/{d.replace('.diff.png', '.png')}",
+                          }
+                          for d in diffs
+                      ],
+                  }, indent=2))
+                  PY
+
+                  echo "${{ github.event.pull_request.number }}" > visual/pr-number.txt
+
+            - name: Upload visual artifacts
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: server-ui-visual-artifacts
+                  path: |
+                      visual/screenshots/**
+                      visual/diffs/**
+                      visual/baselines/**
+                      visual/regressions.json
+                      visual/pr-number.txt
+                  if-no-files-found: warn
+                  retention-days: 14
 
             - name: Test report
               if: always()

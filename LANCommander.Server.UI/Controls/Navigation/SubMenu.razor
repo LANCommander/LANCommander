@@ -1,0 +1,131 @@
+@namespace LANCommander.Server.UI.Controls
+@using Microsoft.AspNetCore.Components.Routing
+@inherits ControlBase
+@implements IDisposable
+@inject NavigationManager Navigation
+
+@* A collapsible group of menu items; opens by itself while one of its items' pages is open *@
+<li @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <button type="button" class="lc-menu-item-content lc-submenu-title" aria-expanded="@(_open ? "true" : "false")" @onclick="Toggle">
+        @if (Icon != IconType.None)
+        {
+            <Icon Type="Icon" Class="lc-menu-item-icon" />
+        }
+        <span class="lc-menu-item-text">
+            @if (TitleTemplate != null)
+            {
+                @TitleTemplate
+            }
+            else
+            {
+                @Title
+            }
+        </span>
+        <Icon Type="IconType.CaretDown" Class="lc-submenu-caret" />
+    </button>
+    <ul class="lc-menu-list lc-submenu-list" style="--lc-menu-depth: @Depth" hidden="@(!_open)">
+        <CascadingValue Value="this" IsFixed>
+            @if (Name != null)
+            {
+                @Menu?.Insertions?.Start(Name)
+            }
+            @ChildContent
+            @if (Name != null && Menu?.Insertions != null)
+            {
+                <MenuInsertionsEnd Group="@Name" />
+            }
+        </CascadingValue>
+    </ul>
+</li>
+@Menu?.InsertionsAfter(Parent, Name)
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Names the group so a menu's <see cref="Menu.Insertions"/> can place items in it and after it.</summary>
+    [Parameter] public string? Name { get; set; }
+
+    /// <summary>Starts open regardless of the current page.</summary>
+    [Parameter] public bool Open { get; set; }
+
+    [CascadingParameter] Menu? Menu { get; set; }
+
+    /// <summary>The enclosing SubMenu, if this group is nested inside another.</summary>
+    [CascadingParameter] SubMenu? Parent { get; set; }
+
+    /// <summary>Nesting level: a top-level group is 1, a group inside it 2, and so on. Drives the child indent and guide line.</summary>
+    internal int Depth => (Parent?.Depth ?? 0) + 1;
+
+    readonly List<MenuItem> _items = [];
+    bool _open;
+    bool _toggledByUser;
+    string? _class;
+    string? _anchor;
+
+    protected override void OnInitialized()
+    {
+        _open = Open;
+        Navigation.LocationChanged += LocationChanged;
+    }
+
+    protected override void OnParametersSet()
+    {
+        Menu?.MoveAnchor(Parent, _anchor, Name);
+        _anchor = Name;
+        UpdateClass();
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        // Items register while rendering, so the first chance to see if one is active is after it
+        if (firstRender && !_open && _items.Any(i => i.IsActive))
+        {
+            _open = true;
+            UpdateClass();
+            StateHasChanged();
+        }
+    }
+
+    internal void Register(MenuItem item) => _items.Add(item);
+
+    internal void Unregister(MenuItem item) => _items.Remove(item);
+
+    void Toggle()
+    {
+        _open = !_open;
+        _toggledByUser = true;
+        UpdateClass();
+    }
+
+    void LocationChanged(object? sender, LocationChangedEventArgs e)
+    {
+        if (!_open && !_toggledByUser && _items.Any(i => i.IsActive))
+        {
+            _open = true;
+            UpdateClass();
+            _ = InvokeAsync(StateHasChanged);
+        }
+    }
+
+    void UpdateClass() =>
+        _class = new ClassBuilder()
+            .Add("lc-menu-item")
+            .Add("lc-submenu")
+            .If(_open, "lc-submenu-open")
+            .If(_items.Any(i => i.IsActive), "lc-submenu-active")
+            .Add(Class)
+            .Build();
+
+    public void Dispose()
+    {
+        Navigation.LocationChanged -= LocationChanged;
+        Menu?.MoveAnchor(Parent, _anchor, null);
+    }
+}

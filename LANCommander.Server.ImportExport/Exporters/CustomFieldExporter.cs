@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class CustomFieldExporter(
+    ManifestMapper manifestMapper,
     GameCustomFieldService gameCustomFieldService) : BaseExporter<GameCustomField, Data.Models.GameCustomField>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.GameCustomField record)
@@ -23,6 +24,6 @@ public class CustomFieldExporter(
 
     public override async Task<GameCustomField> ExportAsync(Guid id)
     {
-        return await gameCustomFieldService.GetAsync<GameCustomField>(id);
+        return await gameCustomFieldService.GetAsync(id, manifestMapper.ProjectToManifestGameCustomField);
     }
 } 

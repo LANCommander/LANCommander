@@ -1,0 +1,35 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* Placeholder bars standing in for text that is still loading *@
+<div @attributes="AdditionalAttributes" class="@_class" style="@Style" aria-hidden="true">
+    @for (var i = 0; i < Rows; i++)
+    {
+        <span class="lc-skeleton-bar" style="width: @Width(i)"></span>
+    }
+</div>
+
+@code {
+    /// <summary>How many bars to draw.</summary>
+    [Parameter] public int Rows { get; set; } = 3;
+
+    /// <summary>The bars' widths (any CSS length), repeated if there are more rows than widths.</summary>
+    [Parameter] public IReadOnlyList<string>? Widths { get; set; }
+
+    // Uneven, like lines of text
+    static readonly string[] DefaultWidths = ["70%", "92%", "54%"];
+
+    string? _class;
+
+    string Width(int row)
+    {
+        var widths = Widths is { Count: > 0 } ? Widths : DefaultWidths;
+
+        return widths[row % widths.Count];
+    }
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-skeleton").Add(Class).Build();
+    }
+}

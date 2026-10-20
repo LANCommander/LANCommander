@@ -26,9 +26,18 @@ public partial class GameMediaItemViewModel : ObservableObject
     [ObservableProperty]
     private string _mimeType = string.Empty;
 
+    /// <summary>Name given to the media on the server; the lightbox shows it as a caption.</summary>
+    [ObservableProperty]
+    private string _name = string.Empty;
+
     /// <summary>Pre-loaded bitmap for screenshot display (loaded from local file or remote URL).</summary>
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(AspectRatio))]
     private Bitmap? _imageSource;
+
+    /// <summary>Width over height for layout: the screenshot's own shape, 16:9 for videos and placeholders.</summary>
+    public double AspectRatio =>
+        ImageSource is { Size: { Width: > 0, Height: > 0 } size } ? size.Width / size.Height : 16.0 / 9.0;
 
     /// <summary>When true, this item is a loading placeholder that will be replaced with real content.</summary>
     [ObservableProperty]

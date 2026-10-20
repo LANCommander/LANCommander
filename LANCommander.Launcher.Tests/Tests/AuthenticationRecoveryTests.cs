@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Platform;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
@@ -91,7 +92,8 @@ public class AuthenticationRecoveryTests
             Requests = new ApiRequestFactory(_httpClient, tokens, inMemorySettings, _session);
             var authenticationClient = new AuthenticationClient(
                 NullLogger<AuthenticationClient>.Instance, tokens, null!, inMemorySettings,
-                Requests, Connection, null!);
+                Requests, Connection, null!,
+                new LANCommander.SDK.Plugins.PluginEventBus(NullLogger<LANCommander.SDK.Plugins.PluginEventBus>.Instance));
             var authentication = new AuthenticationService(
                 tokens, inMemorySettings, null!, Connection, authenticationClient,
                 NullLogger<AuthenticationService>.Instance);
@@ -102,6 +104,8 @@ public class AuthenticationRecoveryTests
                 options.Authentication = settings.Authentication;
             });
             services.AddSingleton<INavigationService, NavigationService>();
+            services.AddSingleton<IBatteryService, NullBatteryService>();
+            services.AddSingleton<IVolumeService, NullVolumeService>();
             services.AddSingleton(authenticationClient);
             services.AddSingleton(_session);
             services.AddSingleton(new BeaconClient(

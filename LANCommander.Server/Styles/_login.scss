@@ -1,11 +1,39 @@
+// Account pages (UI/Pages/Account/*.cshtml, laid out by UI/Views/Shared/_LayoutBasic.cshtml)
+.layout-basic {
+    min-height: 100vh;
+    padding: 24px;
+}
+
+.login-container {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+
+    &-background {
+        position: absolute;
+        inset: 0;
+        background-size: cover;
+        background-position: center;
+        filter: blur(20px) brightness(75%);
+        transform: scale(110%);
+    }
+}
+
+// The form and the download pane side by side in the middle, stacked on small screens
 .login-box {
+    position: relative;
+    display: flex;
+    justify-content: center;
     filter: drop-shadow(0px 0px 32px #000);
-    
+
     &-logo {
         margin-bottom: 48px;
         text-align: center;
         width: 100%;
-        
+
         img {
             max-width: 300px;
             width: 80%;
@@ -13,28 +41,26 @@
     }
 }
 
-.login-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-content: center;
-    overflow: hidden;
-    
-    &-background {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background-size: cover;
-        background-position: center;
-        filter: blur(20px) brightness(75%);
-        transform: scale(110%);
+.login-form-pane,
+.login-download-pane {
+    flex: 0 0 25%;
+}
+
+@media (max-width: 1199px) {
+    .login-form-pane,
+    .login-download-pane {
+        flex-basis: 33.333%;
+    }
+}
+
+@media (max-width: 767px) {
+    .login-box {
+        flex-direction: column;
+    }
+
+    .login-form-pane,
+    .login-download-pane {
+        flex-basis: auto;
     }
 }
 
@@ -45,14 +71,43 @@
     align-items: center;
     justify-content: center;
     padding: 24px;
-    
-    form {
+
+    form,
+    .login-alert,
+    .authentication-provider-container,
+    .lc-divider {
         width: 100%;
         max-width: 300px;
     }
+
+    .lc-input {
+        width: 100%;
+    }
+}
+
+.login-alert {
+    margin: 0 0 16px;
+}
+
+.login-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.login-alternative {
+    display: flex;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.authentication-provider-container {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
 }
 
 .login-download-pane {
+    position: relative;
     min-height: 50vh;
     background-size: cover;
     background-position: center;
@@ -61,11 +116,11 @@
     align-items: end;
     padding-top: 48px;
     padding-bottom: 48px;
-    
-    .ant-btn {
-        box-shadow: 0px 1px 4px rgba(0, 0, 0, .5)
+
+    .lc-button {
+        box-shadow: 0px 1px 4px rgba(0, 0, 0, .5);
     }
-    
+
     &::before {
         content: '';
         position: absolute;
@@ -75,4 +130,20 @@
         height: 256px;
         background: linear-gradient(0deg, rgba(0, 0, 0, 0.75) 0%, rgba(0, 0, 0, 0) 100%);
     }
+}
+
+.login-download-pane-container {
+    position: relative;
+}
+
+.login-download-link .lc-button-text {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 4px;
+}
+
+.login-download-link-name {
+    flex: 1;
+    text-align: left;
 }

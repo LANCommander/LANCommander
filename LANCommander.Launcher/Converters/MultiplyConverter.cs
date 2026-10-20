@@ -8,7 +8,7 @@ public class MultiplyConverter : IValueConverter
 {
     public object Convert(object value, Type targetType, object parameter, CultureInfo culture)
     {
-        if (value is double d && double.TryParse(parameter?.ToString(), out var factor))
+        if (value is double d && double.TryParse(parameter?.ToString(), NumberStyles.Float, CultureInfo.InvariantCulture, out var factor))
             return d * factor;
 
         return value;

@@ -5,13 +5,18 @@
         <Description>A .NET library for interacting with a LANCommander server</Description>
         <PackageIcon>package-icon.png</PackageIcon>
         <PackageReadmeFile>README.md</PackageReadmeFile>
+        <!-- Opt out of the repo-wide Nullable=enable; Mapperly projections over the manifest models rely on oblivious collections. -->
+        <Nullable>disable</Nullable>
+        <!-- Emit XML docs so the plugin API reference can be generated from source comments. -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+        <!-- Don't fail/spam the build for members without XML comments. -->
+        <NoWarn>$(NoWarn);CS1591</NoWarn>
     </PropertyGroup>
 
     <ItemGroup>
         <PackageReference Include="CommandLineParser" />
         <PackageReference Include="Crc32.NET" />
         <PackageReference Include="DiscordRichPresence" />
-        <PackageReference Include="Facepunch.Steamworks" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client" />
         <PackageReference Include="Microsoft.AspNetCore.SignalR.Client.SourceGenerator" />
         <PackageReference Include="Microsoft.Extensions.Configuration" />
@@ -19,6 +24,7 @@
         <PackageReference Include="Microsoft.Extensions.Hosting.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Abstractions" />
         <PackageReference Include="Microsoft.Extensions.Logging.Configuration" />
+        <PackageReference Include="Microsoft.Extensions.Logging.Console" />
         <PackageReference Include="Microsoft.Extensions.Options.ConfigurationExtensions" />
         <PackageReference Include="Microsoft.PowerShell.Commands.Diagnostics" />
         <PackageReference Include="Microsoft.PowerShell.SDK" />
@@ -42,7 +48,6 @@
     </ItemGroup>
     
     <ItemGroup>
-      <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
       <ProjectReference Include="..\LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj"
                         OutputItemType="Analyzer"
                         ReferenceOutputAssembly="false" />

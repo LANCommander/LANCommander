@@ -10,6 +10,7 @@ public partial class GameActionBarView : UserControl
     private GameActionBarViewModel? _vm;
     private MenuFlyout? _installFlyout;
     private MenuFlyout? _playFlyout;
+    private MenuFlyout? _moreFlyout;
 
     public GameActionBarView()
     {
@@ -34,6 +35,13 @@ public partial class GameActionBarView : UserControl
             _playFlyout = null;
         }
 
+        if (_moreFlyout != null)
+        {
+            GameContextMenu.DetachBinder(_moreFlyout);
+            MoreButton.Flyout = null;
+            _moreFlyout = null;
+        }
+
         _vm = DataContext as GameActionBarViewModel;
 
         if (_vm == null)
@@ -43,8 +51,10 @@ public partial class GameActionBarView : UserControl
         // visible at a time, but each needs its own flyout instance.
         _installFlyout = GameContextMenu.CreateFlyout(_vm);
         _playFlyout = GameContextMenu.CreateFlyout(_vm);
+        _moreFlyout = GameContextMenu.CreateFlyout(_vm);
 
         InstallSplitButton.Flyout = _installFlyout;
         PlaySplitButton.Flyout = _playFlyout;
+        MoreButton.Flyout = _moreFlyout;
     }
 }

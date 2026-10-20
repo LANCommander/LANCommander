@@ -1,0 +1,51 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<div @attributes="AdditionalAttributes" class="@_class" style="@_style">
+    @ChildContent
+</div>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    /// <summary>Horizontal space between columns.</summary>
+    [Parameter] public Gap Gap { get; set; }
+
+    /// <summary>Vertical space between wrapped lines of columns.</summary>
+    [Parameter] public Gap VerticalGap { get; set; }
+
+    /// <summary>Keep every column on one line even if they overflow.</summary>
+    [Parameter] public bool NoWrap { get; set; }
+
+    [Parameter] public Align Align { get; set; }
+
+    [Parameter] public Justify Justify { get; set; }
+
+    string? _class;
+    string? _style;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-row")
+            .If(NoWrap, "lc-row-nowrap")
+            .Add(LayoutClasses.For(Align))
+            .Add(LayoutClasses.For(Justify))
+            .Add(Class)
+            .Build();
+
+        _style = new StyleBuilder()
+            .If(Gap != Gap.None, "--lc-gutter", GapSize(Gap))
+            .If(VerticalGap != Gap.None, "--lc-row-gap", GapSize(VerticalGap))
+            .Add(Style)
+            .Build();
+    }
+
+    static string GapSize(Gap gap) => gap switch
+    {
+        Gap.Small => "8px",
+        Gap.Medium => "16px",
+        Gap.Large => "24px",
+        _ => "0px",
+    };
+}

@@ -15,7 +15,7 @@ namespace LANCommander.Launcher.Data.Migrations
         protected override void BuildModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
-            modelBuilder.HasAnnotation("ProductVersion", "9.0.9");
+            modelBuilder.HasAnnotation("ProductVersion", "9.0.19");
 
             modelBuilder.Entity("CategoryGame", b =>
                 {
@@ -244,6 +244,9 @@ namespace LANCommander.Launcher.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("AutoUpdate")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("BaseGameId")
                         .HasColumnType("TEXT");
 
@@ -262,6 +265,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("InstallDirectory")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("InstallTo")
+                        .HasColumnType("INTEGER");
+
                     b.Property<bool>("Installed")
                         .HasColumnType("INTEGER");
 
@@ -271,14 +277,26 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("InstalledVersion")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("InstalledVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("LatestVersion")
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("TEXT");
+
+                    b.Property<bool>("ShowInLibrary")
+                        .HasColumnType("INTEGER");
 
                     b.Property<bool>("Singleplayer")
                         .HasColumnType("INTEGER");

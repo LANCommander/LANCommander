@@ -1,0 +1,24 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TValue
+@inherits FormInputBase<TValue>
+
+@* A number picked by dragging a handle between Min and Max *@
+<RadzenSlider TValue="TValue"
+              Name="@InputId"
+              Value="@Value"
+              ValueChanged="@((TValue value) => SetValueAsync(value))"
+              Min="Min"
+              Max="Max"
+              Step="@Step"
+              Disabled="IsDisabled"
+              Style="@Style"
+              Attributes='@InputAttributes.Build(this, false, default, BuildClass("lc-slider"))' />
+
+@code {
+    [Parameter] public decimal Min { get; set; }
+
+    [Parameter] public decimal Max { get; set; } = 100;
+
+    /// <summary>How far each step moves the value. Defaults to 1.</summary>
+    [Parameter] public string Step { get; set; } = "1";
+}

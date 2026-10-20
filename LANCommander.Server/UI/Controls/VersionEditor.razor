@@ -1,0 +1,87 @@
+@inject DialogService Dialogs
+
+@* The versions of the game whose Id is cascaded. New versions are made from the game editor's version picker,
+   copy the latest version's scripts, actions, save paths, redistributables and options, and get their archive
+   from an upload *@
+<Flex Vertical Gap="Gap.Large">
+<DataTable @ref="_table" TItem="GameVersion" NoPaging Small SettingsKey="game-versions" Query="v => v.GameId == GameId">
+        <Columns>
+            <BoundColumn Property="v => v.SortOrder" Title="Sort Order" Sortable DefaultSort="ColumnSort.Descending" Hide />
+            <BoundColumn Property="v => v.Version" Sortable>
+                @context.Version
+
+                @if (context.Id == GameVersionId)
+                {
+                    <Tag>Editing</Tag>
+                }
+            </BoundColumn>
+            <BoundColumn Property="v => v.Published" Title="Status" Sortable>
+                @if (context.Published)
+                {
+                    <Tag Success>Published</Tag>
+                }
+                else
+                {
+                    <Tag>Draft</Tag>
+                }
+            </BoundColumn>
+            <BoundColumn Property="v => v.Changelog" />
+            <BoundColumn Property="v => v.Archive != null ? v.Archive.CompressedSize : 0" Title="Archive Size" Include="Archive" Sortable>
+                @if (context.Archive != null)
+                {
+                    <ByteSize Value="context.Archive.CompressedSize" />
+                }
+                else
+                {
+                    <Typography Secondary>None</Typography>
+                }
+            </BoundColumn>
+            <BoundColumn Property="v => v.Scripts != null ? v.Scripts.Count : 0" Title="Scripts" Include="Scripts" />
+            <BoundColumn Property="v => v.Actions != null ? v.Actions.Count : 0" Title="Actions" Include="Actions" />
+            <BoundColumn Property="v => v.SavePaths != null ? v.SavePaths.Count : 0" Title="Save Paths" Include="SavePaths" />
+            <BoundColumn Property="v => v.Redistributables != null ? v.Redistributables.Count : 0" Title="Redistributables" Include="Redistributables" />
+            <BoundColumn Property="v => v.CreatedOn" Title="Created On" Sortable>
+                <LocalTime Value="context.CreatedOn" />
+            </BoundColumn>
+            <ActionsColumn TItem="GameVersion">
+                <Tooltip Title="Edit Config">
+                    <Button Text Icon="IconType.PencilSimple" aria-label="Edit config" Href="@($"/Games/{GameId}/Scripts?version={context.Id}")" />
+                </Tooltip>
+                @if (context.Archive != null)
+                {
+                    <Tooltip Title="Download Archive">
+                        <Button Text Icon="IconType.DownloadSimple" aria-label="Download archive" Href="@($"/Download/Archive/{context.Archive.Id}")" NewTab />
+                    </Tooltip>
+                }
+                else
+                {
+                    <Tooltip Title="Upload Archive">
+                        <Button Text Icon="IconType.UploadSimple" aria-label="Upload archive" OnClick="() => UploadArchiveAsync(context.Id)" />
+                    </Tooltip>
+                }
+            </ActionsColumn>
+        </Columns>
+    </DataTable>
+</Flex>
+
+@code {
+    [CascadingParameter(Name = "GameId")] public Guid GameId { get; set; }
+    [CascadingParameter(Name = "GameVersionId")] public Guid GameVersionId { get; set; }
+
+    DataTable<GameVersion>? _table;
+
+    /// <summary>Uploads the archive for a version that doesn't have one yet.</summary>
+    Task UploadArchiveAsync(Guid versionId) =>
+        Dialogs.OpenAsync<ArchiveUploadDialog, ArchiveUploadOptions, bool>("Upload Archive", new ArchiveUploadOptions
+        {
+            GameId = GameId,
+            GameVersionId = versionId,
+            OnUploaded = _ => InvokeAsync(async () =>
+            {
+                if (_table != null)
+                    await _table.ReloadAsync();
+
+                StateHasChanged();
+            }),
+        }, new DialogSettings { NoFooter = true });
+}

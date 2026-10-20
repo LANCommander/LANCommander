@@ -1,0 +1,36 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.ScriptDebugger"
+             xmlns:items="using:LANCommander.Launcher.ViewModels.ScriptDebugger.Items"
+             x:Class="LANCommander.Launcher.Views.ScriptDebugger.ConsoleView"
+             x:DataType="vm:ConsoleViewModel">
+
+  <DockPanel>
+    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,0,0,1">
+      <TextBlock Classes="Kicker PaneHeader" Text="CONSOLE" />
+    </Border>
+
+    <Border DockPanel.Dock="Bottom" Padding="8" BorderBrush="{DynamicResource HairlineBorderBrush}" BorderThickness="0,1,0,0">
+      <Grid ColumnDefinitions="Auto,*">
+        <TextBlock Grid.Column="0" Classes="Code" VerticalAlignment="Center" Margin="2,0,8,0"
+                   Foreground="#DCDCAA" Text="{Binding InputPrompt}" />
+        <TextBox Grid.Column="1" Classes="Code" x:Name="Input"
+                 Text="{Binding InputText, Mode=TwoWay}"
+                 IsEnabled="{Binding IsInputEnabled}"
+                 Watermark="Evaluate while stopped, or answer Read-Host">
+          <TextBox.KeyBindings>
+            <KeyBinding Gesture="Enter" Command="{Binding SubmitCommand}" />
+          </TextBox.KeyBindings>
+        </TextBox>
+      </Grid>
+    </Border>
+
+    <ListBox x:Name="Output" Classes="Dense" ItemsSource="{Binding Lines}" Background="Transparent" Padding="0,4">
+      <ListBox.ItemTemplate>
+        <DataTemplate x:DataType="items:ConsoleLineViewModel">
+          <TextBlock Classes="Code" Text="{Binding Text}" Foreground="{Binding Foreground}" TextWrapping="Wrap" />
+        </DataTemplate>
+      </ListBox.ItemTemplate>
+    </ListBox>
+  </DockPanel>
+</UserControl>

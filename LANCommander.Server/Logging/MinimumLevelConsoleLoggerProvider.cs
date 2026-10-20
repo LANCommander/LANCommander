@@ -11,7 +11,7 @@ namespace LANCommander.Server.Logging;
 /// The framework console provider has no self-gate and relies entirely on the shared
 /// Microsoft.Extensions.Logging filter rules. Those rules are winner-take-all: a provider-scoped
 /// rule (<c>AddFilter&lt;ConsoleLoggerProvider&gt;</c>) always beats a provider-agnostic category
-/// rule, which would resurrect the Hangfire/AntDesign/ASP.NET noise on the console. Gating inside
+/// rule, which would resurrect the Hangfire/ASP.NET noise on the console. Gating inside
 /// the logger AND-combines with the shared rules instead of replacing them.
 /// </remarks>
 [ProviderAlias("Console")]

@@ -138,6 +138,7 @@ public class CmdletRegistrationTests
         services.AddSingleton<ITokenProvider, FakeTokenProvider>();
         services.AddSingleton<IConnectionClient, FakeConnectionClient>();
         services.AddSingleton(new HttpClient());
+        services.AddSingleton<AuthenticationSession>();
         services.AddSingleton<ApiRequestFactory>();
         services.AddSingleton<ProfileClient>();
 

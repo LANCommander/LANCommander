@@ -1,0 +1,99 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.UI.Controls.Internal
+@inherits ControlBase
+@inject LANCommander.Server.UI.Services.DialogService Dialogs
+
+@* An image that shows a spinner while loading and ChildContent (a fallback) if it is missing or fails *@
+<span @attributes="AdditionalAttributes" class="@_class" style="@_style">
+    @if (_url != null && !_failed)
+    {
+        @if (PreviewSrc != null)
+        {
+            <button type="button" class="lc-image-preview-trigger" aria-label="@($"Preview {Alt}".Trim())" @onclick="PreviewAsync">
+                <img src="@_url" alt="@Alt" @onload="Loaded" @onerror="Failed" />
+            </button>
+        }
+        else
+        {
+            <img src="@_url" alt="@Alt" @onload="Loaded" @onerror="Failed" />
+        }
+        @if (_loading)
+        {
+            <span class="lc-image-loading"><Spin Small /></span>
+        }
+    }
+    else
+    {
+        @ChildContent
+    }
+</span>
+
+@code {
+    [Parameter] public string? Src { get; set; }
+
+    [Parameter] public string? Alt { get; set; }
+
+    /// <summary>Width in pixels.</summary>
+    [Parameter] public int? Width { get; set; }
+
+    /// <summary>Height in pixels.</summary>
+    [Parameter] public int? Height { get; set; }
+
+    /// <summary>Fill the box and crop, instead of fitting the whole image inside it.</summary>
+    [Parameter] public bool Cover { get; set; }
+
+    [Parameter] public bool Rounded { get; set; }
+
+    /// <summary>A full-size image shown in a dialog when the image is clicked, e.g. for a thumbnail.</summary>
+    [Parameter] public string? PreviewSrc { get; set; }
+
+    /// <summary>Shown when there is no image or it fails to load.</summary>
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    string? _url;
+    string? _class;
+    string? _style;
+    bool _loading;
+    bool _failed;
+
+    protected override void OnParametersSet()
+    {
+        var url = string.IsNullOrWhiteSpace(Src) ? null : Src;
+
+        if (url != _url)
+        {
+            _url = url;
+            _loading = url != null;
+            _failed = false;
+        }
+
+        _class = new ClassBuilder()
+            .Add("lc-image")
+            .If(Cover, "lc-image-cover")
+            .If(Rounded, "lc-image-rounded")
+            .Add(Class)
+            .Build();
+
+        _style = new StyleBuilder()
+            .Add("width", Width == null ? null : $"{Width}px")
+            .Add("height", Height == null ? null : $"{Height}px")
+            .Add(Style)
+            .Build();
+    }
+
+    Task PreviewAsync() =>
+        Dialogs.OpenAsync<ImagePreviewDialog, ImagePreview, bool>(Alt ?? "Preview", new ImagePreview(PreviewSrc!, Alt), new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Close",
+            NoCancel = true,
+        });
+
+    void Loaded() => _loading = false;
+
+    void Failed()
+    {
+        _loading = false;
+        _failed = true;
+    }
+}

@@ -352,7 +352,10 @@ public class ApiRequestBuilder(
         return await UploadAsync<TResult>(fileName, buffer);
     }
 
-    public async Task<Guid> UploadInChunksAsync(long chunkSize, Stream data)
+    /// <param name="progress">
+    /// Optional receiver for the number of bytes uploaded so far. Reported after each chunk.
+    /// </param>
+    public async Task<Guid> UploadInChunksAsync(long chunkSize, Stream data, IProgress<long> progress = null)
     {
         var initResponse = await new ApiRequestBuilder(httpClient, tokenProvider, settingsProvider, authenticationSession)
             .UseRoute("/api/Upload/Init")
@@ -394,6 +397,8 @@ public class ApiRequestBuilder(
 
             var response = await chunkBuilder.SendRequestAsync();
             response.EnsureSuccessStatusCode();
+
+            progress?.Report(data.Position);
         }
 
         return initResponse.Key;

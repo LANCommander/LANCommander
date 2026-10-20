@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <!-- Not part of the app build graph; built on demand and dropped into <config>/Plugins/. -->
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <!--
+    Host-provided contract assemblies are referenced with Private=false so the plugin binds against
+    the host's already-loaded copies at runtime (preserving type identity across the plugin's
+    AssemblyLoadContext) rather than shipping its own copies in the drop-in folder.
+  -->
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" Private="false" />
+    <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" Private="false" />
+    <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" Private="false" />
+  </ItemGroup>
+
+</Project>

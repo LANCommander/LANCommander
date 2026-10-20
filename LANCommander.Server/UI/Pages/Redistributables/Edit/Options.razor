@@ -1,33 +1,18 @@
 @page "/Redistributables/{id:guid}/Options"
 @using LANCommander.Server.UI.Pages.Redistributables.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
-@inject NavigationManager NavigationManager
 
-<RedistributableEditView @ref="EditView" Id="Id">
-    <TitleTemplate>
-        <Text>Options</Text>
-    </TitleTemplate>
+<RedistributableEditView @ref="EditView" Id="Id" Title="Options">
     <TitleExtraTemplate>
-        <Button Type="ButtonType.Primary" OnClick="EditView.Save">Save</Button>
+        <Button Primary OnClick="() => EditView!.Save()">Save</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <OptionSchemaEditor @bind-Value="context.OptionSchema" OnSave="Save" />
+        <OptionSchemaEditor @bind-Value="context.OptionSchema" OnSave="() => EditView!.Save()" />
     </ChildContent>
 </RedistributableEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
 
-    RedistributableEditView EditView;
-
-    protected override void OnInitialized()
-    {
-        if (Id == Guid.Empty)
-            NavigationManager.NavigateTo("/Redistributables", true);
-    }
-
-    async Task Save()
-    {
-        await EditView.Save();
-    }
+    RedistributableEditView? EditView;
 }

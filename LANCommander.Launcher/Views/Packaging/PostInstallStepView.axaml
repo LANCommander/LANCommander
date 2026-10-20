@@ -1,0 +1,166 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Packaging"
+             xmlns:packaging="using:LANCommander.Launcher.Views.Packaging"
+             x:Class="LANCommander.Launcher.Views.Packaging.PostInstallStepView"
+             x:DataType="vm:PostInstallStepViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,Auto,Auto,*">
+
+        <StackPanel Grid.Row="0" Spacing="4" Margin="0,0,0,10">
+            <TextBlock Text="Additional Changes"
+                       FontSize="{DynamicResource FontSizeSection}"
+                       FontWeight="SemiBold" />
+
+            <TextBlock FontSize="{DynamicResource FontSizeCaption}"
+                       Opacity="0.7"
+                       TextWrapping="Wrap"
+                       Text="Apply any additional changes to the game files now. When you're ready to continue packaging, click the rescan button." />
+
+            <TextBlock Text="{Binding InstallDirectory}"
+                       FontSize="{DynamicResource FontSizeKicker}"
+                       Opacity="0.55"
+                       TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Border Grid.Row="1"
+                Margin="0,0,0,10"
+                Padding="12"
+                CornerRadius="4"
+                Background="{DynamicResource SurfaceBrush}">
+            <Grid RowDefinitions="Auto,Auto">
+                <DockPanel Grid.Row="0">
+                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8">
+                        <!-- First in the row because it is the other way of making a change, not
+                             a variation on rescanning. -->
+                        <Button Classes="Secondary" Content="Run &amp; Monitor"
+                                Click="OnRunInstallerClick"
+                                IsVisible="{Binding !IsMonitoring}"
+                                ToolTip.Tip="Select another executable to run and monitor for additional file and registry changes"
+                                Padding="12,5" />
+
+                        <Button Classes="Secondary" Content="Browse"
+                                Command="{Binding BrowseInstallFolderCommand}"
+                                ToolTip.Tip="Open the install folder"
+                                Padding="12,5" />
+
+                        <Button Classes="Secondary" Content="Reset"
+                                Command="{Binding ResetBaselineCommand}"
+                                IsEnabled="{Binding !IsScanning}"
+                                ToolTip.Tip="Treat the folder as it is now as the starting point, and forget the changes listed below."
+                                Padding="12,5" />
+
+                        <Button Content="Rescan"
+                                Classes="Primary"
+                                Command="{Binding RescanCommand}"
+                                IsEnabled="{Binding !IsScanning}"
+                                Padding="14,5" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding ScanSummary}"
+                               VerticalAlignment="Center"
+                               TextWrapping="Wrap" />
+                </DockPanel>
+
+                <UniformGrid Grid.Row="1"
+                             Columns="4"
+                             MinWidth="320"
+                             Margin="0,10,0,0"
+                             HorizontalAlignment="Left"
+                             IsVisible="{Binding HasScanned}">
+                    <StackPanel>
+                        <TextBlock Text="Baseline" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding BaselineFileCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Added" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding AddedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource SuccessTextBrush}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Changed" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding ModifiedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource Primary4Brush}" />
+                    </StackPanel>
+                    <StackPanel>
+                        <TextBlock Text="Removed" FontSize="{DynamicResource FontSizeKicker}" Opacity="0.7" />
+                        <TextBlock Text="{Binding RemovedCount}" FontSize="{DynamicResource FontSizeSection}" FontWeight="Bold" Foreground="{DynamicResource ErrorTextBrush}" />
+                    </StackPanel>
+                </UniformGrid>
+            </Grid>
+        </Border>
+
+        <!-- What has been run so far. Stays out of the way until an installer has actually been
+             run through the step. -->
+        <StackPanel Grid.Row="2" Spacing="4" Margin="0,0,0,10"
+                    IsVisible="{Binding HasAdditionalInstallers}">
+            <ItemsControl ItemsSource="{Binding AdditionalInstallers}">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="x:String">
+                        <TextBlock Text="{Binding}"
+                                   FontSize="{DynamicResource FontSizeKicker}"
+                                   Opacity="0.7"
+                                   TextTrimming="CharacterEllipsis" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </StackPanel>
+
+        <!-- Only once something has been run: an empty log panel on a step most people will walk
+             straight past is just noise. The status also opens it, so an installer that could
+             not be started still says why. -->
+        <packaging:CapturePanelView Grid.Row="3"
+                                    Height="200"
+                                    Margin="0,0,0,10">
+            <packaging:CapturePanelView.IsVisible>
+                <MultiBinding Converter="{x:Static BoolConverters.Or}">
+                    <Binding Path="HasLog" />
+                    <Binding Path="Status" Converter="{x:Static StringConverters.IsNotNullOrEmpty}" />
+                </MultiBinding>
+            </packaging:CapturePanelView.IsVisible>
+        </packaging:CapturePanelView>
+
+        <!-- What changed -->
+        <Border Grid.Row="4"
+                CornerRadius="4"
+                Background="{DynamicResource SurfaceBrush}">
+            <Grid RowDefinitions="*,Auto">
+                <ListBox Grid.Row="0"
+                         ItemsSource="{Binding Changes}"
+                         Padding="6">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DirectoryChangeItem">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Border Classes="StatusTag Success" IsVisible="{Binding IsAdded}">
+                                    <TextBlock Text="ADDED" />
+                                </Border>
+                                <Border Classes="StatusTag" IsVisible="{Binding IsModified}">
+                                    <TextBlock Text="CHANGED" />
+                                </Border>
+                                <Border Classes="StatusTag Error" IsVisible="{Binding IsRemoved}">
+                                    <TextBlock Text="REMOVED" />
+                                </Border>
+
+                                <TextBlock Text="{Binding RelativePath}"
+                                           VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"
+                                           ToolTip.Tip="{Binding Path}" />
+
+                                <TextBlock Text="{Binding Size}"
+                                           FontSize="{DynamicResource FontSizeKicker}"
+                                           Opacity="0.6"
+                                           VerticalAlignment="Center" />
+                            </StackPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+
+                <TextBlock Grid.Row="1"
+                           Margin="8,6"
+                           FontSize="{DynamicResource FontSizeKicker}"
+                           Foreground="{DynamicResource WarningTextBrush}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding IsChangeListTruncated}"
+                           Text="Only the first 2,000 changes are listed. The counts above are complete, and every changed file is still included in the package." />
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>

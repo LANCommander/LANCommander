@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class PlatformExporter(PlatformService platformService) : BaseExporter<Platform, Data.Models.Platform>
+public class PlatformExporter(ManifestMapper manifestMapper, PlatformService platformService) : BaseExporter<Platform, Data.Models.Platform>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Platform record)
     {
@@ -22,6 +22,6 @@ public class PlatformExporter(PlatformService platformService) : BaseExporter<Pl
 
     public override async Task<Platform> ExportAsync(Guid id)
     {
-        return await platformService.GetAsync<Platform>(id);
+        return await platformService.GetAsync(id, manifestMapper.ProjectToManifestPlatform);
     }
 } 

@@ -2,7 +2,6 @@
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using Microsoft.Extensions.Logging;
-using AutoMapper;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.Server.Services.Extensions;
@@ -16,9 +15,9 @@ namespace LANCommander.Server.Services
         ILogger<ScriptService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        GameVersionService gameVersionService,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Script>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Script> AddAsync(Script script)
         {
@@ -26,6 +25,12 @@ namespace LANCommander.Server.Services
 
             await cache.ExpireGameCacheAsync(script?.GameId);
             await cache.RemoveByTagAsync("Scripts");
+
+            // Scripts for a game are version-scoped. Attach new scripts to the game's current
+            // version here so callers don't have to resolve and pass it in themselves.
+            if (script.GameId.HasValue && script.GameId != Guid.Empty
+                && (script.GameVersionId == null || script.GameVersionId == Guid.Empty))
+                script.GameVersionId = await gameVersionService.GetOrCreateLatestIdAsync(script.GameId.Value);
 
             if (script.RedistributableId?.IsNullOrEmpty() ?? false)
             {
@@ -99,6 +104,63 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(script);
         }
         
+        /// <summary>
+        /// The scripts a script editor lists beside the one it edits, with their owners loaded: the
+        /// owner's own (a game's from its latest version), then for a game the scripts of the
+        /// redistributables it depends on, then the system scripts (those with no owner at all).
+        /// With no owner, only the system scripts.
+        /// </summary>
+        public async Task<ICollection<Script>> GetEditorScriptsAsync(Guid? gameId, Guid? redistributableId, Guid? serverId, Guid? toolId, Guid? gameVersionId = null)
+        {
+            using var context = await contextFactory.CreateDbContextAsync();
+
+            gameId = gameId == Guid.Empty ? null : gameId;
+            redistributableId = redistributableId == Guid.Empty ? null : redistributableId;
+            serverId = serverId == Guid.Empty ? null : serverId;
+            toolId = toolId == Guid.Empty ? null : toolId;
+
+            gameVersionId = gameVersionId == Guid.Empty ? null : gameVersionId;
+
+            List<Guid> redistributableIds = [];
+
+            if (gameId is { } game)
+            {
+                // The version being edited (the latest unless one is given) and its redistributables
+                gameVersionId ??= await gameVersionService.GetLatestIdAsync(game);
+
+                redistributableIds = gameVersionId is { } versionId
+                    ? await context.GameVersionRedistributables
+                        .Where(r => r.GameVersionId == versionId)
+                        .Select(r => r.RedistributableId)
+                        .ToListAsync()
+                    : await context.Games
+                        .Where(g => g.Id == game)
+                        .SelectMany(g => g.Redistributables!.Select(r => r.Id))
+                        .ToListAsync();
+            }
+
+            if (redistributableId is { } redistributable)
+                redistributableIds.Add(redistributable);
+
+            return await context.Set<Script>()
+                .AsNoTracking()
+                .Include(s => s.Game)
+                .Include(s => s.Redistributable)
+                .Include(s => s.Server)
+                .Include(s => s.Tool)
+                .Where(s =>
+                    (gameId != null && s.GameId == gameId && (s.GameVersionId == null || s.GameVersionId == gameVersionId))
+                    || (s.RedistributableId != null && redistributableIds.Contains(s.RedistributableId.Value))
+                    || (serverId != null && s.ServerId == serverId)
+                    || (toolId != null && s.ToolId == toolId)
+                    || ((s.GameId == null || s.GameId == Guid.Empty)
+                        && (s.RedistributableId == null || s.RedistributableId == Guid.Empty)
+                        && (s.ServerId == null || s.ServerId == Guid.Empty)
+                        && (s.ToolId == null || s.ToolId == Guid.Empty)))
+                .OrderBy(s => s.Name)
+                .ToListAsync();
+        }
+
         public IEnumerable<Snippet> GetSnippets()
         {
             var storagePath = GetSnippetsStoragePath();

@@ -38,6 +38,18 @@ namespace LANCommander.Launcher.Models
 
         [Option("DataDirectory", HelpText = "The data directory of the launcher that spawned this process. Keeps an elevated child on the same profile, database and settings as its parent.")]
         public string DataDirectory { get; set; }
+
+        [Option("RedistributableId", HelpText = "Run the script of this redistributable (installed for GameId) rather than the game's own")]
+        public Guid? RedistributableId { get; set; }
+
+        [Option("ToolId", HelpText = "Run the script of this tool rather than the game's own")]
+        public Guid? ToolId { get; set; }
+
+        [Option("DebugPipe", HelpText = "Named pipe of the launcher's script debugger to attach to")]
+        public string DebugPipe { get; set; }
+
+        [Option("DebugToken", HelpText = "Token presented to the launcher's script debugger")]
+        public string DebugToken { get; set; }
     }
 
     [Verb("Install", HelpText = "Install a game from the server")]

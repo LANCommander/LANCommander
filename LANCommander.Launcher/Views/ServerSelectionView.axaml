@@ -48,14 +48,14 @@
                     <TextBlock Text="{Binding StatusMessage}"
                                Foreground="White"
                                Opacity="0.75"
-                               FontSize="12"
+                               FontSize="{DynamicResource FontSizeCaption}"
                                HorizontalAlignment="Center" />
                 </StackPanel>
 
                 <TextBlock Text="{Binding StatusMessage}"
                            IsVisible="{Binding HasError}"
                            Foreground="#FF6B6B"
-                           FontSize="12"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            TextWrapping="Wrap"
                            HorizontalAlignment="Center" />
 
@@ -65,7 +65,7 @@
                 <TextBlock Text="Discovered Servers"
                            HorizontalAlignment="Center"
                            Opacity="0.6"
-                           FontSize="12" />
+                           FontSize="{DynamicResource FontSizeCaption}" />
 
                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Spacing="8"
                             IsVisible="{Binding IsScanning}">
@@ -91,7 +91,7 @@
                                     Classes="Glass">
                                 <StackPanel>
                                     <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
-                                    <TextBlock Text="{Binding Address}" FontSize="12" Opacity="0.6" />
+                                    <TextBlock Text="{Binding Address}" FontSize="{DynamicResource FontSizeCaption}" Opacity="0.6" />
                                 </StackPanel>
                             </Button>
                         </DataTemplate>

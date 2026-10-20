@@ -1,8 +1,9 @@
-using AutoMapper;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Extensions;
 using LANCommander.Server.ImportExport;
+using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using ZiggyCreatures.Caching.Fusion;
 
@@ -26,16 +27,16 @@ public static class ToolsEndpoints
     }
 
     internal static async Task<IResult> GetAsync(
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ToolService toolService)
     {
         var models = await toolService.GetAsync();
-        return TypedResults.Ok(mapper.Map<IEnumerable<SDK.Models.Tool>>(models));
+        return TypedResults.Ok(models.Select(sdkMapper.ToSdk).ToList());
     }
 
     internal static async Task<IResult> GetByIdAsync(
         Guid id,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] ToolService toolService)
     {
         var tool = await toolService
@@ -46,7 +47,7 @@ public static class ToolsEndpoints
         if (tool == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(mapper.Map<SDK.Models.Tool>(tool));
+        return TypedResults.Ok(sdkMapper.ToSdk(tool));
     }
 
     internal static async Task<IResult> GetManifestByIdAsync(
@@ -64,7 +65,7 @@ public static class ToolsEndpoints
     internal static async Task<IResult> GetScriptsByIdAsync(
         [FromServices] ScriptService scriptService,
         [FromServices] IFusionCache cache,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         Guid id)
     {
         var scripts = await cache.GetOrSetAsync($"Tools/{id}/Scripts", async _ =>
@@ -74,7 +75,7 @@ public static class ToolsEndpoints
                 .AsNoTracking()
                 .GetAsync(s => s.ToolId == id && s.Type != SDK.Enums.ScriptType.Package);
 
-            return mapper.Map<IEnumerable<SDK.Models.Script>>(results);
+            return results.Select(sdkMapper.ToSdk).ToList();
         }, tags: ["Scripts", $"Tools/{id}/Scripts", "Tools", $"Tools/{id}"]);
         
         return TypedResults.Ok(scripts);
@@ -110,19 +111,25 @@ public static class ToolsEndpoints
 
     internal static async Task<IResult> ImportAsync(
         Guid objectKey,
-        [FromServices] ArchiveService archiveService,
-        [FromServices] ImportContext importContext,
-        [FromServices] ILoggerFactory loggerFactory)
+        [FromServices] ImportRunner importRunner,
+        [FromServices] ILoggerFactory loggerFactory,
+        [FromBody] SDK.Models.ImportRequest request = null)
     {
         var logger = loggerFactory.CreateLogger("ToolsApi");
 
         try
         {
-            var uploadedPath = await archiveService.GetArchiveFileLocationAsync(objectKey.ToString());
+            var result = await importRunner.RunAsync(
+                objectKey,
+                request?.StorageLocationId,
+                SDK.Enums.ManifestType.Tool);
 
-            var result = await importContext.InitializeImportAsync(uploadedPath);
-
-            return TypedResults.Ok(result);
+            return TypedResults.Ok(new SDK.Models.ImportResponse
+            {
+                RecordId = result.RecordId,
+                ManifestType = result.ManifestType,
+                ImportedCount = result.ImportedCount,
+            });
         }
         catch (Exception ex)
         {
@@ -133,7 +140,6 @@ public static class ToolsEndpoints
 
     internal static async Task<IResult> UploadArchiveAsync(
         SDK.Models.UploadArchiveRequest request,
-        [FromServices] StorageLocationService storageLocationService,
         [FromServices] ArchiveService archiveService,
         [FromServices] ILoggerFactory loggerFactory)
     {
@@ -141,38 +147,12 @@ public static class ToolsEndpoints
 
         try
         {
-            var storageLocation = await storageLocationService.FirstOrDefaultAsync(l =>
-                request.StorageLocationId.HasValue ? l.Id == request.StorageLocationId.Value : l.Default);
-
-            var archive = await archiveService.FirstOrDefaultAsync(a =>
-                a.ToolId == request.Id && a.Version == request.Version);
-
-            var archivePath = await archiveService.GetArchiveFileLocationAsync(archive);
-
-            if (archive != null)
-            {
-                File.Delete(archivePath);
-
-                archive.ObjectKey = request.ObjectKey.ToString();
-                archive.Changelog = request.Changelog;
-                archive.CompressedSize = new FileInfo(archivePath).Length;
-                archive.StorageLocation = storageLocation;
-
-                archive = await archiveService.UpdateAsync(archive);
-            }
-            else
-            {
-                archive = new Archive
-                {
-                    ObjectKey = request.ObjectKey.ToString(),
-                    Changelog = request.Changelog,
-                    ToolId = request.Id,
-                    CompressedSize = new FileInfo(archivePath).Length,
-                    StorageLocation = storageLocation,
-                };
-
-                await archiveService.AddAsync(archive);
-            }
+            await archiveService.CompleteUploadAsync(
+                request.ObjectKey,
+                request.StorageLocationId,
+                request.Version,
+                a => a.ToolId = request.Id,
+                a => a.ToolId == request.Id && a.Version == request.Version);
 
             return TypedResults.Ok();
         }

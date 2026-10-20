@@ -1,0 +1,68 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+<header @attributes="AdditionalAttributes" class="@_class" style="@Style">
+    <div class="lc-page-header-heading">
+        @if (Breadcrumb != null)
+        {
+            <div class="lc-page-header-breadcrumb">@Breadcrumb</div>
+        }
+        <div class="lc-page-header-title-row">
+            <h1 class="lc-page-header-title">
+                @if (TitleTemplate != null)
+                {
+                    @TitleTemplate
+                }
+                else
+                {
+                    @Title
+                }
+            </h1>
+            @if (Tags != null)
+            {
+                <div class="lc-page-header-tags">@Tags</div>
+            }
+        </div>
+        @if (SubtitleTemplate != null)
+        {
+            <div class="lc-page-header-subtitle">@SubtitleTemplate</div>
+        }
+        else if (!string.IsNullOrEmpty(Subtitle))
+        {
+            <span class="lc-page-header-subtitle">@Subtitle</span>
+        }
+    </div>
+    @if (Extra != null)
+    {
+        <div class="lc-page-header-extra">@Extra</div>
+    }
+</header>
+
+@code {
+    [Parameter] public string? Title { get; set; }
+
+    /// <summary>A line under the title in 12px mono, e.g. "2,417 titles · 4.61 TB" or a host and uptime.</summary>
+    [Parameter] public string? Subtitle { get; set; }
+
+    /// <summary>Rich subtitle content; replaces <see cref="Subtitle"/>.</summary>
+    [Parameter] public RenderFragment? SubtitleTemplate { get; set; }
+
+    /// <summary>Rich title content; replaces <see cref="Title"/>.</summary>
+    [Parameter] public RenderFragment? TitleTemplate { get; set; }
+
+    /// <summary>A Breadcrumb above the title, for pages under another ("Games › Arena Blitz").</summary>
+    [Parameter] public RenderFragment? Breadcrumb { get; set; }
+
+    /// <summary>Status beside the title, e.g. a Published tag.</summary>
+    [Parameter] public RenderFragment? Tags { get; set; }
+
+    /// <summary>Page-level actions shown at the end of the header, typically buttons.</summary>
+    [Parameter] public RenderFragment? Extra { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-page-header").Add(Class).Build();
+    }
+}

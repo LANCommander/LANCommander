@@ -49,6 +49,9 @@ public partial class SettingsViewModel : ViewModelBase
     private bool _notifyOnChatMessage = true;
 
     [ObservableProperty]
+    private bool _notifyOnElevationRequired = true;
+
+    [ObservableProperty]
     private NotificationSoundTheme _selectedSoundTheme = NotificationSoundTheme.SystemDefault;
 
     [ObservableProperty]
@@ -141,6 +144,7 @@ public partial class SettingsViewModel : ViewModelBase
         NotifyOnInstallComplete = settings.Notifications.NotifyOnInstallComplete;
         NotifyOnInstallFailed = settings.Notifications.NotifyOnInstallFailed;
         NotifyOnChatMessage = settings.Notifications.NotifyOnChatMessage;
+        NotifyOnElevationRequired = settings.Notifications.NotifyOnElevationRequired;
         SelectedSoundTheme = settings.Notifications.SoundTheme;
 
         // Debug settings
@@ -187,6 +191,7 @@ public partial class SettingsViewModel : ViewModelBase
                 s.Notifications.NotifyOnInstallComplete = NotifyOnInstallComplete;
                 s.Notifications.NotifyOnInstallFailed = NotifyOnInstallFailed;
                 s.Notifications.NotifyOnChatMessage = NotifyOnChatMessage;
+                s.Notifications.NotifyOnElevationRequired = NotifyOnElevationRequired;
                 s.Notifications.SoundTheme = SelectedSoundTheme;
 
                 // Debug settings

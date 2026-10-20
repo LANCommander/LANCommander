@@ -1,0 +1,60 @@
+@inherits Dialog<IEnumerable<Redistributable>, Redistributable>
+
+@* Picks one of the redistributables passed as the options *@
+<Flex Vertical Gap="Gap.Medium">
+    <TextInput @bind-Value="_search" Immediate Icon="IconType.MagnifyingGlass" Placeholder="Search redistributables..." AutoFocus />
+
+    <div class="picker-list">
+        @foreach (var redistributable in Filtered)
+        {
+            var selected = _selected == redistributable;
+
+            <button type="button"
+                    class="@(selected ? "picker-list-item picker-list-item-selected" : "picker-list-item")"
+                    aria-pressed="@(selected ? "true" : "false")"
+                    @onclick="() => _selected = redistributable"
+                    @ondblclick="() => ChooseAsync(redistributable)">
+                <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Gap="Gap.Medium">
+                    <Flex Vertical>
+                        <Typography Strong>@redistributable.Name</Typography>
+                        @if (!string.IsNullOrWhiteSpace(redistributable.Description))
+                        {
+                            <Typography Secondary Small>@redistributable.Description</Typography>
+                        }
+                    </Flex>
+
+                    @if (selected)
+                    {
+                        <Icon Type="IconType.Check" />
+                    }
+                </Flex>
+            </button>
+        }
+    </div>
+</Flex>
+
+@code {
+    string? _search = "";
+    Redistributable? _selected;
+
+    protected override bool CanConfirm => _selected != null;
+
+    IEnumerable<Redistributable> Filtered =>
+        string.IsNullOrWhiteSpace(_search)
+            ? Options
+            : Options.Where(r => r.Name?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true);
+
+    async Task ChooseAsync(Redistributable redistributable)
+    {
+        _selected = redistributable;
+
+        await ConfirmAsync();
+    }
+
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = _selected;
+
+        return Task.FromResult(_selected != null);
+    }
+}

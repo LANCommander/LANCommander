@@ -1,0 +1,33 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits ControlBase
+
+@* A small ring that turns while work is in progress, e.g. beside "Fetching archives…" or inside a busy button *@
+<span @attributes="AdditionalAttributes"
+      class="@_class"
+      style="@Style"
+      role="@(Label != null ? "status" : null)"
+      aria-hidden="@(Label == null ? "true" : null)">
+    @if (Label != null)
+    {
+        <span class="lc-visually-hidden">@Label</span>
+    }
+</span>
+
+@code {
+    /// <summary>Announced to screen readers. Without it the spinner is decorative, e.g. beside visible text.</summary>
+    [Parameter] public string? Label { get; set; }
+
+    /// <summary>20px instead of 15px, e.g. alone in an empty panel.</summary>
+    [Parameter] public bool Large { get; set; }
+
+    string? _class;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder()
+            .Add("lc-spinner")
+            .If(Large, "lc-spinner-large")
+            .Add(Class)
+            .Build();
+    }
+}

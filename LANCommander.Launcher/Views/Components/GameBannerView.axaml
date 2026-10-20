@@ -2,7 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="LANCommander.Launcher.Views.Components.GameBannerView">
     
-    <Border Height="300" Background="{DynamicResource SystemControlBackgroundChromeMediumLowBrush}">
+    <Border Height="300" Background="{DynamicResource SurfaceRaisedBrush}">
         <Panel>
             <!-- Background image (if available) -->
             <Image x:Name="BackgroundImage"
@@ -25,14 +25,14 @@
             <Border x:Name="FallbackBanner"
                     HorizontalAlignment="Center" 
                     VerticalAlignment="Center"
-                    Background="{DynamicResource SystemAccentColor}"
+                    Background="{DynamicResource AccentFillBrush}"
                     CornerRadius="8"
                     Padding="40,20"
                     IsVisible="False">
                 <StackPanel>
-                    <TextBlock Text="🎮" FontSize="48" HorizontalAlignment="Center" />
+                    <Icon Type="Regular" Value="GameController" Width="48" Height="48" HorizontalAlignment="Center" />
                     <TextBlock x:Name="FallbackTitle" 
-                               FontSize="24" 
+                               FontSize="{DynamicResource FontSizeTitle}" 
                                FontWeight="Bold" 
                                HorizontalAlignment="Center"
                                Foreground="White" />

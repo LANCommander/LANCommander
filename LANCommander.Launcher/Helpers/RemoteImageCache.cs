@@ -68,7 +68,7 @@ public static class RemoteImageCache
 
         if (IsHttp(source))
         {
-            data = await _httpClient.GetByteArrayAsync(source, ct);
+            data = await _httpClient.GetByteArrayAsync(ThumbnailUrl.WithSize(source, decodeWidth, decodeHeight), ct);
             if (ct.IsCancellationRequested)
                 return null;
         }

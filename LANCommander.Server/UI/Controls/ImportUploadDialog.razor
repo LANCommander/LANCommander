@@ -1,0 +1,347 @@
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.ImportExport
+@using LANCommander.Server.ImportExport.Factories
+@using LANCommander.Server.ImportExport.Models
+@using LANCommander.Server.Models
+@using LANCommander.Server.UI.Components
+@inherits Dialog<ImportDialogOptions, bool>
+@implements IAsyncDisposable
+@inject ArchiveService ArchiveService
+@inject ImportContextFactory ImportContextFactory
+@inject AlertService Alerts
+@inject NotificationService Notifications
+@inject ILogger<ImportUploadDialog> Logger
+
+@*
+    Imports an .lcx: upload it (or pick one already on the server), choose which of its records to
+    import, then watch the import. Uploads keep going if the dialog is closed; the upload indicator
+    offers to continue the import when they finish.
+*@
+@switch (_stage)
+{
+    case ImportStage.Upload:
+        <Flex Vertical Gap="Gap.Medium">
+            <ChunkUploader @ref="_uploader"
+                           Accept=".lcx"
+                           @bind-File="_file"
+                           @bind-Status="_uploadStatus"
+                           StorageLocationId="@(_storageLocation?.Id ?? Guid.Empty)"
+                           UploadType="UploadType.Import"
+                           Hint="@Options.Hint"
+                           OnUploadError="OnUploadErrorAsync" />
+
+            <StorageLocationSelector @bind-Value="_storageLocation" Type="StorageLocationType.Archive" />
+
+            <Flex Justify="Justify.End" Gap="Gap.Small">
+                <FilePickerButton Root="@_rootPath"
+                                  Title="Choose an Import File"
+                                  OkText="Use File"
+                                  EntrySelectable="@(entry => entry.Name?.EndsWith(".lcx", StringComparison.OrdinalIgnoreCase) == true)"
+                                  OnSelected="OnLocalFileSelectedAsync"
+                                  Disabled="_uploadStatus != ChunkUploadStatus.Idle">
+                    Use Local File
+                </FilePickerButton>
+                <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || _uploadStatus != ChunkUploadStatus.Idle)" OnClick="UploadAsync">Upload</Button>
+                <Button OnClick="CancelClickedAsync">Cancel</Button>
+            </Flex>
+        </Flex>
+        break;
+
+    case ImportStage.Reading:
+        <Flex Justify="Justify.Center" Style="padding: 32px">
+            <Spin Tip="Reading the import file" />
+        </Flex>
+        break;
+
+    case ImportStage.RecordSelection:
+        <Tree TItem="ImportNode"
+              Items="_nodes"
+              Children="n => n.Children"
+              Key="n => n.Key"
+              Text="n => n.Name"
+              Checkable
+              @bind-CheckedValues="_checked">
+            <Flex Justify="Justify.SpaceBetween" Gap="Gap.Medium" Style="width: 100%">
+                <span>@context.Name</span>
+                @if (context.Size > 0)
+                {
+                    <Typography Secondary><ByteSize Value="context.Size" /></Typography>
+                }
+            </Flex>
+        </Tree>
+
+        <Flex Justify="Justify.End" Gap="Gap.Small" Style="margin-top: 16px">
+            <Button Primary Disabled="!_checked.Any()" OnClick="ImportAsync">Import</Button>
+            <Button OnClick="CancelClickedAsync">Cancel</Button>
+        </Flex>
+        break;
+
+    case ImportStage.Importing:
+        <Flex Vertical Align="Align.Center" Gap="Gap.Medium">
+            <Progress Circle Value="Math.Max(_importProgress, 0)" Indeterminate="_importProgress < 0" />
+
+            @if (!String.IsNullOrWhiteSpace(_currentImportItemName))
+            {
+                <Typography>Importing @_currentImportItemName</Typography>
+            }
+
+            @foreach (var error in _errors)
+            {
+                <Alert Danger>@error</Alert>
+            }
+        </Flex>
+        break;
+
+    case ImportStage.Complete:
+        <Result Success Title="Import Complete!">
+            <Button Primary OnClick="() => CloseAsync(true)">Close</Button>
+        </Result>
+        break;
+
+    case ImportStage.Failed:
+        <Result Danger Title="Import Failed!">
+            <Content>
+                <Flex Vertical Gap="Gap.Small">
+                    @foreach (var error in _errors)
+                    {
+                        <Alert Danger>@error</Alert>
+                    }
+                </Flex>
+            </Content>
+            <ChildContent>
+                <Button Primary OnClick="() => CloseAsync(false)">Close</Button>
+            </ChildContent>
+        </Result>
+        break;
+}
+
+@code {
+    enum ImportStage
+    {
+        Upload,
+        Reading,
+        RecordSelection,
+        Importing,
+        Complete,
+        Failed,
+    }
+
+    public sealed record ImportNode(string Key, string Name, long Size, IReadOnlyList<ImportNode>? Children = null);
+
+    ChunkUploader? _uploader;
+    IBrowserFile? _file;
+    ChunkUploadStatus _uploadStatus;
+    StorageLocation? _storageLocation;
+    ImportContext _importContext = default!;
+    string? _uploadObjectKey;
+
+    List<ImportNode> _nodes = new();
+    IEnumerable<ImportNode> _checked = [];
+
+    readonly string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+
+    ImportStage _stage = ImportStage.Upload;
+    readonly List<string> _errors = new();
+    int _importProgress = -1;
+    string _currentImportItemName = String.Empty;
+    bool _disposed;
+
+    /// <summary>The keys of the records that will be imported.</summary>
+    public IReadOnlyList<string> SelectedKeys => _checked.Where(n => n.Children == null).Select(n => n.Key).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        _importContext = ImportContextFactory.Create();
+
+        _importContext.OnImportStarted.EventRaised += ImportStartedAsync;
+        _importContext.OnImportComplete.EventRaised += ImportCompleteAsync;
+        _importContext.OnImportStatusUpdate.EventRaised += ImportStatusUpdateAsync;
+        _importContext.OnImportError.EventRaised += ImportErrorAsync;
+
+        // A finished background upload: go straight to choosing records
+        if (!string.IsNullOrWhiteSpace(Options.PreUploadedObjectKey))
+            await OnUploadCompletedAsync(Options.PreUploadedObjectKey);
+    }
+
+    Task ImportStartedAsync(ImportStatusUpdate status) => InvokeAsync(() =>
+    {
+        _stage = ImportStage.Importing;
+        _importProgress = -1;
+        StateHasChanged();
+    });
+
+    Task ImportCompleteAsync(ImportStatusUpdate status) => InvokeAsync(async () =>
+    {
+        _stage = ImportStage.Complete;
+        _importProgress = 100;
+
+        DisposeContext();
+        await CleanupUploadArchiveAsync();
+
+        StateHasChanged();
+    });
+
+    Task ImportStatusUpdateAsync(ImportStatusUpdate status) => InvokeAsync(() =>
+    {
+        _importProgress = status.Total > 0 ? (int)Math.Floor(status.Index / (decimal)status.Total * 100) : 100;
+        _currentImportItemName = $"{status.CurrentItem?.Type.GetDisplayName()}: {status.CurrentItem?.Name}";
+        StateHasChanged();
+    });
+
+    Task ImportErrorAsync(ImportStatusUpdate status) => InvokeAsync(() =>
+    {
+        if (status.Error != null)
+            _errors.Add(status.Error);
+
+        StateHasChanged();
+    });
+
+    async Task UploadAsync()
+    {
+        await _uploader!.StartAsync(async objectKey =>
+        {
+            // Runs even after the dialog closed; then the upload indicator takes over
+            if (!_disposed)
+                await InvokeAsync(() => OnUploadCompletedAsync(objectKey));
+        });
+    }
+
+    async Task ImportAsync()
+    {
+        _stage = ImportStage.Importing;
+
+        var selected = SelectedKeys
+            .Select(k => Guid.TryParse(k, out var id) ? (Guid?)id : null)
+            .Where(id => id.HasValue)
+            .Select(id => id!.Value);
+
+        try
+        {
+            await _importContext.PrepareImportQueueAsync(selected, _storageLocation?.Id ?? Guid.Empty);
+            await _importContext.ImportQueueAsync();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "An unknown error occurred while trying to import");
+
+            _errors.Add(ex.Message);
+            _stage = ImportStage.Failed;
+
+            DisposeContext();
+            await CleanupUploadArchiveAsync();
+        }
+    }
+
+    async Task CancelClickedAsync()
+    {
+        if (_uploadStatus == ChunkUploadStatus.Uploading)
+        {
+            if (!await Alerts.ConfirmAsync("The upload will continue in the background. You will be notified when it's ready for import.", "Continue in Background?"))
+                return;
+        }
+
+        await base.CancelAsync();
+    }
+
+    async Task OnUploadCompletedAsync(string objectKey)
+    {
+        if (!Guid.TryParse(objectKey, out _))
+        {
+            Notifications.Error("Import file failed to upload!");
+            await base.CancelAsync();
+            return;
+        }
+
+        _uploadObjectKey = objectKey;
+
+        var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey);
+
+        await ReadImportFileAsync(archivePath);
+    }
+
+    async Task OnLocalFileSelectedAsync(string path) => await ReadImportFileAsync(path);
+
+    async Task ReadImportFileAsync(string path)
+    {
+        _stage = ImportStage.Reading;
+        StateHasChanged();
+
+        try
+        {
+            var items = await _importContext.InitializeImportAsync(path, Options.ManifestType);
+
+            _nodes = items
+                .GroupBy(i => i.Type)
+                .Select(g => new ImportNode(
+                    $"group:{g.Key}",
+                    $"{g.Key.GetDisplayName()} ({g.Count()})",
+                    g.Sum(i => i.Size),
+                    g.Select(i => new ImportNode(i.Key, i.Name, i.Size)).ToList()))
+                .ToList();
+
+            // Everything is imported unless unchecked
+            _checked = _nodes.SelectMany(n => n.Children!).ToList();
+
+            _stage = ImportStage.RecordSelection;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The import file could not be read");
+
+            _stage = ImportStage.Upload;
+        }
+    }
+
+    async Task OnUploadErrorAsync(string message)
+    {
+        Logger.LogError("An error occurred while uploading an import: {Message}", message);
+
+        Notifications.Error("The import file could not be uploaded", message);
+
+        await base.CancelAsync();
+    }
+
+    bool _contextDisposed;
+
+    void DisposeContext()
+    {
+        if (_contextDisposed)
+            return;
+
+        _contextDisposed = true;
+        _importContext?.Dispose();
+    }
+
+    async Task CleanupUploadArchiveAsync()
+    {
+        if (string.IsNullOrEmpty(_uploadObjectKey))
+            return;
+
+        try
+        {
+            var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == _uploadObjectKey);
+
+            if (archive != null)
+                await ArchiveService.DeleteAsync(archive);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not clean up upload archive record for {ObjectKey}", _uploadObjectKey);
+        }
+
+        _uploadObjectKey = null;
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _disposed = true;
+
+        // An upload still running continues in the background, so leave its context alone
+        if (_uploadStatus == ChunkUploadStatus.Uploading || _stage == ImportStage.Importing)
+            return;
+
+        DisposeContext();
+
+        await CleanupUploadArchiveAsync();
+    }
+}

@@ -1,7 +1,6 @@
 @page "/Pages/{*route}"
 @using LANCommander.SDK.Extensions
 @using LANCommander.Server.UI.Pages.Pages.Components
-@using LANCommander.UI
 @using Markdig
 @using ZiggyCreatures.Caching.Fusion
 @using LANCommander.Server.Services.Abstractions
@@ -12,48 +11,36 @@
 
 @if (Page != null)
 {
-    <Layout Class="panel-layout">
-        <Content>
-            <SplitPane Style="flex-grow: 1">
-                <Pane Size="25%" Class="page-nav">
-                    <PageMenu CurrentRoute="@Page.Route" />
-                </Pane>
+    <SplitPane Class="page-view">
+        <Pane Size="25%" Class="page-nav">
+            <PageMenu CurrentRoute="@Page.Route" />
+        </Pane>
 
-                <Pane Size="75%">
-                    @if (Ancestors.Any())
+        <Pane Size="75%">
+            @if (Ancestors.Any())
+            {
+                <Breadcrumb Class="page-view-breadcrumb">
+                    @foreach (var ancestor in Ancestors)
                     {
-                        <div style="padding: 16px 24px 0;">
-                            <Breadcrumb>
-                                @foreach (var ancestor in Ancestors)
-                                {
-                                    <BreadcrumbItem Href="@($"/{ancestor.Route}")">@ancestor.Title</BreadcrumbItem>
-                                }
-                                <BreadcrumbItem>@Page.Title</BreadcrumbItem>
-                            </Breadcrumb>
-                        </div>
+                        <BreadcrumbItem Href="@($"/{ancestor.Route}")">@ancestor.Title</BreadcrumbItem>
                     }
+                    <BreadcrumbItem>@Page.Title</BreadcrumbItem>
+                </Breadcrumb>
+            }
 
-                    <PageHeader Title="@Page.Title" />
+            <PageHeader Title="@Page.Title" />
 
-                    <div style="padding: 0 24px;">
-                        @((MarkupString)Markdig.Markdown.ToHtml(Page.Contents ?? "", PagePipeline))
-                    </div>
-                </Pane>
-            </SplitPane>
-        </Content>
-    </Layout>
+            <PageContent Class="page-view-content">
+                @((MarkupString)Markdig.Markdown.ToHtml(Page.Contents ?? "", PagePipeline))
+            </PageContent>
+        </Pane>
+    </SplitPane>
 }
 else if (NotFoundResult)
 {
-    <Layout Class="panel-layout">
-        <Content>
-            <NotFound Title="Page Not Found">
-                <Extra>
-                    <a href="/Pages"><Button Type="@ButtonType.Primary">Back to Pages</Button></a>
-                </Extra>
-            </NotFound>
-        </Content>
-    </Layout>
+    <NotFound Title="Page Not Found">
+        <Button Primary Href="/Pages">Back to Pages</Button>
+    </NotFound>
 }
 
 <link rel="stylesheet" href="~/css/pages.css?v=@(VersionProvider.GetCurrentVersion())" />

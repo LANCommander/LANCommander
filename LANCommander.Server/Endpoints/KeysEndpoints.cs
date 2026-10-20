@@ -1,8 +1,8 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
@@ -22,12 +22,12 @@ public static class KeysEndpoints
     internal static async Task<IResult> GetAsync(
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
         [FromServices] ILoggerFactory loggerFactory)
-        => await GetAllocatedAsync(keyRequest.GameId, keyRequest, userPrincipal, mapper, keyService, gameService, userService, loggerFactory);
+        => await GetAllocatedAsync(keyRequest.GameId, keyRequest, userPrincipal, sdkMapper, keyService, gameService, userService, loggerFactory);
 
     /// <summary>
     /// Returns the key this claimant already holds for the game, allocating one if they do not
@@ -38,7 +38,7 @@ public static class KeysEndpoints
         Guid id,
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
@@ -54,7 +54,7 @@ public static class KeysEndpoints
                 return TypedResults.NotFound();
 
             if (request.HeldKey != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(request.HeldKey));
+                return TypedResults.Ok(sdkMapper.ToSdk(request.HeldKey));
 
             var availableKey = request.Game.Keys.FirstOrDefault(k => k.IsAvailable());
 
@@ -65,7 +65,7 @@ public static class KeysEndpoints
                 return TypedResults.NotFound();
             }
 
-            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(await AllocateToAsync(keyService, request, availableKey)));
+            return TypedResults.Ok(sdkMapper.ToSdk(await AllocateToAsync(keyService, request, availableKey)));
         }
         catch (Exception ex)
         {
@@ -84,7 +84,7 @@ public static class KeysEndpoints
         Guid id,
         [FromBody] KeyRequest keyRequest,
         ClaimsPrincipal userPrincipal,
-        [FromServices] IMapper mapper,
+        [FromServices] SdkMapper sdkMapper,
         [FromServices] KeyService keyService,
         [FromServices] GameService gameService,
         [FromServices] UserService userService,
@@ -102,7 +102,7 @@ public static class KeysEndpoints
             var availableKey = request.Game.Keys.FirstOrDefault(k => k.IsAvailable() && k.Id != request.HeldKey?.Id);
 
             if (availableKey == null && request.HeldKey != null)
-                return TypedResults.Ok(mapper.Map<SDK.Models.Key>(request.HeldKey));
+                return TypedResults.Ok(sdkMapper.ToSdk(request.HeldKey));
 
             if (availableKey == null)
                 return TypedResults.NotFound();
@@ -110,7 +110,7 @@ public static class KeysEndpoints
             if (request.HeldKey != null)
                 await keyService.ReleaseAsync(request.HeldKey.Id);
 
-            return TypedResults.Ok(mapper.Map<SDK.Models.Key>(await AllocateToAsync(keyService, request, availableKey)));
+            return TypedResults.Ok(sdkMapper.ToSdk(await AllocateToAsync(keyService, request, availableKey)));
         }
         catch (Exception ex)
         {

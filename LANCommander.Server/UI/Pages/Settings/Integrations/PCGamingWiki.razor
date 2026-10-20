@@ -3,31 +3,31 @@
 @using Microsoft.Extensions.Options
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IMessageService MessageService
-@inject ILogger<PCGamingWiki> Logger
+@inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="PCGamingWiki">
-    <PageHeaderExtra>
-        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Text Type="@TextElementType.Secondary">
+    <Typography Secondary>
         PCGamingWiki metadata works without any credentials. Supplying a bot password unlocks their
         <a href="https://www.pcgamingwiki.com/wiki/Special:CargoTables" target="_blank">Cargo</a> API, which returns
         structured data instead of requiring us to scrape the rendered page. Create one at
         <a href="https://www.pcgamingwiki.com/wiki/Special:BotPasswords" target="_blank">Special:BotPasswords</a> and grant it
-        <Text Strong>Create, query and delete data through the Cargo extension</Text>.
-    </Text>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+        <Typography Strong>Create, query and delete data through the Cargo extension</Typography>.
+    </Typography>
+
+    <Form Model="Settings.Value" OnSubmit="Save">
         <FormItem Label="Username" Help="Your bot password username, in Account@@BotName form.">
-            <Input @bind-Value="context.Server.PcGamingWiki.Username"/>
+            <TextInput @bind-Value="Settings.Value.Server.PcGamingWiki.Username" />
         </FormItem>
 
         <FormItem Label="Bot Password">
-            <InputPassword @bind-Value="context.Server.PcGamingWiki.BotPassword"/>
+            <PasswordInput @bind-Value="Settings.Value.Server.PcGamingWiki.BotPassword" />
         </FormItem>
     </Form>
 </PageContent>
@@ -42,12 +42,11 @@
                 s.Server.PcGamingWiki = Settings.Value.Server.PcGamingWiki;
             });
 
-            MessageService.Success("Settings saved!");
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
         }
     }
 }

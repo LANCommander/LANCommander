@@ -234,7 +234,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
     {
         var filtered = _allGames.AsEnumerable();
 
-        filtered = filtered.Where(g => g.Type.ValueIsIn(GameType.MainGame, GameType.StandaloneExpansion, GameType.StandaloneMod));
+        filtered = filtered.Where(g => g.ShowInLibrary);
 
         if (!string.IsNullOrWhiteSpace(SearchText))
             filtered = filtered.Where(g =>

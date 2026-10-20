@@ -1,0 +1,83 @@
+@using System.ComponentModel.DataAnnotations
+
+@* A representative form, optionally validated as soon as it renders to show the error state *@
+<Form Model="_model" Horizontal="Horizontal" Disabled="Disabled" @ref="_form">
+    <FormItem Label="Title" Required>
+        <TextInput @bind-Value="_model.Title" Placeholder="Game title" />
+    </FormItem>
+    <FormItem Label="Sort Title" Help="Used when ordering the library; defaults to the title">
+        <TextInput @bind-Value="_model.SortTitle" />
+    </FormItem>
+    <FormItem Label="Type">
+        <EnumSelect @bind-Value="_model.Type" />
+    </FormItem>
+    <FormItem Label="Genres">
+        <Select @bind-Values="_model.Genres" Multiple Searchable Placeholder="Choose genres">
+            <SelectOption Value="@("Action")" Label="Action" />
+            <SelectOption Value="@("Racing")" Label="Racing" />
+            <SelectOption Value="@("Real-Time Strategy")" Label="Real-Time Strategy" />
+        </Select>
+    </FormItem>
+    <FormItem Label="Max Players">
+        <NumberInput @bind-Value="_model.MaxPlayers" Min="1" Max="64" />
+    </FormItem>
+    <FormItem Label="Key">
+        <TextInput @bind-Value="_model.Key" />
+    </FormItem>
+    <FormItem Label="Description">
+        <TextArea @bind-Value="_model.Description" Rows="3" MaxLength="200" Counter />
+    </FormItem>
+    <FormItem Label="Singleplayer">
+        <Switch @bind-Value="_model.Singleplayer" />
+    </FormItem>
+    <FormItem>
+        <Checkbox @bind-Value="_model.Featured">Show on the launcher's home page</Checkbox>
+    </FormItem>
+    <Button Primary Submit Icon="IconType.FloppyDisk">Save</Button>
+</Form>
+
+@code {
+    public enum GameType
+    {
+        [Display(Name = "Main Game")]
+        MainGame,
+        Expansion,
+        Mod,
+    }
+
+    public class GameModel
+    {
+        public string? Title { get; set; }
+        public string? SortTitle { get; set; }
+        public GameType Type { get; set; }
+        public IEnumerable<string> Genres { get; set; } = ["Action"];
+        public int MaxPlayers { get; set; } = 16;
+        [StringLength(8, ErrorMessage = "Keys are at most 8 characters")]
+        public string? Key { get; set; }
+        public string? Description { get; set; } = "A fast arena shooter built for sixteen players.";
+        public bool Singleplayer { get; set; } = true;
+        public bool Featured { get; set; }
+    }
+
+    [Parameter] public bool Horizontal { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    /// <summary>Validate on first render so the fixture shows validation messages.</summary>
+    [Parameter] public bool ShowErrors { get; set; }
+
+    GameModel _model = new();
+    Form? _form;
+
+    protected override void OnInitialized()
+    {
+        if (ShowErrors)
+            _model.Key = "ABCD-1234-EFGH";
+    }
+
+    protected override void OnAfterRender(bool firstRender)
+    {
+        if (firstRender && ShowErrors)
+            _form?.Validate();
+    }
+}

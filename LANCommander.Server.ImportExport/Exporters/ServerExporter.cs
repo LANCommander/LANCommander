@@ -1,4 +1,3 @@
-using AutoMapper;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
@@ -36,7 +35,7 @@ public class ServerExporter(
 
     public override async Task<SDK.Models.Manifest.Server> ExportAsync(Guid id)
     {
-        var entity = await serverService.GetAsync<SDK.Models.Manifest.Server>(id);
+        var entity = await serverService.GetManifestAsync(id);
         
         var files = Directory.GetFiles(entity.WorkingDirectory, "*", SearchOption.AllDirectories);
 
@@ -57,17 +56,12 @@ public class ServerExporter(
             }
         }
 
-        if (entity.Scripts is null)
-            entity.Scripts = new List<Script>();
-
-        if (entity.Actions is null)
-            entity.Actions = new List<Action>();
-
-        if (entity.HttpPaths is null)
-            entity.HttpPaths = new List<ServerHttpPath>();
-        
-        if (entity.ServerConsoles is null)
-            entity.ServerConsoles = new List<ServerConsole>();
+        // The queue fills these from the records the user actually selected, so anything the
+        // manifest already carries has to be cleared first or every child is written out twice.
+        entity.Scripts = new List<Script>();
+        entity.Actions = new List<Action>();
+        entity.HttpPaths = new List<ServerHttpPath>();
+        entity.ServerConsoles = new List<ServerConsole>();
         
         return entity;
     }

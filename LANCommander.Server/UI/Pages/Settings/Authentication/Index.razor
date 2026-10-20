@@ -1,115 +1,113 @@
-﻿@page "/Settings/Authentication"
+@page "/Settings/Authentication"
 @using CaseConverter
 @using LANCommander.SDK.Extensions
 @using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Pages.Settings.Authentication.Components
 @using Microsoft.Extensions.Options
-@inject IMessageService MessageService
-@inject ILogger<Index> Logger
-@inject IServiceProvider ServiceProvider
+@inject NotificationService Notifications
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Authentication">
-    <PageHeaderExtra>
-        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-    </PageHeaderExtra>
+    <Extra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Form Model="Settings.Value" Layout="@FormLayout.Vertical">
+    <Form Model="Settings.Value" OnSubmit="Save">
         <FormItem Label="Allow Registration">
-            <Switch @bind-Checked="context.Server.Authentication.AllowRegistration" />
+            <Switch @bind-Value="Auth.AllowRegistration" />
         </FormItem>
 
         <FormItem Label="Allow password authentication" Help="When disabled, users can only sign in through external providers and cannot set or change a password.">
-            <Switch @bind-Checked="context.Server.Authentication.AllowPassword" />
+            <Switch @bind-Value="Auth.AllowPassword" />
         </FormItem>
 
         <FormItem Label="Require Account Approval">
-            <Switch @bind-Checked="context.Server.Authentication.RequireApproval" />
+            <Switch @bind-Value="Auth.RequireApproval" />
         </FormItem>
 
         <FormItem Label="Auto-redirect to external provider">
-            <Switch @bind-Checked="context.Server.Authentication.AutoRedirectToProvider" />
+            <Switch @bind-Value="Auth.AutoRedirectToProvider" />
         </FormItem>
 
         <FormItem Label="Token Secret">
-            <InputPassword @bind-Value="context.Server.Authentication.TokenSecret" />
+            <PasswordInput @bind-Value="Auth.TokenSecret" />
         </FormItem>
         <FormItem Label="Token Lifetime">
-            <AntDesign.InputNumber @bind-Value="context.Server.Authentication.TokenLifetime" Formatter="FormatTokenLifetime" Min="1" />
+            <InputGroup>
+                <NumberInput @bind-Value="Auth.TokenLifetime" Min="1" />
+                <InputAddon>days</InputAddon>
+            </InputGroup>
         </FormItem>
 
-        <Divider Text="User Profile Restrictions" />
+        <Divider>User Profile Restrictions</Divider>
 
         <FormItem Label="Allow users to change their username">
-            <Switch @bind-Checked="context.Server.Authentication.AllowUsernameChange" />
+            <Switch @bind-Value="Auth.AllowUsernameChange" />
         </FormItem>
         <FormItem Label="Allow users to set an alias">
-            <Switch @bind-Checked="context.Server.Authentication.AllowAliasChange" />
+            <Switch @bind-Value="Auth.AllowAliasChange" />
         </FormItem>
         <FormItem Label="Allow users to upload an avatar">
-            <Switch @bind-Checked="context.Server.Authentication.AllowAvatarUpload" />
+            <Switch @bind-Value="Auth.AllowAvatarUpload" />
         </FormItem>
         <FormItem Label="Allow users to change their email">
-            <Switch @bind-Checked="context.Server.Authentication.AllowEmailChange" />
+            <Switch @bind-Value="Auth.AllowEmailChange" />
         </FormItem>
 
-        <Divider Text="Password Requirements" />
+        <Divider>Password Requirements</Divider>
 
         <FormItem Label="Require non-alphanumeric characters">
-            <Switch @bind-Checked="@context.Server.Authentication.PasswordRequireNonAlphanumeric" />
+            <Switch @bind-Value="Auth.PasswordRequireNonAlphanumeric" />
         </FormItem>
         <FormItem Label="Require Lowercase characters">
-            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireLowercase" />
+            <Switch @bind-Value="Auth.PasswordRequireLowercase" />
         </FormItem>
         <FormItem Label="Require Uppercase characters">
-            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireUppercase" />
+            <Switch @bind-Value="Auth.PasswordRequireUppercase" />
         </FormItem>
         <FormItem Label="Require digits">
-            <Switch @bind-Checked="context.Server.Authentication.PasswordRequireDigit" />
+            <Switch @bind-Value="Auth.PasswordRequireDigit" />
         </FormItem>
         <FormItem Label="Minimum Length">
-            <AntDesign.InputNumber @bind-Value="context.Server.Authentication.PasswordRequiredLength" Min="1" />
+            <NumberInput @bind-Value="Auth.PasswordRequiredLength" Min="1" />
         </FormItem>
 
-        <Divider Text="Security" />
-        
+        <Divider>Security</Divider>
+
         <Collapse>
             <Panel Header="HTTP">
                 <FormItem Label="Minimum Same Site Cookie Policy">
-                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Server.Authentication.HttpCookiePolicy.SameSite" />
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="Auth.HttpCookiePolicy.SameSite" />
                 </FormItem>
                 <FormItem Label="Cookie Secure Policy">
-                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Server.Authentication.HttpCookiePolicy.Secure" />
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="Auth.HttpCookiePolicy.Secure" />
                 </FormItem>
             </Panel>
-            
+
             <Panel Header="HTTPS">
                 <FormItem Label="Minimum Same Site Cookie Policy">
-                    <EnumSelect TEnum="SameSiteMode" @bind-Value="context.Server.Authentication.HttpsCookiePolicy.SameSite" />
+                    <EnumSelect TEnum="SameSiteMode" @bind-Value="Auth.HttpsCookiePolicy.SameSite" />
                 </FormItem>
                 <FormItem Label="Cookie Secure Policy">
-                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="context.Server.Authentication.HttpsCookiePolicy.Secure" />
+                    <EnumSelect TEnum="CookieSecurePolicy" @bind-Value="Auth.HttpsCookiePolicy.Secure" />
                 </FormItem>
             </Panel>
         </Collapse>
     </Form>
 
-    <Divider Text="External Providers" />
+    <Divider>External Providers</Divider>
 
-    <Alert Type="@AlertType.Info" Message="A server restart is required for changes to authentication providers to take effect." ShowIcon="true" Style="margin-bottom: 16px;" />
+    <Alert Info Style="margin-bottom: 16px">A server restart is required for changes to authentication providers to take effect.</Alert>
 
-    <ExternalProviderEditor @bind-Values="Settings.Value.Server.Authentication.AuthenticationProviders" />
+    <ExternalProviderEditor @bind-Values="Auth.AuthenticationProviders" />
 </PageContent>
 
 @code {
-    string FormatTokenLifetime(int value)
-    {
-        return value.ToString() + " days";
-    }
+    LANCommander.Server.Settings.Models.AuthenticationSettings Auth => Settings.Value.Server.Authentication;
 
     void Save()
     {
@@ -117,21 +115,20 @@
         {
             SettingsProvider.Update(s =>
             {
-                foreach (var authenticationProvider in Settings.Value.Server.Authentication.AuthenticationProviders)
+                foreach (var authenticationProvider in Auth.AuthenticationProviders)
                 {
                     if (String.IsNullOrWhiteSpace(authenticationProvider.Slug))
                         authenticationProvider.Slug = authenticationProvider.Name.ToPascalCase();
                 }
 
-                s.Server.Authentication = Settings.Value.Server.Authentication;
+                s.Server.Authentication = Auth;
             });
 
-            MessageService.Success("Settings saved!");
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
         }
     }
 }

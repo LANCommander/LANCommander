@@ -1,0 +1,345 @@
+.lc-card {
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    box-shadow: var(--lc-inset-highlight);
+
+    // Radzen's outlined card is transparent; a card is Surface whatever it sits on
+    &.rz-card {
+        background-color: var(--lc-panel-background);
+    }
+
+    &.rz-variant-flat {
+        border-color: transparent;
+        box-shadow: none;
+    }
+
+    // The default header runs into the body with no divider: a 15/600 title with a 12px note on
+    // its baseline, and whatever Extra holds pushed to the end
+    .lc-card-header {
+        display: flex;
+        align-items: baseline;
+        gap: 10px;
+        padding: 16px 18px 0;
+    }
+
+    .lc-card-title {
+        min-width: 0;
+        overflow: hidden;
+        color: var(--rz-text-title-color);
+        font-size: 15px;
+        font-weight: 600;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+
+    .lc-card-subtitle {
+        flex-shrink: 0;
+        color: var(--lc-text-tertiary-color);
+        font-size: 12px;
+    }
+
+    .lc-card-count {
+        align-self: center;
+    }
+
+    .lc-card-extra {
+        display: flex;
+        align-items: center;
+        align-self: center;
+        gap: 8px;
+        margin-inline-start: auto;
+    }
+
+    .lc-card-body {
+        flex: 1;
+        min-height: 0;
+        padding: 16px 18px;
+    }
+
+    .lc-card-header + .lc-card-body {
+        padding-top: 18px;
+    }
+
+    .lc-card-footer {
+        padding: 10px 16px;
+        border-top: 1px solid var(--lc-border-card-color);
+        font-size: 13px;
+        font-weight: 500;
+    }
+
+    &.lc-card-small {
+        .lc-card-header {
+            padding: 12px 14px 0;
+        }
+
+        .lc-card-body,
+        .lc-card-header + .lc-card-body {
+            padding: 12px 14px;
+        }
+    }
+
+    // Panel: a kicker title and count chip over a hairline, and a flush body for lists
+    &.lc-card-panel {
+        overflow: hidden;
+
+        .lc-card-header {
+            align-items: center;
+            padding: 14px 16px;
+            border-bottom: 1px solid var(--lc-border-card-color);
+        }
+
+        .lc-card-title {
+            flex: 1;
+            color: var(--lc-text-tertiary-color);
+            font-size: var(--lc-kicker-size);
+            font-weight: 600;
+            letter-spacing: var(--lc-kicker-tracking);
+            text-transform: uppercase;
+        }
+
+        .lc-card-extra {
+            margin-inline-start: 0;
+        }
+
+        .lc-card-body,
+        .lc-card-header + .lc-card-body {
+            padding: 0;
+        }
+    }
+}
+
+// Collapse and Panel
+
+.lc-collapse {
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-lg);
+    box-shadow: var(--lc-inset-highlight);
+
+    > .lc-panel + .lc-panel {
+        border-top: 1px solid var(--lc-border-subtle-color);
+    }
+}
+
+.lc-panel-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding-inline-end: 12px;
+}
+
+.lc-panel-toggle {
+    display: flex;
+    flex: 1;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    border: 0;
+    background: none;
+    color: var(--rz-text-title-color);
+    font: inherit;
+    font-weight: 600;
+    text-align: start;
+    cursor: pointer;
+}
+
+.lc-panel-caret {
+    color: var(--lc-text-tertiary-color);
+    transition: transform 0.15s;
+}
+
+.lc-panel-open > .lc-panel-header .lc-panel-caret {
+    transform: rotate(90deg);
+}
+
+.lc-panel-body {
+    padding: 4px 16px 16px 36px;
+}
+
+// Statistic: a kicker, a 30px mono figure with its note on the baseline, and an optional 4px meter
+
+.lc-statistic-title {
+    margin-bottom: 10px;
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.lc-statistic-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 4px 10px;
+}
+
+.lc-statistic-value {
+    color: var(--rz-text-title-color);
+    font-family: var(--lc-font-mono);
+    font-size: 30px;
+    font-weight: 500;
+    line-height: 1;
+}
+
+.lc-statistic-delta {
+    color: var(--lc-text-tertiary-color);
+    font-size: 12px;
+}
+
+.lc-statistic-delta-success { color: var(--lc-success-text-color); }
+.lc-statistic-delta-warning { color: var(--lc-warning-text-color); }
+.lc-statistic-delta-danger { color: var(--lc-danger-text-color); }
+
+.lc-statistic-usage {
+    position: relative;
+    height: 4px;
+    margin-top: 9px;
+    overflow: hidden;
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-well);
+}
+
+.lc-statistic-usage-value {
+    position: absolute;
+    inset-block: 0;
+    inset-inline-start: 0;
+    border-radius: var(--lc-radius-sm);
+    background: var(--lc-accent-text-color);
+}
+
+// Image
+
+.lc-image {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    vertical-align: middle;
+
+    img {
+        max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+    }
+}
+
+.lc-image-cover img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.lc-image-rounded {
+    border-radius: var(--lc-radius-md);
+}
+
+.lc-image-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lc-image-preview-trigger {
+    display: contents;
+    cursor: zoom-in;
+
+    img {
+        cursor: zoom-in;
+    }
+}
+
+.lc-image-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    max-height: 75vh;
+
+    img {
+        max-width: 100%;
+        max-height: 75vh;
+        object-fit: contain;
+    }
+}
+
+.lc-slider {
+    width: 100%;
+}
+
+// Avatar
+.lc-avatar {
+    --lc-avatar-size: 32px;
+
+    display: inline-flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: center;
+    width: var(--lc-avatar-size);
+    height: var(--lc-avatar-size);
+    overflow: hidden;
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-popover);
+    color: var(--rz-text-color);
+    font-size: calc(var(--lc-avatar-size) * .42);
+    font-weight: 600;
+    line-height: 1;
+    user-select: none;
+
+    .lc-image,
+    img {
+        width: 100%;
+        height: 100%;
+    }
+}
+
+.lc-avatar-small {
+    --lc-avatar-size: 24px;
+}
+
+.lc-avatar-large {
+    --lc-avatar-size: 40px;
+}
+
+.lc-avatar-square {
+    border-radius: var(--lc-radius-md);
+}
+
+.lc-avatar-xs {
+    --lc-avatar-size: 22px;
+}
+
+// A person without a picture gets one of four tones, chosen from their id so it never changes
+.lc-avatar-tone-0,
+.lc-avatar-tone-1,
+.lc-avatar-tone-2,
+.lc-avatar-tone-3 {
+    color: #FFFFFF;
+}
+
+.lc-avatar-tone-0 { background: #6A4478; }
+.lc-avatar-tone-1 { background: #1A6FBF; }
+.lc-avatar-tone-2 { background: #3F7A4A; }
+.lc-avatar-tone-3 { background: #7A5230; }
+
+.lc-avatar-group {
+    display: inline-flex;
+    align-items: center;
+
+    > .lc-avatar {
+        box-shadow: 0 0 0 2px var(--rz-base-background-color);
+    }
+
+    > .lc-avatar + .lc-avatar {
+        margin-inline-start: -8px;
+    }
+}
+
+.lc-avatar-overflow {
+    font-size: 11px;
+}

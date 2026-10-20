@@ -1,4 +1,4 @@
-using LANCommander.Server.UI.Tests.Pages;
+﻿using LANCommander.Server.UI.Tests.Pages;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -42,10 +42,12 @@ public class AdminNavigationTests : IAsyncLifetime
         var dashboard = new AdminDashboardPage(_page);
         Assert.True(await dashboard.IsDisplayedAsync());
 
-        // Dashboard should show playtime charts
-        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Player)")).ToBeVisibleAsync();
-        await Assertions.Expect(_page.GetByText("Top 10 Total Playtime (By Game)")).ToBeVisibleAsync();
-        await Assertions.Expect(_page.GetByText("Top Average Session Length (By Game)")).ToBeVisibleAsync();
+        // Dashboard should show the range chart, the sessions panel and the all-time playtime charts
+        await Assertions.Expect(_page.GetByText("Playtime by title", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Active sessions", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Playtime by player", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Share of playtime", new() { Exact = true })).ToBeVisibleAsync();
+        await Assertions.Expect(_page.GetByText("Average session length", new() { Exact = true })).ToBeVisibleAsync();
     }
 
     [Fact]
@@ -65,7 +67,7 @@ public class AdminNavigationTests : IAsyncLifetime
     }
 
     [Fact]
-    public async Task GamesPage_ShowsEmptyTable()
+    public async Task GamesPage_ListsTheSeededGame()
     {
         var dashboard = new AdminDashboardPage(_page);
         await dashboard.NavigateToGamesAsync();
@@ -74,8 +76,8 @@ public class AdminNavigationTests : IAsyncLifetime
         await Assertions.Expect(_page.GetByText("Games").First).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Add Game" })).ToBeVisibleAsync();
         await Assertions.Expect(_page.GetByRole(AriaRole.Button, new() { Name = "Import" })).ToBeVisibleAsync();
-        // Empty table should show "No data"
-        await Assertions.Expect(_page.GetByText("No data")).ToBeVisibleAsync();
+        // The fixture seeds one game
+        await Assertions.Expect(_page.Locator("td").GetByText(ConfiguredServerFixture.TestGameTitle, new() { Exact = true })).ToBeVisibleAsync();
     }
 
     [Fact]

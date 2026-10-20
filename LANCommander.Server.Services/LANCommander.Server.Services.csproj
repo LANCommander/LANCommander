@@ -2,7 +2,9 @@
 
   <ItemGroup>
     <PackageReference Include="AsmResolver.PE.Win32Resources" />
-    <PackageReference Include="AutoMapper" />
+    <PackageReference Include="Riok.Mapperly">
+      <PrivateAssets>all</PrivateAssets>
+    </PackageReference>
     <PackageReference Include="CoreRCON" />
     <PackageReference Include="craftersmine.SteamGridDB.Net" />
     <PackageReference Include="YoutubeExplode" />
@@ -32,7 +34,6 @@
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
-    <ProjectReference Include="..\LANCommander.Steam\LANCommander.Steam.csproj" />
   </ItemGroup>
 
 </Project>

@@ -14,6 +14,8 @@ public static class GameExtensions
         ReleasedOn       = game.ReleasedOn ?? DateTime.MinValue,
         Singleplayer     = game.Singleplayer,
         Type             = game.Type,
+        InstallTo        = game.InstallTo,
+        ShowInLibrary    = game.ShowInLibrary,
         BaseGameId       = game.BaseGameId ?? Guid.Empty,
         InstallDirectory = game.InstallDirectory,
         InLibrary        = true,

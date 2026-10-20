@@ -15,11 +15,16 @@ namespace LANCommander.Server.Services.MediaGrabbers
 
         public CompositeMediaGrabberService(
             HqMediaGrabber hq,
-            SteamMediaGrabber steam,
             SteamGridDBMediaGrabber steamGridDb,
-            YouTubeMediaGrabber youtube)
+            YouTubeMediaGrabber youtube,
+            IEnumerable<IMediaGrabberProvider> providers)
         {
-            _grabbers = new List<IMediaGrabberService> { hq, steam, steamGridDb, youtube };
+            _grabbers = new List<IMediaGrabberService> { hq, steamGridDb, youtube };
+
+            // A grabber whose name is already taken could never be told apart from the first one
+            foreach (var grabber in providers.SelectMany(p => p.GetGrabbers()))
+                if (_grabbers.All(g => g.Name != grabber.Name))
+                    _grabbers.Add(grabber);
         }
 
         public async Task<IEnumerable<MediaGrabberResult>> SearchAsync(MediaType type, string keywords, int page = 0)
@@ -55,6 +60,22 @@ namespace LANCommander.Server.Services.MediaGrabbers
             MediaType type, string keywords, string? grabberName, string? subProvider, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
+            // Failed grabbers answer with no results, as they always have
+            await foreach (var batch in SearchBatchesAsync(type, keywords, grabberName, subProvider, page, cancellationToken))
+                yield return batch.Results;
+        }
+
+        public IEnumerable<string> GetGrabberNames(MediaType type) =>
+            _grabbers.Where(g => g.SupportedMediaTypes.Contains(type)).Select(g => g.Name);
+
+        /// <summary>
+        /// Searches every applicable grabber at once and yields each one's batch as it lands, in the
+        /// order they finish. Every grabber answers exactly once, with results, none, or its error.
+        /// </summary>
+        public async IAsyncEnumerable<MediaGrabberBatch> SearchBatchesAsync(
+            MediaType type, string keywords, string? grabberName, string? subProvider, int page,
+            [EnumeratorCancellation] CancellationToken cancellationToken = default)
+        {
             var applicable = _grabbers.Where(g => g.SupportedMediaTypes.Contains(type)).ToList();
 
             if (!string.IsNullOrEmpty(grabberName))
@@ -63,10 +84,12 @@ namespace LANCommander.Server.Services.MediaGrabbers
             if (applicable.Count == 0)
                 yield break;
 
-            var channel = Channel.CreateUnbounded<IEnumerable<MediaGrabberResult>>();
+            var channel = Channel.CreateUnbounded<MediaGrabberBatch>();
 
             var tasks = applicable.Select(async grabber =>
             {
+                MediaGrabberBatch batch;
+
                 try
                 {
                     var results = (await grabber.SearchAsync(type, keywords, subProvider, page)).ToList();
@@ -74,15 +97,18 @@ namespace LANCommander.Server.Services.MediaGrabbers
                     foreach (var result in results)
                         result.GrabberName = grabber.Name;
 
-                    await channel.Writer.WriteAsync(results, cancellationToken);
+                    batch = new MediaGrabberBatch { GrabberName = grabber.Name, Results = results };
                 }
-                catch
+                catch (Exception ex)
                 {
-                    // Individual grabber failures shouldn't break the stream
+                    // One grabber failing shouldn't break the stream; it answers with its error
+                    batch = new MediaGrabberBatch { GrabberName = grabber.Name, Error = ex.Message };
                 }
+
+                await channel.Writer.WriteAsync(batch, cancellationToken);
             }).ToList();
 
-            _ = Task.WhenAll(tasks).ContinueWith(_ => channel.Writer.Complete(), cancellationToken);
+            _ = Task.WhenAll(tasks).ContinueWith(_ => channel.Writer.Complete(), TaskScheduler.Default);
 
             await foreach (var batch in channel.Reader.ReadAllAsync(cancellationToken))
                 yield return batch;

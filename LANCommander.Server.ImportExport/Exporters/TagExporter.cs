@@ -1,12 +1,12 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
-public class TagExporter(TagService tagService) : BaseExporter<Tag, Data.Models.Tag>
+public class TagExporter(ManifestMapper manifestMapper, TagService tagService) : BaseExporter<Tag, Data.Models.Tag>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Tag record)
     {
@@ -22,6 +22,6 @@ public class TagExporter(TagService tagService) : BaseExporter<Tag, Data.Models.
 
     public override async Task<Tag> ExportAsync(Guid id)
     {
-        return await tagService.GetAsync<Tag>(id);
+        return await tagService.GetAsync(id, manifestMapper.ProjectToManifestTag);
     }
 } 

@@ -1,0 +1,78 @@
+@implements IComponentFixtureSet
+
+@code {
+    static readonly TaskCompletionSource<string> Never = new();
+
+    public IEnumerable<ComponentFixture> Fixtures =>
+    [
+        new("ErrorHandler.Page", "A page-level error with the exception, a quip and recovery actions",
+            @<ErrorHandler Title="Something went wrong">
+                <Throw />
+            </ErrorHandler>)
+        {
+            Width = 720,
+            Covers = [typeof(ErrorHandler)],
+        },
+        new("ErrorHandler.Inline", "A section-level error that leaves the rest of the page usable",
+            @<Flex Vertical Gap="Gap.Medium">
+                <Card Title="Server status"><Typography>Everything else on the page keeps working.</Typography></Card>
+                <ErrorHandler Inline Title="The play history could not be displayed">
+                    <Throw Message="Sequence contains no elements" />
+                </ErrorHandler>
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(ErrorHandler)],
+        },
+        new("AsyncContent.States", "Loading, failed, empty and loaded content",
+            @<Flex Vertical Gap="Gap.Medium">
+                <AsyncContent T="string" Load="() => Never.Task" LoadingText="Loading games">
+                    <p>@context</p>
+                </AsyncContent>
+                <AsyncContent T="string" Load="@(() => Task.FromException<string>(new TimeoutException("The database did not respond in time.")))">
+                    <p>@context</p>
+                </AsyncContent>
+                <AsyncContent T="List<string>" Load="() => Task.FromResult(new List<string>())">
+                    <Empty><Empty Small Description="No sessions recorded" /></Empty>
+                    <ChildContent><p>@context.Count sessions</p></ChildContent>
+                </AsyncContent>
+                <AsyncContent T="string" Load="@(() => Task.FromResult("Arena Blitz"))">
+                    <Card Small Title="Loaded">@context</Card>
+                </AsyncContent>
+            </Flex>)
+        {
+            Width = 480,
+            Covers = [typeof(AsyncContent<>)],
+        },
+        new("NotFound.Default", "The page shown for an unknown route",
+            @<NotFound SubTitle="The page you're looking for took an arrow to the knee.">
+                <Button Primary Icon="IconType.House">Home</Button>
+            </NotFound>)
+        {
+            Width = 480,
+            Covers = [typeof(NotFound)],
+        },
+        new("Page.Layout", "A page header with a subtitle and actions over padded page content",
+            @<div style="margin: -16px; background: var(--rz-body-background-color)">
+                <PageHeader Title="Games" Subtitle="8">
+                    <Extra>
+                        <Button Icon="IconType.UploadSimple">Import</Button>
+                        <Button Primary Icon="IconType.Plus">Add Game</Button>
+                    </Extra>
+                </PageHeader>
+                <PageContent>
+                    <Card>Page body</Card>
+                </PageContent>
+                <PageHeader>
+                    <TitleTemplate>Arena Blitz <Tag Primary>1.1.2</Tag></TitleTemplate>
+                </PageHeader>
+                <PageContent Loading LoadingText="Loading game">
+                    <Card>Content that is still loading</Card>
+                </PageContent>
+            </div>)
+        {
+            Width = 640,
+            Covers = [typeof(PageHeader), typeof(PageContent)],
+        },
+    ];
+}

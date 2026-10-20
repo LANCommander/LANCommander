@@ -1,0 +1,36 @@
+@using LANCommander.SDK.Enums
+
+@* Picks any of Windows, Linux and macOS, combined into one RuntimePlatform flags value; none means all *@
+<Select TValue="RuntimePlatform"
+        Multiple
+        Clearable
+        Items="Choices"
+        Values="SelectedFlags"
+        ValuesChanged="OnValuesChangedAsync"
+        Placeholder="@Placeholder"
+        Disabled="Disabled"
+        Style="@Style" />
+
+@code {
+    [Parameter] public RuntimePlatform Value { get; set; }
+    [Parameter] public EventCallback<RuntimePlatform> ValueChanged { get; set; }
+    [Parameter] public string Placeholder { get; set; } = "All platforms";
+    [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Style { get; set; } = "min-width: 180px";
+
+    static readonly SelectItem<RuntimePlatform>[] Choices =
+    [
+        new(RuntimePlatform.Windows, "Windows"),
+        new(RuntimePlatform.Linux, "Linux"),
+        new(RuntimePlatform.macOS, "macOS"),
+    ];
+
+    IEnumerable<RuntimePlatform> SelectedFlags => Choices.Where(c => Value.HasFlag(c.Value)).Select(c => c.Value).ToList();
+
+    async Task OnValuesChangedAsync(IEnumerable<RuntimePlatform>? values)
+    {
+        Value = (values ?? []).Aggregate(RuntimePlatform.None, (combined, value) => combined | value);
+
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

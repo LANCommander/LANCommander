@@ -1,149 +1,190 @@
-﻿@using LANCommander.Server.Services.Enums
-@using Microsoft.AspNetCore.SignalR.Client
-@inject ServerService ServerService
-@inject IMessageService MessageService
-@inject INotificationService NotificationService
-@inject NavigationManager NavigationManager
-@implements IAsyncDisposable
+@using LANCommander.Server.Services.Enums
+@inject ServerManager ServerManager
+@inject NotificationService Notifications
+@inject ILogger<ServerControl> Logger
+@implements IDisposable
 
-<Flex Gap="FlexGap.Large" Align="FlexAlign.Center" Wrap="FlexWrap.NoWrap">
-    @switch (Status)
+@*
+    Starts and stops a server. In a list row it shows the live status beside a small Start or Stop
+    button; in a server's header (Header) it is the 36px Restart and Stop pair, or Start when the
+    server isn't running, and the header shows the status itself.
+*@
+@if (Header)
+{
+    @if (Status is ServerProcessStatus.Stopped or ServerProcessStatus.Error)
     {
-        case ServerProcessStatus.Running:
-            <Badge Status="BadgeStatus.Success" Text="Running" />
-            break;
-
-        case ServerProcessStatus.Starting:
-            <Badge Status="BadgeStatus.Processing" Text="Starting" />
-            break;
-
-        case ServerProcessStatus.Error:
-            <Badge Status="BadgeStatus.Error" Text="Error" />
-            break;
-
-        case ServerProcessStatus.Stopped:
-            <Badge Status="BadgeStatus.Default" Text="Stopped" />
-            break;
-
-        case ServerProcessStatus.Stopping:
-            <Badge Status="BadgeStatus.Error" Text="Stopping" />
-            break;
-
-        default:
-            <Badge Status="BadgeStatus.Warning" Text="Retrieving" />
-            break;
-    }
-
-    @if (Status != ServerProcessStatus.Running)
-    {
-        <Button Type="@ButtonType.Primary" OnClick="() => Start()" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+        <Button Icon="IconType.Play" Loading="_busy" OnClick="StartAsync">Start</Button>
     }
     else
     {
-        <Popconfirm OnConfirm="() => Stop()" Title="Are you sure you want to kill this server process?">
-            <Button Danger Type="@ButtonType.Primary">Stop</Button>
+        <Popconfirm OnConfirm="RestartAsync" Title="Restart this server?" Description="Anyone playing on it is disconnected." OkText="Restart" Disabled="Status != ServerProcessStatus.Running || _busy">
+            <Button Icon="IconType.ArrowsClockwise" Loading="_restarting" Disabled="Status != ServerProcessStatus.Running || _busy">Restart</Button>
+        </Popconfirm>
+        <Popconfirm OnConfirm="StopAsync" Title="Stop this server?" Description="This kills the server process." OkText="Stop" Danger Disabled="!CanStop">
+            <Button Danger Icon="IconType.Stop" Loading="Status == ServerProcessStatus.Stopping" Disabled="!CanStop">Stop</Button>
         </Popconfirm>
     }
-</Flex>
+}
+else
+{
+    <Flex Gap="Gap.Medium" Align="Align.Center" Class="server-control">
+        @switch (Status)
+        {
+            case ServerProcessStatus.Running:
+                <Badge Success>Running</Badge>
+                break;
+
+            case ServerProcessStatus.Starting:
+                <Badge Processing>Starting</Badge>
+                break;
+
+            case ServerProcessStatus.Error:
+                <Badge Danger>Error</Badge>
+                break;
+
+            case ServerProcessStatus.Stopped:
+                <Badge>Stopped</Badge>
+                break;
+
+            case ServerProcessStatus.Stopping:
+                <Badge Danger>Stopping</Badge>
+                break;
+
+            default:
+                <Badge Warning>Retrieving</Badge>
+                break;
+        }
+
+        @if (Status != ServerProcessStatus.Running)
+        {
+            <Button Primary Small Icon="IconType.Play" OnClick="StartAsync" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+        }
+        else
+        {
+            <Popconfirm OnConfirm="StopAsync" Title="Are you sure you want to kill this server process?" OkText="Stop" Danger>
+                <Button Small Danger Icon="IconType.Stop">Stop</Button>
+            </Popconfirm>
+        }
+    </Flex>
+}
 
 @code {
-    [CascadingParameter] public Dictionary<Guid, ServerProcessStatus> CurrentServerStatus { get; set; } = new();
     [Parameter] public Guid ServerId { get; set; }
 
-    HubConnection? HubConnection;
-    Server Server;
-    Timer Timer;
+    /// <summary>The header's Restart/Stop (or Start) buttons, without the status badge.</summary>
+    [Parameter] public bool Header { get; set; }
 
-    ServerProcessStatus Status = ServerProcessStatus.Retrieving;
+    /// <summary>
+    /// The status, when the page already follows it (as the server header does). Without it the
+    /// control asks the server manager every second itself.
+    /// </summary>
+    [Parameter] public ServerProcessStatus? CurrentStatus { get; set; }
 
-    protected override async Task OnInitializedAsync()
+    /// <summary>Raised when a button changes the status ahead of the next poll, e.g. to Starting.</summary>
+    [Parameter] public EventCallback<ServerProcessStatus> CurrentStatusChanged { get; set; }
+
+    ServerProcessStatus _polled = ServerProcessStatus.Retrieving;
+    ServerProcessStatus? _pending;
+    Timer? _poll;
+    bool _busy;
+    bool _restarting;
+
+    ServerProcessStatus Status => _pending ?? CurrentStatus ?? _polled;
+
+    bool CanStop => !_busy && Status is ServerProcessStatus.Running or ServerProcessStatus.Starting;
+
+    protected override void OnParametersSet()
     {
-        await Connect();
+        // A fresh status from the page replaces the guess made when a button was pressed
+        if (CurrentStatus != null)
+            _pending = null;
     }
 
-    protected override async Task OnParametersSetAsync()
+    protected override void OnInitialized()
     {
-        if (!CurrentServerStatus.ContainsKey(ServerId))
-            Status = ServerProcessStatus.Stopped;
-        else
-            Status = CurrentServerStatus[ServerId];
-        
-        await Task.Yield();
-        await InvokeAsync(StateHasChanged);
-    }
+        if (CurrentStatus != null)
+            return;
 
-    async Task Connect()
-    {
-        HubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/hubs/gameserver"))
-            .WithAutomaticReconnect()
-            .Build();
-
-        HubConnection.On<string>("OnConnected", async connectionId =>
+        _poll = new Timer(_ => InvokeAsync(async () =>
         {
-            await HubConnection.InvokeAsync("GetStatus", ServerId);
-        });
-
-        HubConnection.On<ServerProcessStatus, Guid>("StatusUpdate", (status, serverId) =>
-        {
-            if (ServerId == serverId && Status != status)
+            try
             {
-                Status = status;
-                InvokeAsync(StateHasChanged);
+                var status = await ServerManager.GetStatusAsync(ServerId);
+
+                if (status != _polled || _pending != null)
+                {
+                    _polled = status;
+                    _pending = null;
+                    StateHasChanged();
+                }
             }
-        });
-        
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not read the status of server {ServerId}", ServerId);
+            }
+        }), null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+
+    async Task SetPendingAsync(ServerProcessStatus status)
+    {
+        _pending = status;
+
+        await CurrentStatusChanged.InvokeAsync(status);
+    }
+
+    async Task StartAsync()
+    {
+        await SetPendingAsync(ServerProcessStatus.Starting);
+
+        // The engine's start runs for the server's whole lifetime, so it isn't awaited
         _ = Task.Run(async () =>
         {
             try
             {
-                while (true)
-                {
-                    await Task.Delay(1000);
-
-                    if (HubConnection.State == HubConnectionState.Connected)
-                        await HubConnection.SendAsync("UpdateStatusAsync", ServerId.ToString());
-                }
+                await ServerManager.StartAsync(ServerId);
             }
-            catch
+            catch (Exception ex)
             {
+                Logger.LogError(ex, "Could not start server {ServerId}", ServerId);
+
+                await InvokeAsync(() => Notifications.Error(ex, "The server could not be started"));
             }
         });
+    }
+
+    async Task StopAsync()
+    {
+        await SetPendingAsync(ServerProcessStatus.Stopping);
 
         try
         {
-            await HubConnection.StartAsync();
+            await ServerManager.StopAsync(ServerId);
         }
-        catch
+        catch (Exception ex)
         {
+            Notifications.Error(ex, "The server could not be stopped");
         }
     }
 
-    async Task Start()
+    async Task RestartAsync()
     {
-        if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
+        _busy = true;
+        _restarting = true;
+
+        try
         {
-            Status = ServerProcessStatus.Starting;
-            await Task.Yield();
-            
-            await HubConnection.InvokeAsync("StartServer", ServerId);
+            await ServerManager.RestartAsync(ServerId);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The server could not be restarted");
+        }
+        finally
+        {
+            _busy = false;
+            _restarting = false;
         }
     }
 
-    async Task Stop()
-    {
-        if (HubConnection != null && HubConnection.State == HubConnectionState.Connected)
-        {
-            Status = ServerProcessStatus.Stopping;
-            await Task.Yield();
-            
-            await HubConnection.InvokeAsync("StopServer", ServerId);
-        }
-    }
-
-    public async ValueTask DisposeAsync()
-    {
-        if (HubConnection is not null)
-            await HubConnection.DisposeAsync();
-    }
+    public void Dispose() => _poll?.Dispose();
 }

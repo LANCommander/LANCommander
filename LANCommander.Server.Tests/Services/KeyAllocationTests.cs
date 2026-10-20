@@ -1,10 +1,10 @@
 using System.Security.Claims;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Data;
 using LANCommander.Server.Endpoints;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,7 +45,7 @@ public class KeyAllocationTests(ApplicationFixture fixture) : DalTest(fixture)
             gameId,
             new KeyRequest { GameId = gameId, MacAddress = macAddress, ComputerName = "TEST-PC" },
             Principal(userName),
-            scope.ServiceProvider.GetRequiredService<IMapper>(),
+            scope.ServiceProvider.GetRequiredService<SdkMapper>(),
             scope.ServiceProvider.GetRequiredService<KeyService>(),
             scope.ServiceProvider.GetRequiredService<GameService>(),
             scope.ServiceProvider.GetRequiredService<UserService>(),
@@ -62,7 +62,7 @@ public class KeyAllocationTests(ApplicationFixture fixture) : DalTest(fixture)
             gameId,
             new KeyRequest { GameId = gameId, MacAddress = macAddress, ComputerName = "TEST-PC" },
             Principal(userName),
-            scope.ServiceProvider.GetRequiredService<IMapper>(),
+            scope.ServiceProvider.GetRequiredService<SdkMapper>(),
             scope.ServiceProvider.GetRequiredService<KeyService>(),
             scope.ServiceProvider.GetRequiredService<GameService>(),
             scope.ServiceProvider.GetRequiredService<UserService>(),

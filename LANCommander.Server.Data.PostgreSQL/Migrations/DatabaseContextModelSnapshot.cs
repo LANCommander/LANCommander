@@ -17,7 +17,7 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
         {
 #pragma warning disable 612, 618
             modelBuilder
-                .HasAnnotation("ProductVersion", "9.0.9")
+                .HasAnnotation("ProductVersion", "9.0.19")
                 .HasAnnotation("Relational:MaxIdentifierLength", 63);
 
             NpgsqlModelBuilderExtensions.UseIdentityByDefaultColumns(modelBuilder);
@@ -193,6 +193,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("GameVersionId")
+                        .HasColumnType("uuid");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -233,6 +236,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("GameId");
 
+                    b.HasIndex("GameVersionId");
+
                     b.HasIndex("ServerId");
 
                     b.HasIndex("ToolId");
@@ -248,9 +253,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<string>("Changelog")
-                        .HasColumnType("text");
-
                     b.Property<long>("CompressedSize")
                         .HasColumnType("bigint");
 
@@ -261,6 +263,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasColumnType("timestamp with time zone");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GameVersionId")
                         .HasColumnType("uuid");
 
                     b.Property<Guid?>("LastVersionId")
@@ -297,6 +302,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("GameVersionId")
+                        .IsUnique();
 
                     b.HasIndex("LastVersionId");
 
@@ -552,14 +560,26 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid?>("EngineId")
                         .HasColumnType("uuid");
 
+                    b.Property<int>("InstallTo")
+                        .HasColumnType("integer");
+
                     b.Property<int>("KeyAllocationMethod")
                         .HasColumnType("integer");
 
                     b.Property<string>("Notes")
                         .HasColumnType("text");
 
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("boolean");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<bool>("ShowInLibrary")
+                        .HasColumnType("boolean");
 
                     b.Property<bool>("Singleplayer")
                         .HasColumnType("boolean");
@@ -726,6 +746,72 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("UserId");
 
                     b.ToTable("GameSaves");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Changelog")
+                        .HasColumnType("text");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("OptionSchema")
+                        .HasColumnType("text");
+
+                    b.Property<bool>("Published")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Version")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("GameId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("GameVersions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.Property<Guid>("GameVersionId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RedistributableId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Options")
+                        .HasColumnType("text");
+
+                    b.HasKey("GameVersionId", "RedistributableId");
+
+                    b.HasIndex("RedistributableId");
+
+                    b.ToTable("GameVersionRedistributables");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -1323,6 +1409,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<Guid?>("GameVersionId")
+                        .HasColumnType("uuid");
+
                     b.Property<bool>("IsRegex")
                         .HasColumnType("boolean");
 
@@ -1351,6 +1440,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.HasIndex("GameId");
 
+                    b.HasIndex("GameVersionId");
+
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("SavePaths");
@@ -1376,6 +1467,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasColumnType("text");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("GameVersionId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Name")
@@ -1411,6 +1505,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("CreatedById");
 
                     b.HasIndex("GameId");
+
+                    b.HasIndex("GameVersionId");
 
                     b.HasIndex("RedistributableId");
 
@@ -2189,6 +2285,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Actions")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
                         .WithMany("Actions")
                         .HasForeignKey("ServerId")
@@ -2208,6 +2309,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Navigation("Game");
 
+                    b.Navigation("GameVersion");
+
                     b.Navigation("Server");
 
                     b.Navigation("Tool");
@@ -2226,6 +2329,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .WithMany("Archives")
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithOne("Archive")
+                        .HasForeignKey("LANCommander.Server.Data.Models.Archive", "GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.HasOne("LANCommander.Server.Data.Models.Archive", "LastVersion")
                         .WithMany()
@@ -2255,6 +2363,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("LastVersion");
 
@@ -2521,6 +2631,50 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("Versions")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersionRedistributable", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Redistributables")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Redistributable", "Redistributable")
+                        .WithMany()
+                        .HasForeignKey("RedistributableId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("GameVersion");
+
+                    b.Navigation("Redistributable");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Genre", b =>
@@ -2854,6 +3008,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("SavePaths")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -2862,6 +3021,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("UpdatedBy");
                 });
@@ -2877,6 +3038,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .WithMany("Scripts")
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.GameVersion", "GameVersion")
+                        .WithMany("Scripts")
+                        .HasForeignKey("GameVersionId")
+                        .OnDelete(DeleteBehavior.ClientCascade);
 
                     b.HasOne("LANCommander.Server.Data.Models.Redistributable", "Redistributable")
                         .WithMany("Scripts")
@@ -2901,6 +3067,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("CreatedBy");
 
                     b.Navigation("Game");
+
+                    b.Navigation("GameVersion");
 
                     b.Navigation("Redistributable");
 
@@ -3243,6 +3411,21 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("Scripts");
 
                     b.Navigation("Servers");
+
+                    b.Navigation("Versions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.GameVersion", b =>
+                {
+                    b.Navigation("Actions");
+
+                    b.Navigation("Archive");
+
+                    b.Navigation("Redistributables");
+
+                    b.Navigation("SavePaths");
+
+                    b.Navigation("Scripts");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>

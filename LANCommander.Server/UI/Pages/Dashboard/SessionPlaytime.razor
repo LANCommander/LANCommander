@@ -1,89 +1,67 @@
-﻿@page "/Dashboard/SessionPlaytime"
+@page "/Dashboard/SessionPlaytime"
+@attribute [Authorize]
 @inject GameService GameService
 
 <PageHeader Title="Session Playtime" />
 
-<Table TItem="GameAverageSessionData" DataSource="SessionData" Loading="@Loading" Responsive PageSize="100">
-    <Column TData="string" Title="Icon">
-        <Image Src="@GetIcon(context.Game)" Height="32" Width="32" Preview="false"></Image>
-    </Column>
-    <PropertyColumn Property="d => d.Game.Title" Title="Game" Sortable Filterable />
-    <PropertyColumn Property="d => d.LastPlayed" Title="Last Played" Sortable Filterable>
-        <LocalTime Value="context.LastPlayed" />
-    </PropertyColumn>
-    <PropertyColumn Property="d => d.SessionCount" Title="Sessions" Sortable Filterable />
-    <PropertyColumn Property="d => d.TotalTime" Title="Total Time" Sortable />
-    <PropertyColumn Property="d => d.AverageTime" Title="Average Session" Sortable DefaultSortOrder="SortDirection.Descending" />
-</Table>
+<PageContent>
+    <AsyncContent T="List<GameAverageSessionData>" Load="LoadAsync" LoadingText="Loading sessions" Context="rows">
+        <Table TItem="GameAverageSessionData" Items="rows" PageSize="100" SettingsKey="session-playtime">
+            <Columns>
+                <TemplateColumn TItem="GameAverageSessionData" Title="Icon" Width="64px">
+                    <Image Src="@GetIcon(context.Game)" Width="32" Height="32" />
+                </TemplateColumn>
+                <BoundColumn Property="d => d.Game.Title" Title="Game" Sortable />
+                <BoundColumn Property="d => d.LastPlayed" Title="Last Played" Sortable>
+                    <LocalTime Value="context.LastPlayed" />
+                </BoundColumn>
+                <BoundColumn Property="d => d.SessionCount" Title="Sessions" Sortable AlignEnd />
+                <BoundColumn Property="d => d.TotalTime" Title="Total Time" Sortable AlignEnd>
+                    @Playtime.Format(context.TotalTime.TotalSeconds)
+                </BoundColumn>
+                <BoundColumn Property="d => d.AverageTime" Title="Average Session" Sortable DefaultSort="ColumnSort.Descending" AlignEnd>
+                    @Playtime.Format(context.AverageTime.TotalSeconds)
+                </BoundColumn>
+            </Columns>
+        </Table>
+    </AsyncContent>
+</PageContent>
 
 @code {
-    Dictionary<string, TimeSpan> Playtimes = new Dictionary<string, TimeSpan>();
-
-    ICollection<Game> Games { get; set; } = new List<Game>();
-    IEnumerable<GameAverageSessionData> SessionData = new List<GameAverageSessionData>();
-
-    bool Loading = true;
-
-    protected override async Task OnAfterRenderAsync(bool firstRender)
+    async Task<List<GameAverageSessionData>> LoadAsync()
     {
-        if (firstRender)
-            await LoadData();
-    }
-
-    private async Task LoadData()
-    {
-        Loading = true;
-        
-        Games = await GameService
+        var games = await GameService
             .Include(g => g.PlaySessions)
             .Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon))
             .GetAsync();
 
-        SessionData = Games.Select(g =>
+        return games.Select(game =>
         {
-            var data = new GameAverageSessionData()
+            var sessions = game.PlaySessions?.Where(s => s.Start != null && s.End != null).ToList() ?? [];
+            var total = Playtime.Total(sessions);
+
+            return new GameAverageSessionData
             {
-                Game = g,
-                TotalTime = new TimeSpan()
+                Game = game,
+                LastPlayed = sessions.Count > 0 ? sessions.Max(s => s.End!.Value) : null,
+                SessionCount = sessions.Count,
+                TotalTime = total,
+                AverageTime = sessions.Count > 0 ? total / sessions.Count : TimeSpan.Zero,
             };
-
-            if (g.PlaySessions != null && g.PlaySessions.Any(g => g.End != null && g.Start != null))
-            {
-                var playSessions = g.PlaySessions.Where(s => s.Start != null && s.End != null);
-
-                data.LastPlayed = playSessions.OrderByDescending(s => s.End).First().End.Value;
-                data.SessionCount = playSessions.Count();
-
-                foreach (var session in playSessions)
-                {
-                    data.TotalTime = data.TotalTime.Add(session.End.Value.Subtract(session.Start.Value));
-                }
-
-                data.AverageTime = TimeSpan.FromSeconds(data.TotalTime.TotalSeconds / data.SessionCount);
-            }
-
-            return data;
-        });
-
-        Loading = false;
-
-        await InvokeAsync(StateHasChanged);
+        }).ToList();
     }
 
-    private string GetIcon(Game game)
+    static string GetIcon(Game game)
     {
-        var media = game?.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
+        var media = game.Media?.FirstOrDefault(m => m.Type == SDK.Enums.MediaType.Icon);
 
-        if (media != null)
-            return $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
-        else
-            return "/favicon.ico";
+        return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : "/favicon.ico";
     }
 
     public class GameAverageSessionData
     {
-        public Game Game { get; set; }
-        public DateTime LastPlayed { get; set; }
+        public Game Game { get; set; } = default!;
+        public DateTime? LastPlayed { get; set; }
         public TimeSpan TotalTime { get; set; }
         public int SessionCount { get; set; }
         public TimeSpan AverageTime { get; set; }

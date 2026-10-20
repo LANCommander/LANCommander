@@ -1,0 +1,108 @@
+@namespace LANCommander.Server.UI.Controls
+@typeparam TItem
+@inherits ControlBase
+
+@*
+    Two lists side by side: the chosen Values on the right, the rest of Items on the left, with
+    buttons to move items across.
+*@
+<RadzenPickList TItem="Entry"
+                Source="_source"
+                SourceChanged="SourceChanged"
+                Target="_target"
+                TargetChanged="TargetChangedAsync"
+                TextProperty="@nameof(Entry.Text)"
+                Multiple="true"
+                AllowFiltering="Searchable"
+                AllowMoveAll="true"
+                SourceToTargetTitle="Add all"
+                SelectedSourceToTargetTitle="Add selected"
+                SelectedTargetToSourceTitle="Remove selected"
+                TargetToSourceTitle="Remove all"
+                ShowHeader="true"
+                SourceHeader="SourceHeader"
+                TargetHeader="TargetHeader"
+                Disabled="Disabled"
+                SourcePlaceholder="Search"
+                TargetPlaceholder="Search"
+                SourceEmptyText="Nothing left to add"
+                TargetEmptyText="Nothing chosen"
+                class="@_class"
+                style="@Style"
+                @attributes="AdditionalAttributes" />
+
+@code {
+    /// <summary>Every item that can be chosen.</summary>
+    [Parameter, EditorRequired] public IEnumerable<TItem> Items { get; set; } = [];
+
+    /// <summary>The chosen items.</summary>
+    [Parameter] public IEnumerable<TItem>? Values { get; set; }
+
+    [Parameter] public EventCallback<IEnumerable<TItem>> ValuesChanged { get; set; }
+
+    /// <summary>The label shown for each item.</summary>
+    [Parameter, EditorRequired] public Func<TItem, string?> Text { get; set; } = default!;
+
+    /// <summary>Identifies an item, so chosen values match items loaded separately. Defaults to an Id property.</summary>
+    [Parameter] public Func<TItem, object?>? Key { get; set; }
+
+    [Parameter] public string SourceTitle { get; set; } = "Available";
+
+    [Parameter] public string TargetTitle { get; set; } = "Chosen";
+
+    /// <summary>Adds a filter box to each list.</summary>
+    [Parameter] public bool Searchable { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    public sealed record Entry(TItem Item, string Text, object? Key);
+
+    IEnumerable<Entry> _source = [];
+    IEnumerable<Entry> _target = [];
+    IEnumerable<TItem>? _lastItems;
+    IEnumerable<TItem>? _lastValues;
+    string? _class;
+
+    RenderFragment SourceHeader => @<span class="lc-transfer-title">@SourceTitle</span>;
+
+    RenderFragment TargetHeader => @<span class="lc-transfer-title">@TargetTitle</span>;
+
+    protected override void OnParametersSet()
+    {
+        _class = new ClassBuilder().Add("lc-transfer").Add(Class).Build();
+
+        if (ReferenceEquals(Items, _lastItems) && ReferenceEquals(Values, _lastValues))
+            return;
+
+        _lastItems = Items;
+        _lastValues = Values;
+
+        var keyOf = Key ?? DefaultKey();
+        var chosen = (Values ?? []).Select(keyOf).ToHashSet();
+        var entries = Items.Select(i => new Entry(i, Text(i) ?? "", keyOf(i))).ToList();
+
+        _target = entries.Where(e => chosen.Contains(e.Key)).ToList();
+        _source = entries.Where(e => !chosen.Contains(e.Key)).ToList();
+    }
+
+    static Func<TItem, object?> DefaultKey()
+    {
+        var id = typeof(TItem).GetProperty("Id");
+
+        return id != null ? item => id.GetValue(item) : item => item;
+    }
+
+    // Moving with nothing selected reports null
+    void SourceChanged(IEnumerable<Entry>? source) => _source = source ?? [];
+
+    async Task TargetChangedAsync(IEnumerable<Entry>? target)
+    {
+        _target = target ?? [];
+
+        var values = _target.Select(e => e.Item).ToList();
+
+        _lastValues = values;
+
+        await ValuesChanged.InvokeAsync(values);
+    }
+}

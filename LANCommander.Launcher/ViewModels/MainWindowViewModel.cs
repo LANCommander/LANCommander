@@ -4,6 +4,7 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Platform;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Exceptions;
 using LANCommander.SDK.Services;
@@ -36,6 +37,9 @@ public partial class MainWindowViewModel : ViewModelBase
     private bool _isBigScreenMode;
 
     public bool IsNotBigScreenMode => !IsBigScreenMode;
+
+    /// <summary>Status items (battery/volume/time) shown in the title bar in big screen mode.</summary>
+    public BigScreenStatusViewModel StatusBar { get; }
 
     public bool IsLogoVisible => CurrentView != ServerSelectionViewModel && CurrentView != LoginViewModel;
     public bool ShowTitlebarTint => !IsShellActive || ShellViewModel.IsTitlebarTinted;
@@ -71,6 +75,14 @@ public partial class MainWindowViewModel : ViewModelBase
         OnPropertyChanged(nameof(ShowTitlebarTint));
     }
 
+    partial void OnIsBigScreenModeChanged(bool value)
+    {
+        if (value)
+            StatusBar.Start();
+        else
+            StatusBar.Stop();
+    }
+
     public SplashViewModel SplashViewModel { get; }
     public ServerSelectionViewModel ServerSelectionViewModel { get; }
     public LoginViewModel LoginViewModel { get; }
@@ -87,6 +99,10 @@ public partial class MainWindowViewModel : ViewModelBase
         _authenticationService = authenticationService;
         _settingsProvider = settingsProvider;
         _logger = serviceProvider.GetRequiredService<ILogger<MainWindowViewModel>>();
+
+        StatusBar = new BigScreenStatusViewModel(
+            serviceProvider.GetRequiredService<IBatteryService>(),
+            serviceProvider.GetRequiredService<IVolumeService>());
 
         SplashViewModel = new SplashViewModel();
         ServerSelectionViewModel = new ServerSelectionViewModel(connectionClient, settingsProvider, serviceProvider.GetRequiredService<BeaconClient>());
@@ -126,6 +142,11 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public async Task InitializeAsync()
     {
+        // Big screen mode may have been restored from settings / command line by setting the backing
+        // field directly (which doesn't fire OnIsBigScreenModeChanged), so start polling here too.
+        if (IsBigScreenMode)
+            StatusBar.Start();
+
         SplashViewModel.UpdateStatus("Checking connection...");
         
         // Check if we have a saved server address and valid token

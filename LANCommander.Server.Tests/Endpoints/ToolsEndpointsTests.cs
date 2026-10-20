@@ -1,9 +1,9 @@
 using System.Net;
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Endpoints;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Http.HttpResults;
 using Shouldly;
 using ZiggyCreatures.Caching.Fusion;
@@ -54,11 +54,11 @@ public class ToolsEndpointsTests(ApplicationFixture fixture) : BaseTest(fixture)
         var result = await ToolsEndpoints.GetScriptsByIdAsync(
             GetService<ScriptService>(),
             GetService<IFusionCache>(),
-            GetService<IMapper>(),
+            GetService<SdkMapper>(),
             toolId);
 
         return result
-            .ShouldBeOfType<Ok<IEnumerable<SDK.Models.Script>>>()
+            .ShouldBeOfType<Ok<List<SDK.Models.Script>>>()
             .Value!
             .ToList();
     }
@@ -161,7 +161,7 @@ public class ToolsEndpointsTests(ApplicationFixture fixture) : BaseTest(fixture)
 
         var result = await ToolsEndpoints.GetByIdAsync(
             tool.Id,
-            GetService<IMapper>(),
+            GetService<SdkMapper>(),
             GetService<ToolService>());
 
         var fetched = result.ShouldBeOfType<Ok<SDK.Models.Tool>>().Value;

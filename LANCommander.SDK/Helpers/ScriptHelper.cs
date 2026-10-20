@@ -120,21 +120,88 @@ namespace LANCommander.SDK.Helpers
             return Path.Combine(installDirectory, ".lancommander", id, filename);
         }
 
+        private static readonly Dictionary<ScriptType, string> ScriptFileNames = new Dictionary<ScriptType, string>() {
+            { ScriptType.Install, "Install.ps1" },
+            { ScriptType.Uninstall, "Uninstall.ps1" },
+            { ScriptType.NameChange, "ChangeName.ps1" },
+            { ScriptType.KeyChange, "ChangeKey.ps1" },
+            { ScriptType.DetectInstall, "DetectInstall.ps1" },
+            { ScriptType.BeforeStart, "BeforeStart.ps1" },
+            { ScriptType.AfterStop, "AfterStop.ps1" },
+            { ScriptType.Package, "Package.ps1" },
+            { ScriptType.RunWrapper, "RunWrapper.ps1" }
+        };
+
+        private const string RequiresAdminHeader = "#Requires -RunAsAdministrator" + "\r\n\r\n";
+
         public static string GetScriptFileName(ScriptType type)
         {
-            Dictionary<ScriptType, string> filenames = new Dictionary<ScriptType, string>() {
-                { ScriptType.Install, "Install.ps1" },
-                { ScriptType.Uninstall, "Uninstall.ps1" },
-                { ScriptType.NameChange, "ChangeName.ps1" },
-                { ScriptType.KeyChange, "ChangeKey.ps1" },
-                { ScriptType.DetectInstall, "DetectInstall.ps1" },
-                { ScriptType.BeforeStart, "BeforeStart.ps1" },
-                { ScriptType.AfterStop, "AfterStop.ps1" },
-                { ScriptType.Package, "Package.ps1" },
-                { ScriptType.RunWrapper, "RunWrapper.ps1" }
-            };
+            return ScriptFileNames[type];
+        }
 
-            return filenames[type];
+        /// <summary>
+        /// The inverse of <see cref="GetScriptFilePath(string, Guid, ScriptType)"/>: recognises
+        /// <c>&lt;installDirectory&gt;/.lancommander/&lt;id&gt;/&lt;Type&gt;.ps1</c> and extracts its parts.
+        /// </summary>
+        public static bool TryParseScriptFilePath(string path, out string installDirectory, out Guid ownerId, out ScriptType type)
+        {
+            installDirectory = null;
+            ownerId = Guid.Empty;
+            type = default;
+
+            if (String.IsNullOrWhiteSpace(path))
+                return false;
+
+            try
+            {
+                var fileName = Path.GetFileName(path);
+                var match = ScriptFileNames.FirstOrDefault(f => String.Equals(f.Value, fileName, StringComparison.OrdinalIgnoreCase));
+
+                if (match.Value == null)
+                    return false;
+
+                var ownerDirectory = Path.GetDirectoryName(Path.GetFullPath(path));
+                var metadataDirectory = Path.GetDirectoryName(ownerDirectory);
+
+                if (!Guid.TryParse(Path.GetFileName(ownerDirectory), out ownerId))
+                    return false;
+
+                if (!String.Equals(Path.GetFileName(metadataDirectory), ".lancommander", StringComparison.OrdinalIgnoreCase))
+                    return false;
+
+                installDirectory = Path.GetDirectoryName(metadataDirectory);
+                type = match.Key;
+
+                return installDirectory != null;
+            }
+            catch (Exception)
+            {
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// Removes the <c>#Requires -RunAsAdministrator</c> header that <see cref="GetScriptContents"/>
+        /// prepends when a script is written to disk, so contents read back from an install can be sent to
+        /// the server (where the flag is stored separately) without the header piling up.
+        /// </summary>
+        public static string StripRequiresAdminHeader(string contents)
+        {
+            if (String.IsNullOrEmpty(contents))
+                return contents ?? String.Empty;
+
+            while (contents.StartsWith(RequiresAdminHeader, StringComparison.Ordinal))
+                contents = contents.Substring(RequiresAdminHeader.Length);
+
+            return contents;
+        }
+
+        /// <summary>A stable hash of script contents, used to detect concurrent edits of a server script.</summary>
+        public static string HashContents(string contents)
+        {
+            var bytes = System.Security.Cryptography.SHA256.HashData(Encoding.UTF8.GetBytes(contents ?? String.Empty));
+
+            return Convert.ToHexString(bytes);
         }
     }
 }

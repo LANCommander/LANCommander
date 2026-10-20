@@ -1,0 +1,17 @@
+@page "/Games/{id:guid}/Versions"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<GameEditView @ref="_view" Id="Id" Title="Versions">
+    <TitleExtraTemplate>
+        <Button Primary Icon="IconType.Plus" OnClick="() => _view?.CreateVersionAsync() ?? Task.CompletedTask">New Version</Button>
+    </TitleExtraTemplate>
+    <ChildContent>
+        <VersionEditor />
+    </ChildContent>
+</GameEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    GameEditView? _view;
+}

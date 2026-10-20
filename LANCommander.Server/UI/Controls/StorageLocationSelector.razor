@@ -1,0 +1,39 @@
+@using LANCommander.SDK.Enums
+@inject StorageLocationService StorageLocationService
+
+@* Picks one of the storage locations of Type; shown only when there is more than one to choose from *@
+@if (_locations.Count > 1)
+{
+    <Select TValue="Guid" Items="_items" Value="Value?.Id ?? Guid.Empty" ValueChanged="ChangedAsync" />
+}
+
+@code {
+    [Parameter] public StorageLocation? Value { get; set; }
+    [Parameter] public EventCallback<StorageLocation?> ValueChanged { get; set; }
+    [Parameter] public StorageLocationType Type { get; set; } = StorageLocationType.Archive;
+
+    List<StorageLocation> _locations = new();
+    IEnumerable<SelectItem<Guid>> _items = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        _locations = (await StorageLocationService
+                .AsNoTracking()
+                .SortBy(l => l.Path)
+                .GetAsync(l => l.Type == Type))
+            .ToList();
+
+        _items = _locations.ToSelectItems(l => l.Id, l => l.Default ? $"{l.Path} (default)" : l.Path).ToList();
+
+        // Start on the default location unless the caller already chose one
+        if (Value == null || !_locations.Any(l => l.Id == Value.Id))
+            await ChangedAsync(_locations.FirstOrDefault(l => l.Default)?.Id ?? _locations.FirstOrDefault()?.Id ?? Guid.Empty);
+    }
+
+    async Task ChangedAsync(Guid id)
+    {
+        Value = _locations.FirstOrDefault(l => l.Id == id);
+
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

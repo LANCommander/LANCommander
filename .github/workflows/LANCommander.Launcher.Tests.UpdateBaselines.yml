@@ -47,29 +47,22 @@ jobs:
                   dotnet restore LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj
                   dotnet build   LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj -c Debug --no-restore
 
-            # Run visual tests, ignore failures (regressions are expected here — that's
-            # the whole point of refreshing). Then promote every captured screenshot
-            # to be the new baseline.
-            - name: Capture fresh screenshots
-              continue-on-error: true
-              run: |
-                  dotnet test LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj \
-                      -c Debug --no-build --no-restore \
-                      --logger "console;verbosity=normal"
-
-            - name: Promote captures to baselines
+            # UPDATE_VISUAL_BASELINES makes every visual test write its capture over its
+            # baseline instead of comparing (see Helpers/VisualAssert.cs). The folder is
+            # emptied first so baselines of renamed or removed fixtures go too.
+            - name: Capture fresh baselines
+              env:
+                  UPDATE_VISUAL_BASELINES: '1'
               run: |
                   set -euo pipefail
-                  src=LANCommander.Launcher.Tests/bin/Debug/net10.0/Screenshots
                   dst=LANCommander.Launcher.Tests/Baselines
 
-                  if [ ! -d "$src" ]; then
-                      echo "::error::No screenshots captured at $src — visual tests didn't run."
-                      exit 1
-                  fi
+                  rm -f "$dst"/*.png
 
-                  mkdir -p "$dst"
-                  cp -v "$src"/*.png "$dst"/
+                  dotnet test LANCommander.Launcher.Tests/LANCommander.Launcher.Tests.csproj \
+                      -c Debug --no-build --no-restore \
+                      --filter "FullyQualifiedName~FixtureVisualTests|FullyQualifiedName~ViewInteractionTests" \
+                      --logger "console;verbosity=normal"
 
                   echo "## Updated baselines" >> "$GITHUB_STEP_SUMMARY"
                   echo "" >> "$GITHUB_STEP_SUMMARY"
@@ -81,11 +74,13 @@ jobs:
                   git config user.name  "github-actions[bot]"
                   git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
 
-                  if git diff --quiet -- LANCommander.Launcher.Tests/Baselines; then
+                  # Staged first: a plain diff misses new baselines, which are untracked.
+                  git add -A LANCommander.Launcher.Tests/Baselines
+
+                  if git diff --cached --quiet -- LANCommander.Launcher.Tests/Baselines; then
                       echo "Baselines unchanged — nothing to commit."
                       exit 0
                   fi
 
-                  git add LANCommander.Launcher.Tests/Baselines
                   git commit -m "Refresh launcher visual baselines from CI run ${GITHUB_RUN_ID}"
                   git push origin HEAD:${{ inputs.branch }}

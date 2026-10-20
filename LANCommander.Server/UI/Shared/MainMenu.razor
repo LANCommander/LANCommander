@@ -1,0 +1,183 @@
+@using System.Security.Claims
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Data
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Services.Enums
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject ServerManager ServerManager
+@inject NavigationManager NavigationManager
+@inject ILogger<MainMenu> Logger
+@inject IEnumerable<IServerNavigationExtension> PluginNavigationExtensions
+@inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
+@implements IDisposable
+@implements IMenuInsertions
+
+@* The sidebar's navigation. Items that front a list carry a count of it, never the records themselves *@
+<Menu Variant="MenuVariant.Sidebar" Insertions="this">
+    <SubMenu Name="@ServerNavigationSection.Dashboards" Title="Dashboards" Icon="IconType.Gauge">
+        <MenuItem Href="/" Exact>Overview</MenuItem>
+        <MenuItem Href="/Dashboard/SessionPlaytime">Average Session Playtime</MenuItem>
+    </SubMenu>
+    <MenuDivider />
+
+    @if (_user != null && _user.IsInRole(RoleService.AdministratorRoleName))
+    {
+        <MenuItem Href="/Games" Icon="IconType.GameController" Count="_games">Games</MenuItem>
+        <SubMenu Name="@ServerNavigationSection.Metadata" Title="Metadata" Icon="IconType.Tag">
+            <MenuItem Href="/Metadata/Collections">Collections</MenuItem>
+            <MenuItem Href="/Metadata/Companies">Companies</MenuItem>
+            <MenuItem Href="/Metadata/Engines">Engines</MenuItem>
+            <MenuItem Href="/Metadata/Genres">Genres</MenuItem>
+            <MenuItem Href="/Metadata/Platforms">Platforms</MenuItem>
+            <MenuItem Href="/Metadata/Tags">Tags</MenuItem>
+        </SubMenu>
+        <MenuItem Href="/Redistributables" Icon="IconType.Package">Redistributables</MenuItem>
+        <MenuItem Href="/Tools" Icon="IconType.Wrench">Tools</MenuItem>
+        <MenuItem Href="/Servers" Icon="IconType.HardDrives" Extra="@RunningServers">Servers</MenuItem>
+        <SubMenu Name="@ServerNavigationSection.Scripting" Title="Scripting" Icon="IconType.Code">
+            <MenuItem Href="/Scripting/Snippets">Snippets</MenuItem>
+            <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
+        </SubMenu>
+        <MenuDivider />
+        <SubMenu Name="@ServerNavigationSection.Pages" Title="Pages" Icon="IconType.BookOpen">
+            <MenuItem Href="/Pages/Edit">Edit</MenuItem>
+            <MenuItem Href="/Pages" Exact>View</MenuItem>
+        </SubMenu>
+        <MenuItem Href="/Issues" Icon="IconType.Bug" Count="@(_openIssues is > 0 ? _openIssues : null)">Issues</MenuItem>
+        <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
+        <SubMenu Name="@ServerNavigationSection.Settings" Title="Settings" Icon="IconType.Gear">
+            <MenuItem Href="/Settings/General">General</MenuItem>
+            <MenuItem Href="/Settings/Database">Database</MenuItem>
+            <MenuItem Href="/Settings/Users">Users</MenuItem>
+            <MenuItem Href="/Settings/Roles">Roles</MenuItem>
+            <MenuItem Href="/Settings/Authentication">Authentication</MenuItem>
+            <MenuItem Href="/Settings/Appearance">Appearance</MenuItem>
+            <MenuItem Href="/Settings/UserSaves">User Saves</MenuItem>
+            <MenuItem Href="/Settings/Library">Library</MenuItem>
+            <MenuItem Href="/Settings/Archives">Archives</MenuItem>
+            <MenuItem Href="/Settings/Media">Media</MenuItem>
+            <MenuItem Href="/Settings/Scripts">Scripts</MenuItem>
+            <MenuItem Href="/Settings/IPXRelay">IPX Relay</MenuItem>
+            <MenuItem Href="/Settings/Servers">Servers</MenuItem>
+            <MenuItem Href="/Settings/Beacon">Beacon</MenuItem>
+            <MenuItem Href="/Settings/Tools">Tools</MenuItem>
+            <MenuItem Href="/Settings/Logs">Logs</MenuItem>
+            <MenuItem Href="/Settings/Launcher">Launcher</MenuItem>
+            <MenuItem Href="/Settings/Updates">Updates</MenuItem>
+            <SubMenu Name="@ServerNavigationSection.Integrations" Title="Integrations">
+                <MenuItem Href="/Settings/Integrations/HQ">HQ</MenuItem>
+                <MenuItem Href="/Settings/Integrations/IGDB">IGDB</MenuItem>
+                <MenuItem Href="/Settings/Integrations/PCGamingWiki">PCGamingWiki</MenuItem>
+                <MenuItem Href="/Settings/Integrations/SteamGridDB">SteamGridDB</MenuItem>
+            </SubMenu>
+            <MenuItem Href="/api">API</MenuItem>
+        </SubMenu>
+    }
+    else
+    {
+        <MenuItem Href="/Pages" Icon="IconType.BookOpen">Pages</MenuItem>
+    }
+</Menu>
+
+@code {
+    ClaimsPrincipal? _user;
+
+    int? _games;
+    int? _openIssues;
+    int? _runningServers;
+    PluginNavigation _plugins = new([]);
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        if (authState.User.Identity?.IsAuthenticated ?? false)
+            _user = authState.User;
+
+        var pluginAssemblies = UIRouteAssembly.ResolvePluginAssemblies(PluginRouteAssemblies);
+
+        _plugins = new(PluginNavigation.Resolve(PluginNavigationExtensions, Logger)
+            .Where(extension => PluginNavigationVisibility.IsVisible(extension, _user, pluginAssemblies)));
+
+        NavigationManager.LocationChanged += RefreshOnNavigation;
+
+        await RefreshCountsAsync();
+    }
+
+    public RenderFragment? Start(string? group) => PluginItems(_plugins.Start(group));
+
+    public RenderFragment? After(string? group, string anchor) => PluginItems(_plugins.After(group, anchor));
+
+    public RenderFragment? End(string? group, IReadOnlySet<string> anchors)
+    {
+        var entries = PluginItems(_plugins.End(group, anchors));
+
+        // The plugin area closes the top level, set apart from the built-in entries
+        if (group != null || _plugins.PluginArea.Count == 0)
+            return entries;
+
+        return @<text>
+            @entries
+            <MenuDivider />
+            @PluginItems(_plugins.PluginArea)
+        </text>;
+    }
+
+    RenderFragment? PluginItems(IReadOnlyList<IServerNavigationExtension> entries) => entries.Count == 0 ? null : @<text>
+        @foreach (var entry in entries)
+        {
+            <MenuItem Href="@entry.Href" Icon="@ParseIcon(entry.Icon)">@entry.Label</MenuItem>
+        }
+    </text>;
+
+    static IconType ParseIcon(string? icon) =>
+        Enum.TryParse<IconType>(icon, true, out var parsed) ? parsed : IconType.None;
+
+    // Servers carry only a live dot while any is running, never a count
+    RenderFragment? RunningServers => _runningServers is > 0
+        ? @<text><span class="lc-sidebar-running" role="img" aria-label="@($"{_runningServers} running")"></span></text>
+        : null;
+
+    void RefreshOnNavigation(object? sender, LocationChangedEventArgs e) => _ = InvokeAsync(async () =>
+    {
+        await RefreshCountsAsync();
+        StateHasChanged();
+    });
+
+    /// <summary>The counts each query returns; the sidebar never loads the records themselves.</summary>
+    async Task RefreshCountsAsync()
+    {
+        if (_user == null || !_user.IsInRole(RoleService.AdministratorRoleName))
+            return;
+
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            // The same rows the Games page lists (GameFilters.Listed)
+            _games = await context.Set<Game>().CountAsync(g =>
+                g.BaseGameId == null || g.BaseGameId == Guid.Empty || g.Type == GameType.MainGame || g.ShowInLibrary);
+
+            _openIssues = await context.Set<Issue>().CountAsync(i => i.ResolvedOn == null);
+
+            var running = 0;
+
+            foreach (var serverId in await context.Set<Data.Models.Server>().Select(s => s.Id).ToListAsync())
+            {
+                if (ServerManager.IsManaging(serverId) && await ServerManager.GetStatusAsync(serverId) == ServerProcessStatus.Running)
+                    running++;
+            }
+
+            _runningServers = running;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not count the sidebar's records");
+        }
+    }
+
+    public void Dispose() => NavigationManager.LocationChanged -= RefreshOnNavigation;
+}

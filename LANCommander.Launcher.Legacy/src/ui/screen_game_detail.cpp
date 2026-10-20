@@ -163,6 +163,28 @@ namespace launcher
             return out;
         }
 
+        // DirectoryName overrides the folder a game (or sub directory addon) is installed to
+        static const std::string &folder_name(const lancommander::Game &g)
+        {
+            return g.directory_name.empty() ? g.title : g.directory_name;
+        }
+
+        // Where an addon goes relative to its base game's directory, per its install_to
+        static std::string addon_install_dir(const std::string &install_root,
+                                             const std::string &game_dir,
+                                             const lancommander::Game &addon)
+        {
+            switch (addon.install_to)
+            {
+            case lancommander::GameInstallLocation::SubDirectory:
+                return join_path(game_dir, folder_name(addon));
+            case lancommander::GameInstallLocation::OwnDirectory:
+                return join_path(install_root, folder_name(addon));
+            default:
+                return game_dir;
+            }
+        }
+
         static void replace_var(std::string &s, const std::string &var,
                                 const std::string &val)
         {
@@ -599,7 +621,7 @@ namespace launcher
                         log_info("Install clicked: %s -> %s", s_game.title.c_str(), install_root.c_str());
 
                         CreateDirectoryA(install_root.c_str(), NULL);
-                        std::string game_dir = install_root + "\\" + s_game.title;
+                        std::string game_dir = join_path(install_root, folder_name(s_game));
                         CreateDirectoryA(game_dir.c_str(), NULL);
 
                         bool needs_lib_add = !s_game.in_library;
@@ -846,10 +868,10 @@ namespace launcher
             const char *type_str = "Main Game";
             switch (s_game.type)
             {
-                case lancommander::GameType::Expansion:           type_str = "Expansion"; break;
-                case lancommander::GameType::StandaloneExpansion: type_str = "Standalone Expansion"; break;
-                case lancommander::GameType::Mod:                 type_str = "Mod"; break;
-                case lancommander::GameType::StandaloneMod:       type_str = "Standalone Mod"; break;
+                case lancommander::GameType::Expansion:
+                case lancommander::GameType::StandaloneExpansion: type_str = "Expansion"; break;
+                case lancommander::GameType::Mod:
+                case lancommander::GameType::StandaloneMod:       type_str = "Mod"; break;
                 default: break;
             }
             label(buf, meta_x, my, theme().text_dim, type_str);
@@ -1162,7 +1184,7 @@ namespace launcher
                     log_info("Install (dialog): %s -> %s", s_game.title.c_str(), install_root.c_str());
 
                     CreateDirectoryA(install_root.c_str(), NULL);
-                    std::string game_dir = install_root + "\\" + s_game.title;
+                    std::string game_dir = join_path(install_root, folder_name(s_game));
                     CreateDirectoryA(game_dir.c_str(), NULL);
 
                     bool needs_lib_add = !s_game.in_library;
@@ -1173,7 +1195,8 @@ namespace launcher
                     {
                         if (s_addon_selected[i])
                         {
-                            std::string addon_dir = game_dir;
+                            std::string addon_dir = addon_install_dir(install_root, game_dir, s_addons[i]);
+                            CreateDirectoryA(addon_dir.c_str(), NULL);
                             log_info("Addon selected: %s", s_addons[i].title.c_str());
                             app.downloads().enqueue(s_addons[i].id, s_addons[i].title,
                                                     addon_dir, false);

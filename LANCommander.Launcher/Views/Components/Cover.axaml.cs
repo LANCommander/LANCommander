@@ -8,12 +8,15 @@ using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
+using Avalonia.Media.Immutable;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
+using LANCommander.Launcher.Controls;
 using LANCommander.Launcher.Helpers;
 
 namespace LANCommander.Launcher.Views.Components;
 
-public partial class Cover : UserControl
+public partial class Cover : UserControl, ICarouselLazyItem
 {
     private static readonly HttpClient _httpClient = new();
 
@@ -52,8 +55,35 @@ public partial class Cover : UserControl
     public static readonly DirectProperty<Cover, double> FallbackFontSizeProperty =
         AvaloniaProperty.RegisterDirect<Cover, double>(nameof(FallbackFontSize), o => o.FallbackFontSize);
 
+    public static readonly DirectProperty<Cover, Thickness> FallbackPaddingProperty =
+        AvaloniaProperty.RegisterDirect<Cover, Thickness>(nameof(FallbackPadding), o => o.FallbackPadding);
+
+    public static readonly DirectProperty<Cover, IBrush> FallbackBackgroundProperty =
+        AvaloniaProperty.RegisterDirect<Cover, IBrush>(nameof(FallbackBackground), o => o.FallbackBackground);
+
+    // Fallback plate tones: six hues at matched lightness, each run as a 155° gradient into a darker
+    // stop of the same hue, so a shelf of games without art has some depth without reading as six
+    // accent colours. The title picks one via a stable hash.
+    private static readonly (Color Light, Color Dark)[] FallbackTones =
+    {
+        (Color.Parse("#33383F"), Color.Parse("#1C1F24")), // slate
+        (Color.Parse("#313A34"), Color.Parse("#1B211D")), // green
+        (Color.Parse("#363140"), Color.Parse("#1E1B24")), // violet
+        (Color.Parse("#3A352D"), Color.Parse("#201D18")), // amber
+        (Color.Parse("#3A3339"), Color.Parse("#201C20")), // plum
+        (Color.Parse("#2E363C"), Color.Parse("#191D21")), // steel
+    };
+
+    private static readonly IBrush[] FallbackBrushes = Array.ConvertAll(FallbackTones, tone =>
+        (IBrush)new ImmutableLinearGradientBrush(
+            new[] { new ImmutableGradientStop(0, tone.Light), new ImmutableGradientStop(1, tone.Dark) },
+            startPoint: new RelativePoint(0.29, 0.05, RelativeUnit.Relative),
+            endPoint: new RelativePoint(0.71, 0.95, RelativeUnit.Relative)));
+
     private bool _hasCover;
     private double _fallbackFontSize = 12;
+    private Thickness _fallbackPadding = new(12);
+    private IBrush _fallbackBackground = FallbackBrushes[0];
     private CancellationTokenSource? _loadCts;
     private VideoFrameRenderer? _videoRenderer;
     private bool _isAnimatedCover;
@@ -62,6 +92,12 @@ public partial class Cover : UserControl
     // Source for an animated cover whose stream is deferred until it should actually
     // play (hover/focus), so the depot doesn't stream every video cover up front.
     private string? _animatedSource;
+
+    // Loads wait until the cover is attached. Inside a carousel they wait further, until the carousel
+    // reports the cover within a page of the viewport, so a long carousel doesn't fetch every cover.
+    private (string? Source, string? MimeType)? _pendingLoad;
+    private CarouselControl? _carousel;
+    private bool _nearViewport;
 
     public string? Source
     {
@@ -118,6 +154,18 @@ public partial class Cover : UserControl
         private set => SetAndRaise(FallbackFontSizeProperty, ref _fallbackFontSize, value);
     }
 
+    public Thickness FallbackPadding
+    {
+        get => _fallbackPadding;
+        private set => SetAndRaise(FallbackPaddingProperty, ref _fallbackPadding, value);
+    }
+
+    public IBrush FallbackBackground
+    {
+        get => _fallbackBackground;
+        private set => SetAndRaise(FallbackBackgroundProperty, ref _fallbackBackground, value);
+    }
+
     public Cover()
     {
         InitializeComponent();
@@ -129,12 +177,35 @@ public partial class Cover : UserControl
 
         if (change.Property == SourceProperty || change.Property == MimeTypeProperty)
         {
-            LoadCover(Source, MimeType);
+            RequestLoad(Source, MimeType);
         }
         else if (change.Property == IsPlayingAnimationProperty || change.Property == AlwaysAnimateProperty)
         {
             UpdateAnimationState();
         }
+        else if (change.Property == TitleProperty)
+        {
+            FallbackBackground = FallbackBrushes[FallbackToneIndex(Title)];
+        }
+    }
+
+    /// <summary>
+    /// FNV-1a over the title, so a game keeps its plate across launches
+    /// (<see cref="string.GetHashCode()"/> is randomised per process).
+    /// </summary>
+    private static int FallbackToneIndex(string? title)
+    {
+        if (string.IsNullOrEmpty(title))
+            return 0;
+
+        var hash = 2166136261u;
+        foreach (var c in title)
+        {
+            hash ^= c;
+            hash *= 16777619u;
+        }
+
+        return (int)(hash % (uint)FallbackBrushes.Length);
     }
 
     protected override Size MeasureOverride(Size availableSize)
@@ -156,17 +227,66 @@ public partial class Cover : UserControl
         return result;
     }
 
+    protected override void OnAttachedToVisualTree(VisualTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToVisualTree(e);
+
+        _carousel = this.FindAncestorOfType<CarouselControl>();
+
+        if (_carousel != null)
+            _carousel.QueueVisibilityUpdate();
+        else
+            FlushPendingLoad();
+    }
+
     protected override void OnDetachedFromVisualTree(VisualTreeAttachmentEventArgs e)
     {
         _lastLoadedSource = null;
+        _carousel = null;
+        _nearViewport = false;
         StopVideo();
         base.OnDetachedFromVisualTree(e);
     }
 
+    /// <inheritdoc />
+    public void SetCarouselNearViewport(bool near)
+    {
+        _nearViewport = near;
+
+        if (near)
+            FlushPendingLoad();
+    }
+
+    private void RequestLoad(string? source, string? mimeType)
+    {
+        var canLoad = VisualRoot != null && (_carousel == null || _nearViewport);
+
+        if (!canLoad)
+        {
+            _pendingLoad = (source, mimeType);
+            return;
+        }
+
+        _pendingLoad = null;
+        LoadCover(source, mimeType);
+    }
+
+    private void FlushPendingLoad()
+    {
+        if (_pendingLoad is not { } pending)
+            return;
+
+        _pendingLoad = null;
+        LoadCover(pending.Source, pending.MimeType);
+    }
+
     private void UpdateFallbackFontSize(Size size)
     {
+        // Title and inset both track the cover's short side: ~16px type in 12px of inset on a
+        // 160px shelf cover, capped so the detail page's large cover doesn't shout.
         var minDimension = Math.Min(size.Width, size.Height);
-        FallbackFontSize = Math.Max(8, minDimension * 0.09);
+        FallbackFontSize = Math.Clamp(minDimension * 0.1, 8, 28);
+        FallbackPadding = new Thickness(Math.Clamp(minDimension * 0.08, 6, 20));
     }
 
     private static bool IsAnimatedMimeType(string? mimeType)
@@ -270,6 +390,8 @@ public partial class Cover : UserControl
             }
         }
 
+        PendingLoads.Begin();
+
         try
         {
             // Debounce: wait briefly so covers that are scrolled past quickly
@@ -303,6 +425,10 @@ public partial class Cover : UserControl
             if (!ct.IsCancellationRequested)
                 await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
         }
+        finally
+        {
+            PendingLoads.End();
+        }
     }
 
     private async Task LoadRemoteImageAsync(Uri uri, CancellationToken ct)
@@ -325,12 +451,14 @@ public partial class Cover : UserControl
             }
         }
 
+        PendingLoads.Begin();
+
         try
         {
             // Debounce remote loads as well.
             await Task.Delay(50, ct);
 
-            var data = await _httpClient.GetByteArrayAsync(uri, ct);
+            var data = await _httpClient.GetByteArrayAsync(ThumbnailUrl.WithSize(uri.AbsoluteUri, decodeWidth, 0), ct);
             if (ct.IsCancellationRequested) return;
 
             using var stream = new MemoryStream(data);
@@ -350,6 +478,10 @@ public partial class Cover : UserControl
         {
             if (!ct.IsCancellationRequested)
                 await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(null), DispatcherPriority.Background);
+        }
+        finally
+        {
+            PendingLoads.End();
         }
     }
 

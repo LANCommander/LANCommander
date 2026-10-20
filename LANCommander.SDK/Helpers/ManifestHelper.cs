@@ -148,7 +148,12 @@ namespace LANCommander.SDK.Helpers
                 .WithNamingConvention(new PascalCaseNamingConvention())
                 .Build();
 
-            return deserializer.Deserialize<T>(serializedManifest);
+            var manifest = deserializer.Deserialize<T>(serializedManifest);
+
+            if (manifest is Models.Manifest.Game game)
+                GameTypeHelper.Normalize(game);
+
+            return manifest;
         }
 
         public static string Serialize<T>(T manifest)

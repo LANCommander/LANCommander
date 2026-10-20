@@ -87,15 +87,15 @@ jobs:
 
     - name: Install Node Packages
       run: |
-        npm install --prefix ./LANCommander.UI
+        npm install --prefix ./LANCommander.Server.UI
         npm install --prefix ./LANCommander.Server
 
     - name: Generate PowerShell Completions
-      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+      run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
 
     - name: Package Frontend
       run: |
-        npm run package --prefix ./LANCommander.UI
+        npm run package --prefix ./LANCommander.Server.UI
         npm run package --prefix ./LANCommander.Server
 
     # .NET builds
@@ -150,7 +150,6 @@ jobs:
           'wwwroot/_content/BootstrapBlazor.PdfReader/build/pdf.sandbox.js',
           'wwwroot/_content/BootstrapBlazor.PdfReader/build/*.map',
           'wwwroot/_content/BootstrapBlazor.PdfReader/web/*.map',
-          'wwwroot/_content/AntDesign/less',
           'wwwroot/_content/BlazorMonaco/lib/monaco-editor/min-maps',
           'wwwroot/Identity/lib/bootstrap',
           'LANCommander.ico',

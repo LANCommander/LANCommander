@@ -1,0 +1,58 @@
+@namespace LANCommander.Server.UI.Controls
+@using System.ComponentModel.DataAnnotations
+@using System.Reflection
+@typeparam TEnum where TEnum : struct, Enum
+@inherits ControlBase
+
+@* A Select of every value of TEnum, labelled with each member's [Display(Name)] where present *@
+<Select TValue="TEnum"
+        Items="Choices"
+        Value="Value"
+        ValueChanged="ValueChanged"
+        ValueExpression="ValueExpression"
+        Multiple="Multiple"
+        Values="Values"
+        ValuesChanged="ValuesChanged"
+        ValuesExpression="ValuesExpression"
+        Searchable="Searchable"
+        Disabled="Disabled"
+        Placeholder="@Placeholder"
+        Class="@Class"
+        Style="@Style"
+        AdditionalAttributes="AdditionalAttributes" />
+
+@code {
+    [Parameter] public TEnum Value { get; set; }
+
+    [Parameter] public EventCallback<TEnum> ValueChanged { get; set; }
+
+    [Parameter] public System.Linq.Expressions.Expression<Func<TEnum>>? ValueExpression { get; set; }
+
+    /// <summary>Lets several values be chosen, bound through <see cref="Values"/>.</summary>
+    [Parameter] public bool Multiple { get; set; }
+
+    [Parameter] public IEnumerable<TEnum>? Values { get; set; }
+
+    [Parameter] public EventCallback<IEnumerable<TEnum>> ValuesChanged { get; set; }
+
+    [Parameter] public System.Linq.Expressions.Expression<Func<IEnumerable<TEnum>?>>? ValuesExpression { get; set; }
+
+    /// <summary>Only these values, e.g. to hide ones that don't apply.</summary>
+    [Parameter] public IEnumerable<TEnum>? Only { get; set; }
+
+    [Parameter] public bool Searchable { get; set; }
+
+    [Parameter] public bool Disabled { get; set; }
+
+    [Parameter] public string? Placeholder { get; set; }
+
+    static readonly SelectItem<TEnum>[] AllChoices = Enum.GetValues<TEnum>()
+        .Select(value => new SelectItem<TEnum>(value, LabelFor(value)))
+        .ToArray();
+
+    IEnumerable<SelectItem<TEnum>> Choices => Only == null ? AllChoices : AllChoices.Where(c => Only.Contains(c.Value));
+
+    /// <summary>The [Display(Name)] of an enum member, or its name.</summary>
+    public static string LabelFor(TEnum value) =>
+        typeof(TEnum).GetField(value.ToString())?.GetCustomAttribute<DisplayAttribute>()?.GetName() ?? value.ToString();
+}

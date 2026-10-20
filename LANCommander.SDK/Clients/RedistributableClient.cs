@@ -40,6 +40,17 @@ namespace LANCommander.SDK.Services
         
         private InstallProgress _installProgress;
 
+        /// <summary>A redistributable with its archives and scripts, as needed to install it.</summary>
+        public async Task<Redistributable> GetAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Redistributables/{id}")
+                .GetAsync<Redistributable>();
+        }
+
         public async Task<SDK.Models.Manifest.Redistributable> GetManifestAsync(Guid id)
         {
             return await apiRequestFactory
@@ -395,7 +406,18 @@ namespace LANCommander.SDK.Services
             return extractionResult;
         }
 
-        public async Task ImportAsync(string archivePath)
+        /// <summary>
+        /// Uploads an .lcx package and imports it as a redistributable.
+        /// </summary>
+        /// <param name="archivePath">Path to the .lcx file.</param>
+        /// <param name="storageLocationId">
+        /// Archive storage location to import into. Falls back to the server's default.
+        /// </param>
+        /// <param name="uploadProgress">Receives the number of bytes uploaded so far.</param>
+        public async Task<ImportResponse> ImportAsync(
+            string archivePath,
+            Guid? storageLocationId = null,
+            IProgress<long> uploadProgress = null)
         {
             using (var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read))
             {
@@ -403,15 +425,19 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UploadInChunksAsync(settingsProvider.CurrentValue.Archives.UploadChunkSize, fs);
+                    .UploadInChunksAsync(
+                        settingsProvider.CurrentValue.Archives.UploadChunkSize, fs, uploadProgress);
 
-                if (objectKey != Guid.Empty)
-                    await apiRequestFactory
-                        .Create()
-                        .UseAuthenticationToken()
-                        .UseVersioning()
-                        .UseRoute($"/api/Redistributables/Import/{objectKey}")
-                        .PostAsync();
+                if (objectKey == Guid.Empty)
+                    throw new Exception("Failed to upload package: the server did not return an object key.");
+
+                return await apiRequestFactory
+                    .Create()
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseRoute($"/api/Redistributables/Import/{objectKey}")
+                    .AddBody(new ImportRequest { StorageLocationId = storageLocationId })
+                    .PostAsync<ImportResponse>();
             }
         }
 

@@ -1,0 +1,35 @@
+@namespace LANCommander.Server.UI.Controls.Internal
+@inherits Dialog<PromptDialogOptions, string>
+
+<Form Model="_model" OnSubmit="SubmitAsync">
+    <FormItem Label="@Options.Label" Required="Options.Required">
+        <TextInput @bind-Value="_model.Value" Immediate AutoFocus Placeholder="@Options.Placeholder" />
+    </FormItem>
+</Form>
+
+@code {
+    sealed class Model
+    {
+        public string? Value { get; set; }
+    }
+
+    Model _model = new();
+
+    protected override void OnInitialized() => _model.Value = Options.InitialValue;
+
+    protected override bool CanConfirm => !Options.Required || !string.IsNullOrWhiteSpace(_model.Value);
+
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = _model.Value?.Trim();
+
+        return Task.FromResult(CanConfirm);
+    }
+
+    // Enter in the field confirms, like pressing OK
+    async Task SubmitAsync()
+    {
+        if (CanConfirm)
+            await CloseAsync(_model.Value?.Trim());
+    }
+}

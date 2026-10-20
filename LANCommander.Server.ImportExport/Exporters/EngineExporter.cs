@@ -1,12 +1,13 @@
-using AutoMapper;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Models.Manifest;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 
 namespace LANCommander.Server.ImportExport.Exporters;
 
 public class EngineExporter(
+    ManifestMapper manifestMapper,
     EngineService engineService) : BaseExporter<Engine, Data.Models.Engine>
 {
     public override async Task<ExportItemInfo> GetExportInfoAsync(Data.Models.Engine record)
@@ -23,6 +24,6 @@ public class EngineExporter(
 
     public override async Task<Engine> ExportAsync(Guid id)
     {
-        return await engineService.GetAsync<Engine>(id);
+        return await engineService.GetAsync(id, manifestMapper.ProjectToManifestEngine);
     }
 } 

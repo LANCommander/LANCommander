@@ -1,13 +1,18 @@
-﻿@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.Abstractions
 @inherits LayoutComponentBase
 @inject IVersionProvider VersionProvider
 
-<Layout Class="layout">
-    <Content Style="padding: 24px;">
-        @Body
-    </Content>
+@* A layout without navigation, for first-time setup *@
+<div class="lc-layout lc-layout-basic">
+    <div class="lc-layout-main">
+        <main class="lc-layout-content lc-layout-content-basic">
+            <ErrorHandler Title="Unexpected Error">
+                @Body
+            </ErrorHandler>
+        </main>
 
-    <Footer Style="text-align: center; padding-top: 0;">
-        LANCommander v@(VersionProvider.GetCurrentVersion().ToString())
-    </Footer>
-</Layout>
+        <footer class="lc-layout-footer">
+            LANCommander v@(VersionProvider.GetCurrentVersion().ToString())
+        </footer>
+    </div>
+</div>

@@ -3,8 +3,8 @@ using Microsoft.Extensions.Logging;
 using Semver;
 using System.Diagnostics;
 using System.IO.Compression;
-using System.Reflection;
 using LANCommander.SDK.Extensions;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Services;
 
 namespace LANCommander.Launcher.Services
@@ -84,11 +84,6 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public static SemVersion GetCurrentVersion()
-        {
-            var productVersion = FileVersionInfo.GetVersionInfo(Assembly.GetEntryAssembly().Location).ProductVersion;
-            
-            return SemVersion.Parse(productVersion);
-        }
+        public static SemVersion GetCurrentVersion() => VersionHelper.GetCurrentVersion();
     }
 }

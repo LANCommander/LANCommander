@@ -1,0 +1,57 @@
+@* A Windows registry path: a hive picked from a list, then the key path typed after it *@
+<InputGroup Block>
+    <Select TValue="string" Items="Hives" Value="_hive" ValueChanged="HiveChangedAsync" Style="width: 110px" />
+    <TextInput Value="@_path" ValueChanged="PathChangedAsync" Style="flex: 1" />
+</InputGroup>
+
+@code {
+    [Parameter] public string? Value { get; set; }
+    [Parameter] public EventCallback<string?> ValueChanged { get; set; }
+
+    static readonly SelectItem<string>[] Hives =
+    [
+        new("HKCR:\\", "HKCR:\\"),
+        new("HKCU:\\", "HKCU:\\"),
+        new("HKLM:\\", "HKLM:\\"),
+        new("HKU:\\", "HKU:\\"),
+        new("HKCC:\\", "HKCC:\\"),
+    ];
+
+    string _hive = "HKCU:\\";
+    string? _path = "SOFTWARE";
+    string? _parsed;
+
+    protected override void OnParametersSet()
+    {
+        if (Value == _parsed)
+            return;
+
+        _parsed = Value;
+
+        var hive = Hives.FirstOrDefault(h => Value?.StartsWith(h.Value, StringComparison.OrdinalIgnoreCase) == true);
+
+        _hive = hive?.Value ?? "HKCU:\\";
+        _path = hive != null ? Value![hive.Value.Length..] : Value;
+    }
+
+    Task HiveChangedAsync(string? hive)
+    {
+        _hive = hive ?? "HKCU:\\";
+
+        return ChangedAsync();
+    }
+
+    Task PathChangedAsync(string? path)
+    {
+        _path = path;
+
+        return ChangedAsync();
+    }
+
+    async Task ChangedAsync()
+    {
+        _parsed = Value = _hive + _path;
+
+        await ValueChanged.InvokeAsync(Value);
+    }
+}

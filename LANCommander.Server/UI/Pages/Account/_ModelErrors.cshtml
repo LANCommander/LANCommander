@@ -1,0 +1,5 @@
+﻿@* The page's validation errors *@
+@foreach (var error in ViewContext.ModelState.SelectMany(x => x.Value!.Errors))
+{
+    <div lc-alert lc-danger class="login-alert">@error.ErrorMessage</div>
+}

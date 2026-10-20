@@ -2,10 +2,10 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="LANCommander.Launcher.Views.Components.PageHeaderView">
     
-    <Border Padding="16" Background="{DynamicResource SystemControlBackgroundChromeMediumBrush}">
+    <Border Padding="16" Background="{DynamicResource SurfaceBrush}">
         <DockPanel>
             <!-- Back Button (optional) -->
-            <Button x:Name="BackButton"
+            <Button Classes="Secondary" x:Name="BackButton"
                     DockPanel.Dock="Left" 
                     Padding="12,8"
                     IsVisible="False" />
@@ -19,11 +19,11 @@
             <!-- Title and Subtitle -->
             <StackPanel Margin="16,0,0,0" VerticalAlignment="Center">
                 <TextBlock x:Name="TitleText" 
-                           FontSize="20" 
+                           FontSize="{DynamicResource FontSizeTitle}" 
                            FontWeight="Bold" />
                 <TextBlock x:Name="SubtitleText" 
                            Opacity="0.7" 
-                           FontSize="12"
+                           FontSize="{DynamicResource FontSizeCaption}"
                            IsVisible="False" />
             </StackPanel>
         </DockPanel>

@@ -1,5 +1,6 @@
-using LANCommander.Server.UI;
+﻿using LANCommander.Server.UI;
 using LANCommander.Server.Startup;
+using LANCommander.Server.Plugins;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -23,7 +24,10 @@ builder.AddServerProcessStatusMonitor();
 builder.AddLANCommanderServices();
 builder.AddMigrations();
 builder.AddDatabase(args);
-builder.UseSteam();
+
+#if DEBUG
+builder.AddUIFixtures();
+#endif
 
 builder.Services.AddHealthChecks();
 
@@ -75,12 +79,24 @@ app.MapEndpoints();
 
 app.MapRazorComponents<App>()
     .DisableAntiforgery()
-    .AddInteractiveServerRenderMode();
+    .AddInteractiveServerRenderMode()
+    .AddAdditionalAssemblies(UIRouteAssembly.Resolve(
+        app.Services.GetServices<UIRouteAssembly>(),
+        app.Services.GetServices<IServerRouteAssemblyExtension>()));
 
 app.PrepareDirectories();
 
 await app.RunApplicationMigrationsAsync();
 await app.RunDatabaseMigrationsAsync();
+
+#if DEBUG
+await app.SeedUIFixturesIfRequestedAsync();
+#endif
+
+// Initialize plugins once the database is ready but before servers start, so plugins can subscribe
+// to lifecycle events ahead of time.
+await app.Services.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>().InitializeAllAsync(app.Services);
+
 await app.StartServersAsync();
 await app.StartBeaconAsync();
 

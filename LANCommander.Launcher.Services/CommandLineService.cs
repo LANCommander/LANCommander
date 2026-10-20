@@ -58,6 +58,18 @@ namespace LANCommander.Launcher.Services
 
         private async Task RunScript(RunScriptCommandLineOptions options)
         {
+            if (options.RedistributableId is { } redistributableId)
+            {
+                await RunRedistributableScript(options, redistributableId);
+                return;
+            }
+
+            if (options.ToolId is { } toolId)
+            {
+                await RunToolScript(options, toolId);
+                return;
+            }
+
             switch (options.Type)
             {
                 case SDK.Enums.ScriptType.Install:
@@ -82,6 +94,62 @@ namespace LANCommander.Launcher.Services
 
                 case SDK.Enums.ScriptType.KeyChange:
                     await scriptClient.Game_RunKeyChangeScriptAsync(options.InstallDirectory, options.GameId, options.AllocatedKey);
+                    break;
+            }
+        }
+
+        private async Task RunRedistributableScript(RunScriptCommandLineOptions options, Guid redistributableId)
+        {
+            switch (options.Type)
+            {
+                case SDK.Enums.ScriptType.Install:
+                    await scriptClient.Redistributable_RunInstallScriptAsync(options.InstallDirectory, options.GameId, redistributableId);
+                    break;
+
+                case SDK.Enums.ScriptType.Uninstall:
+                    await scriptClient.Redistributable_RunUninstallScriptAsync(options.InstallDirectory, options.GameId, redistributableId);
+                    break;
+
+                case SDK.Enums.ScriptType.BeforeStart:
+                    await scriptClient.Redistributable_RunBeforeStartScriptAsync(options.InstallDirectory, options.GameId, redistributableId);
+                    break;
+
+                case SDK.Enums.ScriptType.AfterStop:
+                    await scriptClient.Redistributable_RunAfterStopScriptAsync(options.InstallDirectory, options.GameId, redistributableId);
+                    break;
+
+                case SDK.Enums.ScriptType.NameChange:
+                    await scriptClient.Redistributable_RunNameChangeScriptAsync(options.InstallDirectory, options.GameId, redistributableId, options.NewPlayerAlias ?? Settings.Settings.DEFAULT_GAME_USERNAME);
+                    break;
+
+                default:
+                    Logger.LogWarning("{ScriptType} scripts for redistributables cannot be run from the command line", options.Type);
+                    break;
+            }
+        }
+
+        private async Task RunToolScript(RunScriptCommandLineOptions options, Guid toolId)
+        {
+            switch (options.Type)
+            {
+                case SDK.Enums.ScriptType.Install:
+                    await scriptClient.Tool_RunInstallScriptAsync(options.InstallDirectory, toolId);
+                    break;
+
+                case SDK.Enums.ScriptType.Uninstall:
+                    await scriptClient.Tool_RunUninstallScriptAsync(options.InstallDirectory, toolId);
+                    break;
+
+                case SDK.Enums.ScriptType.BeforeStart:
+                    await scriptClient.Tool_RunBeforeStartScriptAsync(options.InstallDirectory, toolId);
+                    break;
+
+                case SDK.Enums.ScriptType.AfterStop:
+                    await scriptClient.Tool_RunAfterStopScriptAsync(options.InstallDirectory, toolId);
+                    break;
+
+                default:
+                    Logger.LogWarning("{ScriptType} scripts for tools cannot be run from the command line", options.Type);
                     break;
             }
         }

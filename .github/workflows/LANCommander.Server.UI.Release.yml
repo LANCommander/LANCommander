@@ -1,0 +1,159 @@
+name: LANCommander Server UI Release
+
+# Publishes LANCommander.Server.UI to NuGet for every published release, prereleases included
+# (vX.Y.Z and vX.Y.Z-suffix tags). The assembly is Authenticode-signed with Azure Artifact Signing
+# before it is packed. See LANCommander.Sign.yml for the required secrets and variables; leaving
+# AZURE_SIGNING_ENDPOINT unset skips signing and publishes an unsigned package.
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write # OIDC token for Azure Artifact Signing
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+      version_tag: ${{ steps.version.outputs.version_tag }}
+      version_semver: ${{ steps.version.outputs.version_semver }}
+    steps:
+      - name: Parse Version
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+
+          # Other releases (e.g. nightly-server) are skipped, not failed
+          if [[ ! "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)(-.+)?$ ]]; then
+            echo "::notice::Tag '$TAG' is not vX.Y.Z or vX.Y.Z-suffix. Skipping publish."
+            echo "publish=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # version_tag keeps the prerelease suffix for the package version; version_semver drops it
+          # because AssemblyVersion only accepts numeric parts
+          echo "publish=true" >> $GITHUB_OUTPUT
+          echo "version_tag=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "version_semver=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
+
+  publish:
+    needs: prep
+    if: needs.prep.outputs.publish == 'true'
+    runs-on: windows-latest
+    environment: release
+    env:
+      SIGNING_ENABLED: ${{ vars.AZURE_SIGNING_ENDPOINT != '' && 'true' || 'false' }}
+      ASSEMBLY_PATH: LANCommander.Server.UI/bin/Release/net10.0/LANCommander.Server.UI.dll
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      # 8.0 is the runtime the signing action documents as a prerequisite
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: |
+            8.0.x
+            10.0.x
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3.8.1
+        with:
+          node-version: '20'
+
+      - name: Restore dependencies
+        run: dotnet restore LANCommander.Server.UI/LANCommander.Server.UI.csproj
+
+      # working-directory rather than --prefix: npm on Windows resolves package.json from the cwd
+      - name: Install Node Packages
+        working-directory: LANCommander.Server.UI
+        run: npm install
+
+      # The build regenerates these too, but wwwroot must be populated before MSBuild evaluates the
+      # project, otherwise the bundle is missing from the package's static web assets
+      - name: Generate PowerShell Completions
+        run: dotnet run --project ./LANCommander.CompletionGenerator/LANCommander.CompletionGenerator.csproj -- ./LANCommander.Server.UI/Components/MonacoCodeEditor/PowerShellCompletions.g.ts
+
+      - name: Package Frontend
+        working-directory: LANCommander.Server.UI
+        run: npm run package
+
+      - name: Build project
+        run: dotnet build --configuration Release LANCommander.Server.UI/LANCommander.Server.UI.csproj -p:Version="${{ needs.prep.outputs.version_tag }}" -p:AssemblyVersion="${{ needs.prep.outputs.version_semver }}"
+
+      - name: Report signing configuration
+        shell: pwsh
+        run: |
+          if ($env:SIGNING_ENABLED -ne 'true') {
+            Write-Host "::warning::AZURE_SIGNING_ENDPOINT is not set. Publishing an unsigned package."
+          }
+
+      - name: Azure Login
+        if: env.SIGNING_ENABLED == 'true'
+        uses: azure/login@v3
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      # Signed in bin/ after the build; pack --no-build takes the assembly from there
+      - name: Sign Assembly
+        if: env.SIGNING_ENABLED == 'true'
+        uses: azure/artifact-signing-action@v2
+        with:
+          endpoint: ${{ vars.AZURE_SIGNING_ENDPOINT }}
+          signing-account-name: ${{ vars.AZURE_SIGNING_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ vars.AZURE_SIGNING_CERT_PROFILE_NAME }}
+          files: ${{ github.workspace }}\${{ env.ASSEMBLY_PATH }}
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+          # Pin authentication to the session established by azure/login rather than
+          # letting DefaultAzureCredential fall through a chain of unconfigured options.
+          exclude-environment-credential: true
+          exclude-azure-cli-credential: false
+
+      # Version (not just PackageVersion) so the LANCommander.SDK dependency is pinned to the same release
+      - name: Pack NuGet package with symbols
+        run: dotnet pack LANCommander.Server.UI/LANCommander.Server.UI.csproj --no-build --configuration Release -p:Version="${{ needs.prep.outputs.version_tag }}" -p:AssemblyVersion="${{ needs.prep.outputs.version_semver }}" -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -o ./artifacts
+
+      # Checks the copy inside the package, so a pack that picked up an unsigned build fails here
+      - name: Verify Signature
+        if: env.SIGNING_ENABLED == 'true'
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $package = Get-Item ./artifacts/*.nupkg
+          $staging = Join-Path $PWD 'verify-staging'
+          [System.IO.Compression.ZipFile]::ExtractToDirectory($package.FullName, $staging)
+
+          $assembly = Join-Path $staging 'lib/net10.0/LANCommander.Server.UI.dll'
+          $signature = Get-AuthenticodeSignature -FilePath $assembly
+
+          if ($signature.Status -ne 'Valid') {
+            throw "$($package.Name) : $($signature.Status) - $($signature.StatusMessage)"
+          }
+          if (-not $signature.TimeStamperCertificate) {
+            throw "$($package.Name) : signed but not timestamped"
+          }
+
+          Write-Host "$($package.Name) : Valid ($($signature.SignerCertificate.Subject))"
+
+      # The glob is expanded here because dotnet nuget push on Windows treats ./artifacts/*.nupkg as a
+      # literal path. The .snupkg next to it is pushed automatically.
+      - name: Publish NuGet package
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          $packages = Get-ChildItem ./artifacts -Filter *.nupkg
+          if (-not $packages) { throw "No .nupkg found in ./artifacts" }
+
+          foreach ($package in $packages) {
+            dotnet nuget push $package.FullName --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate
+            if ($LASTEXITCODE -ne 0) { throw "Failed to push $($package.Name)" }
+          }

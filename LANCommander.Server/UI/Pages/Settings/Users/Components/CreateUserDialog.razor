@@ -1,119 +1,87 @@
 @using LANCommander.Server.Settings
 @using Microsoft.Extensions.Options
+@inherits Dialog<User>
 @inject UserService UserService
 @inject IOptions<Settings> Settings
-@inject IMessageService MessageService
-@inject ILogger<CreateUserDialog> Logger
+@inject NotificationService Notifications
 
-<Modal Title="Add a User" @bind-Visible="Visible" OnOk="Submit" OnCancel="Cancel" ConfirmLoading="Submitting">
-    <Form Model="Model" Layout="@FormLayout.Vertical">
-        <FormItem Label="Username">
-            <Input @bind-Value="@context.UserName" OnPressEnter="Submit" />
+<Form @ref="_form" Model="Model" OnSubmit="ConfirmAsync">
+    <FormItem Label="Username" Required>
+        <TextInput @bind-Value="Model.UserName" AutoFocus />
+    </FormItem>
+    <FormItem Label="Password" Required>
+        <PasswordInput @bind-Value="Model.Password" />
+    </FormItem>
+    <FormItem Label="Confirm Password" Required>
+        <PasswordInput @bind-Value="Model.PasswordConfirm" />
+    </FormItem>
+    @if (Settings.Value.Server.Authentication.RequireApproval)
+    {
+        <FormItem Label="Approved">
+            <Switch @bind-Value="Model.Approved" />
         </FormItem>
-        <FormItem Label="Password">
-            <InputPassword @bind-Value="@context.Password" OnPressEnter="Submit" />
-        </FormItem>
-        <FormItem Label="Confirm Password">
-            <InputPassword @bind-Value="@context.PasswordConfirm" OnPressEnter="Submit" />
-        </FormItem>
-        @if (Settings.Value.Server.Authentication.RequireApproval)
-        {
-            <FormItem Label="Approved">
-                <Switch @bind-Value="@context.Approved" />
-            </FormItem>
-        }
-    </Form>
-</Modal>
+    }
+
+    @* Enter in any field submits *@
+    <button type="submit" hidden></button>
+</Form>
 
 @code {
-    [Parameter] public bool Visible { get; set; }
-    [Parameter] public EventCallback<bool> VisibleChanged { get; set; }
-    [Parameter] public EventCallback OnCreated { get; set; }
-
     NewUserModel Model { get; set; } = new();
-    bool Submitting = false;
+    Form? _form;
 
-    async Task Submit()
+    protected override async Task<bool> OnOkAsync()
     {
-        if (string.IsNullOrWhiteSpace(Model.UserName))
-        {
-            MessageService.Error("A username is required!");
-            return;
-        }
+        if (_form?.Validate() == false)
+            return false;
 
         if (Model.Password != Model.PasswordConfirm)
         {
-            MessageService.Error("Passwords do not match!");
-            return;
+            Notifications.Error("Passwords do not match!");
+            return false;
         }
 
         if (await UserService.ExistsAsync(u => u.UserName == Model.UserName))
         {
-            MessageService.Error("A user with that username already exists!");
-            return;
+            Notifications.Error("A user with that username already exists!");
+            return false;
         }
 
-        Submitting = true;
+        var approved = !Settings.Value.Server.Authentication.RequireApproval || Model.Approved;
 
-        try
+        var user = new User
         {
-            var approved = !Settings.Value.Server.Authentication.RequireApproval || Model.Approved;
+            UserName = Model.UserName,
+            Approved = approved,
+            ApprovedOn = approved ? DateTime.UtcNow : null,
+        };
 
-            var user = new User
-            {
-                UserName = Model.UserName,
-                Approved = approved,
-                ApprovedOn = approved ? DateTime.UtcNow : null,
-            };
+        var checkResult = await UserService.CheckRegister(user, Model.Password);
 
-            var checkResult = await UserService.CheckRegister(user, Model.Password);
-
-            if (!checkResult.Succeeded)
-            {
-                foreach (var error in checkResult.Errors)
-                    MessageService.Error(error.Description);
-
-                return;
-            }
-
-            user = await UserService.AddAsync(user);
-
-            await UserService.ChangePassword(user.UserName, Model.Password);
-
-            MessageService.Success($"Created {user.UserName}!");
-
-            await Close();
-
-            await OnCreated.InvokeAsync();
-        }
-        catch (Exception ex)
+        if (!checkResult.Succeeded)
         {
-            MessageService.Error("Could not create user!");
-            Logger.LogError(ex, "Could not create user!");
-        }
-        finally
-        {
-            Submitting = false;
-        }
-    }
+            foreach (var error in checkResult.Errors)
+                Notifications.Error(error.Description);
 
-    async Task Cancel()
-    {
-        await Close();
-    }
+            return false;
+        }
 
-    async Task Close()
-    {
-        Model = new();
-        Visible = false;
-        await VisibleChanged.InvokeAsync(false);
+        user = await UserService.AddAsync(user);
+
+        await UserService.ChangePassword(user.UserName, Model.Password);
+
+        Notifications.Success($"Created {user.UserName}!");
+
+        Result = user;
+
+        return true;
     }
 
     public class NewUserModel
     {
-        public string UserName { get; set; }
-        public string Password { get; set; }
-        public string PasswordConfirm { get; set; }
+        public string? UserName { get; set; }
+        public string? Password { get; set; }
+        public string? PasswordConfirm { get; set; }
         public bool Approved { get; set; } = true;
     }
 }

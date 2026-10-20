@@ -1,5 +1,4 @@
-using AutoMapper;
-using LANCommander.Server.Data;
+﻿using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
@@ -13,12 +12,18 @@ namespace LANCommander.Server.Services
         ILogger<SavePathService> logger,
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
-        IMapper mapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, settingsProvider, cache, mapper, httpContextAccessor, contextFactory)
+        GameVersionService gameVersionService,
+        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<SavePath>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<SavePath> AddAsync(SavePath entity)
         {
+            // Save paths for a game are version-scoped. Attach new save paths to the game's current
+            // version here so callers don't have to resolve and pass it in themselves.
+            if (entity.GameId.HasValue && entity.GameId != Guid.Empty
+                && (entity.GameVersionId == null || entity.GameVersionId == Guid.Empty))
+                entity.GameVersionId = await gameVersionService.GetOrCreateLatestIdAsync(entity.GameId.Value);
+
             var added = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(sp => sp.Game);

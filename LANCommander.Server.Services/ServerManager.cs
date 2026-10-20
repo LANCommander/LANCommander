@@ -3,6 +3,7 @@ using System.Linq.Expressions;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -18,8 +19,12 @@ public sealed class ServerManager(
     ILogger<ServerManager> logger,
     IServiceScopeFactory scopeFactory,
     IEnumerable<IServerEngine> serverEngines,
-    SettingsProvider<Settings.Settings> settingsProvider)
+    SettingsProvider<Settings.Settings> settingsProvider,
+    IRconCommandSender rconCommandSender)
 {
+    /// <summary>How many recent output lines are kept per server for <see cref="GetRecentLog"/>.</summary>
+    public const int RecentLogCapacity = 1000;
+
     // Pending debounced stops keyed by gameId. Held here (singleton) because the request-scoped
     // ServerService can't keep pending-stop state across requests.
     private readonly ConcurrentDictionary<Guid, CancellationTokenSource> _pendingStops = new();
@@ -31,6 +36,8 @@ public sealed class ServerManager(
     /// </summary>
     public async Task InitializeAsync()
     {
+        SubscribeToEngineLogs();
+
         foreach (var engine in serverEngines)
         {
             await engine.InitializeAsync();
@@ -87,6 +94,239 @@ public sealed class ServerManager(
         }
 
         return ServerProcessStatus.Stopped;
+    }
+
+    /// <summary>
+    /// Stops the server, waits for it to report <see cref="ServerProcessStatus.Stopped"/>, then
+    /// starts it again. Returns once the new start has been kicked off, not for the server's
+    /// lifetime (unlike <see cref="StartAsync"/> on the local engine).
+    /// </summary>
+    public async Task RestartAsync(Guid serverId, CancellationToken cancellationToken = default)
+    {
+        var engine = GetEngine(serverId);
+
+        if (engine == null)
+            return;
+
+        if (await engine.GetStatusAsync(serverId) != ServerProcessStatus.Stopped)
+        {
+            await engine.StopAsync(serverId);
+
+            await WaitForStatusAsync(engine, serverId, s => s is ServerProcessStatus.Stopped or ServerProcessStatus.Error, TimeSpan.FromSeconds(30), cancellationToken);
+        }
+
+        // An engine may still be unwinding the previous run for a moment after it reports Stopped
+        // and ignore a start in that window, so retry until the server leaves the Stopped state.
+        for (var attempt = 0; attempt < 5; attempt++)
+        {
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    await engine.StartAsync(serverId);
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Could not restart server {ServerId}", serverId);
+                }
+            }, CancellationToken.None);
+
+            if (await WaitForStatusAsync(engine, serverId, s => s != ServerProcessStatus.Stopped, TimeSpan.FromSeconds(2), cancellationToken))
+                return;
+        }
+
+        logger.LogWarning("Server {ServerId} did not start after a restart", serverId);
+    }
+
+    private static async Task<bool> WaitForStatusAsync(IServerEngine engine, Guid serverId, Func<ServerProcessStatus, bool> predicate, TimeSpan timeout, CancellationToken cancellationToken)
+    {
+        var deadline = DateTime.UtcNow + timeout;
+
+        while (true)
+        {
+            if (predicate(await engine.GetStatusAsync(serverId)))
+                return true;
+
+            if (DateTime.UtcNow >= deadline)
+                return false;
+
+            await Task.Delay(100, cancellationToken);
+        }
+    }
+
+    /// <summary>
+    /// Samples the server's process: pid, start time, CPU% and memory. Null when the server
+    /// isn't running or its engine can't observe the process (e.g. remote servers).
+    /// </summary>
+    public async Task<ServerProcessInfo?> GetProcessInfoAsync(Guid serverId)
+    {
+        var engine = GetEngine(serverId);
+
+        if (engine == null)
+            return null;
+
+        try
+        {
+            return await engine.GetProcessInfoAsync(serverId);
+        }
+        catch (Exception ex)
+        {
+            logger.LogDebug(ex, "Could not sample the process for server {ServerId}", serverId);
+
+            return null;
+        }
+    }
+
+    private IServerEngine? GetEngine(Guid serverId) => serverEngines.FirstOrDefault(engine => engine.IsManaging(serverId));
+
+    #endregion
+
+    #region Commands
+
+    /// <summary>
+    /// Whether <see cref="SendCommandAsync"/> can currently deliver a command. With a console id
+    /// for an RCON console this means the console is configured; otherwise (no console, or a log
+    /// file console) it means the server process is running with redirected standard input,
+    /// which isn't the case for servers started with shell execute.
+    /// </summary>
+    public async Task<bool> CanSendCommandAsync(Guid serverId, Guid? consoleId = null)
+    {
+        if (consoleId.HasValue && consoleId.Value != Guid.Empty)
+        {
+            var console = await GetConsoleAsync(consoleId.Value);
+
+            if (console == null || console.ServerId != serverId)
+                return false;
+
+            if (console.Type == ServerConsoleType.RCON)
+                return rconCommandSender.CanSend(console);
+        }
+
+        return GetEngine(serverId)?.CanSendInput(serverId) ?? false;
+    }
+
+    /// <summary>
+    /// Sends a command to a server. RCON consoles receive it over RCON (and the response is
+    /// returned); anything else is written as a line to the server process's standard input,
+    /// whose effects arrive as ordinary output lines.
+    /// </summary>
+    public async Task<ServerCommandResult> SendCommandAsync(Guid serverId, Guid? consoleId, string text, CancellationToken cancellationToken = default)
+    {
+        if (String.IsNullOrWhiteSpace(text))
+            return ServerCommandResult.Failed("The command is empty");
+
+        if (consoleId.HasValue && consoleId.Value != Guid.Empty)
+        {
+            var console = await GetConsoleAsync(consoleId.Value);
+
+            if (console == null || console.ServerId != serverId)
+                return ServerCommandResult.Failed("The console could not be found");
+
+            if (console.Type == ServerConsoleType.RCON)
+            {
+                if (!rconCommandSender.CanSend(console))
+                    return ServerCommandResult.Failed("The RCON console has no host or port configured");
+
+                try
+                {
+                    var response = await rconCommandSender.SendCommandAsync(console, text, cancellationToken);
+
+                    return new ServerCommandResult(true, response);
+                }
+                catch (Exception ex) when (ex is not OperationCanceledException)
+                {
+                    logger.LogWarning(ex, "Could not send an RCON command to server {ServerId}", serverId);
+
+                    return ServerCommandResult.Failed($"RCON command failed: {ex.Message}");
+                }
+            }
+        }
+
+        var engine = GetEngine(serverId);
+
+        if (engine == null)
+            return ServerCommandResult.Failed("The server is not managed by any engine");
+
+        if (!engine.CanSendInput(serverId))
+            return ServerCommandResult.Failed("The server isn't running, or wasn't started with redirected input (shell execute)");
+
+        return await engine.SendInputAsync(serverId, text)
+            ? new ServerCommandResult(true)
+            : ServerCommandResult.Failed("The command could not be written to the server's input");
+    }
+
+    private async Task<Data.Models.ServerConsole?> GetConsoleAsync(Guid consoleId)
+    {
+        using var scope = scopeFactory.CreateScope();
+        var serverConsoleService = scope.ServiceProvider.GetRequiredService<ServerConsoleService>();
+
+        return await serverConsoleService.AsNoTracking().GetAsync(consoleId);
+    }
+
+    #endregion
+
+    #region Output
+
+    private readonly ConcurrentDictionary<Guid, Queue<ServerLogLine>> _recentLogs = new();
+    private int _logsSubscribed;
+
+    /// <summary>
+    /// Raised for every line of server output from any engine, already timestamped and
+    /// classified. Handlers run on the engine's output thread; keep them short.
+    /// </summary>
+    public event EventHandler<ServerLogEventArgs>? OnServerLog;
+
+    /// <summary>
+    /// The most recent output lines for a server (up to <see cref="RecentLogCapacity"/>), oldest
+    /// first. Pass a console id to get only that log file console's lines, or null for the
+    /// process's own output.
+    /// </summary>
+    public IReadOnlyList<ServerLogLine> GetRecentLog(Guid serverId, Guid? consoleId = null)
+    {
+        if (!_recentLogs.TryGetValue(serverId, out var buffer))
+            return [];
+
+        lock (buffer)
+            return buffer.Where(l => l.ConsoleId == consoleId).ToList();
+    }
+
+    /// <summary>Forgets the buffered output for a server (the console's Clear button).</summary>
+    public void ClearRecentLog(Guid serverId)
+    {
+        if (_recentLogs.TryGetValue(serverId, out var buffer))
+            lock (buffer)
+                buffer.Clear();
+    }
+
+    private void SubscribeToEngineLogs()
+    {
+        if (Interlocked.Exchange(ref _logsSubscribed, 1) == 1)
+            return;
+
+        foreach (var engine in serverEngines)
+            engine.OnServerLog += HandleServerLog;
+    }
+
+    private void HandleServerLog(object? sender, ServerLogEventArgs args)
+    {
+        var buffer = _recentLogs.GetOrAdd(args.ServerId, _ => new Queue<ServerLogLine>());
+
+        lock (buffer)
+        {
+            buffer.Enqueue(args.ToLogLine());
+
+            while (buffer.Count > RecentLogCapacity)
+                buffer.Dequeue();
+        }
+
+        try
+        {
+            OnServerLog?.Invoke(this, args);
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "A server output handler failed");
+        }
     }
 
     #endregion

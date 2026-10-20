@@ -1,0 +1,37 @@
+@namespace LANCommander.Server.UI.Controls
+
+<li class="@(Mono ? "lc-breadcrumb-item lc-breadcrumb-item-mono" : "lc-breadcrumb-item")">
+    @if (Href != null)
+    {
+        <a href="@Href">@Content</a>
+    }
+    else if (OnClick.HasDelegate)
+    {
+        <button type="button" class="lc-breadcrumb-button" @onclick="OnClick">@Content</button>
+    }
+    else
+    {
+        <span aria-current="page">@Content</span>
+    }
+</li>
+
+@code {
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    [Parameter] public string? Href { get; set; }
+
+    [Parameter] public EventCallback<MouseEventArgs> OnClick { get; set; }
+
+    [Parameter] public IconType Icon { get; set; }
+
+    /// <summary>Sets the text in mono, for a path's root: an archive name, a drive, a server's directory.</summary>
+    [Parameter] public bool Mono { get; set; }
+
+    RenderFragment Content => @<text>
+        @if (Icon != IconType.None)
+        {
+            <Icon Type="Icon" />
+        }
+        @ChildContent
+    </text>;
+}

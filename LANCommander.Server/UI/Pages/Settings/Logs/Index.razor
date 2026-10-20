@@ -1,4 +1,4 @@
-﻿@page "/Settings/Logs"
+@page "/Settings/Logs"
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
@@ -6,51 +6,51 @@
 @using Microsoft.Extensions.Options
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
-@inject IMessageService MessageService
+@inject NotificationService Notifications
 @inject NavigationManager NavigationManager
-@inject ILogger<Index> Logger
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Logs">
-    <PageHeaderExtra>
+    <Extra>
         @if (FileProvider != null)
         {
-            <Button OnClick="DownloadLog" Icon="@IconType.Outline.Download">Download Log</Button>
+            <Button Icon="IconType.DownloadSimple" OnClick="DownloadLog">Download Log</Button>
         }
-        <Button OnClick="Save" Type="@ButtonType.Primary">Save</Button>
-    </PageHeaderExtra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
 </PageHeader>
 
 <PageContent>
-    <Flex Direction="FlexDirection.Vertical" Gap="FlexGap.Large">
+    <Flex Vertical Gap="Gap.Large">
         <Collapse>
             @foreach (var provider in Providers)
             {
                 <Panel Header="@provider.Name">
-                    <ExtraTemplate>
-                        <Flex Gap="FlexGap.Small">
-                            <Switch @bind-Checked="provider.Enabled" />
-                            <Button Type="ButtonType.Text" Icon="@IconType.Outline.Close" Size="ButtonSize.Small" Danger OnClick="() => RemoveProvider(provider)"/>
+                    <Extra>
+                        <Flex Gap="Gap.Small" Align="Align.Center">
+                            <Switch @bind-Value="provider.Enabled" aria-label="Enabled" />
+                            <Button Text Small Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveProvider(provider)" />
                         </Flex>
-                    </ExtraTemplate>
+                    </Extra>
                     <ChildContent>
-                        <ProviderEditorPanel Provider="provider" />
+                        <ProviderEditorPanel Provider="provider" ProviderChanged="StateHasChanged" />
                     </ChildContent>
                 </Panel>
             }
         </Collapse>
 
-        <Flex Justify="FlexJustify.End">
+        <Flex Justify="Justify.End">
             <Button OnClick="AddProvider">Add Provider</Button>
         </Flex>
     </Flex>
 </PageContent>
-    
+
 @if (Providers.Any(p => p.Type == LoggingProviderType.SignalR && p.Enabled))
 {
     <PageHeader Title="Log Viewer" />
-    <PageContent Style="padding-bottom: 24px;">
-        <div style="padding: 8px; background: #000">
-            <LANCommander.Server.UI.Pages.Settings.Logs.Components.LogViewer/>
+    <PageContent>
+        <div class="log-viewer">
+            <LogViewer />
         </div>
     </PageContent>
 }
@@ -69,18 +69,17 @@
         try
         {
             Settings.Value.Server.Logs.Providers = Providers;
-            
+
             SettingsProvider.Update(s =>
             {
                 s.Server.Logs = Settings.Value.Server.Logs;
-            }); 
-            
-            MessageService.Success("Settings saved!");
+            });
+
+            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
-            MessageService.Error("An unknown error occurred.");
-            Logger.LogError(ex, "An unknown error occurred.");
+            Notifications.Error(ex, "The settings could not be saved");
         }
     }
 
@@ -109,7 +108,7 @@
 
         if (!File.Exists(logFilePath))
         {
-            MessageService.Warning("No log file exists for today.");
+            Notifications.Warning("No log file exists for today.");
             return;
         }
 

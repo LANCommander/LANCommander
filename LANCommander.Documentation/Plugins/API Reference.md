@@ -88,7 +88,7 @@ A multiplayer lobby the player can join.
 - `string Id { get; init; }`
   - The lobby's id on the platform that hosts it.
 - `string HostName { get; init; }`
-  - Name of the player hosting the lobby, shown as "Join {HostName}'s lobby".
+  - Name of the player hosting the lobby, shown as "Join \{HostName\}'s lobby".
 - `string JoinArguments { get; init; }`
   - Arguments appended to the game's primary action to join the lobby, for example `+connect_lobby 109775241055537385`.
 

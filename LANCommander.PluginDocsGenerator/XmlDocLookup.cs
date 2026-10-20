@@ -52,7 +52,7 @@ internal sealed class XmlDocLookup
             switch (node)
             {
                 case XText text:
-                    sb.Append(text.Value);
+                    sb.Append(EscapeMdx(text.Value));
                     break;
                 case XElement child:
                     RenderElement(child, sb);
@@ -60,6 +60,17 @@ internal sealed class XmlDocLookup
             }
         }
     }
+
+    // Docusaurus renders these docs as MDX, which parses `{`, `}`, and `<` in prose as JSX
+    // (expressions and tags). Doc-comment text that uses them literally - e.g. the summary
+    // "Join {HostName}'s lobby" - otherwise fails the static build with "HostName is not
+    // defined". Backslash-escape them so they render as text. Only free text is escaped;
+    // the backtick code spans synthesized by RenderElement are left alone because MDX
+    // already treats code-span contents literally.
+    private static string EscapeMdx(string text) => text
+        .Replace("{", "\\{")
+        .Replace("}", "\\}")
+        .Replace("<", "\\<");
 
     private static void RenderElement(XElement element, StringBuilder sb)
     {

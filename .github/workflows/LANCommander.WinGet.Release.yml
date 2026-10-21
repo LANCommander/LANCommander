@@ -8,7 +8,10 @@ permissions:
   id-token: write  # OIDC token for Azure Artifact Signing
 
 jobs:
+  # Installers are built for prereleases too and attached to the GitHub release; only the
+  # WinGet submission below is limited to stable releases. Other releases (e.g. nightly) are skipped.
   create-installers:
+    if: startsWith(github.event.release.tag_name, 'v')
     runs-on: windows-latest
     environment: release
     strategy:
@@ -146,15 +149,18 @@ jobs:
 
           Write-Host "$installer : Valid ($($signature.SignerCertificate.Subject))"
 
-      # Upload installer to release
+      # --clobber so re-running the workflow replaces the installer instead of failing
       - name: Upload installer to release
         run: |
-          gh release upload ${{ github.ref_name }} "Output/LANCommander.${{ matrix.app }}-${{ env.VERSION }}-${{ matrix.arch }}-Setup.exe"
+          gh release upload ${{ github.ref_name }} --clobber "Output/LANCommander.${{ matrix.app }}-${{ env.VERSION }}-${{ matrix.arch }}-Setup.exe"
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+  # WinGet has no prerelease channel, so a vX.Y.Z-suffix tag would become the version everyone
+  # upgrades to. Checks the tag as well as the release flag in case the flag was cleared by hand.
   publish-winget:
     needs: create-installers
+    if: ${{ !github.event.release.prerelease && !contains(github.event.release.tag_name, '-') }}
     runs-on: windows-latest
     strategy:
       matrix:

@@ -11,36 +11,40 @@ jobs:
   prep:
     runs-on: ubuntu-latest
     outputs:
-      version_tag: ${{ steps.trim_tag_ref.outputs.replaced }}
-      version_semver: ${{ steps.extract_semver.outputs.replaced }}
+      publish: ${{ steps.version.outputs.publish }}
+      version_tag: ${{ steps.version.outputs.version_tag }}
+      version_semver: ${{ steps.version.outputs.version_semver }}
     steps:
-      - uses: frabert/replace-string-action@v2
-        name: Trim Tag Ref
-        id: trim_tag_ref
-        with:
-          string: '${{ github.ref }}'
-          pattern: 'refs/tags/v'
-          replace-with: ''
+      - name: Parse Version
+        id: version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
 
-      - uses: frabert/replace-string-action@v2
-        name: Extract SemVer (strip prerelease suffix for AssemblyVersion)
-        id: extract_semver
-        with:
-          string: '${{ steps.trim_tag_ref.outputs.replaced }}'
-          pattern: '-.*$'
-          replace-with: ''
+          # Other releases (e.g. nightly) are skipped, not failed
+          if [[ ! "$TAG" =~ ^v([0-9]+\.[0-9]+\.[0-9]+)(-.+)?$ ]]; then
+            echo "::notice::Tag '$TAG' is not vX.Y.Z or vX.Y.Z-suffix. Skipping publish."
+            echo "publish=false" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          # version_tag keeps the prerelease suffix for the package version; version_semver drops it
+          # because AssemblyVersion only accepts numeric parts
+          echo "publish=true" >> $GITHUB_OUTPUT
+          echo "version_tag=${TAG#v}" >> $GITHUB_OUTPUT
+          echo "version_semver=${BASH_REMATCH[1]}" >> $GITHUB_OUTPUT
 
   publish:
     needs: prep
+    if: needs.prep.outputs.publish == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
 
       - name: Setup .NET
-        uses: actions/setup-dotnet@v3
+        uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.102'
+          dotnet-version: '10.0.x'
 
       - name: Restore dependencies
         run: dotnet restore LANCommander.SDK/LANCommander.SDK.csproj
@@ -51,6 +55,7 @@ jobs:
       - name: Pack NuGet package with symbols
         run: dotnet pack LANCommander.SDK/LANCommander.SDK.csproj --no-build --configuration Release -p:PackageVersion=${{ needs.prep.outputs.version_tag }} -p:IncludeSymbols=true -p:SymbolPackageFormat=snupkg -o ./artifacts
 
+      # --skip-duplicate so re-running a release (or re-publishing a prerelease) doesn't fail on 409
       - name: Publish NuGet package
         run: |
-          dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json
+          dotnet nuget push ./artifacts/*.nupkg --api-key ${{ secrets.NUGET_API_KEY }} --source https://api.nuget.org/v3/index.json --skip-duplicate

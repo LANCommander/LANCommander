@@ -1,0 +1,131 @@
+name: LANCommander Docker Release
+
+# Publishes the server Docker images for a release that already exists on GitHub, using the
+# Linux server builds attached to that release. Use this to (re)publish an image without
+# re-running the full release pipeline.
+
+on:
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag to publish (e.g. v2.1.17)'
+        required: true
+        type: string
+      update_floating_tags:
+        description: 'Also move latest/latest-full (or prerelease/prerelease-full for prereleases)'
+        required: false
+        type: boolean
+        default: true
+
+env:
+  REGISTRY: docker.io
+  IMAGE_NAME: lancommander/lancommander
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+
+jobs:
+  prep:
+    runs-on: ubuntu-latest
+    outputs:
+      version_tag: ${{ steps.version.outputs.version_tag }}
+      is_prerelease: ${{ steps.version.outputs.is_prerelease }}
+    steps:
+      - name: Resolve version
+        id: version
+        env:
+          TAG: ${{ inputs.tag }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [[ ! "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "::error::'$TAG' is not a release tag like v2.1.17"
+            exit 1
+          fi
+
+          gh release view "$TAG" --repo "${{ github.repository }}" > /dev/null
+
+          VERSION="${TAG#v}"
+          echo "version_tag=$VERSION" >> $GITHUB_OUTPUT
+
+          if [[ "$VERSION" == *-* ]]; then
+            echo "is_prerelease=true" >> $GITHUB_OUTPUT
+          else
+            echo "is_prerelease=false" >> $GITHUB_OUTPUT
+          fi
+
+  publish_docker_image:
+    needs: [prep]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        variant: [base, full]
+    steps:
+      - name: Checkout release tag
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.tag }}
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+
+      - name: Download Server artifacts from release
+        env:
+          TAG: ${{ inputs.tag }}
+          VARIANT: ${{ matrix.variant }}
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern "LANCommander.Server-Linux-x64-$TAG.zip"
+          mkdir -p ./LANCommander.Server/published-amd64
+          unzip "./LANCommander.Server-Linux-x64-$TAG.zip" -d ./LANCommander.Server/published-amd64
+
+          if [[ "$VARIANT" == "base" ]]; then
+            gh release download "$TAG" --repo "${{ github.repository }}" --pattern "LANCommander.Server-Linux-arm64-$TAG.zip"
+            mkdir -p ./LANCommander.Server/published-arm64
+            unzip "./LANCommander.Server-Linux-arm64-$TAG.zip" -d ./LANCommander.Server/published-arm64
+          fi
+
+      - name: Set up QEMU
+        if: matrix.variant == 'base'
+        uses: docker/setup-qemu-action@v2
+
+      - name: Setup buildx
+        uses: docker/setup-buildx-action@v3
+        with:
+          platforms: linux/amd64,linux/arm64
+
+      - name: Publish ${{ matrix.variant }} Docker image
+        id: push
+        uses: docker/build-push-action@v6
+        with:
+          context: ./LANCommander.Server
+          file: ./LANCommander.Server/${{ matrix.variant == 'full' && 'Dockerfile.full' || 'Dockerfile' }}
+          push: true
+          platforms: ${{ matrix.variant == 'full' && 'linux/amd64' || 'linux/amd64,linux/arm64' }}
+          tags: |
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}:v${{ needs.prep.outputs.version_tag }}${{ matrix.variant == 'full' && '-full' || '' }}
+            ${{ inputs.update_floating_tags && (needs.prep.outputs.is_prerelease == 'true' && format('{0}/{1}:{2}', env.REGISTRY, env.IMAGE_NAME, matrix.variant == 'full' && 'prerelease-full' || 'prerelease') || format('{0}/{1}:{2}', env.REGISTRY, env.IMAGE_NAME, matrix.variant == 'full' && 'latest-full' || 'latest')) || '' }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+          build-args: |
+            VERSION=${{ needs.prep.outputs.version_tag }}
+            BUILD_DATE=$(date -u +"%Y-%m-%dT%H:%M:%SZ")
+          provenance: true
+
+      - name: Generate image attestation
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME}}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true

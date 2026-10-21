@@ -94,6 +94,10 @@ namespace LANCommander.SDK.Extensions
             {
                 var value = (string)(Environment.GetFolderPath(folder));
 
+                // Folders that don't exist on this platform (most of them on Linux) resolve to an empty string
+                if (string.IsNullOrEmpty(value))
+                    continue;
+
                 path = Regex.Replace(path, Regex.Escape(value), $"%{folder}%", RegexOptions.IgnoreCase);
             }
 
@@ -121,6 +125,10 @@ namespace LANCommander.SDK.Extensions
             foreach (var variable in supportedVariables)
             {
                 var value = (string)(Environment.GetEnvironmentVariable(variable));
+
+                // Unset outside of Windows, and Regex.Escape throws on null
+                if (string.IsNullOrEmpty(value))
+                    continue;
 
                 path = Regex.Replace(path, Regex.Escape(value), $"%{variable}%", RegexOptions.IgnoreCase);
             }

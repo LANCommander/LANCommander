@@ -1,0 +1,46 @@
+---
+title: 2.1.17
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.1.17 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.1 series**. For the complete feature overview and all patch notes, visit the [LANCommander 2.1.0 release notes](./2.1.0).
+:::
+
+## Upgrade Notes
+- The server Docker image is now published in two variants. The standard tags (`latest`, `v2.1.17`, `nightly`, `development`) no longer include SteamCMD or WINE, which makes the image roughly 500 MB smaller uncompressed. They still include yt-dlp and ffmpeg, and can still install SteamCMD and WINE at runtime. If you want both preinstalled, switch to the matching `-full` tag, such as `latest-full` or `v2.1.17-full`. The `-full` images are amd64 only.
+- Update both the server and the launcher to get automatic session renewal. Sign in once after upgrading so the launcher can store the new renewal credentials.
+- **SDK:** the `ApiRequestBuilder` and `ApiRequestFactory` constructors now require an `AuthenticationSession`.
+
+## Improvements
+- The launcher now renews expired authentication sessions on its own.
+- Exported LCX packages now record which schema their `Manifest.yml` follows in a `$schema` field. JSON Schemas for game, redistributable, server, and tool manifests are published with each release under `https://docs.lancommander.app/schemas/<version>/`.
+- Rows on the server's list pages can now be double-clicked to open them for editing. The edit buttons in those lists are now icon-only.
+
+## Bug Fixes
+- Fixed save paths using a regex never being restored. The launcher looked for matching files on the local disk instead of in the downloaded save, so nothing was restored to a fresh install or after the save files had been deleted. If the working directory didn't exist yet, the restore failed outright.
+- Fixed save paths whose working directory points to a subfolder, such as `{InstallDir}/baseq3`, never being restored.
+- Fixed save paths with an empty working directory failing to pack. They are now treated as relative to the install directory.
+- Fixed a save path whose working directory shares the start of its name with the save folder, such as `{InstallDir}/save` and `{InstallDir}/saves`, being restored to the wrong place.
+- Fixed save uploads failing on Linux.
+- Fixed downloaded save archives being left behind in the temp directory.
+- Fixed uninstalling a tool or addon deleting the base game's files. When no file list is available and the install directory is shared with other installed content, its files are now left in place. A cancelled or failed install now removes only the files it wrote, instead of deleting the whole install directory.
+- Fixed tool scripts not being saved when a tool was installed. The launcher requested them from the wrong endpoint, and the server endpoint returned the wrong scripts. Scripts are now taken from the tool's manifest, with the server as a fallback.
+- Fixed starting a tool's action running the game's name change, key change, before start, and after stop scripts. Tool actions now run only the tool's own before start and after stop scripts.
+- Fixed tool scripts running from the tool's metadata folder rather than the install directory.
+- Fixed the server not saving refresh tokens, which made session renewal fail. An invalid refresh token is now rejected with a 401 instead of an error response.
+- Fixed error and sign-in responses being saved to disk as if they were ZIP archives when a download failed.
+- Fixed installs failing with `ArchiveOperationException: Ring buffer underflow` on valid archives containing many small files.
+- Fixed media search results from LANCommander HQ all showing the game's cover as their thumbnail. Choosing a result also downloaded the first item of that media type rather than the one that was picked.
+
+## Downloads
+
+<ReleaseDownloads release="v2.1.17" />
+
+## Contributors
+
+<ContributorGrid from="v2.1.16" to="v2.1.17" />

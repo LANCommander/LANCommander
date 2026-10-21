@@ -12,7 +12,7 @@ using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 namespace LANCommander.Server.Data.PostgreSQL.Migrations
 {
     [DbContext(typeof(DatabaseContext))]
-    [Migration("20260630234733_RemoveArchiveChangelog")]
+    [Migration("20260708080200_RemoveArchiveChangelog")]
     partial class RemoveArchiveChangelog
     {
         /// <inheritdoc />
@@ -208,6 +208,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<string>("Path")
                         .HasColumnType("text");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
 
                     b.Property<bool>("PrimaryAction")
                         .HasColumnType("boolean");
@@ -702,6 +705,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
 
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
@@ -1380,6 +1386,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
+
                     b.Property<int>("Type")
                         .HasColumnType("integer");
 
@@ -1433,6 +1442,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<int>("Platforms")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("RedistributableId")
                         .HasColumnType("uuid");

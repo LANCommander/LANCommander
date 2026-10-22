@@ -9,9 +9,8 @@
 *@
 @if (HasArchive || !String.IsNullOrWhiteSpace(Root))
 {
-    <Button Primary="Primary" Text="Text" Icon="Icon" Disabled="@(Disabled || (HasArchive && !_archiveExists))" OnClick="BrowseAsync" title="@Title">
-        @ChildContent
-    </Button>
+    @* ChildContent passed as a parameter, not as the body: a body is never null, so the button would never be icon-only (square) *@
+    <Button Primary="Primary" Text="Text" Icon="Icon" Disabled="@(Disabled || (HasArchive && !_archiveExists))" OnClick="BrowseAsync" title="@Title" Class="@Class" ChildContent="ChildContent" />
 }
 
 @code {
@@ -28,6 +27,7 @@
     [Parameter] public bool Primary { get; set; }
     [Parameter] public bool Text { get; set; }
     [Parameter] public bool Disabled { get; set; }
+    [Parameter] public string? Class { get; set; }
 
     bool _archiveExists;
     Guid? _checkedArchiveId;

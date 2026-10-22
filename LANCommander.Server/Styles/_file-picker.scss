@@ -8,6 +8,14 @@
         flex: 1;
         min-width: 0;
     }
+
+    // The browse button stands beside the input, so it takes the input's height (inputs are 38px,
+    // buttons 36px) and stays square. Three classes, like the library's icon-only size rule, which
+    // app.css follows.
+    .file-picker-browse.lc-button {
+        width: var(--lc-control-height);
+        height: var(--lc-control-height);
+    }
 }
 
 // FilePickerDialog, opened as a picker: the file manager fills the dialog, and the footer says what

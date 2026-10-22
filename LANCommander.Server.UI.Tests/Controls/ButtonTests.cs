@@ -109,6 +109,45 @@ public class ButtonTests : ControlsTestContext
         Assert.DoesNotContain("lc-button-danger", classes);
     }
 
+    [Theory]
+    [InlineData(nameof(Button.Text), "rz-variant-text")]
+    [InlineData(nameof(Button.Primary), "rz-variant-filled")]
+    [InlineData(nameof(Button.Link), "rz-variant-text")]
+    public void Success_WithVariant_IsSuccessStyled(string variant, string expectedVariant)
+    {
+        var classes = RenderButton(p => p.Add(Flag(variant), true).Add(x => x.Success, true)).Find("button").ClassList;
+
+        Assert.Contains(expectedVariant, classes);
+        Assert.Contains("rz-success", classes);
+        Assert.DoesNotContain("lc-button-success", classes);
+    }
+
+    [Fact]
+    public void Success_Alone_IsTheSecondaryButtonWithSuccessText()
+    {
+        var classes = RenderButton(p => p.Add(x => x.Success, true)).Find("button").ClassList;
+
+        Assert.Contains("lc-button-success", classes);
+        Assert.Contains("rz-base", classes);
+        Assert.DoesNotContain("rz-success", classes);
+    }
+
+    [Fact]
+    public void Danger_WinsOverSuccess()
+    {
+        var classes = RenderButton(p => p.Add(x => x.Text, true).Add(x => x.Danger, true).Add(x => x.Success, true)).Find("button").ClassList;
+
+        Assert.Contains("rz-danger", classes);
+        Assert.DoesNotContain("rz-success", classes);
+    }
+
+    [Fact]
+    public void IconFill_DrawsTheSolidWeight()
+    {
+        Assert.True(Render<Button>(p => p.Add(x => x.Icon, IconType.Play).Add(x => x.IconFill, true)).FindComponent<Icon>().Instance.Fill);
+        Assert.False(Render<Button>(p => p.Add(x => x.Icon, IconType.Play)).FindComponent<Icon>().Instance.Fill);
+    }
+
     [Fact]
     public void Loading_ShowsRingInPlaceOfIcon_KeepsLabel_AndDisables()
     {

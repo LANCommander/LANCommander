@@ -5,8 +5,8 @@
 @implements IDisposable
 
 @*
-    Starts and stops a server. In a list row it shows the live status beside a small Start or Stop
-    button; in a server's header (Header) it is the 36px Restart and Stop pair, or Start when the
+    Starts and stops a server. In a list row it shows the live status beside an icon-only Start (a
+    green play) or Stop (a red square); in a server's header (Header) it is the 36px Restart and Stop pair, or Start when the
     server isn't running, and the header shows the status itself.
 *@
 @if (Header)
@@ -57,12 +57,13 @@ else
 
         @if (Status != ServerProcessStatus.Running)
         {
-            <Button Primary Small Icon="IconType.Play" OnClick="StartAsync" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error">Start</Button>
+            @* Icon-only text buttons, like the row's other actions *@
+            <Button Text Success Icon="IconType.Play" IconFill OnClick="StartAsync" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error" title="Start" aria-label="Start" />
         }
         else
         {
             <Popconfirm OnConfirm="StopAsync" Title="Are you sure you want to kill this server process?" OkText="Stop" Danger>
-                <Button Small Danger Icon="IconType.Stop">Stop</Button>
+                <Button Text Danger Icon="IconType.Stop" IconFill title="Stop" aria-label="Stop" />
             </Popconfirm>
         }
     </Flex>

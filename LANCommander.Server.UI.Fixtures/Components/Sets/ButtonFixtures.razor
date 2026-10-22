@@ -54,6 +54,18 @@
             Width = 280,
             Covers = [typeof(Button)],
         },
+        new("Button.Success", "Success buttons, and the filled play and stop glyphs of a server row",
+            @<div style="display: flex; gap: 8px; align-items: center">
+                <Button Success Icon="IconType.Play">Start</Button>
+                <Button Primary Success Icon="IconType.Play">Start</Button>
+                <Button Text Success Icon="IconType.Play">Start</Button>
+                <Button Text Success Icon="IconType.Play" IconFill title="Start" />
+                <Button Text Danger Icon="IconType.Stop" IconFill title="Stop" />
+            </div>)
+        {
+            Width = 380,
+            Covers = [typeof(Button)],
+        },
         new("Button.States", "Disabled, loading and full-width buttons",
             @<div style="display: grid; gap: 12px">
                 <div style="display: flex; gap: 12px">

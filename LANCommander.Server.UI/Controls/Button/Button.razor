@@ -41,6 +41,9 @@ else
 
     [Parameter] public IconType Icon { get; set; }
 
+    /// <summary>Draws <see cref="Icon"/> in its solid (Fill) weight, e.g. a Play or Stop glyph.</summary>
+    [Parameter] public bool IconFill { get; set; }
+
     /// <summary>The main action of a view: filled with the primary colour.</summary>
     [Parameter] public bool Primary { get; set; }
 
@@ -56,6 +59,12 @@ else
     /// for the confirming button of a destructive dialog. Also combines with <see cref="Text"/> or <see cref="Link"/>.
     /// </summary>
     [Parameter] public bool Danger { get; set; }
+
+    /// <summary>
+    /// A positive action that sets something going, e.g. starting a server. Combines like <see cref="Danger"/>,
+    /// which wins when both are set.
+    /// </summary>
+    [Parameter] public bool Success { get; set; }
 
     /// <summary>32px, for toolbars and dense rows.</summary>
     [Parameter] public bool Small { get; set; }
@@ -91,7 +100,7 @@ else
         }
         else if (Icon != IconType.None)
         {
-            <Icon Type="Icon" Class="lc-button-icon" />
+            <Icon Type="Icon" Fill="IconFill" Class="lc-button-icon" />
         }
 
         @if (ChildContent != null)
@@ -103,12 +112,14 @@ else
     protected override void OnParametersSet()
     {
         // Precedence when several are set: Primary, then Link, then Text, then the outlined default
+        var tone = Danger ? ButtonStyle.Danger : Success ? ButtonStyle.Success : (ButtonStyle?)null;
+
         (_buttonStyle, _variant) = (Primary, Link, Text) switch
         {
-            (true, _, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Filled),
-            (_, true, _) => (Danger ? ButtonStyle.Danger : ButtonStyle.Primary, Variant.Text),
-            (_, _, true) => (Danger ? ButtonStyle.Danger : ButtonStyle.Base, Variant.Text),
-            // Danger alone stays the secondary button; lc-button-danger colours its text
+            (true, _, _) => (tone ?? ButtonStyle.Primary, Variant.Filled),
+            (_, true, _) => (tone ?? ButtonStyle.Primary, Variant.Text),
+            (_, _, true) => (tone ?? ButtonStyle.Base, Variant.Text),
+            // Danger or Success alone stays the secondary button; lc-button-danger/-success colours its text
             _ => (ButtonStyle.Base, Variant.Outlined),
         };
 
@@ -121,6 +132,7 @@ else
             .If(Link, "lc-button-link")
             .If(Block, "lc-button-block")
             .If(Danger && !Primary && !Link && !Text, "lc-button-danger")
+            .If(Success && !Danger && !Primary && !Link && !Text, "lc-button-success")
             .If(Loading, "lc-button-loading")
             .Add(Class)
             .Build()!;
@@ -129,7 +141,7 @@ else
             .Add("rz-button")
             .Add(_size switch { ButtonSize.ExtraSmall => "rz-button-xs", ButtonSize.Small => "rz-button-sm", ButtonSize.Large => "rz-button-lg", _ => "rz-button-md" })
             .Add(_variant switch { Variant.Filled => "rz-variant-filled", Variant.Text => "rz-variant-text", _ => "rz-variant-outlined" })
-            .Add(_buttonStyle switch { ButtonStyle.Primary => "rz-primary", ButtonStyle.Danger => "rz-danger", _ => "rz-base" })
+            .Add(_buttonStyle switch { ButtonStyle.Primary => "rz-primary", ButtonStyle.Danger => "rz-danger", ButtonStyle.Success => "rz-success", _ => "rz-base" })
             .Add("rz-shade-default")
             .If(IsDisabledLink, "rz-state-disabled")
             .Add((string)_attributes["class"])

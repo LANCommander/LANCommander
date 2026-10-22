@@ -761,6 +761,12 @@
         // Expands a collapsed row and collapses an expanded one
         await _grid.ExpandRow(row);
 
+        // Radzen drops its cached view when a row's children load but not its cached grouped view, so
+        // a grouped table would keep drawing the rows without them. Replacing the group with itself
+        // is the only public way to clear that cache.
+        if (_groups.Count > 0)
+            _groups[0] = _groups[0];
+
         StateHasChanged();
     }
 

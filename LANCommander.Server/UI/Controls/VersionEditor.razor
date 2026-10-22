@@ -8,12 +8,15 @@
         <Columns>
             <BoundColumn Property="v => v.SortOrder" Title="Sort Order" Sortable DefaultSort="ColumnSort.Descending" Hide />
             <BoundColumn Property="v => v.Version" Sortable>
-                @context.Version
+                @* Razor drops the whitespace before @if, so the gap between the label and the tag is the Flex's *@
+                <Flex Gap="Gap.Small" Align="Align.Center">
+                    <span>@context.Version</span>
 
-                @if (context.Id == GameVersionId)
-                {
-                    <Tag>Editing</Tag>
-                }
+                    @if (context.Id == GameVersionId)
+                    {
+                        <Tag>Editing</Tag>
+                    }
+                </Flex>
             </BoundColumn>
             <BoundColumn Property="v => v.Published" Title="Status" Sortable>
                 @if (context.Published)

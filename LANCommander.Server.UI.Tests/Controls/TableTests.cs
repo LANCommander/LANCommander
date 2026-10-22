@@ -13,6 +13,8 @@ public class TableTests : ControlsTestContext
     {
         [Display(Name = "Max Players")]
         public int MaxPlayers => Players;
+
+        public string Initial => Title[..1];
     }
 
     private static readonly Row[] Rows =
@@ -58,6 +60,9 @@ public class TableTests : ControlsTestContext
 
         [Parameter] public Func<Row, string?>? RowMark { get; set; }
 
+        /// <summary>Groups the rows by the first letter of their title, as the Games list does.</summary>
+        [Parameter] public bool GroupByInitial { get; set; }
+
         public Table<Row>? Table { get; private set; }
 
         protected override void BuildRenderTree(RenderTreeBuilder builder)
@@ -80,6 +85,13 @@ public class TableTests : ControlsTestContext
             builder.AddComponentParameter(14, nameof(Table<Row>.ShowSortSummary), ShowSortSummary);
             builder.AddComponentParameter(15, nameof(Table<Row>.ChildSummary), ChildSummary);
             builder.AddComponentParameter(16, nameof(Table<Row>.RowMark), RowMark);
+
+            if (GroupByInitial)
+            {
+                builder.AddComponentParameter(17, nameof(Table<Row>.Group), (Expression<Func<Row, object?>>)(r => r.Initial));
+                builder.AddComponentParameter(18, nameof(Table<Row>.GroupColumn), nameof(Row.Title));
+            }
+
             builder.AddComponentParameter(10, nameof(Table<Row>.Columns), (RenderFragment)(columns =>
             {
                 columns.OpenComponent<BoundColumn<Row, string>>(0);
@@ -372,6 +384,26 @@ public class TableTests : ControlsTestContext
             Assert.NotNull(child.QuerySelector(".lc-table-expandable-child"));
         });
         Assert.Equal("true", host.Find(".lc-table-expander").GetAttribute("aria-expanded"));
+
+        host.Find(".lc-table-expander").Click();
+
+        host.WaitForAssertion(() => Assert.Empty(host.FindAll("tbody tr[data-lc-child]")));
+    }
+
+    [Fact]
+    public void TitleExpander_InAGroupedTable_TogglesChildRows()
+    {
+        var dlc = new Row(Guid.NewGuid(), "Arena Blitz: Map Pack", 16);
+
+        var host = Render<Host>(p => p
+            .Add(x => x.Items, Rows)
+            .Add(x => x.Children, r => r.Title == "Arena Blitz" ? [dlc] : [])
+            .Add(x => x.TitleExpander, true)
+            .Add(x => x.GroupByInitial, true));
+
+        host.WaitForElement(".lc-table-expander").Click();
+
+        host.WaitForAssertion(() => Assert.Contains("Arena Blitz: Map Pack", host.Find("tbody tr[data-lc-child]").TextContent));
 
         host.Find(".lc-table-expander").Click();
 

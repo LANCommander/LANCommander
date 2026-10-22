@@ -113,9 +113,11 @@
 
 // Collapse and Panel
 
+// Bordered like a card, so Surface like one: on the bare canvas its inputs (Well) would all but vanish
 .lc-collapse {
     border: 1px solid var(--lc-border-color);
     border-radius: var(--lc-radius-lg);
+    background-color: var(--lc-panel-background);
     box-shadow: var(--lc-inset-highlight);
 
     > .lc-panel + .lc-panel {

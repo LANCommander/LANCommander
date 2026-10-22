@@ -8,13 +8,24 @@
     // Radzen's own edge clamp misses it and the panel spills off the right or bottom of the viewport.
     // Re-clamp smart-positioned popups (position-less: menus, dropdowns, selects, column pickers) once
     // they are placed. Tooltips and explicitly-placed popups pass a position and keep their placement.
+    // A Lazy popup (Dropdown) renders its content only after it is opened, so both Radzen and the first
+    // clamp measure it empty; a ResizeObserver clamps it again once the content gives it its size, and
+    // so does Radzen's repositionPopup, which its own observer calls for the same resize.
+    // The box is read from layout (offset size, inline left/top), not getBoundingClientRect: the popup
+    // plays the rz-open scale animation, and mid-animation its bounding rect is the shrunken one.
     (function () {
         function clamp(id) {
             var popup = document.getElementById(id);
             if (!popup || popup.style.display === 'none' || !popup.classList.contains('rz-open')) return;
             var scrollLeft = document.documentElement.scrollLeft || document.body.scrollLeft || 0;
             var scrollTop = document.documentElement.scrollTop || document.body.scrollTop || 0;
-            var rect = popup.getBoundingClientRect();
+            var left = (parseFloat(popup.style.left) || 0) - scrollLeft;
+            var top = (parseFloat(popup.style.top) || 0) - scrollTop;
+            var rect = {
+                left: left, top: top,
+                width: popup.offsetWidth, height: popup.offsetHeight,
+                right: left + popup.offsetWidth, bottom: top + popup.offsetHeight
+            };
             if (rect.width < window.innerWidth) {
                 if (rect.right > window.innerWidth)
                     popup.style.left = Math.max(0, window.innerWidth - rect.width) + scrollLeft + 'px';
@@ -32,11 +43,36 @@
             var R = window.Radzen;
             if (!R || typeof R.openPopup !== 'function' || R.__lcClampPatched) return !!(R && R.__lcClampPatched);
             var original = R.openPopup;
+            var observer = typeof ResizeObserver === 'function'
+                ? new ResizeObserver(function (entries) {
+                    entries.forEach(function (entry) {
+                        // A removed popup (its component disposed) reports one last resize to zero; let it go
+                        if (!entry.target.isConnected) { observer.unobserve(entry.target); entry.target.__lcObserved = false; return; }
+                        if (entry.target.__lcClamp) { try { clamp(entry.target.id); } catch (e) { } }
+                    });
+                })
+                : null;
             R.openPopup = function (parent, id, syncWidth, position) {
                 var result = original.apply(this, arguments);
+                var popup = document.getElementById(id);
+                if (popup) {
+                    popup.__lcClamp = !position;
+                    if (observer && !popup.__lcObserved) { observer.observe(popup); popup.__lcObserved = true; }
+                }
                 if (!position) { try { clamp(id); } catch (e) { } }
                 return result;
             };
+            // Radzen's own content observer re-anchors a resized popup under its trigger (top only, no
+            // clamp), after ours has run, so clamp again after it
+            if (typeof R.repositionPopup === 'function') {
+                var reposition = R.repositionPopup;
+                R.repositionPopup = function (parent, id) {
+                    var result = reposition.apply(this, arguments);
+                    var popup = document.getElementById(id);
+                    if (popup && popup.__lcClamp) { try { clamp(id); } catch (e) { } }
+                    return result;
+                };
+            }
             R.__lcClampPatched = true;
             return true;
         }

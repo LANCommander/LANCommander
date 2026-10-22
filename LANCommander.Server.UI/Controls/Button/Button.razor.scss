@@ -127,6 +127,15 @@ a.lc-button {
     }
 }
 
+// Success alone, likewise, with success text (Start)
+.lc-button.rz-button.lc-button-success {
+    &,
+    &:not(.rz-state-disabled):hover,
+    &:not(.rz-state-disabled):active {
+        color: var(--lc-success-text-color);
+    }
+}
+
 // Solid fills (primary, danger) get only the lit top edge, brighter since it sits on colour
 .lc-button.rz-variant-filled {
     --rz-button-shadow: var(--lc-inset-highlight-solid);
@@ -156,6 +165,11 @@ a.lc-button {
     &.rz-danger,
     &.rz-danger:not(.rz-state-disabled):hover {
         color: var(--lc-danger-text-color);
+    }
+
+    &.rz-success,
+    &.rz-success:not(.rz-state-disabled):hover {
+        color: var(--lc-success-text-color);
     }
 }
 

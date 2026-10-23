@@ -2,6 +2,8 @@
 
   <ItemGroup>
     <PackageReference Include="Emzi0767.NtfsDataStreams" />
+    <!-- Starts LAN games under the Interposer so they can join the server's network relay -->
+    <PackageReference Include="LANCommander.Interposer" />
     <PackageReference Include="System.IdentityModel.Tokens.Jwt" />
   </ItemGroup>
 

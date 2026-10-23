@@ -249,6 +249,53 @@ user satisfies both the entry's own `Access` and the policy of the page it point
 navigation routes must live under `/Plugins/`; duplicate navigation ids and routes are rejected rather
 than rendered ambiguously.
 
+## Server API endpoints
+
+A server plugin can add HTTP endpoints, for example for launchers or scripts to call, by registering an
+[`IServerEndpointExtension`](/Plugins/API%20Reference#iserverendpointextension). The server maps them
+under `/api/Plugins/{RoutePrefix}`, so they cannot collide with the server's own API or with another
+plugin's endpoints, and callers authenticate the same way as for the rest of the API: a launcher's
+bearer token or a signed-in browser session.
+
+```csharp
+public sealed class MyEndpoints : IServerEndpointExtension
+{
+    public string RoutePrefix => "MyPlugin";
+
+    public PluginAccessPolicy Access => PluginAccessPolicy.AuthenticatedUser;
+
+    public void MapEndpoints(IEndpointRouteBuilder endpoints)
+    {
+        // GET /api/Plugins/MyPlugin/Status
+        endpoints.MapGet("/Status", (MyStatusService status) => status.Get());
+
+        // POST /api/Plugins/MyPlugin/Things, as the signed-in user
+        endpoints.MapPost("/Things", (CreateThing request, ClaimsPrincipal user, MyThingService things) =>
+            things.Create(request, user.Identity!.Name!));
+    }
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IServerEndpointExtension, MyEndpoints>();
+}
+```
+
+`MapEndpoints` receives a route group already rooted at the plugin's prefix, so routes are relative
+to it. Handlers are ordinary ASP.NET Core minimal API handlers: parameters are bound from the route,
+query, body and the server's services.
+
+Access works as it does for pages. The server applies `Access` to every endpoint the extension maps,
+before the handler runs, and it defaults to administrators only, so an extension that declares
+nothing has locked endpoints rather than open ones. Within the group, `RequireAuthorization` narrows
+a single endpoint further, and `AllowAnonymous` opens one to callers who are not signed in; both are
+visible in the plugin's source.
+
+A route prefix is a single path segment of letters, digits, `.`, `-` and `_`, starting with a letter
+or digit. Extensions with an invalid prefix are ignored, and so are all extensions sharing a prefix,
+ignoring case, with a warning in the server log. An extension that throws while mapping does not stop
+the server or other plugins from starting.
+
 ## Importing generated game packages
 
 The SDK `GameClient.ImportAsync` method is intended for remote clients: it uploads a package over

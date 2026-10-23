@@ -49,6 +49,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<PlaySessionClient>();
         services.AddSingleton<ProfileClient>();
         services.AddSingleton<RedistributableClient>();
+        services.AddSingleton<RelayClient>();
         services.AddSingleton<SaveClient>();
         services.AddSingleton<ScriptClient>();
         services.AddSingleton<ServerClient>();

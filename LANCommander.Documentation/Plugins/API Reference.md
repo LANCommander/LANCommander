@@ -669,4 +669,3 @@ The kind of requirement a `PluginAccessPolicy` enforces.
 | `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
 | `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
 | `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
-

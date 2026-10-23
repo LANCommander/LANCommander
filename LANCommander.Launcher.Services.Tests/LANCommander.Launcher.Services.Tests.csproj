@@ -19,6 +19,8 @@
     <PackageReference Include="Moq" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
+    <!-- A real relay server for games started through RelayGameProcessStarter to join -->
+    <PackageReference Include="LANCommander.Interposer.Relay" />
   </ItemGroup>
 
   <ItemGroup>

@@ -3,7 +3,9 @@ using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Import.Factories;
 using LANCommander.Launcher.Services.Import.Importers;
 using LANCommander.Launcher.Services.Packaging;
+using LANCommander.Launcher.Services.Relay;
 using LANCommander.Launcher.Services.ScriptDebugging;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.PowerShell.Debugging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -54,6 +56,10 @@ namespace LANCommander.Launcher.Services.Extensions
                 services.AddSingleton<IPackagingSessionService, UnsupportedPackagingSessionService>();
             }
             #endregion
+
+            // Games with LAN multiplayer join the server's network relay, through the Interposer, which is Windows only
+            if (OperatingSystem.IsWindows())
+                services.AddSingleton<IGameProcessStarter, RelayGameProcessStarter>();
 
             services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
 

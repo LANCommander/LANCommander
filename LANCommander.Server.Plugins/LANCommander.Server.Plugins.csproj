@@ -8,7 +8,7 @@
     <NoWarn>$(NoWarn);CS1591</NoWarn>
     <Authors>pathartl</Authors>
     <Company>LANCommander</Company>
-    <Description>The contracts a LANCommander server plugin builds against: navigation, routes, page access, and the services the server provides to plugins</Description>
+    <Description>The contracts a LANCommander server plugin builds against: navigation, routes, page access, API endpoints, and the services the server provides to plugins</Description>
     <PackageProjectUrl>https://github.com/LANCommander/LANCommander</PackageProjectUrl>
     <PackageIcon>package-icon.png</PackageIcon>
     <PackageReadmeFile>README.md</PackageReadmeFile>
@@ -17,6 +17,11 @@
     <PackageTags>lancommander;plugins</PackageTags>
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- For IServerEndpointExtension. The server is an ASP.NET Core app, so a plugin gains nothing it did not already have. -->
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />

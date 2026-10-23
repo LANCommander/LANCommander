@@ -12,6 +12,7 @@ using YamlDotNet.Serialization;
 using YamlDotNet.Serialization.NamingConventions;
 using System.Threading;
 using System.Threading.Tasks;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Services;
 
@@ -23,6 +24,12 @@ namespace LANCommander.SDK
         private Process Process;
 
         private Dictionary<string, string> Variables { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// Starts game actions in place of <see cref="System.Diagnostics.Process.Start()"/> when it
+        /// accepts; see <see cref="IGameProcessStarter"/>. Null starts every game directly.
+        /// </summary>
+        public IGameProcessStarter GameProcessStarter { get; init; }
 
         public event DataReceivedEventHandler? OutputDataReceived;
         public event DataReceivedEventHandler? ErrorDataReceived;
@@ -222,11 +229,46 @@ namespace LANCommander.SDK
             logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
             logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
-            bool exited = false;
+            var started = await StartWithStarterAsync(installDirectory, gameId, manifest, action, cancellationToken);
 
-            Process.Start();
+            try
+            {
+                if (started != null)
+                    Process = started.Process;
+                else
+                    Process.Start();
 
-            await Process.WaitForAllExitAsync(cancellationToken);
+                await Process.WaitForAllExitAsync(cancellationToken);
+            }
+            finally
+            {
+                started?.Dispose();
+            }
+        }
+
+        /// <summary>
+        /// Lets <see cref="GameProcessStarter"/> start the game. Null when there is none, it declines,
+        /// or it fails; the game is then started directly, so a starter can never stop a game from
+        /// running.
+        /// </summary>
+        private async Task<StartedGameProcess> StartWithStarterAsync(
+            string installDirectory, Guid gameId, Models.Manifest.Game manifest, Models.Manifest.Action action, CancellationToken cancellationToken)
+        {
+            if (GameProcessStarter == null)
+                return null;
+
+            try
+            {
+                return await GameProcessStarter.StartAsync(
+                    new GameProcessStartContext(Process.StartInfo, gameId, installDirectory, manifest, action),
+                    cancellationToken);
+            }
+            catch (Exception ex) when (ex is not OperationCanceledException)
+            {
+                logger?.LogError(ex, "Could not start game {GameId} through {Starter}; starting it directly", gameId, GameProcessStarter.GetType().Name);
+
+                return null;
+            }
         }
 
         private void ApplyCompatibilityOptions(Models.Manifest.Game manifest, Models.Manifest.Action action, string installDirectory)

@@ -509,6 +509,24 @@ Imports LCX packages through the server's own import pipeline, the same one the 
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
 
+### IServerEndpointExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerEndpointExtension`
+
+Contributes HTTP endpoints to the server's API, for example for a launcher or another client to call. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string RoutePrefix { get; }`
+  - The path segment the endpoints are mapped under: `/api/Plugins/{RoutePrefix}`. Letters, digits, `.`, `-` and `_`, starting with a letter or digit. Must be unique among plugins, ignoring case; extensions that share a prefix are all ignored.
+- `PluginAccessPolicy Access { get; }`
+  - Who may call the endpoints. Defaults to administrators only.
+
+**Methods**
+
+- `void MapEndpoints(IEndpointRouteBuilder endpoints)`
+  - Maps the endpoints. `endpoints` is already rooted at `/api/Plugins/{RoutePrefix}` and carries the `Access` requirement, so routes are given relative to it. Called once, when the server starts.
+
 ### IServerNavigationExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
@@ -669,3 +687,4 @@ The kind of requirement a `PluginAccessPolicy` enforces.
 | `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
 | `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
 | `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
+

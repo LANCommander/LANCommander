@@ -90,9 +90,6 @@ namespace LANCommander.SDK.Services
         {
             var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
 
-            string tempFile;
-            string tempLocation = string.Empty;
-
             if (manifest != null)
             {
                 FileInfo destination;
@@ -126,130 +123,152 @@ namespace LANCommander.SDK.Services
 
                 logger?.LogDebug("Save archive downloaded to {SaveTempLocation} for game {GameId}", destination, gameId);
 
-                tempFile = destination.FullName;
-
-                // Go into the archive and extract the files to the correct locations
                 try
                 {
-                    tempLocation = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
-
-                    Directory.CreateDirectory(tempLocation);
-
-                    bool success = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(200), false, () =>
-                    {
-                        logger?.LogTrace("Extracting save archive to temporary location {TempPath}", tempLocation);
-
-                        ExtractFilesFromZip(tempFile, tempLocation);
-
-                        return true;
-                    });
-
-                    if (!success)
-                        throw new ExtractionException("Could not extract the save archive. Is the file locked?");
-
-                    manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(tempLocation);
-
-                    #region Move files
-                    var tempLocationFilePath = "Files";
-
-                    // Legacy support
-                    if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
-                        tempLocationFilePath = "Saves";
-
-                    foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File && EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)))
-                    {
-                        var entries = GetFileSavePathEntries(savePath, installDirectory) ?? [];
-
-                        logger?.LogTrace("Processing save path {SavePathId} with {EntryCount} entries", savePath.Id, entries.Count());
-
-                        foreach (var entry in entries)
-                        {
-                            var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
-                            var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
-
-                            if (File.Exists(entryPath))
-                            {
-                                var destinationDirectory = Path.GetDirectoryName(destinationPath);
-
-                                Directory.CreateDirectory(destinationDirectory);
-
-                                // Handle individual files that were saved as an entry in the path
-                                if (File.Exists(destinationPath))
-                                    File.Delete(destinationPath);
-
-                                File.Move(entryPath, destinationPath);
-
-                                logger?.LogTrace("Restored save file {ArchivePath} to {DestinationPath}", entry.ArchivePath, destinationPath);
-                            }
-                            else if (Directory.Exists(entryPath))
-                            {
-                                // Handle directories that were saved as an entry in the path
-                                var entryFiles = Directory.GetFiles(entryPath, "*", SearchOption.AllDirectories);
-
-                                foreach (var entryFile in entryFiles)
-                                {
-                                    var fileDestination = entryFile.Replace(entryPath, destinationPath);
-
-                                    var destinationDirectory = Path.GetDirectoryName(fileDestination);
-
-                                    Directory.CreateDirectory(destinationDirectory);
-
-                                    if (File.Exists(fileDestination))
-                                        File.Delete(fileDestination);
-
-                                    File.Move(entryFile, fileDestination);
-                                }
-
-                                logger?.LogTrace("Restored save directory {ArchivePath} ({FileCount} files) to {DestinationPath}", entry.ArchivePath, entryFiles.Length, destinationPath);
-                            }
-                            else
-                            {
-                                logger?.LogWarning("Save entry {ArchivePath} not found in archive at {EntryPath}", entry.ArchivePath, entryPath);
-                            }
-                        }
-                    }
-                    #endregion
-
-                    #region Handle registry importing
-                    var registryImportFilePaths = Directory.GetFiles(tempLocation, "_registry*.reg");
-                    var importer = new RegistryImportUtility();
-
-                    foreach (var registryImportFilePath in registryImportFilePaths)
-                    {
-                        var registryImportFileContents = File.ReadAllText(registryImportFilePath);
-
-                        var script = powerShellScriptFactory.Create(Enums.ScriptType.SaveDownload);
-
-                        string adminArgument = string.Empty;
-                        if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
-                        {
-                            script.AsAdmin();
-                            adminArgument = " -Verb RunAs";
-                        }
-
-                        script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
-
-                        if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
-                        {
-                            script.EnableDebug();
-                        }
-
-                        await script.ExecuteAsync<int>();
-                    }
-                    #endregion
-
-                    // Clean up temp files
-                    Directory.Delete(tempLocation, true);
-                }
-                catch (Exception ex)
-                {
-                    logger?.LogError(ex, "Failed to extract save files for game {GameId}", gameId);
+                    await RestoreAsync(destination.FullName, installDirectory, gameId);
                 }
                 finally
                 {
-                    if (Directory.Exists(tempLocation))
-                        Directory.Delete(tempLocation, true);
+                    if (File.Exists(destination.FullName))
+                        File.Delete(destination.FullName);
                 }
+            }
+        }
+
+        /// <summary>
+        /// Extracts a save archive and moves its entries to their locations on disk
+        /// </summary>
+        /// <param name="archivePath">Path to the save archive (ZIP)</param>
+        /// <param name="installDirectory">Install directory of the game the save belongs to</param>
+        /// <param name="gameId">ID of the game, used for logging</param>
+        internal async Task RestoreAsync(string archivePath, string installDirectory, Guid gameId)
+        {
+            string tempLocation = string.Empty;
+
+            // Go into the archive and extract the files to the correct locations
+            try
+            {
+                tempLocation = Path.Combine(Path.GetTempPath(), Guid.NewGuid().ToString());
+
+                Directory.CreateDirectory(tempLocation);
+
+                bool success = RetryHelper.RetryOnException(10, TimeSpan.FromMilliseconds(200), false, () =>
+                {
+                    logger?.LogTrace("Extracting save archive to temporary location {TempPath}", tempLocation);
+
+                    ExtractFilesFromZip(archivePath, tempLocation);
+
+                    return true;
+                });
+
+                if (!success)
+                    throw new ExtractionException("Could not extract the save archive. Is the file locked?");
+
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(tempLocation);
+
+                #region Move files
+                var tempLocationFilePath = "Files";
+
+                // Legacy support
+                if (!Directory.Exists(Path.Combine(tempLocation, tempLocationFilePath)))
+                    tempLocationFilePath = "Saves";
+
+                foreach (var savePath in manifest.SavePaths.Where(sp => sp.Type == Enums.SavePathType.File && EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)))
+                {
+                    // Regex matches are resolved from what was packed, as the files may not exist locally yet
+                    var entries = savePath.IsRegex
+                        ? GetArchivedSavePathEntries(savePath, Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString()), installDirectory)
+                        : GetFileSavePathEntries(savePath, installDirectory) ?? [];
+
+                    logger?.LogTrace("Processing save path {SavePathId} with {EntryCount} entries", savePath.Id, entries.Count());
+
+                    foreach (var entry in entries)
+                    {
+                        var entryPath = Path.Combine(tempLocation, tempLocationFilePath, savePath.Id.ToString(), entry.ArchivePath.Replace('/', Path.DirectorySeparatorChar));
+                        var destinationPath = entry.ActualPath.ExpandEnvironmentVariables(installDirectory);
+
+                        if (File.Exists(entryPath))
+                        {
+                            var destinationDirectory = Path.GetDirectoryName(destinationPath);
+
+                            Directory.CreateDirectory(destinationDirectory);
+
+                            // Handle individual files that were saved as an entry in the path
+                            if (File.Exists(destinationPath))
+                                File.Delete(destinationPath);
+
+                            File.Move(entryPath, destinationPath);
+
+                            logger?.LogTrace("Restored save file {ArchivePath} to {DestinationPath}", entry.ArchivePath, destinationPath);
+                        }
+                        else if (Directory.Exists(entryPath))
+                        {
+                            // Handle directories that were saved as an entry in the path
+                            var entryFiles = Directory.GetFiles(entryPath, "*", SearchOption.AllDirectories);
+
+                            foreach (var entryFile in entryFiles)
+                            {
+                                var fileDestination = entryFile.Replace(entryPath, destinationPath);
+
+                                var destinationDirectory = Path.GetDirectoryName(fileDestination);
+
+                                Directory.CreateDirectory(destinationDirectory);
+
+                                if (File.Exists(fileDestination))
+                                    File.Delete(fileDestination);
+
+                                File.Move(entryFile, fileDestination);
+                            }
+
+                            logger?.LogTrace("Restored save directory {ArchivePath} ({FileCount} files) to {DestinationPath}", entry.ArchivePath, entryFiles.Length, destinationPath);
+                        }
+                        else
+                        {
+                            logger?.LogWarning("Save entry {ArchivePath} not found in archive at {EntryPath}", entry.ArchivePath, entryPath);
+                        }
+                    }
+                }
+                #endregion
+
+                #region Handle registry importing
+                var registryImportFilePaths = Directory.GetFiles(tempLocation, "_registry*.reg");
+                var importer = new RegistryImportUtility();
+
+                foreach (var registryImportFilePath in registryImportFilePaths)
+                {
+                    var registryImportFileContents = File.ReadAllText(registryImportFilePath);
+
+                    var script = powerShellScriptFactory.Create(Enums.ScriptType.SaveDownload);
+
+                    string adminArgument = string.Empty;
+                    if (registryImportFileContents.Contains("HKEY_LOCAL_MACHINE"))
+                    {
+                        script.AsAdmin();
+                        adminArgument = " -Verb RunAs";
+                    }
+
+                    script.UseInline($"Start-Process regedit.exe {adminArgument} -ArgumentList \"/s\", \"{registryImportFilePath}\"");
+
+                    if (settingsProvider.CurrentValue.Debug.EnableScriptDebugging)
+                    {
+                        script.EnableDebug();
+                    }
+
+                    await script.ExecuteAsync<int>();
+                }
+                #endregion
+
+                // Clean up temp files
+                Directory.Delete(tempLocation, true);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Failed to extract save files for game {GameId}", gameId);
+            }
+            finally
+            {
+                if (Directory.Exists(tempLocation))
+                    Directory.Delete(tempLocation, true);
             }
         }
 
@@ -262,7 +281,15 @@ namespace LANCommander.SDK.Services
 
                 await savePacker.AddManifestAsync(manifest);
 
-                return await savePacker.PackAsync();
+                // The packer owns its stream and disposes it, so hand back a copy
+                var packed = await savePacker.PackAsync();
+                var stream = new MemoryStream();
+
+                await packed.CopyToAsync(stream);
+
+                stream.Position = 0;
+
+                return stream;
             }
         }
 
@@ -314,35 +341,29 @@ namespace LANCommander.SDK.Services
                 .DeleteAsync<bool>();
         }
 
+        /// <summary>
+        /// Gets the entries for a file save path as they exist on the local disk. Regex save paths only
+        /// return files that currently exist, so use the archive's contents when restoring them.
+        /// </summary>
         public IEnumerable<SavePathEntry> GetFileSavePathEntries(SDK.Models.Manifest.SavePath savePath, string installDirectory)
         {
             IEnumerable<string> localPaths;
 
+            var workingDirectory = GetLocalPath(SavePacker.GetWorkingDirectory(savePath.WorkingDirectory), installDirectory);
+
             if (savePath.IsRegex)
             {
-                var workingDirectory = GetLocalPath(savePath.WorkingDirectory, installDirectory);
-                var pattern = savePath.Path;
+                var regex = new Regex(savePath.Path);
 
-                if (string.IsNullOrWhiteSpace(workingDirectory))
-                    workingDirectory = installDirectory;
-
-                var regex = new Regex(pattern);
-
-                localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
-                    .Where(p =>
-                    {
-                        var relativePath = p.Substring(workingDirectory.Length)
-                            .TrimStart(Path.DirectorySeparatorChar)
-                            .Replace('\\', '/');
-
-                        return regex.IsMatch(relativePath);
-                    })
-                    .ToList();
+                if (Directory.Exists(workingDirectory))
+                    localPaths = Directory.GetFiles(workingDirectory, "*", SearchOption.AllDirectories)
+                        .Where(p => regex.IsMatch(SavePacker.GetArchiveEntryName(p, workingDirectory, installDirectory)))
+                        .ToList();
+                else
+                    localPaths = [];
             }
             else
             {
-                var workingDirectory = GetLocalPath(savePath.WorkingDirectory, installDirectory);
-
                 var localPath = Path.Combine(workingDirectory, GetLocalPath(savePath.Path, installDirectory));
 
                 localPaths = new[] { localPath };
@@ -353,19 +374,39 @@ namespace LANCommander.SDK.Services
             foreach (var localPath in localPaths)
             {
                 var actualPath = localPath.DeflateEnvironmentVariables(installDirectory);
-                var workingDirectory = savePath.WorkingDirectory.DeflateEnvironmentVariables(installDirectory);
-                var archivePath = actualPath.Replace(workingDirectory, "").TrimStart(Path.DirectorySeparatorChar);
 
                 entries.Add(new SavePathEntry
                 {
-                    ArchivePath = archivePath.Replace(Path.DirectorySeparatorChar, '/'),
+                    ArchivePath = SavePacker.GetArchiveEntryName(localPath, workingDirectory, installDirectory),
                     ActualPath = actualPath.Replace(Path.DirectorySeparatorChar, '/')
                 });
-
-                savePath.Entries = entries;
             }
 
+            savePath.Entries = entries;
+
             return entries;
+        }
+
+        private IEnumerable<SavePathEntry> GetArchivedSavePathEntries(SDK.Models.Manifest.SavePath savePath, string archiveDirectory, string installDirectory)
+        {
+            if (!Directory.Exists(archiveDirectory))
+                return [];
+
+            var workingDirectory = GetLocalPath(SavePacker.GetWorkingDirectory(savePath.WorkingDirectory), installDirectory);
+
+            return Directory.GetFiles(archiveDirectory, "*", SearchOption.AllDirectories)
+                .Select(file =>
+                {
+                    var archivePath = Path.GetRelativePath(archiveDirectory, file).Replace('\\', '/');
+                    var localPath = Path.Combine(workingDirectory, GetLocalPath(archivePath, installDirectory));
+
+                    return new SavePathEntry
+                    {
+                        ArchivePath = archivePath,
+                        ActualPath = localPath.DeflateEnvironmentVariables(installDirectory).Replace(Path.DirectorySeparatorChar, '/'),
+                    };
+                })
+                .ToList();
         }
 
         public string GetLocalPath(string path, string installDirectory)

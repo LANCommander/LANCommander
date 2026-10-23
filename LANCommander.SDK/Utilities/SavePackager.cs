@@ -112,16 +112,59 @@ public class SavePacker : IDisposable
 
     private void AddEntriesFromPath(SDK.Models.Manifest.SavePath savePath)
     {
+        var workingDirectory = GetWorkingDirectory(savePath.WorkingDirectory);
+
         if (savePath.IsRegex)
-            AddEntriesFromFilePathPattern(savePath.Id, savePath.Path, savePath.WorkingDirectory);
+            AddEntriesFromFilePathPattern(savePath.Id, savePath.Path, workingDirectory);
         else
-            AddEntriesFromFilePath(savePath.Id, savePath.Path, savePath.WorkingDirectory);
+            AddEntriesFromFilePath(savePath.Id, savePath.Path, workingDirectory);
+    }
+
+    /// <summary>
+    /// Save paths without a working directory are relative to the install directory
+    /// </summary>
+    internal static string GetWorkingDirectory(string workingDirectory)
+    {
+        return string.IsNullOrWhiteSpace(workingDirectory) ? "{InstallDir}" : workingDirectory;
+    }
+
+    /// <summary>
+    /// Gets the name of a file's entry in the archive (under Files/{savePathId}/). Files within the working
+    /// directory are stored relative to it, anything else is stored by its deflated full path.
+    /// </summary>
+    internal static string GetArchiveEntryName(string localPath, string localWorkingDirectory, string installDirectory)
+    {
+        var relativePath = Path.GetRelativePath(localWorkingDirectory, localPath);
+
+        if (relativePath == ".")
+            return string.Empty;
+
+        if (relativePath != ".." && !relativePath.StartsWith(".." + Path.DirectorySeparatorChar) && !Path.IsPathRooted(relativePath))
+            return relativePath.Replace('\\', '/');
+
+        return localPath
+            .DeflateEnvironmentVariables(installDirectory)
+            .Replace('\\', '/')
+            .TrimStart('/');
+    }
+
+    /// <summary>
+    /// Expands variables and normalizes separators, as save paths may have been written for another OS
+    /// </summary>
+    private string GetLocalPath(string path)
+    {
+        var localPath = path.ExpandEnvironmentVariables(_installDirectory);
+
+        if (Path.DirectorySeparatorChar == '/')
+            return localPath.Replace('\\', Path.DirectorySeparatorChar);
+
+        return localPath.Replace('/', Path.DirectorySeparatorChar);
     }
 
     private void AddEntriesFromFilePath(Guid savePathId, string path, string workingDirectory)
     {
-        var absoluteLocalWorkingDirectory = workingDirectory.ExpandEnvironmentVariables(_installDirectory);
-        var absoluteLocalPath = path.ExpandEnvironmentVariables(_installDirectory);
+        var absoluteLocalWorkingDirectory = GetLocalPath(workingDirectory);
+        var absoluteLocalPath = GetLocalPath(path);
         var absoluteFullLocalPath = Path.Combine(absoluteLocalWorkingDirectory, absoluteLocalPath);
 
         var archiveBaseFolder = $"Files/{savePathId}/";
@@ -129,65 +172,36 @@ public class SavePacker : IDisposable
         {
             foreach (var file in Directory.GetFiles(absoluteFullLocalPath, "*", SearchOption.AllDirectories))
             {
-                var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(file, absoluteLocalWorkingDirectory).TrimStart('/')}";
+                var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(file, absoluteLocalWorkingDirectory, _installDirectory)}";
                 _archive.AddEntry(archivePath, file);
             }
         }
         else if (File.Exists(absoluteFullLocalPath))
         {
-            var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory).TrimStart('/')}";
+            var archivePath = $"{archiveBaseFolder}{GetArchiveEntryName(absoluteFullLocalPath, absoluteLocalWorkingDirectory, _installDirectory)}";
             _archive.AddEntry(archivePath, absoluteFullLocalPath);
         }
     }
 
     private void AddEntriesFromFilePathPattern(Guid savePathId, string pathPattern, string workingDirectory)
     {
-        var absoluteLocalWorkingDirectory = workingDirectory.ExpandEnvironmentVariables(_installDirectory);
-        
-        if (string.IsNullOrWhiteSpace(workingDirectory))
-            absoluteLocalWorkingDirectory = _installDirectory;
+        var absoluteLocalWorkingDirectory = GetLocalPath(workingDirectory);
+
+        if (!Directory.Exists(absoluteLocalWorkingDirectory))
+            return;
 
         var regex = new Regex(pathPattern);
 
+        // Patterns match against the path relative to the working directory, using / as the separator
         var matchedFiles = Directory
-            .GetFiles(absoluteLocalWorkingDirectory.Replace('/', Path.DirectorySeparatorChar), "*", SearchOption.AllDirectories)
-            .Where(f =>
-            {
-                var relativePath = f[absoluteLocalWorkingDirectory.Length..]
-                    .TrimStart(Path.DirectorySeparatorChar)
-                    .Replace('\\', '/');
-
-                return regex.IsMatch(relativePath);
-            })
+            .GetFiles(absoluteLocalWorkingDirectory, "*", SearchOption.AllDirectories)
+            .Where(f => regex.IsMatch(GetArchiveEntryName(f, absoluteLocalWorkingDirectory, _installDirectory)))
             .ToList();
 
         foreach (var file in matchedFiles)
         {
             AddEntriesFromFilePath(savePathId, file, workingDirectory);
         }
-    }
-
-    private string SanitizeLocalPathNameForPacking(string filePath)
-    {
-        return filePath
-            .DeflateEnvironmentVariables(_installDirectory)
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .Replace('\\', '/');
-    }
-
-    private string GetArchiveEntryName(string filePath, string workingDirectory)
-    {
-        var actualPath = SanitizeLocalPathNameForPacking(filePath).TrimStart('/');
-        
-        workingDirectory = workingDirectory
-            .DeflateEnvironmentVariables(_installDirectory)
-            .Replace(Path.DirectorySeparatorChar, '/')
-            .TrimStart('/');
-
-        if (actualPath.StartsWith(workingDirectory))
-            return actualPath.Substring(workingDirectory.Length);
-        else
-            return actualPath;
     }
 
     public void Dispose()

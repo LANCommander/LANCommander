@@ -200,6 +200,35 @@ This cmdlet can be useful if you have a game that might require a persistent ID 
 Get-UserCustomField -Name "SteamId"
 ```
 
+## `Get-LocalGame`
+Lists the games in the launcher's local library, including whether and where each one is installed.
+
+### Syntax
+```powershell
+Get-LocalGame
+    [-Id <Guid[]>]
+    [-Title <string>]
+    [-Installed]
+```
+
+### Description
+Each result has the game's `Id`, `Title`, `SortTitle`, `Type`, `BaseGameId`, `Installed`, `InstallDirectory`, `InstalledVersion`, `InstalledVersionId`, `InstalledOn` and `LatestVersion`. `-Title` supports wildcards and is case-insensitive, and `-Id` can be bound from the pipeline, so `$GameManifest | Get-LocalGame` returns the current game.
+
+The data comes from the client running the script, so this cmdlet only works in scripts run by the launcher. Run anywhere else, it writes an error and returns nothing.
+
+### Example
+```powershell
+# Find where another game is installed
+$quake = Get-LocalGame -Title "Quake III Arena" -Installed
+
+if ($quake) {
+    Copy-Item "$InstallDirectory\maps\*" "$($quake.InstallDirectory)\baseq3\" -Recurse
+}
+
+# List every installed game
+Get-LocalGame -Installed | Select-Object Title, InstallDirectory
+```
+
 ## `Get-RedistributableOptions`
 Retrieves the resolved options for a redistributable assigned to a game.
 

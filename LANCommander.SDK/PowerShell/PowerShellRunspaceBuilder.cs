@@ -166,6 +166,12 @@ namespace LANCommander.SDK.PowerShell
                 runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.ProfileClientKey, profileClient);
             }
 
+            var localLibraryProvider = _serviceProvider.GetService<ILocalLibraryProvider>();
+            if (localLibraryProvider is not null)
+            {
+                runspace.SessionStateProxy.SetVariable(ScriptServicesProvider.LocalLibraryProviderKey, localLibraryProvider);
+            }
+
             // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
         }
 

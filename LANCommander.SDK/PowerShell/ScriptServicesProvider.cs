@@ -1,5 +1,6 @@
 using System;
 using System.Management.Automation;
+using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Services;
 
@@ -29,6 +30,11 @@ public static class ScriptServicesProvider
     public const string SettingsProviderKey = "LANCommander.SDK.ISettingsProvider";
 
     /// <summary>
+    /// Session state variable holding the <see cref="Abstractions.ILocalLibraryProvider"/> for the current script.
+    /// </summary>
+    public const string LocalLibraryProviderKey = "LANCommander.SDK.ILocalLibraryProvider";
+
+    /// <summary>
     /// Gets the profile client for the current script, or throws if the script is not running in a
     /// LANCommander context (for example, a bare runspace with no server connection).
     /// </summary>
@@ -40,5 +46,19 @@ public static class ScriptServicesProvider
             throw new InvalidOperationException("ProfileClient not available in session state. This cmdlet must be run within a LANCommander script context.");
 
         return profileClient;
+    }
+
+    /// <summary>
+    /// Gets the local library provider for the current script, or throws if the host running the
+    /// script has no local library (for example, the server or a bare runspace).
+    /// </summary>
+    public static ILocalLibraryProvider GetLocalLibraryProvider(SessionState sessionState)
+    {
+        var provider = sessionState?.PSVariable.GetValue(LocalLibraryProviderKey) as ILocalLibraryProvider;
+
+        if (provider is null)
+            throw new InvalidOperationException("No local library is available in session state. This cmdlet must be run by a LANCommander client such as the launcher.");
+
+        return provider;
     }
 }

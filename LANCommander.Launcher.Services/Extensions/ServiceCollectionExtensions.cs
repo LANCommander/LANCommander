@@ -63,6 +63,9 @@ namespace LANCommander.Launcher.Services.Extensions
 
             services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
 
+            // Lets scripts query the local library (Get-LocalGame).
+            services.AddSingleton<ILocalLibraryProvider, LocalLibraryProvider>();
+
             // Script debugger windows register here; scripts for a game whose window is open attach to it.
             // An elevated child process replaces this with a broker that talks to the launcher over a pipe.
             services.AddSingleton<ScriptDebugBroker>();

@@ -53,7 +53,7 @@ public sealed class VariableExpander
         // compiled script and output capture.
         "Logo", "LANCommander.SDK.PSHostUI",
         ScriptServicesProvider.ProfileClientKey, ScriptServicesProvider.ApiRequestFactoryKey,
-        ScriptServicesProvider.SettingsProviderKey,
+        ScriptServicesProvider.SettingsProviderKey, ScriptServicesProvider.LocalLibraryProviderKey,
         DebugSession.CompiledScriptVariable, DebugSession.OutputCaptureVariable,
 
         // Punctuation automatics ($?, $^, $$) and the debugger's own plumbing. PSDebugContext in

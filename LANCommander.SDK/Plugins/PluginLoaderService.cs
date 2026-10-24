@@ -28,6 +28,9 @@ public sealed class PluginLoaderService
     /// <summary>Plugins successfully loaded and configured during discovery.</summary>
     public IReadOnlyList<PluginManifest> LoadedPlugins => _loaded.Select(p => p.Manifest).ToList();
 
+    /// <summary>The loaded plugins' entry points alongside their manifests.</summary>
+    public IReadOnlyList<LoadedPlugin> Plugins => _loaded;
+
     /// <summary>
     /// Phase 1: scans <paramref name="pluginsRoot"/> for plugins, loads each into its own
     /// <see cref="PluginLoadContext"/>, applies host + version gates, instantiates the entry point,
@@ -171,7 +174,11 @@ public sealed class PluginLoaderService
         return candidates.Length == 1 ? candidates[0] : null;
     }
 
-    internal static bool IsVersionCompatible(string hostVersion, string? min, string? max)
+    /// <summary>
+    /// Whether <paramref name="hostVersion"/> falls within the inclusive SemVer bounds a plugin declares.
+    /// A host version that cannot be parsed never blocks a plugin.
+    /// </summary>
+    public static bool IsVersionCompatible(string hostVersion, string? min, string? max)
     {
         if (!SemVersion.TryParse(hostVersion, SemVersionStyles.Any, out var host))
             return true; // can't evaluate the host version, so don't block
@@ -186,6 +193,7 @@ public sealed class PluginLoaderService
 
         return true;
     }
-
-    private readonly record struct LoadedPlugin(IPlugin Plugin, PluginManifest Manifest);
 }
+
+/// <summary>A plugin the loader has configured: its entry point and the manifest it was loaded from.</summary>
+public sealed record LoadedPlugin(IPlugin Plugin, PluginManifest Manifest);

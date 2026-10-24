@@ -1,0 +1,500 @@
+@page "/Settings/Plugins"
+@using LANCommander.Server.Endpoints
+@using LANCommander.Server.Plugins.Installation
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
+@using LANCommander.Server.UI.Pages.Settings.Plugins.Components
+@using Microsoft.Extensions.Options
+@using NuGet.Versioning
+@inject PluginPackageService PluginPackages
+@inject IOptions<Settings> Settings
+@inject SettingsProvider<Settings> SettingsProvider
+@inject NotificationService Notifications
+@inject DialogService Dialogs
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Plugins">
+    <Extra>
+        <Button Icon="IconType.ArrowCircleUp" OnClick="CheckForUpdatesAsync" Loading="_checkingForUpdates">Check for Updates</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent>
+    <Flex Vertical Gap="Gap.Large">
+        @if (_restartRequired)
+        {
+            <Alert Warning Title="Restart required">Plugins are installed, updated and removed when the server restarts.</Alert>
+        }
+
+        <Tabs SelectedIndex="_tab" SelectedIndexChanged="TabChangedAsync">
+            <Tab Title="Installed" Icon="IconType.PuzzlePiece">
+                <Flex Vertical Gap="Gap.Medium">
+                    <Upload Action="@($"{PluginPackageEndpoints.Root}/Upload")"
+                            Accept=".nupkg"
+                            Multiple
+                            Text="Click or drag .nupkg files here to install"
+                            Hint="Each package is checked when it uploads and installed when the server restarts"
+                            OnUploaded="Refresh"
+                            OnError="Refresh" />
+
+                    <Table TItem="InstalledPlugin" Items="_installed" Key="p => p.Folder" Small NoPaging EmptyText="No plugins are installed">
+                        <Columns>
+                            <TemplateColumn Title="Plugin">
+                                <Flex Vertical>
+                                    <span>
+                                        <Typography Strong>@context.Name</Typography>
+                                        @if (context.IsOfficial)
+                                        {
+                                            <OfficialPluginTag />
+                                        }
+                                    </span>
+                                    <Typography Secondary Small>@(context.EffectivePackage?.Id ?? context.Folder)</Typography>
+                                </Flex>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Version" Width="160px">
+                                @if (context.State == PluginInstallState.UpdatePending)
+                                {
+                                    <span>@context.Package?.Version → @context.PendingPackage?.Version</span>
+                                }
+                                else
+                                {
+                                    <span>@context.Version</span>
+                                }
+                            </TemplateColumn>
+                            <TemplateColumn Title="Source" Width="160px">
+                                @SourceOf(context)
+                            </TemplateColumn>
+                            <TemplateColumn Title="Status" Width="180px">
+                                @switch (context.State)
+                                {
+                                    case PluginInstallState.Loaded:
+                                        <Tag Success>Running</Tag>
+                                        break;
+                                    case PluginInstallState.NotLoaded:
+                                        <Tooltip Title="The server did not load this plugin. The server log says why.">
+                                            <Tag Danger>Not loaded</Tag>
+                                        </Tooltip>
+                                        break;
+                                    case PluginInstallState.InstallPending:
+                                        <Tag Info>Installs on restart</Tag>
+                                        break;
+                                    case PluginInstallState.UpdatePending:
+                                        <Tag Info>Updates on restart</Tag>
+                                        break;
+                                    case PluginInstallState.RemovalPending:
+                                        <Tag Warning>Removed on restart</Tag>
+                                        break;
+                                }
+                                @if (UpdateFor(context) is { } update)
+                                {
+                                    <Tag Primary>@update.Version available</Tag>
+                                }
+                            </TemplateColumn>
+                            <ActionsColumn TItem="InstalledPlugin" Width="128px">
+                                @if (UpdateFor(context) is { } update)
+                                {
+                                    <Tooltip Title="@($"Update to {update.Version}")">
+                                        <Button Text Icon="IconType.ArrowCircleUp" Loading="_busy.Contains(context.Folder)" OnClick="() => UpdateAsync(context, update)" aria-label="Update" />
+                                    </Tooltip>
+                                }
+
+                                @if (context.State is PluginInstallState.InstallPending or PluginInstallState.UpdatePending or PluginInstallState.RemovalPending)
+                                {
+                                    <Tooltip Title="Undo the change waiting for a restart">
+                                        <Button Text Icon="IconType.ArrowCounterClockwise" OnClick="() => CancelPendingAsync(context)" aria-label="Undo" />
+                                    </Tooltip>
+                                }
+
+                                @if (context.State is not (PluginInstallState.RemovalPending or PluginInstallState.InstallPending))
+                                {
+                                    <Popconfirm OnConfirm="() => UninstallAsync(context)" Title="@($"Uninstall {context.Name}? It is removed when the server restarts.")" OkText="Uninstall" Danger>
+                                        <Button Text Danger Icon="IconType.Trash" title="Uninstall" />
+                                    </Popconfirm>
+                                }
+                            </ActionsColumn>
+                        </Columns>
+                    </Table>
+                </Flex>
+            </Tab>
+
+            <Tab Title="Browse" Icon="IconType.MagnifyingGlass">
+                <Flex Vertical Gap="Gap.Medium">
+                    @if (!PluginPackages.GetEnabledSources().Any())
+                    {
+                        <Empty Title="No package sources" Description="Turn on nuget.org or add a package source to find plugins.">
+                            <Button Primary OnClick="() => _tab = SourcesTab">Package Sources</Button>
+                        </Empty>
+                    }
+                    else
+                    {
+                        <Flex Gap="Gap.Small">
+                            <TextInput @bind-Value="_term" Immediate Icon="IconType.MagnifyingGlass" Placeholder="Search for plugins, or enter a package ID" OnEnter="SearchAsync" Style="flex: 1" />
+                            <Button Primary OnClick="SearchAsync" Loading="_searching">Search</Button>
+                        </Flex>
+
+                        @foreach (var error in _searchErrors)
+                        {
+                            <Alert Warning Title="A source could not be searched">@error</Alert>
+                        }
+
+                        <Table TItem="PluginPackageListing" Items="_results" Key="p => (p.SourceUrl, p.Id)" Small NoPaging EmptyText="@(_searched ? "No plugins found" : "Searching...")">
+                            <Columns>
+                                <TemplateColumn Title="Package">
+                                    <Flex Gap="Gap.Medium" Align="Align.Center">
+                                        <Avatar Src="@context.IconUrl" Name="@context.DisplayName" Icon="IconType.PuzzlePiece" Square />
+                                        <Flex Vertical>
+                                            <span>
+                                                <Typography Strong>@context.DisplayName</Typography>
+                                                @if (context.IsOfficial)
+                                                {
+                                                    <OfficialPluginTag />
+                                                }
+                                                @if (!String.IsNullOrWhiteSpace(context.Authors))
+                                                {
+                                                    <Typography Secondary Small> by @context.Authors</Typography>
+                                                }
+                                            </span>
+                                            <Typography Secondary Small Ellipsis title="@context.Description">@(context.Description ?? context.Id)</Typography>
+                                        </Flex>
+                                    </Flex>
+                                </TemplateColumn>
+                                <BoundColumn Property="p => p.Version" Title="Latest" Width="120px" />
+                                <TemplateColumn Title="Downloads" Width="120px">
+                                    @context.DownloadCount?.ToString("N0")
+                                </TemplateColumn>
+                                <BoundColumn Property="p => p.SourceName" Title="Source" Width="140px" />
+                                <ActionsColumn TItem="PluginPackageListing" Width="140px">
+                                    @switch (InstalledVersionOf(context))
+                                    {
+                                        case null:
+                                            <Button Small Icon="IconType.DownloadSimple" OnClick="() => InstallAsync(context)">Install</Button>
+                                            break;
+                                        case var installed when IsNewer(context.Version, installed):
+                                            <Button Small Icon="IconType.ArrowCircleUp" OnClick="() => InstallAsync(context)">Update</Button>
+                                            break;
+                                        default:
+                                            <Tag Success>Installed</Tag>
+                                            break;
+                                    }
+                                </ActionsColumn>
+                            </Columns>
+                        </Table>
+                    }
+                </Flex>
+            </Tab>
+
+            <Tab Title="Sources" Icon="IconType.Database">
+                <Form Model="_sources" OnSubmit="SaveSources">
+                    <FormItem Label="nuget.org">
+                        <Typography Secondary>Search the official NuGet registry, where plugin developers publish their plugins.</Typography>
+                        <Switch @bind-Value="_useNuGetOrg" />
+                    </FormItem>
+
+                    <FormItem Label="Prerelease Versions">
+                        <Typography Secondary>Offer prerelease versions of plugins when searching and checking for updates.</Typography>
+                        @if (PluginPackages.ServerIsPrerelease)
+                        {
+                            <Switch Value="true" Disabled aria-label="Prerelease Versions" />
+                            <Typography Secondary Small>Always on while the server is a prerelease itself.</Typography>
+                        }
+                        else
+                        {
+                            <Switch @bind-Value="_includePrerelease" />
+                        }
+                    </FormItem>
+
+                    <FormItem Label="Package Sources">
+                        <Typography Secondary>Other NuGet feeds to search: a v3 service index URL (usually ending in index.json), or a folder on the server. Most private feeds take a personal access token as the password.</Typography>
+                        <Flex Vertical Gap="Gap.Small">
+                            @foreach (var source in _sources)
+                            {
+                                <Card @key="source" Small>
+                                    <Flex Vertical Gap="Gap.Small">
+                                        <Flex Gap="Gap.Small" Align="Align.Center">
+                                            <TextInput @bind-Value="source.Name" Placeholder="Name" aria-label="Name" Style="flex: 1" />
+                                            <TextInput @bind-Value="source.Url" Placeholder="https://example.com/v3/index.json" aria-label="URL" Style="flex: 3" />
+                                            <Switch @bind-Value="source.Enabled" aria-label="Enabled" />
+                                        </Flex>
+                                        <Flex Gap="Gap.Small" Align="Align.Center">
+                                            <TextInput @bind-Value="source.Username" Placeholder="Username (optional)" aria-label="Username" Style="flex: 1" />
+                                            <PasswordInput @bind-Value="source.Password" Placeholder="Password or access token (optional)" aria-label="Password" Style="flex: 1" />
+                                            <Button Small Icon="IconType.Plugs" Loading="_testing.Contains(source)" Disabled="String.IsNullOrWhiteSpace(source.Url)" OnClick="() => TestSourceAsync(source)">Test</Button>
+                                            <Button Text Small Danger Icon="IconType.X" title="Remove" OnClick="() => _sources.Remove(source)" />
+                                        </Flex>
+                                    </Flex>
+                                </Card>
+                            }
+                            <div>
+                                <Button Small Icon="IconType.Plus" OnClick="AddSource">Add Source</Button>
+                            </div>
+                        </Flex>
+                    </FormItem>
+
+                    <FormItem>
+                        <Button Primary Submit>Save</Button>
+                    </FormItem>
+                </Form>
+            </Tab>
+        </Tabs>
+    </Flex>
+</PageContent>
+
+@code {
+    const int BrowseTab = 1;
+    const int SourcesTab = 2;
+
+    int _tab;
+
+    IReadOnlyList<InstalledPlugin> _installed = [];
+    IReadOnlyList<PluginUpdate> _updates = [];
+    bool _restartRequired;
+    bool _checkingForUpdates;
+    readonly HashSet<string> _busy = [];
+
+    string? _term;
+    bool _searching;
+    bool _searched;
+    IReadOnlyList<PluginPackageListing> _results = [];
+    IReadOnlyList<string> _searchErrors = [];
+
+    bool _useNuGetOrg;
+    bool _includePrerelease;
+    List<PluginPackageSource> _sources = [];
+    readonly HashSet<PluginPackageSource> _testing = [];
+
+    protected override void OnInitialized()
+    {
+        var settings = Settings.Value.Server.Plugins;
+
+        _useNuGetOrg = settings.UseNuGetOrg;
+        _includePrerelease = settings.IncludePrerelease;
+
+        // Edited as copies, so nothing changes until Save
+        _sources = settings.Sources.Select(s => new PluginPackageSource
+        {
+            Name = s.Name,
+            Url = s.Url,
+            Enabled = s.Enabled,
+            Username = s.Username,
+            Password = s.Password,
+        }).ToList();
+
+        Refresh();
+    }
+
+    void Refresh()
+    {
+        _installed = PluginPackages.GetInstalled();
+        _restartRequired = PluginPackages.RestartRequired;
+    }
+
+    async Task TabChangedAsync(int tab)
+    {
+        _tab = tab;
+
+        if (tab == BrowseTab && !_searched && !_searching && PluginPackages.GetEnabledSources().Any())
+            await SearchAsync();
+    }
+
+    #region Installed
+
+    string SourceOf(InstalledPlugin plugin) => plugin.EffectivePackage switch
+    {
+        null => "Manual",
+        { SourceName: null } => "Uploaded",
+        var package => package.SourceName,
+    };
+
+    PluginUpdate? UpdateFor(InstalledPlugin plugin) =>
+        plugin.State is PluginInstallState.Loaded or PluginInstallState.NotLoaded
+            ? _updates.FirstOrDefault(u => u.Folder == plugin.Folder)
+            : null;
+
+    async Task CheckForUpdatesAsync()
+    {
+        _checkingForUpdates = true;
+
+        try
+        {
+            _updates = await PluginPackages.CheckForUpdatesAsync();
+
+            if (_updates.Count == 0)
+                Notifications.Success("All plugins are up to date");
+            else
+                Notifications.Info($"{_updates.Count} plugin {(_updates.Count == 1 ? "update is" : "updates are")} available");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not check for plugin updates");
+        }
+        finally
+        {
+            _checkingForUpdates = false;
+        }
+    }
+
+    async Task UpdateAsync(InstalledPlugin plugin, PluginUpdate update)
+    {
+        _busy.Add(plugin.Folder);
+
+        try
+        {
+            await PluginPackages.InstallAsync(update.SourceUrl, update.PackageId, update.Version);
+
+            Notifications.Success($"{plugin.Name} {update.Version} installs when the server restarts");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be updated");
+        }
+        finally
+        {
+            _busy.Remove(plugin.Folder);
+            Refresh();
+        }
+    }
+
+    async Task UninstallAsync(InstalledPlugin plugin)
+    {
+        try
+        {
+            await PluginPackages.UninstallAsync(plugin.Folder);
+
+            Notifications.Success($"{plugin.Name} is removed when the server restarts");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be uninstalled");
+        }
+
+        Refresh();
+    }
+
+    async Task CancelPendingAsync(InstalledPlugin plugin)
+    {
+        try
+        {
+            await PluginPackages.CancelPendingAsync(plugin.Folder);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The change could not be undone");
+        }
+
+        Refresh();
+    }
+
+    #endregion
+
+    #region Browse
+
+    async Task SearchAsync()
+    {
+        _searching = true;
+
+        try
+        {
+            var result = await PluginPackages.SearchAsync(_term);
+
+            _results = result.Packages;
+            _searchErrors = result.Errors;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not search for plugins");
+        }
+        finally
+        {
+            _searching = false;
+            _searched = true;
+        }
+    }
+
+    /// <summary>The version of a package installed, or waiting to be, in any plugin folder.</summary>
+    string? InstalledVersionOf(PluginPackageListing listing) => _installed
+        .Select(p => p.EffectivePackage)
+        .FirstOrDefault(p => p != null && p.Id.Equals(listing.Id, StringComparison.OrdinalIgnoreCase))
+        ?.Version;
+
+    static bool IsNewer(string candidate, string installed) =>
+        NuGetVersion.TryParse(candidate, out var a) && NuGetVersion.TryParse(installed, out var b) && a > b;
+
+    async Task InstallAsync(PluginPackageListing listing)
+    {
+        var result = await Dialogs.OpenAsync<PluginInstallDialog, PluginPackageListing, PluginInstallResult>(
+            "Install Plugin", listing, new DialogSettings { OkText = "Install" });
+
+        if (result == null)
+            return;
+
+        Notifications.Success($"{listing.DisplayName} {result.Package.Version} installs when the server restarts");
+
+        Refresh();
+    }
+
+    #endregion
+
+    #region Sources
+
+    void AddSource() => _sources.Add(new PluginPackageSource { Name = $"Source {_sources.Count + 1}" });
+
+    async Task TestSourceAsync(PluginPackageSource source)
+    {
+        _testing.Add(source);
+
+        try
+        {
+            await PluginPackages.TestSourceAsync(source);
+
+            Notifications.Success($"Connected to {source.Name}");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"Could not connect to {source.Name}");
+        }
+        finally
+        {
+            _testing.Remove(source);
+        }
+    }
+
+    void SaveSources()
+    {
+        try
+        {
+            foreach (var source in _sources)
+            {
+                source.Name = source.Name.Trim();
+                source.Url = source.Url.Trim();
+            }
+
+            if (_sources.Any(s => String.IsNullOrWhiteSpace(s.Url)))
+                throw new InvalidOperationException("Every package source needs a URL or folder.");
+
+            if (_sources.GroupBy(s => s.Name, StringComparer.OrdinalIgnoreCase).Any(g => g.Count() > 1))
+                throw new InvalidOperationException("Each package source needs a name of its own.");
+
+            var sources = _sources.ToList();
+
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Plugins.UseNuGetOrg = _useNuGetOrg;
+                s.Server.Plugins.IncludePrerelease = _includePrerelease;
+                s.Server.Plugins.Sources = sources;
+            });
+
+            // Sources changed, so earlier results may no longer apply
+            _searched = false;
+            _results = [];
+            _searchErrors = [];
+
+            Notifications.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The package sources could not be saved");
+        }
+    }
+
+    #endregion
+}

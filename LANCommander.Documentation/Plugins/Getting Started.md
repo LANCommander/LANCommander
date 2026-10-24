@@ -152,7 +152,85 @@ Data/
 The loader prefers an assembly named after the folder (`MyCompany.MyPlugin.dll` in the example above),
 so naming the folder after your main assembly is the most reliable convention.
 
-## 6. Verify it loaded
+Copying the folder in by hand is fine while developing. To hand a server plugin to administrators,
+package it instead (next step).
+
+## 6. Package a server plugin
+
+Administrators install server plugins from **Settings → Plugins**, either by uploading a `.nupkg` or
+by picking one from a NuGet package source: nuget.org, or a feed they add themselves. A plugin package
+is an ordinary NuGet package with two conventions:
+
+- Its `lib/net10.0/` folder **is** the drop-in folder. It holds the plugin assembly and every private
+  dependency the plugin ships. The server does not install package dependencies, so anything the plugin
+  needs beyond the host's own assemblies must be in the package.
+- It declares the `LANCommander.Plugin` package type, plus one for each host it runs on:
+  `LANCommander.Plugin.Server` and/or `LANCommander.Plugin.Launcher`, matching the `Hosts` in its
+  `[LANCommanderPlugin]` attribute. The server's Plugins page searches for `LANCommander.Plugin.Server`,
+  so a package without it can only be installed by entering its exact ID or by uploading it. The names
+  are in [`PluginPackageTypes`](/Plugins/API%20Reference#pluginpackagetypes).
+
+Add this to your plugin's project file. It lists the plugin's own assemblies in `PluginAssembly`, which
+are the same files that belong in the drop-in folder, and packs them beside the plugin assembly:
+
+```xml
+<PropertyGroup>
+  <PackageId>MyCompany.MyPlugin</PackageId>
+  <Version>1.0.0</Version>
+  <Authors>My Company</Authors>
+  <Description>What the plugin adds to a LANCommander server.</Description>
+
+  <!-- LANCommander.Plugin, plus a type per host in [LANCommanderPlugin] -->
+  <PackageType>LANCommander.Plugin;LANCommander.Plugin.Server</PackageType>
+  <!-- The package carries the plugin's dependencies itself; the host provides the rest -->
+  <SuppressDependenciesWhenPacking>true</SuppressDependenciesWhenPacking>
+  <NoWarn>$(NoWarn);NU5128</NoWarn>
+  <TargetsForTfmSpecificBuildOutput>$(TargetsForTfmSpecificBuildOutput);PackPluginAssemblies</TargetsForTfmSpecificBuildOutput>
+</PropertyGroup>
+
+<ItemGroup>
+  <!-- The plugin assembly and its private dependencies, by assembly name -->
+  <PluginAssembly Include="$(AssemblyName);Humanizer" />
+</ItemGroup>
+
+<Target Name="PackPluginAssemblies">
+  <ItemGroup>
+    <BuildOutputInPackage Include="@(PluginAssembly->'$(OutDir)%(Identity).dll')" Condition="'%(Identity)' != '$(AssemblyName)'" />
+  </ItemGroup>
+</Target>
+```
+
+Then `dotnet pack -c Release` writes the package, and `dotnet nuget push` publishes it to nuget.org or
+any other feed.
+
+The official plugins ([Steam](https://github.com/LANCommander/LANCommander.Plugins.Steam),
+[GOG](https://github.com/LANCommander/LANCommander.Plugins.GOG) and
+[Relay](https://github.com/LANCommander/LANCommander.Plugins.Relay)) pack this way through a
+`build/PluginPackage.targets` file you can copy. It also reads the package types from the built
+assembly's `[LANCommanderPlugin]` attribute, so they can't drift from `Hosts`, and their
+`.github/workflows/Release.yml` publishes to nuget.org whenever a GitHub release is published.
+
+Packages whose ID starts with `LANCommander.Plugins.` and that are owned on nuget.org by the
+[`LANCommander` organization](https://www.nuget.org/profiles/LANCommander) are the official LANCommander plugins, and the Plugins page marks them **Official**. The ID prefix
+alone proves nothing, since anyone can publish under it, and packages from other feeds or uploaded
+by hand are never marked.
+
+Prerelease versions are offered when the administrator turns them on under **Sources**, and always on
+a server that is itself a prerelease.
+
+When a package is installed, the server checks it before accepting it. It needs exactly one assembly
+with `[LANCommanderPlugin]`, a `Hosts` value that includes the server, and a `MinHostVersion` /
+`MaxHostVersion` range that covers the running server. The plugin is installed into a folder named after
+that assembly. Installs, updates and uninstalls all take effect the next time the server restarts,
+because a loaded plugin's assemblies stay loaded until then.
+
+:::note
+Put assemblies directly in `lib/net10.0/`, not in subfolders. Without a `.deps.json` the loader
+resolves a plugin's assemblies from the top of its folder only, so assemblies under subfolders such as
+`runtimes/` are not found. Other files the plugin reads itself may sit in subfolders.
+:::
+
+## 7. Verify it loaded
 
 Start the host and check the logs. A successful load emits an entry like:
 
@@ -162,7 +240,8 @@ Loaded plugin 'My Plugin' (com.mycompany.myplugin) v1.0.0 by My Company
 
 If your plugin does not appear, the logs will explain why — a missing `[LANCommanderPlugin]` attribute,
 an incompatible host version, a host it does not target, or an exception thrown during
-`ConfigureServices`. Every failure is isolated and logged rather than crashing the host.
+`ConfigureServices`. Every failure is isolated and logged rather than crashing the host. On the server,
+**Settings → Plugins** also lists the plugin, marked *Running* or *Not loaded*.
 
 ## Next steps
 

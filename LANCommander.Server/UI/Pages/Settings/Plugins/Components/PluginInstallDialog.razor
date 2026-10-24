@@ -1,0 +1,85 @@
+@using LANCommander.Server.Plugins.Installation
+@inherits Dialog<PluginPackageListing, PluginInstallResult>
+@inject PluginPackageService PluginPackages
+
+@* Picks the version of a package found on a source, and stages it to install at the next restart *@
+<Flex Vertical Gap="Gap.Medium">
+    <Flex Gap="Gap.Medium" Align="Align.Center">
+        <Avatar Src="@Options.IconUrl" Name="@Options.DisplayName" Icon="IconType.PuzzlePiece" Square Large />
+        <Flex Vertical>
+            <span>
+                <Typography Strong>@Options.DisplayName</Typography>
+                @if (Options.IsOfficial)
+                {
+                    <OfficialPluginTag />
+                }
+            </span>
+            <Typography Secondary Small>
+                @Options.Id
+                @if (!String.IsNullOrWhiteSpace(Options.Authors))
+                {
+                    <text> · by @Options.Authors</text>
+                }
+                <text> · @Options.SourceName</text>
+            </Typography>
+        </Flex>
+    </Flex>
+
+    @if (!String.IsNullOrWhiteSpace(Options.Description))
+    {
+        <Typography>@Options.Description</Typography>
+    }
+
+    @if (!String.IsNullOrWhiteSpace(Options.ProjectUrl))
+    {
+        <a href="@Options.ProjectUrl" target="_blank" rel="noopener noreferrer">Project website</a>
+    }
+
+    <Flex Vertical Gap="Gap.Small">
+        <Typography Strong>Version</Typography>
+        @if (_error != null)
+        {
+            <Alert Danger Title="The versions could not be listed">@_error</Alert>
+        }
+        else if (_versions == null)
+        {
+            <Spin />
+        }
+        else
+        {
+            <Select TValue="string" Items="_versions" @bind-Value="_version" @bind-Value:after="StateHasChanged" Searchable />
+        }
+    </Flex>
+
+    <Typography Secondary Small>The package is checked now and installed when the server restarts.</Typography>
+</Flex>
+
+@code {
+    IEnumerable<SelectItem<string>>? _versions;
+    string? _version;
+    string? _error;
+
+    protected override bool CanConfirm => _version != null;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            var versions = await PluginPackages.GetVersionsAsync(Options.SourceUrl, Options.Id);
+
+            _versions = versions.Select(v => new SelectItem<string>(v, v == Options.Version ? $"{v} (latest)" : v)).ToList();
+            _version = versions.Contains(Options.Version) ? Options.Version : versions.FirstOrDefault();
+        }
+        catch (Exception ex)
+        {
+            _error = ex.Message;
+        }
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        Result = await PluginPackages.InstallAsync(Options.SourceUrl, Options.Id, _version!);
+
+        return true;
+    }
+}

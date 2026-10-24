@@ -111,6 +111,17 @@ Assembly-level attribute that marks an assembly as a LANCommander plugin and dec
 - `PluginHost Hosts { get; set; }`
   - The hosts this plugin supports. Defaults to both server and launcher.
 
+### LoadedPlugin
+
+`record` — `LANCommander.SDK.Plugins.LoadedPlugin`
+
+A plugin the loader has configured: its entry point and the manifest it was loaded from.
+
+**Properties**
+
+- `IPlugin Plugin { get; init; }`
+- `PluginManifest Manifest { get; init; }`
+
 ### LobbyQuery
 
 `record` — `LANCommander.SDK.Plugins.LobbyQuery`
@@ -179,6 +190,8 @@ Discovers, loads, and initializes plugins from a drop-in folder. Split into two 
 
 - `IReadOnlyList<PluginManifest> LoadedPlugins { get; }`
   - Plugins successfully loaded and configured during discovery.
+- `IReadOnlyList<LoadedPlugin> Plugins { get; }`
+  - The loaded plugins' entry points alongside their manifests.
 
 **Methods**
 
@@ -186,6 +199,8 @@ Discovers, loads, and initializes plugins from a drop-in folder. Split into two 
   - Phase 1: scans `pluginsRoot` for plugins, loads each into its own `PluginLoadContext`, applies host + version gates, instantiates the entry point, and lets it register services. A failure in one plugin never aborts the batch.
 - `Task InitializeAllAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)`
   - Phase 2: invokes `InitializeAsync` for every loaded plugin, each within its own DI scope. A failure in one plugin never aborts the others.
+- `bool IsVersionCompatible(string hostVersion, string min, string max)`
+  - Whether `hostVersion` falls within the inclusive SemVer bounds a plugin declares. A host version that cannot be parsed never blocks a plugin.
 
 ### PluginManifest
 
@@ -209,6 +224,19 @@ Parsed metadata describing a discovered plugin, derived from its `LANCommanderPl
 
 - `PluginManifest FromAttribute(LANCommanderPluginAttribute attribute, Assembly assembly, string directory)`
   - Builds a manifest from an assembly-level plugin attribute.
+
+### PluginPackageTypes
+
+`class` — `LANCommander.SDK.Plugins.PluginPackageTypes`
+
+The NuGet package types a plugin package declares. Every plugin package declares `Plugin`, plus the type of each host it runs on; hosts search their package sources for their own type.
+
+**Methods**
+
+- `string For(PluginHost host)`
+  - The package type a host searches for.
+- `IReadOnlyList<string> All(PluginHost hosts)`
+  - Every package type a plugin targeting `hosts` declares.
 
 ### PluginHost
 
@@ -509,6 +537,24 @@ Imports LCX packages through the server's own import pipeline, the same one the 
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
 
+### IServerEndpointExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerEndpointExtension`
+
+Contributes HTTP endpoints to the server's API, for example for a launcher or another client to call. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string RoutePrefix { get; }`
+  - The path segment the endpoints are mapped under: `/api/Plugins/{RoutePrefix}`. Letters, digits, `.`, `-` and `_`, starting with a letter or digit. Must be unique among plugins, ignoring case; extensions that share a prefix are all ignored.
+- `PluginAccessPolicy Access { get; }`
+  - Who may call the endpoints. Defaults to administrators only.
+
+**Methods**
+
+- `void MapEndpoints(IEndpointRouteBuilder endpoints)`
+  - Maps the endpoints. `endpoints` is already rooted at `/api/Plugins/{RoutePrefix}` and carries the `Access` requirement, so routes are given relative to it. Called once, when the server starts.
+
 ### IServerNavigationExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
@@ -669,3 +715,4 @@ The kind of requirement a `PluginAccessPolicy` enforces.
 | `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
 | `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
 | `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
+

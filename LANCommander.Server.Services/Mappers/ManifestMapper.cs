@@ -120,6 +120,8 @@ namespace LANCommander.Server.Services.Mappers
         [MapProperty(nameof(LANCommander.Server.Data.Models.Game.Collections), nameof(LANCommander.SDK.Models.Manifest.Game.Collections), Use = nameof(MapCollections))]
         [MapProperty(nameof(LANCommander.Server.Data.Models.Game.Engine), nameof(LANCommander.SDK.Models.Manifest.Game.Engine), Use = nameof(EngineOrNull))]
         [MapperIgnoreTarget(nameof(LANCommander.SDK.Models.Manifest.Game.Version))]
+        // The player's own values: written by the launcher, never by the server
+        [MapperIgnoreTarget(nameof(LANCommander.SDK.Models.Manifest.Game.RedistributableOptions))]
         private partial LANCommander.SDK.Models.Manifest.Game ToManifestCore(LANCommander.Server.Data.Models.Game source);
 
         [UserMapping(Default = true)]
@@ -132,6 +134,7 @@ namespace LANCommander.Server.Services.Mappers
 
         [MapperIgnoreTarget(nameof(LANCommander.Server.Data.Models.Game.BaseGameId))]
         [MapperIgnoreTarget(nameof(LANCommander.Server.Data.Models.Game.BaseGame))]
+        [MapperIgnoreSource(nameof(LANCommander.SDK.Models.Manifest.Game.RedistributableOptions))]
         public partial LANCommander.Server.Data.Models.Game ToData(LANCommander.SDK.Models.Manifest.Game? source);
 
         // ---- Queryable projections (preserve EF server-side SELECT) ----------------------------

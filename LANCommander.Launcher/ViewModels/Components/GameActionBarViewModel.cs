@@ -16,6 +16,7 @@ using LANCommander.Launcher.Views;
 using LANCommander.SDK.Clients;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Interposer;
 using LANCommander.SDK.Abstractions;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
@@ -180,6 +181,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Shows "Update" label when update available and game is idle (not running/starting)
     /// </summary>
+    /// <summary>The running game's place on the server's network relay; hidden when it is not on it.</summary>
+    public RelayStatusViewModel Relay { get; } = new();
+
     public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting;
 
     /// <summary>
@@ -502,6 +506,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     public void Dispose()
     {
         StopRunningCheck();
+        Relay.Follow(null);
     }
 
     private void CheckRunningState()
@@ -515,6 +520,15 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
             var wasRunning = IsRunning;
             var nowRunning = gameClient.IsRunning(GameId);
+
+            // The relay block follows the game's Interposer session while it runs on the relay
+            var relaySession = nowRunning ? _serviceProvider.GetService<InterposerSessionService>()?.Get(GameId) : null;
+
+            if (relaySession?.JoinsRelay != true)
+                relaySession = null;
+
+            if (!ReferenceEquals(relaySession, Relay.Session))
+                Dispatcher.UIThread.Post(() => Relay.Follow(relaySession));
 
             // If game stopped running, reset states and refresh stats
             if (wasRunning && !nowRunning)
@@ -889,10 +903,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
                 _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
 
-                var discordAppId = localGame.ExternalIds?
-                    .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
-                    ?.ExternalId;
-                discordClient.UpdatePresence(localGame.Title, discordAppId);
+                UpdatePresence(discordClient, localGame);
 
                 // Run the game
                 await gameService.Run(localGame, primaryAction);
@@ -911,6 +922,61 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 IsStarting = false;
             }
         }
+    }
+
+    /// <summary>
+    /// Shows the game in the player's Discord activity, unless the Interposer is set to show it from
+    /// inside the game: two clients would take turns replacing each other's activity.
+    /// </summary>
+    private void UpdatePresence(DiscordClient discordClient, Data.Models.Game localGame)
+    {
+        if (_serviceProvider.GetRequiredService<InterposerLaunchService>().HandlesRichPresence(localGame))
+            return;
+
+        var discordAppId = localGame.ExternalIds?
+            .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
+            ?.ExternalId;
+
+        discordClient.UpdatePresence(localGame.Title, discordAppId);
+    }
+
+    /// <summary>
+    /// The game's Interposer settings for its Manage dialog: what the player set for it, over the
+    /// launcher's settings for every game and the server's for this one.
+    /// </summary>
+    private InterposerSettingsViewModel BuildInterposerSettings(Data.Models.Game localGame)
+    {
+        var launch = _serviceProvider.GetRequiredService<InterposerLaunchService>();
+        var options = launch.GetOptions(localGame);
+
+        InheritedOptionValue Inherit(string key)
+        {
+            // Not the schema's default: LAN games join the relay unless it is turned off in Settings
+            if (key == "NetworkRelay.Enabled")
+                return new(launch.JoinsRelayByDefault(localGame) ? "true" : "false",
+                    launch.SupportsRelay(localGame) ? "your launcher settings, for games with a LAN mode" : null);
+
+            if (options.Global.TryGetValue(key, out var global))
+                return new(global, "your launcher settings");
+
+            if (options.Server.TryGetValue(key, out var server))
+                return new(server, "the server");
+
+            return new(InterposerOptions.GetDefault(key), null);
+        }
+
+        var vm = InterposerSettingsViewModel.Build(options.Player, Inherit);
+
+        // Listing devices can take a while on a machine with many HID devices; the filters fill in when it is done
+        _ = vm.LoadDevicesAsync(_serviceProvider.GetRequiredService<Services.Platform.IDeviceCatalog>());
+
+        vm.Notice = options.HasRedistributable
+            ? "This game installs the Interposer itself. What you set here is applied over the server's settings each time you play."
+            : launch.Settings.Interposer.Enabled
+                ? "The launcher adds its own copy of the Interposer to this game when something here needs it."
+                : "The launcher is set not to add the Interposer to games that don't include it, so nothing here applies. You can change that under Compatibility in Settings.";
+
+        return vm;
     }
 
     /// <summary>
@@ -938,10 +1004,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
             _logger.LogInformation("Running action {ActionName} for game {GameId}", action.Name, GameId);
 
-            var discordAppId = localGame.ExternalIds?
-                .FirstOrDefault(e => string.Equals(e.Provider, "Discord", StringComparison.OrdinalIgnoreCase))
-                ?.ExternalId;
-            discordClient.UpdatePresence(localGame.Title, discordAppId);
+            UpdatePresence(discordClient, localGame);
 
             // Run the game with the specific action
             await gameService.Run(localGame, action);
@@ -1217,6 +1280,34 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
                     manageVm.Sections.Add(optionsSection);
                 }
+            }
+
+            // ── Compatibility section (installed games, Windows only) ──────────
+            // The game's Interposer settings, over the launcher's and the server's
+            if (IsInstalled && OperatingSystem.IsWindows())
+            {
+                var interposerVm = BuildInterposerSettings(localGame);
+
+                var compatibilitySection = new ManageSectionViewModel
+                {
+                    Title = "Compatibility",
+                    IconValue = "PuzzlePiece",
+                    Content = interposerVm,
+                    ActionText = "Save",
+                };
+
+                compatibilitySection.ActionAsync = async () =>
+                {
+                    localGame.RedistributableOptions = RedistributableOptionValues.With(
+                        localGame.RedistributableOptions, InterposerOptions.RedistributableId, interposerVm.CollectValues());
+
+                    await gameService.UpdateAsync(localGame);
+
+                    compatibilitySection.Status = "Saved. Applies the next time you play.";
+                    _logger.LogInformation("Saved Interposer settings for {GameId} ({Title})", GameId, Title);
+                };
+
+                manageVm.Sections.Add(compatibilitySection);
             }
 
             // ── Modify section (installed games only) ───────────────────────────

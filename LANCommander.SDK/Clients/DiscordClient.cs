@@ -9,7 +9,8 @@ namespace LANCommander.SDK.Clients
 {
     public class DiscordClient : IDisposable
     {
-        private const string DefaultApplicationId = "1272690976791461950";
+        /// <summary>LANCommander's own Discord application, for games that have none of their own.</summary>
+        public const string DefaultApplicationId = "1272690976791461950";
 
         private readonly ILogger<DiscordClient> _logger;
 

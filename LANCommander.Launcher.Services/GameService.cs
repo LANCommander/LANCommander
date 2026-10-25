@@ -221,26 +221,42 @@ namespace LANCommander.Launcher.Services
         }
 
         /// <summary>
-        /// Persists the user's locally-chosen game option values into the on-disk game manifestso that
-        /// before-start scripts can read them via the <c>Get-GameOptions</c> cmdlet. Option values are
-        /// stored per-game in the launcher database (never on the server), so the manifest must be
+        /// Persists the user's locally-chosen option values into the on-disk game manifest: the game's own
+        /// options, so before-start scripts can read them via the <c>Get-GameOptions</c> cmdlet, and their
+        /// redistributable option values, which the SDK and the Interposer starter apply over the server's.
+        /// Both are stored per-game in the launcher database (never on the server), so the manifest must be
         /// updated immediately before launch.
         /// </summary>
         private async Task WriteOptionsToManifestAsync(Game game)
         {
-            if (string.IsNullOrWhiteSpace(game.InstallDirectory) || string.IsNullOrWhiteSpace(GetOptionSchema(game)))
+            if (string.IsNullOrWhiteSpace(game.InstallDirectory))
                 return;
+
+            var hasOptionSchema = !string.IsNullOrWhiteSpace(GetOptionSchema(game));
+            var redistributableOptions = RedistributableOptionValues.Parse(game.RedistributableOptions);
 
             try
             {
-                var options = new Dictionary<string, string>();
-
-                if (!string.IsNullOrWhiteSpace(game.Options))
-                    options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(game.Options) ?? new();
-
                 var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
 
-                manifest.Options = options;
+                if (manifest == null)
+                    return;
+
+                // Nothing to write, and nothing stale to clear: leave the file alone
+                if (!hasOptionSchema && redistributableOptions.Count == 0 && (manifest.RedistributableOptions?.Count ?? 0) == 0)
+                    return;
+
+                if (hasOptionSchema)
+                {
+                    var options = new Dictionary<string, string>();
+
+                    if (!string.IsNullOrWhiteSpace(game.Options))
+                        options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(game.Options) ?? new();
+
+                    manifest.Options = options;
+                }
+
+                manifest.RedistributableOptions = redistributableOptions;
 
                 await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
             }

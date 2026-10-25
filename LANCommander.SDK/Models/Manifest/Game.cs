@@ -34,6 +34,14 @@ namespace LANCommander.SDK.Models.Manifest
         public Engine Engine { get; set; }
         public string OptionSchema { get; set; }
         public Dictionary<string, string> Options { get; set; } = new Dictionary<string, string>();
+
+        /// <summary>
+        /// The player's own values for redistributable options, keyed by redistributable id and then by
+        /// dotted option key. Never sent by the server: the launcher writes them here before each launch,
+        /// and they win over the server's values and an action's overrides. A redistributable the game
+        /// does not have can appear too -- the launcher keeps its values for the Interposer it bundles.
+        /// </summary>
+        public Dictionary<Guid, Dictionary<string, string>> RedistributableOptions { get; set; } = new Dictionary<Guid, Dictionary<string, string>>();
         public virtual ICollection<Action> Actions { get; set; } = new List<Action>();
         public virtual ICollection<Archive> Archives { get; set; } = new List<Archive>();
         public virtual ICollection<Collection> Collections { get; set; } = new List<Collection>();

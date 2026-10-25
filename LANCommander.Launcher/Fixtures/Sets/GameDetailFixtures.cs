@@ -17,6 +17,24 @@ namespace LANCommander.Launcher.Fixtures.Sets;
 /// <summary>The game page in each install and play state.</summary>
 public static class GameDetailFixtures
 {
+    /// <summary>Quake III running, on the relay as 10.13.37.5, with two friends in the network.</summary>
+    private static GameDetailViewModel RunningOnRelay(FixtureContext context)
+    {
+        var detail = Fill(context.Shell.GameDetailViewModel, FixtureGames.Quake3);
+        detail.ActionBar.IsRunning = true;
+        detail.ActionBar.LastPlayed = Localize("LastPlayedJustNow");
+
+        detail.ActionBar.Relay.Apply(new Services.Interposer.RelaySnapshot(
+            LANCommander.Interposer.RelayState.Connected,
+            "10.13.37.5",
+            [
+                new Services.Interposer.RelayPlayer(2, "Doomguy", "10.13.37.6"),
+                new Services.Interposer.RelayPlayer(3, "Ranger", "10.13.37.7"),
+            ]));
+
+        return detail;
+    }
+
     public static IReadOnlyList<ViewFixture> All { get; } =
     [
         new("GameDetail.NotInstalled", "A depot game that isn't in the library", context =>
@@ -74,6 +92,20 @@ public static class GameDetailFixtures
 
             return context.ShellWindow(detail);
         }),
+
+        new("GameDetail.Running.Relay", "A LAN game running on the network relay with two other players", context =>
+            context.ShellWindow(RunningOnRelay(context))),
+
+        new("GameDetail.Running.Relay.Players", "Who else is on the relay, opened from a running game's page", context =>
+            context.ShellWindow(RunningOnRelay(context)))
+        {
+            Prepare = (_, window) =>
+            {
+                var relay = window.GetVisualDescendants().OfType<Button>().Single(b => b.Name == "RelayButton");
+
+                relay.Flyout!.ShowAt(relay);
+            },
+        },
 
         new("GameDetail.Offline", "A game that can't be installed while offline", context =>
         {

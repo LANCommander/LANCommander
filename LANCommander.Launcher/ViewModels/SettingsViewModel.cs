@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Interposer;
 using LANCommander.Launcher.Settings;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
@@ -56,6 +57,19 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<NotificationSoundTheme> _availableSoundThemes = new();
+
+    // Compatibility Settings: the network relay and the Interposer, both Windows only
+    public bool IsCompatibilityAvailable => OperatingSystem.IsWindows();
+
+    [ObservableProperty]
+    private bool _joinNetworkRelay = true;
+
+    [ObservableProperty]
+    private bool _addInterposerToGames = true;
+
+    /// <summary>Interposer settings for every game, under each game's own.</summary>
+    [ObservableProperty]
+    private InterposerSettingsViewModel? _interposer;
 
     // Debug Settings
     [ObservableProperty]
@@ -147,6 +161,18 @@ public partial class SettingsViewModel : ViewModelBase
         NotifyOnElevationRequired = settings.Notifications.NotifyOnElevationRequired;
         SelectedSoundTheme = settings.Notifications.SoundTheme;
 
+        // Compatibility settings. The relay has its own switch above the Interposer's options, so its
+        // option is not offered twice; everything else starts from the Interposer's own defaults.
+        JoinNetworkRelay = settings.NetworkRelay.Enabled;
+        AddInterposerToGames = settings.Interposer.Enabled;
+        Interposer = InterposerSettingsViewModel.Build(
+            settings.Interposer.Options ?? new(),
+            key => new InheritedOptionValue(InterposerOptions.GetDefault(key), null),
+            "NetworkRelay.Enabled");
+
+        if (IsCompatibilityAvailable)
+            _ = Interposer.LoadDevicesAsync(scope.ServiceProvider.GetRequiredService<Services.Platform.IDeviceCatalog>());
+
         // Debug settings
         EnableScriptDebugging = settings.Debug.EnableScriptDebugging;
         LoggingPath = settings.Debug.LoggingPath ?? "Logs";
@@ -193,6 +219,13 @@ public partial class SettingsViewModel : ViewModelBase
                 s.Notifications.NotifyOnChatMessage = NotifyOnChatMessage;
                 s.Notifications.NotifyOnElevationRequired = NotifyOnElevationRequired;
                 s.Notifications.SoundTheme = SelectedSoundTheme;
+
+                // Compatibility settings
+                s.NetworkRelay.Enabled = JoinNetworkRelay;
+                s.Interposer.Enabled = AddInterposerToGames;
+
+                if (Interposer != null)
+                    s.Interposer.Options = Interposer.CollectValues();
 
                 // Debug settings
                 s.Debug.EnableScriptDebugging = EnableScriptDebugging;

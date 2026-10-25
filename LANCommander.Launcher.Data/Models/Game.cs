@@ -49,6 +49,13 @@ namespace LANCommander.Launcher.Data.Models
         public string? OptionSchema { get; set; }
         public string? Options { get; set; }
 
+        /// <summary>
+        /// The player's values for redistributable options, as JSON: redistributable id → dotted option key →
+        /// value. Never sent to or from the server; written into the manifest before each launch. Includes the
+        /// Interposer the launcher bundles, keyed by the Interposer redistributable's id.
+        /// </summary>
+        public string? RedistributableOptions { get; set; }
+
         public Guid? BaseGameId { get; set; }
         [ForeignKey(nameof(BaseGameId))]
         public virtual Game? BaseGame { get; set; }

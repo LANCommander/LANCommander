@@ -168,6 +168,7 @@ public sealed class FixtureContext : IDisposable
         services.AddSingleton<MainWindowViewModel>();
         services.AddSingleton<IBatteryService, NullBatteryService>();
         services.AddSingleton<IVolumeService, NullVolumeService>();
+        services.AddSingleton<IDeviceCatalog, NullDeviceCatalog>();
         services.AddSingleton<INotificationService, FixtureNotificationService>();
         services.AddSingleton<ITaskbarProgressService, FixtureTaskbarProgressService>();
         services.AddSingleton<NotificationService>();

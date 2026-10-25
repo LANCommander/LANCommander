@@ -6,6 +6,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
 using Avalonia.Layout;
+using Avalonia.VisualTree;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Views;
@@ -29,6 +30,56 @@ public static class OverlayFixtures
         Over("Overlay.Manage.Modify", "Changing which add-ons an install has", () => Manage(1)),
         Over("Overlay.Manage.Versions", "Switching between versions of a game", () => Manage(2)),
         Over("Overlay.Manage.Saves", "Cloud saves for a game", () => Manage(3)),
+        Over("Overlay.Manage.Compatibility", "A game's Interposer settings over the server's and the launcher's",
+            () => Manage(1, compatibility: true)),
+
+        new("Overlay.Manage.Compatibility.Advanced", "A game's advanced Interposer settings, one group open",
+            context => context.ShellWindow(GameDetailFixtures.Installed(context)))
+        {
+            Prepare = (_, window) =>
+            {
+                var overlay = Manage(1, compatibility: true);
+
+                AddToOverlayLayer(window, overlay);
+                window.UpdateLayout();
+
+                // The groups only exist once the section's content is laid out. FastDL has every kind of row.
+                var group = overlay.GetVisualDescendants().OfType<Expander>().First(e => e.Header as string == "FastDL");
+
+                group.IsExpanded = true;
+                window.UpdateLayout();
+                group.BringIntoView();
+            },
+        },
+
+        new("Overlay.Manage.Compatibility.Devices", "Picking which network adapters, controllers and audio devices a game sees",
+            context => context.ShellWindow(GameDetailFixtures.Installed(context)))
+        {
+            Prepare = (_, window) =>
+            {
+                var settings = InterposerSettings(pickDevices: true);
+
+                // Listing devices finishes on the UI thread, which this is, so it is pumped to completion here
+                var loading = settings.LoadDevicesAsync(new FixtureDeviceCatalog());
+                var deadline = DateTime.UtcNow.AddSeconds(10);
+
+                while (!loading.IsCompleted && DateTime.UtcNow < deadline)
+                    Avalonia.Threading.Dispatcher.UIThread.RunJobs();
+
+                var overlay = Manage(1, compatibility: true, interposer: settings);
+
+                AddToOverlayLayer(window, overlay);
+                window.UpdateLayout();
+
+                // BringIntoView would stop as soon as the heading showed, at the bottom; put it at the top
+                var heading = overlay.GetVisualDescendants().OfType<TextBlock>().First(t => t.Text == "DEVICES");
+                var scroller = heading.FindAncestorOfType<ScrollViewer>()!;
+                var top = Avalonia.VisualExtensions.TranslatePoint(heading, new Avalonia.Point(0, 0), (Avalonia.Visual)scroller.Content!)!.Value.Y;
+
+                scroller.Offset = new Avalonia.Vector(0, top);
+                window.UpdateLayout();
+            },
+        },
 
         Over("Overlay.Alert", "An error reported to the user",
             () => new AlertOverlay("Failed to Launch",
@@ -184,7 +235,13 @@ public static class OverlayFixtures
         """{ "Network.playername": "Pat", "Network.favorites": "[\"192.168.1.20:7777\",\"192.168.1.21:7777\"]" }""";
 
     /// <summary>The Manage dialog for the installed game, on the section at <paramref name="section"/>.</summary>
-    private static ManageOverlay Manage(int section)
+    /// <param name="section">The section to show, counting from Options.</param>
+    /// <param name="compatibility">
+    /// Includes the Compatibility section, second as in the app on Windows. Left out of the other Manage
+    /// fixtures, whose baselines predate it and are rendered on Linux, where the app leaves it out too.
+    /// </param>
+    /// <param name="interposer">The Compatibility section's settings, when not the usual ones.</param>
+    private static ManageOverlay Manage(int section, bool compatibility = false, InterposerSettingsViewModel? interposer = null)
     {
         var title = FixtureGames.UnrealTournament2004.Title;
 
@@ -210,6 +267,16 @@ public static class OverlayFixtures
             Title = "Options", IconValue = "SlidersHorizontal", ActionText = "Save",
             Content = GameOptionsOverlayViewModel.Build(OptionSchema, OptionValues, title)!,
         });
+
+        if (compatibility)
+        {
+            manage.Sections.Add(new ManageSectionViewModel
+            {
+                Title = "Compatibility", IconValue = "PuzzlePiece", ActionText = "Save",
+                Content = interposer ?? InterposerSettings(),
+            });
+        }
+
         manage.Sections.Add(new ManageSectionViewModel
         {
             Title = "Modify", IconValue = "Wrench", ActionText = "Apply",
@@ -229,6 +296,51 @@ public static class OverlayFixtures
         manage.SelectedSection = manage.Sections[section];
 
         return new ManageOverlay { DataContext = manage };
+    }
+
+    /// <summary>
+    /// A LAN game that installs the Interposer: the player has turned on Discord presence and an older
+    /// Windows version, the server turned on file logging, and the relay is on in the launcher.
+    /// </summary>
+    /// <param name="pickDevices">
+    /// The player has also picked devices: the wired LAN adapter, mice, keyboards and their Xbox
+    /// controller, their speakers, and no microphone at all.
+    /// </param>
+    private static InterposerSettingsViewModel InterposerSettings(bool pickDevices = false)
+    {
+        var server = new Dictionary<string, string> { ["Logging.Files"] = "true" };
+
+        var player = new Dictionary<string, string>
+        {
+            ["RichPresence.Discord.Enabled"] = "true",
+            ["OsVersion.Version"] = "WindowsXP",
+        };
+
+        if (pickDevices)
+        {
+            player["NetworkAdapters.Enabled"] = "true";
+            player["NetworkAdapters.Subnets"] = "[\"192.168.1.0/24\"]";
+            player["NetworkAdapters.MACs"] = $"[\"{FixtureDeviceCatalog.EthernetMac}\"]";
+
+            player["DirectInput.DeviceFilter.Enabled"] = "true";
+            player["DirectInput.DeviceFilter.Classes"] = "[\"Mouse\",\"Keyboard\"]";
+            player["DirectInput.DeviceFilter.Names"] = @"[""^Controller \\(Xbox One For Windows\\)$""]";
+
+            player["AudioDevices.Enabled"] = "true";
+            player["AudioDevices.Output"] = $"[\"{FixtureDeviceCatalog.SpeakersId}\"]";
+            player["AudioDevices.Input"] = "[]";
+        }
+
+        var vm = InterposerSettingsViewModel.Build(player, key => key switch
+        {
+            "NetworkRelay.Enabled" => new InheritedOptionValue("true", "your launcher settings, for games with a LAN mode"),
+            _ when server.TryGetValue(key, out var value) => new InheritedOptionValue(value, "the server"),
+            _ => new InheritedOptionValue(Services.Interposer.InterposerOptions.GetDefault(key), null),
+        });
+
+        vm.Notice = "This game installs the Interposer itself. What you set here is applied over the server's settings each time you play.";
+
+        return vm;
     }
 
     private static GameVersionItemViewModel Version(string version, string? changelog, long sizeMb, DateTime createdOn, bool installed, bool newer) =>

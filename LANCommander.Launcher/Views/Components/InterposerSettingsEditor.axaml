@@ -1,0 +1,352 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             x:Class="LANCommander.Launcher.Views.Components.InterposerSettingsEditor"
+             x:DataType="vm:InterposerSettingsViewModel">
+
+    <!-- Edits one layer of Interposer settings: a game's in Manage, or every game's in Settings -->
+
+    <UserControl.DataTemplates>
+
+        <!-- ══ Option rows ═══════════════════════════════════════════════════ -->
+
+        <!-- Switch or choice: Default first, naming what it comes to -->
+        <DataTemplate DataType="vm:InterposerChoiceRowViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,12">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Items}"
+                          SelectedItem="{Binding SelectedItem}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="vm:InterposerChoiceItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Text: empty is Default, shown as the placeholder -->
+        <DataTemplate DataType="vm:InterposerTextRowViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,12">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <TextBox Text="{Binding Text}"
+                         Watermark="{Binding Watermark}"
+                         HorizontalAlignment="Stretch" />
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Number: cleared is Default, shown as the placeholder -->
+        <DataTemplate DataType="vm:InterposerNumberRowViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,12">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <NumericUpDown Value="{Binding Value}"
+                               Watermark="{Binding Watermark}"
+                               Increment="1"
+                               FormatString="0"
+                               HorizontalAlignment="Stretch" />
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- List: Default until the player sets it, then the list editor -->
+        <DataTemplate DataType="vm:InterposerListRowViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,12">
+                <TextBlock Text="{Binding DisplayName}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           IsVisible="{Binding HasDescription}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <CheckBox IsChecked="{Binding IsSet}"
+                          Content="Set my own list" />
+                <TextBlock IsVisible="{Binding !IsSet}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45">
+                    <Run Text="{Binding InheritedSummary}" />
+                </TextBlock>
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+                <ContentControl Content="{Binding List}"
+                                IsVisible="{Binding IsSet}"
+                                Margin="0,4,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- ══ Device filters ════════════════════════════════════════════════ -->
+
+        <!-- A device, or a rule naming one, the filter can let through -->
+        <DataTemplate DataType="vm:SelectableDeviceViewModel">
+            <CheckBox IsChecked="{Binding IsSelected}" Margin="0,0,0,2">
+                <StackPanel Spacing="0">
+                    <TextBlock Text="{Binding Label}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Detail}"
+                               IsVisible="{Binding HasDetail}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                               TextWrapping="Wrap" />
+                </StackPanel>
+            </CheckBox>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:InterposerNetworkAdapterFilterViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,16">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Modes}"
+                          SelectedItem="{Binding SelectedMode}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="vm:DeviceFilterModeItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+
+                <StackPanel Spacing="2" Margin="0,6,0,0" IsVisible="{Binding IsSelecting}">
+                    <TextBlock Text="Looking for network adapters..."
+                               IsVisible="{Binding IsLoading}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+                    <ItemsControl ItemsSource="{Binding Adapters}" />
+                    <StackPanel Spacing="2" Margin="0,4,0,0" IsVisible="{Binding HasOtherRules}">
+                        <TextBlock Text="Also kept, matching no adapter here:"
+                                   FontSize="{DynamicResource FontSizeCaption}" Opacity="0.6" />
+                        <ItemsControl ItemsSource="{Binding OtherRules}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <TextBlock Text="{Binding}" Classes="Mono"
+                                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.6" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:InterposerControllerFilterViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,16">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Modes}"
+                          SelectedItem="{Binding SelectedMode}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="vm:DeviceFilterModeItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+
+                <StackPanel Spacing="4" Margin="0,6,0,0" IsVisible="{Binding IsSelecting}">
+                    <TextBlock Text="Kinds of device" FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold" />
+                    <ItemsControl ItemsSource="{Binding Kinds}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <UniformGrid Columns="2" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                    </ItemsControl>
+                    <TextBlock Text="Controllers" Margin="0,6,0,0"
+                               FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold" />
+                    <TextBlock Text="Looking for controllers..."
+                               IsVisible="{Binding IsLoading}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+                    <TextBlock Text="No game controllers are connected. Connect one to pick it here."
+                               IsVisible="{Binding HasNoControllers}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                               TextWrapping="Wrap" />
+                    <ItemsControl ItemsSource="{Binding Controllers}" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:AudioDirectionFilterViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,8">
+                <TextBlock Text="{Binding Title}" FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold" />
+                <ComboBox ItemsSource="{Binding Modes}"
+                          SelectedItem="{Binding SelectedMode}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="vm:AudioDirectionModeItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <ItemsControl ItemsSource="{Binding Devices}"
+                              IsVisible="{Binding IsSelecting}"
+                              Margin="0,2,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:InterposerAudioFilterViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,16">
+                <TextBlock Text="{Binding Title}"
+                           FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding Description}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                           TextWrapping="Wrap" />
+                <ComboBox ItemsSource="{Binding Modes}"
+                          SelectedItem="{Binding SelectedMode}"
+                          HorizontalAlignment="Stretch">
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate DataType="vm:DeviceFilterModeItem">
+                            <TextBlock Text="{Binding Label}" />
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
+                <TextBlock Text="{Binding InheritedSourceText}"
+                           IsVisible="{Binding HasInheritedSource}"
+                           FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+
+                <StackPanel Spacing="4" Margin="0,6,0,0" IsVisible="{Binding IsSelecting}">
+                    <TextBlock Text="Looking for audio devices..."
+                               IsVisible="{Binding IsLoading}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45" />
+                    <ContentControl Content="{Binding Output}" />
+                    <ContentControl Content="{Binding Input}" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Advanced group: collapsed until opened -->
+        <DataTemplate DataType="vm:InterposerOptionGroupViewModel">
+            <Expander Header="{Binding DisplayName}"
+                      IsExpanded="False"
+                      HorizontalAlignment="Stretch"
+                      Margin="0,0,0,4">
+                <ItemsControl ItemsSource="{Binding Rows}" />
+            </Expander>
+        </DataTemplate>
+
+        <!-- ══ The list editor and the fields its rows hold ═════════════════ -->
+
+        <DataTemplate DataType="vm:GameOptionListViewModel">
+            <StackPanel Spacing="4">
+                <ItemsControl ItemsSource="{Binding Rows}" />
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                    <Button Classes="Secondary" Content="Add Item"
+                            IsEnabled="{Binding CanAdd}"
+                            Command="{Binding AddRowCommand}" />
+                    <TextBlock Text="{Binding BoundsHint}"
+                               IsVisible="{Binding HasBoundsHint}"
+                               FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                               VerticalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:GameOptionListRowViewModel">
+            <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                    Padding="8" Margin="0,0,0,6">
+                <DockPanel>
+                    <Button DockPanel.Dock="Right"
+                            Classes="Text"
+                            Padding="6,4"
+                            VerticalAlignment="Top"
+                            Margin="6,0,0,0"
+                            IsEnabled="{Binding CanRemove}"
+                            Command="{Binding RemoveCommand}">
+                        <Icon Type="Regular" Value="X" Width="12" Height="12" />
+                    </Button>
+                    <ItemsControl ItemsSource="{Binding Fields}" />
+                </DockPanel>
+            </Border>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:StringOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,4">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="{DynamicResource FontSizeCaption}" />
+                <TextBox Text="{Binding Value}" HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:IntOptionViewModel">
+            <StackPanel Spacing="4" Margin="0,0,0,4">
+                <TextBlock Text="{Binding DisplayName}"
+                           IsVisible="{Binding HasLabel}"
+                           FontSize="{DynamicResource FontSizeCaption}" />
+                <NumericUpDown Value="{Binding Value}"
+                               Increment="1"
+                               FormatString="0"
+                               HorizontalAlignment="Stretch" />
+            </StackPanel>
+        </DataTemplate>
+
+        <DataTemplate DataType="vm:BoolOptionViewModel">
+            <CheckBox IsChecked="{Binding Value}" Content="{Binding DisplayName}" Margin="0,0,0,4" />
+        </DataTemplate>
+
+    </UserControl.DataTemplates>
+
+    <StackPanel Spacing="8">
+
+        <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                CornerRadius="4"
+                Padding="12,10"
+                Margin="0,0,0,8"
+                IsVisible="{Binding HasNotice}">
+            <DockPanel>
+                <Icon DockPanel.Dock="Left"
+                      Type="Regular" Value="Info"
+                      Width="16" Height="16"
+                      VerticalAlignment="Top"
+                      Margin="0,1,10,0"
+                      Opacity="0.7" />
+                <TextBlock Text="{Binding Notice}"
+                           FontSize="{DynamicResource FontSizeCaption}"
+                           TextWrapping="Wrap" />
+            </DockPanel>
+        </Border>
+
+        <ItemsControl ItemsSource="{Binding Featured}" />
+
+        <TextBlock Text="DEVICES" Classes="Kicker" Margin="0,8,0,0" />
+        <TextBlock Text="Which of this computer's devices the game can see. A device left out is hidden from the game, not turned off."
+                   FontSize="{DynamicResource FontSizeCaption}" Opacity="0.45"
+                   TextWrapping="Wrap" Margin="0,0,0,4" />
+
+        <ItemsControl ItemsSource="{Binding Devices}" />
+
+        <TextBlock Text="ADVANCED" Classes="Kicker" Margin="0,8,0,4" />
+
+        <ItemsControl ItemsSource="{Binding Advanced}" />
+
+    </StackPanel>
+</UserControl>

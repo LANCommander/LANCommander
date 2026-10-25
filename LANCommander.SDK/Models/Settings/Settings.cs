@@ -18,6 +18,7 @@ public class Settings
     public UpdateSettings Updates { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();
     public NetworkRelaySettings NetworkRelay { get; set; } = new();
+    public InterposerSettings Interposer { get; set; } = new();
 
     public string Culture { get; set; } = "en-US";
 }

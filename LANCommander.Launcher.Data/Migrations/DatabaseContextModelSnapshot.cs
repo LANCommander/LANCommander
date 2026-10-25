@@ -292,6 +292,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("Options")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("RedistributableOptions")
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime?>("ReleasedOn")
                         .HasColumnType("TEXT");
 

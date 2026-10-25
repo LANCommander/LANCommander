@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.SettingsView"
              x:DataType="vm:SettingsViewModel">
     
@@ -146,6 +147,35 @@
                                       HorizontalAlignment="Stretch"
                                       MinWidth="200" />
                         </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <!-- Compatibility Section: the network relay and the Interposer (Windows only) -->
+                <Border Classes="Card" Padding="16" IsVisible="{Binding IsCompatibilityAvailable}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Compatibility" FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSection}" />
+
+                        <StackPanel Spacing="4">
+                            <CheckBox IsChecked="{Binding JoinNetworkRelay}"
+                                      Content="Join LAN games to the server's network relay" />
+                            <TextBlock Text="Lets you play a game's LAN modes with players on other networks, when the server runs a relay. A game's own Compatibility settings can turn it on or off for that game."
+                                       Opacity="0.5" FontSize="{DynamicResource FontSizeCaption}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <CheckBox IsChecked="{Binding AddInterposerToGames}"
+                                      Content="Add the Interposer to games that don't include it" />
+                            <TextBlock Text="The launcher starts a game with its own copy of the Interposer when one of these settings, or the game's, needs it. Games that include the Interposer always get your settings."
+                                       Opacity="0.5" FontSize="{DynamicResource FontSizeCaption}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="Interposer settings for every game" Opacity="0.7" />
+                            <TextBlock Text="Each game can change these in its Manage dialog, under Compatibility."
+                                       Opacity="0.5" FontSize="{DynamicResource FontSizeCaption}" TextWrapping="Wrap" />
+                        </StackPanel>
+
+                        <components:InterposerSettingsEditor DataContext="{Binding Interposer}" />
                     </StackPanel>
                 </Border>
 

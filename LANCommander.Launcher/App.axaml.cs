@@ -363,6 +363,12 @@ public partial class App : Application
             services.AddSingleton<IVolumeService, NullVolumeService>();
         }
 
+        // The devices a game's Interposer settings can show or hide. The Interposer is Windows only.
+        if (OperatingSystem.IsWindows())
+            services.AddSingleton<IDeviceCatalog, WindowsDeviceCatalog>();
+        else
+            services.AddSingleton<IDeviceCatalog, NullDeviceCatalog>();
+
         // Platform services
         services.AddNotifications(opts =>
         {

@@ -81,7 +81,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 return;
             }
 
-            // Build resolved flat options: defaults then per-game values
+            // Build resolved flat options: defaults, per-game values, then the player's own
             var flatOptions = schema.GetFlattenedOptions();
             var resolved = new Dictionary<string, string>();
 
@@ -97,6 +97,19 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
                 foreach (var kvp in target.Options)
                 {
                     resolved[kvp.Key] = kvp.Value;
+                }
+            }
+
+            // A null takes the option back out: an option armed by its presence alone, such as a list the
+            // player chose not to filter by, must not come through as an empty list
+            if (manifest.RedistributableOptions != null && manifest.RedistributableOptions.TryGetValue(target.Id, out var playerValues) && playerValues != null)
+            {
+                foreach (var kvp in playerValues)
+                {
+                    if (kvp.Value == null)
+                        resolved.Remove(kvp.Key);
+                    else
+                        resolved[kvp.Key] = kvp.Value;
                 }
             }
 

@@ -324,7 +324,7 @@ namespace LANCommander.SDK
                 // Flatten nested options into dot-notation keys
                 var flatOptions = schema.GetFlattenedOptions();
 
-                // Resolve option values: defaults → per-game → per-action overrides
+                // Resolve option values: defaults → per-game → per-action overrides → the player's own
                 var resolvedOptions = new Dictionary<string, string>();
 
                 foreach (var kvp in flatOptions)
@@ -349,6 +349,19 @@ namespace LANCommander.SDK
                     foreach (var kvp in overrides)
                     {
                         resolvedOptions[kvp.Key] = kvp.Value;
+                    }
+                }
+
+                // Apply the player's values, which the launcher keeps locally and win over the server's. A
+                // null takes the option back out.
+                if (manifest.RedistributableOptions != null && manifest.RedistributableOptions.TryGetValue(redistributable.Id, out var playerValues) && playerValues != null)
+                {
+                    foreach (var kvp in playerValues)
+                    {
+                        if (kvp.Value == null)
+                            resolvedOptions.Remove(kvp.Key);
+                        else
+                            resolvedOptions[kvp.Key] = kvp.Value;
                     }
                 }
 

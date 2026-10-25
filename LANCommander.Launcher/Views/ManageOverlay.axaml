@@ -141,6 +141,11 @@
             </StackPanel>
         </DataTemplate>
 
+        <!-- Compatibility section: the game's Interposer settings -->
+        <DataTemplate DataType="vm:InterposerSettingsViewModel">
+            <components:InterposerSettingsEditor />
+        </DataTemplate>
+
         <!-- Modify section -->
         <DataTemplate DataType="vm:InstallOptionsViewModel">
             <views:InstallOptionsBody />

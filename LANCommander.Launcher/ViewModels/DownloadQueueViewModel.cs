@@ -337,15 +337,20 @@ public partial class DownloadQueueViewModel : ViewModelBase
             return;
 
         var sourceIds = _installService.Queue.Select(i => i.Id).ToHashSet();
+        var seenIds = new HashSet<Guid>();
+        var added = new List<InstallQueueItemViewModel>();
 
-        // Remove items no longer in the service queue
-        for (int i = QueueItems.Count - 1; i >= 0; i--)
+        // Remove items no longer in the service queue, and any duplicate VMs for the same item
+        for (int i = 0; i < QueueItems.Count; )
         {
-            if (!sourceIds.Contains(QueueItems[i].Id))
+            if (!sourceIds.Contains(QueueItems[i].Id) || !seenIds.Add(QueueItems[i].Id))
                 QueueItems.RemoveAt(i);
+            else
+                i++;
         }
 
-        // Add or update items
+        // Add or update items. This must not await: refreshes can be posted back to back, and
+        // yielding between the lookup and the insert lets each one add its own VM for the same item.
         for (int i = 0; i < _installService.Queue.Count; i++)
         {
             var source = _installService.Queue[i];
@@ -365,18 +370,23 @@ public partial class DownloadQueueViewModel : ViewModelBase
             else
             {
                 var vm = new InstallQueueItemViewModel(source);
-                
-                await ResolveCoverArt(vm);
-                await ResolveIcon(vm);
 
                 if (i < QueueItems.Count)
                     QueueItems.Insert(i, vm);
                 else
                     QueueItems.Add(vm);
+
+                added.Add(vm);
             }
         }
 
         UpdateStateFlags();
+
+        foreach (var vm in added)
+        {
+            await ResolveCoverArt(vm);
+            await ResolveIcon(vm);
+        }
     }
 
     private void UpdateStateFlags()
@@ -391,6 +401,17 @@ public partial class DownloadQueueViewModel : ViewModelBase
         HasPendingItems = ActiveCount > 0;
 
         CurrentItem = QueueItems.FirstOrDefault(i => i.IsActive);
+
+        // Don't let the last download's figures linger into the next one
+        if (!HasActiveDownload)
+        {
+            CurrentProgress = 0;
+            CurrentTransferSpeed = 0;
+            CurrentProgressText = string.Empty;
+            TransferSpeedText = string.Empty;
+            TimeRemainingText = string.Empty;
+            TimeRemainingValue = string.Empty;
+        }
 
         // Auto-expand when there's an active download
         if (HasActiveDownload && !IsExpanded)

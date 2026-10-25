@@ -22,5 +22,10 @@ Use the version of the server the plugin targets.
 | `IMediaGrabberExtension`, `MediaGrabberItem` | Adds a source to the server's media search |
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
+| `IGameProvider`, `IGameVersionProvider` | Manage games and add-ons, their links, external ids, custom fields and versions. Provided by the server |
+| `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
+| `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |
+| `ITaxonomyProvider` | Manage categories, collections, companies, engines, genres, platforms and tags. Provided by the server |
+| `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths. Provided by the server |
 
 The [documentation site](https://docs.lancommander.app/) has a walkthrough under Plugins.

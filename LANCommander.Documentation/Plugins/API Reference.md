@@ -504,6 +504,102 @@ Base type for view models supplied by plugins. Lives in this project (rather tha
 
 ## `LANCommander.Server.Plugins`
 
+### IActionProvider
+
+`interface` — `LANCommander.Server.Plugins.IActionProvider`
+
+Manages the actions of games (per version), tools and servers. Provided by the server; inject it into a scoped plugin service or page.
+
+### IArchiveProvider
+
+`interface` — `LANCommander.Server.Plugins.IArchiveProvider`
+
+Lists and deletes archives. Provided by the server; inject it into a scoped plugin service or page. Archives are added by importing a package through `IPackageImporter`.
+
+**Methods**
+
+- `Task<IReadOnlyList<ArchiveInfo>> GetAsync(RecordOwner owner, CancellationToken cancellationToken)`
+  - The archives of a game, redistributable or tool, newest first. For a game, every version's archive unless the owner names a version.
+- `Task<ArchiveInfo> GetArchiveAsync(Guid id, CancellationToken cancellationToken)`
+  - The archive with the given id, or null.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes an archive and its file. Does nothing when there is no such archive.
+
+### IGameProvider
+
+`interface` — `LANCommander.Server.Plugins.IGameProvider`
+
+Lists and manages the server's games and add-ons, and their links, external ids and custom fields. Provided by the server; inject it into a scoped plugin service or page.
+
+**Methods**
+
+- `Task<IReadOnlyList<GameInfo>> GetAsync(CancellationToken cancellationToken)`
+  - Every game and add-on, ordered by title.
+- `Task<GameInfo> GetAsync(Guid id, CancellationToken cancellationToken)`
+  - The game with the given id, or null.
+- `Task<IReadOnlyList<GameInfo>> GetAddonsAsync(Guid baseGameId, CancellationToken cancellationToken)`
+  - The add-ons of a game, ordered by title.
+- `Task<GameInfo> FindByExternalIdAsync(string provider, string externalId, CancellationToken cancellationToken)`
+  - The game recorded under an id in another service, or null.
+- `Task<GameInfo> AddAsync(GameInfo game, CancellationToken cancellationToken)`
+  - Adds a game.
+- `Task<GameInfo> UpdateAsync(GameInfo game, CancellationToken cancellationToken)`
+  - Writes every field of a game.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a game along with its archives and media, files included. Does nothing when there is no such game.
+- `Task<IReadOnlyList<Guid>> GetLinksAsync(Guid gameId, GameLinkKind kind, CancellationToken cancellationToken)`
+  - The ids of the records a game is linked to.
+- `Task SetLinksAsync(Guid gameId, GameLinkKind kind, IEnumerable<Guid> ids, CancellationToken cancellationToken)`
+  - Replaces the records a game is linked to. An empty list unlinks them all.
+- `Task<string> GetRedistributableOptionsAsync(Guid gameId, Guid redistributableId, CancellationToken cancellationToken)`
+  - The options a game's latest version passes to a redistributable, as JSON, or null.
+- `Task SetRedistributableOptionsAsync(Guid gameId, Guid redistributableId, string optionsJson, CancellationToken cancellationToken)`
+  - Sets the options a game's latest version passes to a redistributable, as JSON.
+- `Task<IReadOnlyList<GameExternalIdInfo>> GetExternalIdsAsync(Guid gameId, CancellationToken cancellationToken)`
+- `Task<GameExternalIdInfo> SetExternalIdAsync(Guid gameId, string provider, string externalId, CancellationToken cancellationToken)`
+  - Records the id a game goes by in a service, replacing any it had there.
+- `Task RemoveExternalIdAsync(Guid gameId, string provider, CancellationToken cancellationToken)`
+  - Forgets the id a game goes by in a service. Does nothing when it has none there.
+- `Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(Guid gameId, CancellationToken cancellationToken)`
+- `Task<GameCustomFieldInfo> SetCustomFieldAsync(Guid gameId, string name, string value, CancellationToken cancellationToken)`
+  - Sets a custom field, adding it when the game has none by that name.
+- `Task RemoveCustomFieldAsync(Guid gameId, string name, CancellationToken cancellationToken)`
+  - Removes a custom field. Does nothing when the game has none by that name.
+
+### IGameVersionProvider
+
+`interface` — `LANCommander.Server.Plugins.IGameVersionProvider`
+
+Lists and manages the versions of games. Provided by the server; inject it into a scoped plugin service or page. A version's archive arrives through `IPackageImporter`.
+
+**Methods**
+
+- `Task<IReadOnlyList<GameVersionInfo>> GetAsync(Guid gameId, CancellationToken cancellationToken)`
+  - A game's versions, oldest first.
+- `Task<GameVersionInfo> GetLatestAsync(Guid gameId, CancellationToken cancellationToken)`
+  - A game's latest version, or null when it has none yet.
+- `Task<GameVersionInfo> GetVersionAsync(Guid id, CancellationToken cancellationToken)`
+  - The version with the given id, or null.
+- `Task<GameVersionInfo> CreateAsync(Guid gameId, string version, string changelog, CancellationToken cancellationToken)`
+  - Adds a version after the game's latest, carrying over the latest's actions, scripts, save paths, option schema and redistributables. A draft latest version is published by this.
+- `Task<GameVersionInfo> UpdateAsync(GameVersionInfo version, CancellationToken cancellationToken)`
+  - Writes a version's number, changelog, sort order, published state and option schema.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a version along with its archive, file included, and its actions, scripts and save paths. Does nothing when there is no such version.
+
+### IKeyProvider
+
+`interface` — `LANCommander.Server.Plugins.IKeyProvider`
+
+Manages the keys of games. Provided by the server; inject it into a scoped plugin service or page. `UpdateAsync` changes a key's value only.
+
+**Methods**
+
+- `Task<IReadOnlyList<KeyInfo>> AddRangeAsync(Guid gameId, IEnumerable<string> values, CancellationToken cancellationToken)`
+  - Adds several keys to a game, skipping blank values and ones it already has.
+- `Task<KeyInfo> ReleaseAsync(Guid id, CancellationToken cancellationToken)`
+  - Frees a claimed key so it can be handed out again.
+
 ### IMediaGrabberExtension
 
 `interface` — `LANCommander.Server.Plugins.IMediaGrabberExtension`
@@ -524,6 +620,56 @@ Adds a source to the server's media search, alongside the built-in ones such as 
 - `Task<IReadOnlyList<MediaGrabberItem>> SearchAsync(MediaType type, string keywords, int page, CancellationToken cancellationToken)`
   - Searches for media of one kind. Only called for a type in `SupportedMediaTypes`. A failure is shown as the source's error without affecting the other sources.
 
+### IMediaProvider
+
+`interface` — `LANCommander.Server.Plugins.IMediaProvider`
+
+Manages the media of games. Provided by the server; inject it into a scoped plugin service or page. New files are stored in the server's default media storage location.
+
+**Methods**
+
+- `Task<IReadOnlyList<MediaInfo>> GetAsync(Guid gameId, CancellationToken cancellationToken)`
+  - A game's media, ordered by type and sort order.
+- `Task<MediaInfo> GetMediaAsync(Guid id, CancellationToken cancellationToken)`
+  - The media with the given id, or null.
+- `Task<MediaInfo> AddAsync(Guid gameId, MediaInfo media, Stream file, CancellationToken cancellationToken)`
+  - Adds media to a game from a stream, which is read to the end.
+- `Task<MediaInfo> AddFromUrlAsync(Guid gameId, MediaInfo media, string url, CancellationToken cancellationToken)`
+  - Adds media to a game, downloading the file from a URL.
+- `Task<MediaInfo> UpdateAsync(MediaInfo media, CancellationToken cancellationToken)`
+  - Writes the name, type, source URL, MIME type and sort order of media. The file is untouched.
+- `Task<MediaInfo> ReplaceFileAsync(Guid id, Stream file, CancellationToken cancellationToken)`
+  - Replaces the file of existing media.
+- `Task<Stream> OpenReadAsync(Guid id, CancellationToken cancellationToken)`
+  - Opens the media's file for reading, or returns null when there is no such media or file.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes media and its file. Does nothing when there is no such media.
+
+### IMultiplayerModeProvider
+
+`interface` — `LANCommander.Server.Plugins.IMultiplayerModeProvider`
+
+Manages the multiplayer modes of games. Provided by the server; inject it into a scoped plugin service or page.
+
+### IOwnedRecordProvider`1
+
+`interface` — `LANCommander.Server.Plugins.IOwnedRecordProvider`1`
+
+Lists and manages records that belong to a game, redistributable, tool or server: actions, scripts, save paths and the like. Each provider accepts only the owners its records can have, and throws `ArgumentException` for any other.
+
+**Methods**
+
+- `Task<IReadOnlyList<TInfo>> GetAsync(RecordOwner owner, CancellationToken cancellationToken)`
+  - The owner's records. For a game's version-scoped records, those of the version the owner names, or of the latest version.
+- `Task<TInfo> GetRecordAsync(Guid id, CancellationToken cancellationToken)`
+  - The record with the given id, or null.
+- `Task<TInfo> AddAsync(RecordOwner owner, TInfo record, CancellationToken cancellationToken)`
+  - Adds a record to an owner. For a game's version-scoped records, to the version the owner names, or to the latest version.
+- `Task<TInfo> UpdateAsync(TInfo record, CancellationToken cancellationToken)`
+  - Writes every field of a record. It stays with its owner.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a record. Does nothing when there is no such record.
+
 ### IPackageImporter
 
 `interface` — `LANCommander.Server.Plugins.IPackageImporter`
@@ -536,6 +682,38 @@ Imports LCX packages through the server's own import pipeline, the same one the 
   - Imports every record in an LCX file the server can already read.
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
+
+### IRedistributableProvider
+
+`interface` — `LANCommander.Server.Plugins.IRedistributableProvider`
+
+Lists and manages the server's redistributables. Provided by the server; inject it into a scoped plugin service or page. Their archives arrive through `IPackageImporter`, and their scripts are managed through `IScriptProvider`.
+
+**Methods**
+
+- `Task<IReadOnlyList<RedistributableInfo>> GetAsync(CancellationToken cancellationToken)`
+  - Every redistributable, ordered by name.
+- `Task<RedistributableInfo> GetAsync(Guid id, CancellationToken cancellationToken)`
+  - The redistributable with the given id, or null.
+- `Task<RedistributableInfo> FindAsync(string name, CancellationToken cancellationToken)`
+  - The redistributable with the given name, compared case-insensitively, or null.
+- `Task<RedistributableInfo> AddAsync(RedistributableInfo redistributable, CancellationToken cancellationToken)`
+- `Task<RedistributableInfo> UpdateAsync(RedistributableInfo redistributable, CancellationToken cancellationToken)`
+  - Writes every field of a redistributable.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a redistributable along with its archives, files included, unlinking it from every game. Does nothing when there is no such redistributable.
+
+### ISavePathProvider
+
+`interface` — `LANCommander.Server.Plugins.ISavePathProvider`
+
+Manages the save paths of games, per version. Provided by the server; inject it into a scoped plugin service or page.
+
+### IScriptProvider
+
+`interface` — `LANCommander.Server.Plugins.IScriptProvider`
+
+Manages the scripts of games (per version), redistributables, tools and servers. Provided by the server; inject it into a scoped plugin service or page.
 
 ### IServerEndpointExtension
 
@@ -580,6 +758,34 @@ Contributes a link to the server's primary navigation. Register an implementatio
 - `PluginAccessPolicy Access { get; }`
   - Who may see this entry. Defaults to administrators only.
 
+### IServerProvider
+
+`interface` — `LANCommander.Server.Plugins.IServerProvider`
+
+Lists and manages the server's game servers, with their consoles and HTTP paths. Provided by the server; inject it into a scoped plugin service or page. Their actions and scripts are managed through `IActionProvider` and `IScriptProvider`.
+
+**Methods**
+
+- `Task<IReadOnlyList<ServerInfo>> GetAsync(CancellationToken cancellationToken)`
+  - Every game server, ordered by name.
+- `Task<ServerInfo> GetAsync(Guid id, CancellationToken cancellationToken)`
+  - The game server with the given id, or null.
+- `Task<ServerInfo> AddAsync(ServerInfo server, CancellationToken cancellationToken)`
+- `Task<ServerInfo> UpdateAsync(ServerInfo server, CancellationToken cancellationToken)`
+  - Writes every field of a game server.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a game server. Does nothing when there is no such game server.
+- `Task<IReadOnlyList<ServerConsoleInfo>> GetConsolesAsync(Guid serverId, CancellationToken cancellationToken)`
+- `Task<ServerConsoleInfo> AddConsoleAsync(Guid serverId, ServerConsoleInfo console, CancellationToken cancellationToken)`
+- `Task<ServerConsoleInfo> UpdateConsoleAsync(ServerConsoleInfo console, CancellationToken cancellationToken)`
+- `Task DeleteConsoleAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a console. Does nothing when there is no such console.
+- `Task<IReadOnlyList<ServerHttpPathInfo>> GetHttpPathsAsync(Guid serverId, CancellationToken cancellationToken)`
+- `Task<ServerHttpPathInfo> AddHttpPathAsync(Guid serverId, ServerHttpPathInfo httpPath, CancellationToken cancellationToken)`
+- `Task<ServerHttpPathInfo> UpdateHttpPathAsync(ServerHttpPathInfo httpPath, CancellationToken cancellationToken)`
+- `Task DeleteHttpPathAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes an HTTP path. Does nothing when there is no such HTTP path.
+
 ### IServerRouteAssemblyExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerRouteAssemblyExtension`
@@ -601,6 +807,205 @@ Lists the server's storage locations, for example to let an administrator pick w
 
 - `Task<IReadOnlyList<StorageLocationInfo>> GetAsync(StorageLocationType type, CancellationToken cancellationToken)`
   - The storage locations of the given type, the default first.
+
+### ITaxonomyProvider
+
+`interface` — `LANCommander.Server.Plugins.ITaxonomyProvider`
+
+Lists and manages the server's taxonomy records: categories, collections, companies, engines, genres, platforms and tags. Provided by the server; inject it into a scoped plugin service or page. Games are linked to them through `IGameProvider`.
+
+**Methods**
+
+- `Task<IReadOnlyList<TaxonomyInfo>> GetAsync(TaxonomyKind kind, CancellationToken cancellationToken)`
+  - Every record of a kind, ordered by name.
+- `Task<TaxonomyInfo> GetAsync(TaxonomyKind kind, Guid id, CancellationToken cancellationToken)`
+  - The record with the given id, or null.
+- `Task<TaxonomyInfo> FindAsync(TaxonomyKind kind, string name, CancellationToken cancellationToken)`
+  - The record with the given name, compared case-insensitively, or null.
+- `Task<TaxonomyInfo> GetOrAddAsync(TaxonomyKind kind, string name, CancellationToken cancellationToken)`
+  - The record with the given name, added first when there is none.
+- `Task<TaxonomyInfo> AddAsync(TaxonomyKind kind, string name, CancellationToken cancellationToken)`
+  - Adds a record, even when one with the same name exists.
+- `Task<TaxonomyInfo> RenameAsync(TaxonomyKind kind, Guid id, string name, CancellationToken cancellationToken)`
+- `Task DeleteAsync(TaxonomyKind kind, Guid id, CancellationToken cancellationToken)`
+  - Deletes a record, unlinking it from every game. Does nothing when there is no such record.
+
+### IToolProvider
+
+`interface` — `LANCommander.Server.Plugins.IToolProvider`
+
+Lists and manages the server's tools. Provided by the server; inject it into a scoped plugin service or page. Their archives arrive through `IPackageImporter`, and their actions and scripts are managed through `IActionProvider` and `IScriptProvider`. The games a tool is linked to can be set from either side; see `Tools`.
+
+**Methods**
+
+- `Task<IReadOnlyList<ToolInfo>> GetAsync(CancellationToken cancellationToken)`
+  - Every tool, ordered by name.
+- `Task<ToolInfo> GetAsync(Guid id, CancellationToken cancellationToken)`
+  - The tool with the given id, or null.
+- `Task<ToolInfo> FindAsync(string name, CancellationToken cancellationToken)`
+  - The tool with the given name, compared case-insensitively, or null.
+- `Task<ToolInfo> AddAsync(ToolInfo tool, CancellationToken cancellationToken)`
+- `Task<ToolInfo> UpdateAsync(ToolInfo tool, CancellationToken cancellationToken)`
+  - Writes every field of a tool.
+- `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
+  - Deletes a tool along with its archives, files included, unlinking it from every game. Does nothing when there is no such tool.
+- `Task<IReadOnlyList<Guid>> GetGamesAsync(Guid toolId, CancellationToken cancellationToken)`
+  - The ids of the games a tool is linked to.
+- `Task SetGamesAsync(Guid toolId, IEnumerable<Guid> gameIds, CancellationToken cancellationToken)`
+  - Replaces the games a tool is linked to. An empty list unlinks them all.
+
+### ActionInfo
+
+`record` — `LANCommander.Server.Plugins.ActionInfo`
+
+Something a launcher can run for a game, tool or server, such as starting it.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Name { get; init; }`
+- `string Path { get; init; }`
+  - The executable, usually relative to `{InstallDir}`.
+- `string Arguments { get; init; }`
+- `string WorkingDirectory { get; init; }`
+- `bool IsPrimary { get; init; }`
+  - Whether this is the action a launcher runs when asked to play.
+- `int SortOrder { get; init; }`
+- `RuntimePlatform Platforms { get; init; }`
+  - The platforms the action runs on.
+- `string OptionOverrides { get; init; }`
+  - Install option values the action overrides, as JSON.
+- `RecordOwner Owner { get; init; }`
+  - Set by the server; ignored when writing.
+
+### ArchiveInfo
+
+`record` — `LANCommander.Server.Plugins.ArchiveInfo`
+
+An archive of files for a game, redistributable or tool.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Version { get; init; }`
+- `Guid StorageLocationId { get; init; }`
+- `Guid? GameId { get; init; }`
+- `Guid? GameVersionId { get; init; }`
+- `Guid? RedistributableId { get; init; }`
+- `Guid? ToolId { get; init; }`
+- `long CompressedSize { get; init; }`
+- `long UncompressedSize { get; init; }`
+- `DateTime CreatedOn { get; init; }`
+
+### GameCustomFieldInfo
+
+`record` — `LANCommander.Server.Plugins.GameCustomFieldInfo`
+
+A named value an administrator or plugin records against a game.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `Guid GameId { get; init; }`
+- `string Name { get; init; }`
+- `string Value { get; init; }`
+
+### GameExternalIdInfo
+
+`record` — `LANCommander.Server.Plugins.GameExternalIdInfo`
+
+An id a game goes by in another service, such as a store.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `Guid GameId { get; init; }`
+- `string Provider { get; init; }`
+  - The service, e.g. `Steam` or `GOG`.
+- `string ExternalId { get; init; }`
+
+### GameInfo
+
+`record` — `LANCommander.Server.Plugins.GameInfo`
+
+A game or add-on on the server: its own fields only. Its links, children and files are managed through the methods of `IGameProvider` and the other providers.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Empty when adding a game, to have the server choose one.
+- `string Title { get; init; }`
+- `string SortTitle { get; init; }`
+- `string DirectoryName { get; init; }`
+- `string Description { get; init; }`
+- `string Notes { get; init; }`
+- `DateTime? ReleasedOn { get; init; }`
+- `GameType Type { get; init; }`
+  - A main game, or one of the kinds of add-on.
+- `Guid? BaseGameId { get; init; }`
+  - For an add-on, the game it adds to.
+- `GameInstallLocation InstallTo { get; init; }`
+- `bool ShowInLibrary { get; init; }`
+- `bool Singleplayer { get; init; }`
+- `bool Published { get; init; }`
+  - Whether launchers are offered the game.
+- `KeyAllocationMethod KeyAllocationMethod { get; init; }`
+- `string ValidKeyRegex { get; init; }`
+- `Guid? EngineId { get; init; }`
+  - The game's engine, an `Engine` record.
+- `DateTime CreatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+- `DateTime UpdatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+
+### GameVersionInfo
+
+`record` — `LANCommander.Server.Plugins.GameVersionInfo`
+
+A version of a game. Each version has its own archive, actions, scripts, save paths, option schema and redistributables; the latest one is what an edit to the game changes.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `Guid GameId { get; init; }`
+- `string Version { get; init; }`
+  - The version number, e.g. `1.2.0`.
+- `string Changelog { get; init; }`
+- `int SortOrder { get; init; }`
+  - Position among the game's versions; the highest is the latest.
+- `bool Published { get; init; }`
+  - Whether launchers are offered the version.
+- `string OptionSchema { get; init; }`
+  - The options the version's install offers, as an option schema, or null.
+- `Guid? ArchiveId { get; init; }`
+  - The version's archive, if it has one. Set by the server; ignored when writing.
+- `DateTime CreatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+
+### KeyInfo
+
+`record` — `LANCommander.Server.Plugins.KeyInfo`
+
+A CD key for a game, handed out to players as the game's allocation method decides.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Value { get; init; }`
+- `KeyAllocationMethod? AllocationMethod { get; init; }`
+  - How the key was claimed, or null while it is free. Set by the server; ignored when writing.
+- `Guid? ClaimedByUserId { get; init; }`
+  - Set by the server; ignored when writing.
+- `string ClaimedByMacAddress { get; init; }`
+  - Set by the server; ignored when writing.
+- `string ClaimedByIpv4Address { get; init; }`
+  - Set by the server; ignored when writing.
+- `string ClaimedByComputerName { get; init; }`
+  - Set by the server; ignored when writing.
+- `DateTime? ClaimedOn { get; init; }`
+  - Set by the server; ignored when writing.
+- `RecordOwner Owner { get; init; }`
+  - Set by the server; ignored when writing.
 
 ### MediaGrabberItem
 
@@ -628,6 +1033,46 @@ One result of an `IMediaGrabberExtension` search.
   - Running time, for videos.
 - `string Resolution { get; init; }`
   - A video's frame height as people say it ("1080p"), where the source knows it.
+
+### MediaInfo
+
+`record` — `LANCommander.Server.Plugins.MediaInfo`
+
+An image, video or other file shown for a game, such as its cover or icon.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Name { get; init; }`
+- `MediaType Type { get; init; }`
+- `string SourceUrl { get; init; }`
+  - Where the file came from, if anywhere.
+- `string MimeType { get; init; }`
+- `int SortOrder { get; init; }`
+- `string Crc32 { get; init; }`
+  - The file's checksum. Set by the server; ignored when writing.
+- `Guid StorageLocationId { get; init; }`
+  - Set by the server; ignored when writing.
+- `Guid GameId { get; init; }`
+  - Set by the server; ignored when writing.
+
+### MultiplayerModeInfo
+
+`record` — `LANCommander.Server.Plugins.MultiplayerModeInfo`
+
+A way a game can be played with others.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `MultiplayerType Type { get; init; }`
+- `NetworkProtocol NetworkProtocol { get; init; }`
+- `string Description { get; init; }`
+- `int MinPlayers { get; init; }`
+- `int MaxPlayers { get; init; }`
+- `int Spectators { get; init; }`
+- `RecordOwner Owner { get; init; }`
+  - Set by the server; ignored when writing.
 
 ### PackageImportResult
 
@@ -675,6 +1120,147 @@ Describes who may reach a plugin-contributed surface, such as a page or a naviga
 - `bool IsSatisfiedBy(ClaimsPrincipal user)`
   - Determines whether `user` satisfies this policy.
 
+### RedistributableInfo
+
+`record` — `LANCommander.Server.Plugins.RedistributableInfo`
+
+Software games need installed alongside them, such as a runtime. Games link to redistributables through `SetLinksAsync`, or a game package's manifest.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Empty when adding a redistributable, to have the server choose one.
+- `string Name { get; init; }`
+- `string Description { get; init; }`
+- `string Notes { get; init; }`
+- `string OptionSchema { get; init; }`
+  - The options games can pass it, as an option schema, or null.
+- `string Version { get; init; }`
+  - The version of the newest archive, if any. Set by the server; ignored when writing.
+- `DateTime CreatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+- `DateTime UpdatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+
+### SavePathInfo
+
+`record` — `LANCommander.Server.Plugins.SavePathInfo`
+
+A file, folder or registry path where a game keeps its saves.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `SavePathType Type { get; init; }`
+- `string Path { get; init; }`
+- `string WorkingDirectory { get; init; }`
+- `bool IsRegex { get; init; }`
+  - Whether `Path` is a regular expression.
+- `RuntimePlatform Platforms { get; init; }`
+  - The platforms the path applies to.
+- `RecordOwner Owner { get; init; }`
+  - Set by the server; ignored when writing.
+
+### ScriptInfo
+
+`record` — `LANCommander.Server.Plugins.ScriptInfo`
+
+A PowerShell script run at a point in the life of a game, redistributable, tool or server.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Name { get; init; }`
+- `string Description { get; init; }`
+- `ScriptType Type { get; init; }`
+  - When the script runs, e.g. on install.
+- `string Contents { get; init; }`
+- `bool RequiresAdmin { get; init; }`
+- `RuntimePlatform Platforms { get; init; }`
+  - The platforms the script runs on.
+- `RecordOwner Owner { get; init; }`
+  - Set by the server; ignored when writing.
+
+### ServerConsoleInfo
+
+`record` — `LANCommander.Server.Plugins.ServerConsoleInfo`
+
+A log file or RCON connection the LANCommander server shows for a game server.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `Guid ServerId { get; init; }`
+  - Set by the server; ignored when writing.
+- `string Name { get; init; }`
+- `ServerConsoleType Type { get; init; }`
+- `string Path { get; init; }`
+  - For a log file console: the file.
+- `string Host { get; init; }`
+  - For an RCON console: the host to connect to.
+- `int? Port { get; init; }`
+  - For an RCON console: the port to connect to.
+- `string Password { get; init; }`
+  - For an RCON console: the password.
+
+### ServerHttpPathInfo
+
+`record` — `LANCommander.Server.Plugins.ServerHttpPathInfo`
+
+A folder of the game server the LANCommander server serves over HTTP.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `Guid ServerId { get; init; }`
+  - Set by the server; ignored when writing.
+- `string LocalPath { get; init; }`
+  - The folder on disk.
+- `string Path { get; init; }`
+  - The URL path it is served under.
+
+### ServerInfo
+
+`record` — `LANCommander.Server.Plugins.ServerInfo`
+
+A dedicated game server the LANCommander server runs and monitors.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Empty when adding a server, to have the LANCommander server choose one.
+- `string Name { get; init; }`
+- `Guid? GameId { get; init; }`
+  - The game the server is for, if any.
+- `ServerHostEngine Engine { get; init; }`
+- `string Path { get; init; }`
+  - The executable to run.
+- `string Arguments { get; init; }`
+- `string WorkingDirectory { get; init; }`
+- `string OnStartScriptPath { get; init; }`
+- `string OnStopScriptPath { get; init; }`
+- `bool UseShellExecute { get; init; }`
+- `ProcessTerminationMethod ProcessTerminationMethod { get; init; }`
+- `Guid? DockerHostId { get; init; }`
+  - For `Docker`: the Docker host.
+- `string ContainerId { get; init; }`
+  - For `Docker`: the container.
+- `Guid? RemoteHostId { get; init; }`
+  - For `Remote`: the LANCommander server that manages it.
+- `Guid? RemoteServerId { get; init; }`
+  - For `Remote`: the server's id on that LANCommander server.
+- `string Host { get; init; }`
+  - The address players connect to.
+- `int Port { get; init; }`
+- `bool Autostart { get; init; }`
+- `ServerAutostartMethod AutostartMethod { get; init; }`
+- `int AutostartDelay { get; init; }`
+  - Seconds to wait before an automatic start.
+- `DateTime CreatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+- `DateTime UpdatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+
 ### ServerNavigationAnchor
 
 `class` — `LANCommander.Server.Plugins.ServerNavigationAnchor`
@@ -704,6 +1290,79 @@ A storage location on the server.
 - `bool Default { get; init; }`
   - Whether the server uses this location when none is chosen.
 
+### TaxonomyInfo
+
+`record` — `LANCommander.Server.Plugins.TaxonomyInfo`
+
+A taxonomy record on the server.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `TaxonomyKind Kind { get; init; }`
+- `string Name { get; init; }`
+
+### ToolInfo
+
+`record` — `LANCommander.Server.Plugins.ToolInfo`
+
+A program players can install alongside the games that use it, such as a mod manager.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Empty when adding a tool, to have the server choose one.
+- `string Name { get; init; }`
+- `string Description { get; init; }`
+- `string Notes { get; init; }`
+- `bool AlwaysInstall { get; init; }`
+  - Whether the tool is installed with its games without asking.
+- `DateTime CreatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+- `DateTime UpdatedOn { get; init; }`
+  - Set by the server; ignored when writing.
+
+### RecordOwner
+
+`struct` — `LANCommander.Server.Plugins.RecordOwner`
+
+The record a child record (an action, script, save path, archive…) belongs to.
+
+**Properties**
+
+- `RecordOwnerKind Kind { get; init; }`
+  - What kind of record the owner is.
+- `Guid Id { get; init; }`
+  - The owner's id.
+- `Guid? VersionId { get; init; }`
+  - For a game's actions, scripts and save paths, the game version they belong to. Null means the game's latest version. Ignored for every other kind of owner and child.
+
+**Methods**
+
+- `RecordOwner Game(Guid id, Guid? versionId)`
+  - A game, or one of its versions.
+- `RecordOwner Redistributable(Guid id)`
+- `RecordOwner Tool(Guid id)`
+- `RecordOwner Server(Guid id)`
+
+### GameLinkKind
+
+`enum` — `LANCommander.Server.Plugins.GameLinkKind`
+
+The kinds of record a game is linked to, other than its engine.
+
+| Value | Description |
+| --- | --- |
+| `Categories` = `0` | `Category` records. |
+| `Collections` = `1` | `Collection` records. |
+| `Developers` = `2` | `Company` records. |
+| `Genres` = `3` | `Genre` records. |
+| `Platforms` = `4` | `Platform` records. |
+| `Publishers` = `5` | `Company` records. |
+| `Tags` = `6` | `Tag` records. |
+| `Redistributables` = `7` | Redistributables, which the game's latest version installs alongside it. |
+| `Tools` = `8` | Tools. |
+
 ### PluginAccessLevel
 
 `enum` — `LANCommander.Server.Plugins.PluginAccessLevel`
@@ -715,4 +1374,45 @@ The kind of requirement a `PluginAccessPolicy` enforces.
 | `Administrator` = `0` | Only members of the built-in administrator role. This is the default for any plugin surface that does not declare a policy. |
 | `AuthenticatedUser` = `1` | Any signed-in user. Anonymous visitors are always rejected. |
 | `Role` = `2` | Members of specific server-defined roles. Administrators always qualify. |
+
+### RecordOwnerKind
+
+`enum` — `LANCommander.Server.Plugins.RecordOwnerKind`
+
+The kinds of record that own actions, scripts and the other child records.
+
+| Value | Description |
+| --- | --- |
+| `Game` = `0` |  |
+| `Redistributable` = `1` |  |
+| `Tool` = `2` |  |
+| `Server` = `3` |  |
+
+### ServerHostEngine
+
+`enum` — `LANCommander.Server.Plugins.ServerHostEngine`
+
+Where a game server runs.
+
+| Value | Description |
+| --- | --- |
+| `Local` = `0` | A process on the LANCommander server's machine. |
+| `Docker` = `1` | A Docker container. |
+| `Remote` = `2` | A server managed by another LANCommander server. |
+
+### TaxonomyKind
+
+`enum` — `LANCommander.Server.Plugins.TaxonomyKind`
+
+The kinds of taxonomy record: named records games are linked to.
+
+| Value | Description |
+| --- | --- |
+| `Category` = `0` |  |
+| `Collection` = `1` |  |
+| `Company` = `2` | A developer or publisher. |
+| `Engine` = `3` |  |
+| `Genre` = `4` |  |
+| `Platform` = `5` |  |
+| `Tag` = `6` |  |
 

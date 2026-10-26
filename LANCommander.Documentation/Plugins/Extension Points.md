@@ -162,6 +162,27 @@ public void ConfigureServices(IServiceCollection services)
 A source that returns results in pages sets `SupportsPaging`; otherwise the server asks only for
 page 0. A source that throws is shown with its error, and the other sources' results still appear.
 
+## Looking up metadata
+
+To consume the server's configured metadata providers, inject
+[`IMetadataLookup`](/Plugins/API%20Reference#imetadatalookup) from `LANCommander.Server.Plugins`.
+It lists only available providers and returns SDK manifest metadata, not server database records:
+
+```csharp
+@inject IMetadataLookup Metadata
+
+var providers = Metadata.GetProviderNames();
+var results = await Metadata.SearchGamesAsync(providerName, title, cancellationToken: cancellationToken);
+if (results.Results.Count > 0)
+{
+    var game = await Metadata.GetGameAsync(providerName, results.Results[0].Id, cancellationToken);
+}
+```
+
+A lookup does not import or change a game.
+Missing or unavailable providers throw `InvalidOperationException`; provider errors propagate.
+Cancellation stops waiting, but a provider without cancellation support may finish in the background.
+
 ## Server UI extensions
 
 Server plugins can contribute routable Razor components and navigation entries through the
@@ -286,6 +307,65 @@ var locations = await StorageLocations.GetAsync(StorageLocationType.Archive);
 The server registers both services. Plugins should use them instead of resolving the server's
 database services or import internals, which are not part of the plugin surface.
 `PluginContext.Services` is scoped to `InitializeAsync` and must not be retained for later imports.
+
+## Managing records
+
+A server plugin can read and change the server's records through providers the server registers
+alongside `IPackageImporter`. Inject them into a plugin page or another scoped plugin service.
+
+| Provider | Manages |
+| --- | --- |
+| [`IGameProvider`](/Plugins/API%20Reference#igameprovider) | Games and add-ons: their fields, links to taxonomy records, redistributables and tools, external ids and custom fields |
+| [`IGameVersionProvider`](/Plugins/API%20Reference#igameversionprovider) | A game's versions |
+| [`ITaxonomyProvider`](/Plugins/API%20Reference#itaxonomyprovider) | Categories, collections, companies, engines, genres, platforms and tags |
+| [`IActionProvider`](/Plugins/API%20Reference#iactionprovider), [`IScriptProvider`](/Plugins/API%20Reference#iscriptprovider) | Actions and scripts of games, redistributables, tools and servers |
+| [`ISavePathProvider`](/Plugins/API%20Reference#isavepathprovider), [`IMultiplayerModeProvider`](/Plugins/API%20Reference#imultiplayermodeprovider), [`IKeyProvider`](/Plugins/API%20Reference#ikeyprovider) | A game's save paths, multiplayer modes and keys |
+| [`IMediaProvider`](/Plugins/API%20Reference#imediaprovider) | A game's media and its files |
+| [`IArchiveProvider`](/Plugins/API%20Reference#iarchiveprovider) | Lists and deletes archives. New archives arrive through `IPackageImporter` |
+| [`IRedistributableProvider`](/Plugins/API%20Reference#iredistributableprovider), [`IToolProvider`](/Plugins/API%20Reference#itoolprovider), [`IServerProvider`](/Plugins/API%20Reference#iserverprovider) | Redistributables, tools, and game servers with their consoles and HTTP paths |
+
+Records are plain `record` types. A write sets every field, so change a record by reading it and
+passing a copy back:
+
+```csharp
+@inject IGameProvider Games
+@inject ITaxonomyProvider Taxonomy
+
+var game = await Games.FindByExternalIdAsync("GOG", productId)
+           ?? await Games.AddAsync(new GameInfo { Title = title });
+
+game = await Games.UpdateAsync(game with { Description = description });
+
+var genre = await Taxonomy.GetOrAddAsync(TaxonomyKind.Genre, "Strategy");
+
+await Games.SetLinksAsync(game.Id, GameLinkKind.Genres, [genre.Id]);
+await Games.SetExternalIdAsync(game.Id, "GOG", productId);
+```
+
+An update writes a record's own fields and nothing else. Links and child records each have their
+own methods, so changing one never disturbs the others; `SetLinksAsync` replaces one kind of link,
+and an empty list clears it.
+
+For bulk identity or provenance checks, `IGameProvider.GetCustomFieldsAsync()` returns every
+game's custom fields with its game id. The overload taking a game id reads only that game's fields.
+
+Use `IGameVersionProvider.GetRedistributablesAsync(versionId)` to read a particular version's
+redistributables and option values, rather than relying on the game's mirrored list.
+`SetRedistributablesAsync` replaces that version's links and preserves option values for links
+that stay. `SetRedistributableOptionsAsync` changes the JSON options of an existing link; a missing
+version or link throws `KeyNotFoundException`. The server applies its normal publishing and
+mirroring rules, and new versions carry their predecessor's links and options forward.
+`GetOrCreateLatestAsync(gameId)` creates an empty initial version only when necessary; it does not
+create another version or publish an existing draft.
+
+Actions, scripts, save paths and the other child records name their owner with a `RecordOwner`,
+such as `RecordOwner.Game(gameId)` or `RecordOwner.Tool(toolId)`. A game's actions, scripts and
+save paths belong to one of its versions: `RecordOwner.Game(gameId)` means the latest, and
+`RecordOwner.Game(gameId, versionId)` a particular one.
+
+Reads return `null` for a record that does not exist. Writes throw `KeyNotFoundException` when the
+record, its owner or a record it links to does not exist, and deletes do nothing. Deleting a game,
+redistributable, tool, version or media also deletes its files.
 
 ## Multiplayer lobbies
 

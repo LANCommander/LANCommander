@@ -5,6 +5,7 @@ using LANCommander.SDK.Services;
 using LANCommander.Server.Clients;
 using LANCommander.Server.ImportExport.Extensions;
 using LANCommander.Server.Plugins;
+using LANCommander.Server.Plugins.Records;
 using LANCommander.Server.Providers;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Extensions;
@@ -31,6 +32,21 @@ public static class Services
         // its service or data assemblies
         builder.Services.AddScoped<IPackageImporter, PackageImporter>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
+        builder.Services.AddScoped<IMetadataLookup, MetadataLookup>();
+        builder.Services.AddScoped<IRedistributableProvider, RedistributableProvider>();
+        builder.Services.AddScoped<IGameProvider, GameProvider>();
+        builder.Services.AddScoped<IGameVersionProvider, GameVersionProvider>();
+        builder.Services.AddScoped<IArchiveProvider, ArchiveProvider>();
+        builder.Services.AddScoped<ITaxonomyProvider, TaxonomyProvider>();
+        builder.Services.AddScoped<IToolProvider, ToolProvider>();
+        builder.Services.AddScoped<IServerProvider, ServerProvider>();
+        builder.Services.AddScoped<IActionProvider, ActionProvider>();
+        builder.Services.AddScoped<IScriptProvider, ScriptProvider>();
+        builder.Services.AddScoped<ISavePathProvider, SavePathProvider>();
+        builder.Services.AddScoped<IMultiplayerModeProvider, MultiplayerModeProvider>();
+        builder.Services.AddScoped<IKeyProvider, KeyProvider>();
+        builder.Services.AddScoped<IMediaProvider, MediaProvider>();
+        builder.Services.AddScoped<RecordOwners>();
 
         // And what plugins offer the server: their media sources join the media search
         builder.Services.AddScoped<IMediaGrabberProvider, PluginMediaGrabbers>();

@@ -38,4 +38,8 @@ public class PluginHostServicesTests(ApplicationFixture fixture) : BaseTest(fixt
     [Fact]
     public void ThePackageImporterIsAvailableToPlugins() =>
         GetService<IPackageImporter>().ShouldNotBeNull();
+
+    [Fact]
+    public void MetadataLookupIsAvailableToPlugins() =>
+        GetService<IMetadataLookup>().ShouldNotBeNull();
 }

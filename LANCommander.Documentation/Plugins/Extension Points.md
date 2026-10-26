@@ -162,6 +162,27 @@ public void ConfigureServices(IServiceCollection services)
 A source that returns results in pages sets `SupportsPaging`; otherwise the server asks only for
 page 0. A source that throws is shown with its error, and the other sources' results still appear.
 
+## Looking up metadata
+
+To consume the server's configured metadata providers, inject
+[`IMetadataLookup`](/Plugins/API%20Reference#imetadatalookup) from `LANCommander.Server.Plugins`.
+It lists only available providers and returns SDK manifest metadata, not server database records:
+
+```csharp
+@inject IMetadataLookup Metadata
+
+var providers = Metadata.GetProviderNames();
+var results = await Metadata.SearchGamesAsync(providerName, title, cancellationToken: cancellationToken);
+if (results.Results.Count > 0)
+{
+    var game = await Metadata.GetGameAsync(providerName, results.Results[0].Id, cancellationToken);
+}
+```
+
+A lookup does not import or change a game.
+Missing or unavailable providers throw `InvalidOperationException`; provider errors propagate.
+Cancellation stops waiting, but a provider without cancellation support may finish in the background.
+
 ## Server UI extensions
 
 Server plugins can contribute routable Razor components and navigation entries through the
@@ -371,6 +392,18 @@ await Games.SetExternalIdAsync(game.Id, "GOG", productId);
 An update writes a record's own fields and nothing else. Links and child records each have their
 own methods, so changing one never disturbs the others; `SetLinksAsync` replaces one kind of link,
 and an empty list clears it.
+
+For bulk identity or provenance checks, `IGameProvider.GetCustomFieldsAsync()` returns every
+game's custom fields with its game id. The overload taking a game id reads only that game's fields.
+
+Use `IGameVersionProvider.GetRedistributablesAsync(versionId)` to read a particular version's
+redistributables and option values, rather than relying on the game's mirrored list.
+`SetRedistributablesAsync` replaces that version's links and preserves option values for links
+that stay. `SetRedistributableOptionsAsync` changes the JSON options of an existing link; a missing
+version or link throws `KeyNotFoundException`. The server applies its normal publishing and
+mirroring rules, and new versions carry their predecessor's links and options forward.
+`GetOrCreateLatestAsync(gameId)` creates an empty initial version only when necessary; it does not
+create another version or publish an existing draft.
 
 Actions, scripts, save paths and the other child records name their owner with a `RecordOwner`,
 such as `RecordOwner.Game(gameId)` or `RecordOwner.Tool(toolId)`. A game's actions, scripts and

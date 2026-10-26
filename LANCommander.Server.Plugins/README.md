@@ -22,6 +22,7 @@ Use the version of the server the plugin targets.
 | `IMediaGrabberExtension`, `MediaGrabberItem` | Adds a source to the server's media search |
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
+| `IMetadataLookup` | Searches configured metadata providers and fetches full game metadata without importing it. Provided by the server |
 | `IGameProvider`, `IGameVersionProvider` | Manage games and add-ons, their links, external ids, custom fields and versions. Provided by the server |
 | `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |
@@ -29,3 +30,9 @@ Use the version of the server the plugin targets.
 | `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths. Provided by the server |
 
 The [documentation site](https://docs.lancommander.app/) has a walkthrough under Plugins.
+
+`IGameProvider.GetCustomFieldsAsync()` reads custom fields across all games, including their game
+ids, for bulk provenance checks. `IGameVersionProvider` can read and replace a version's
+redistributables and set their per-version option values; keeping a redistributable keeps its
+options, and creating a new version carries those options forward. `GetOrCreateLatestAsync`
+creates an empty initial version only when the game has none, without publishing an existing draft.

@@ -30,6 +30,9 @@ public sealed record GameVersionInfo
     public DateTime CreatedOn { get; init; }
 }
 
+/// <summary>A redistributable required by a game version, with that version's option values as JSON.</summary>
+public sealed record GameVersionRedistributableInfo(RedistributableInfo Redistributable, string? Options);
+
 /// <summary>
 /// Lists and manages the versions of games. Provided by the server; inject it into a scoped plugin
 /// service or page. A version's archive arrives through <see cref="IPackageImporter"/>.
@@ -41,6 +44,13 @@ public interface IGameVersionProvider
 
     /// <summary>A game's latest version, or null when it has none yet.</summary>
     Task<GameVersionInfo?> GetLatestAsync(Guid gameId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// The latest version, creating an empty initial version only when the game has none.
+    /// Does not create a new version or publish a draft when a version already exists.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">There is no such game.</exception>
+    Task<GameVersionInfo> GetOrCreateLatestAsync(Guid gameId, CancellationToken cancellationToken = default);
 
     /// <summary>The version with the given id, or null.</summary>
     Task<GameVersionInfo?> GetVersionAsync(Guid id, CancellationToken cancellationToken = default);
@@ -61,4 +71,19 @@ public interface IGameVersionProvider
     /// paths. Does nothing when there is no such version.
     /// </summary>
     Task DeleteAsync(Guid id, CancellationToken cancellationToken = default);
+
+    /// <summary>A version's redistributables and their per-version option values.</summary>
+    /// <exception cref="KeyNotFoundException">There is no such version.</exception>
+    Task<IReadOnlyList<GameVersionRedistributableInfo>> GetRedistributablesAsync(Guid versionId, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Replaces a version's redistributables, preserving options for those kept. An empty list
+    /// unlinks them all. The game's own list is mirrored according to the server's publishing rules.
+    /// </summary>
+    /// <exception cref="KeyNotFoundException">The version or a requested redistributable does not exist.</exception>
+    Task SetRedistributablesAsync(Guid versionId, IEnumerable<Guid> redistributableIds, CancellationToken cancellationToken = default);
+
+    /// <summary>Sets option values as JSON for a redistributable already linked to the version.</summary>
+    /// <exception cref="KeyNotFoundException">The version or its redistributable link does not exist.</exception>
+    Task SetRedistributableOptionsAsync(Guid versionId, Guid redistributableId, string? optionsJson, CancellationToken cancellationToken = default);
 }

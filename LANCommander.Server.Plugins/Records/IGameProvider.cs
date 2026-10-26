@@ -156,6 +156,12 @@ public interface IGameProvider
     /// <summary>Forgets the id a game goes by in a service. Does nothing when it has none there.</summary>
     Task RemoveExternalIdAsync(Guid gameId, string provider, CancellationToken cancellationToken = default);
 
+    /// <summary>
+    /// Every game's custom fields, including the owning game id. Use this for bulk identity or
+    /// provenance checks without making a separate request for each game.
+    /// </summary>
+    Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(CancellationToken cancellationToken = default);
+
     /// <exception cref="KeyNotFoundException">There is no such game.</exception>
     Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(Guid gameId, CancellationToken cancellationToken = default);
 

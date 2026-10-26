@@ -560,6 +560,8 @@ Lists and manages the server's games and add-ons, and their links, external ids 
   - Records the id a game goes by in a service, replacing any it had there.
 - `Task RemoveExternalIdAsync(Guid gameId, string provider, CancellationToken cancellationToken)`
   - Forgets the id a game goes by in a service. Does nothing when it has none there.
+- `Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(CancellationToken cancellationToken)`
+  - Every game's custom fields, including the owning game id. Use this for bulk identity or provenance checks without making a separate request for each game.
 - `Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(Guid gameId, CancellationToken cancellationToken)`
 - `Task<GameCustomFieldInfo> SetCustomFieldAsync(Guid gameId, string name, string value, CancellationToken cancellationToken)`
   - Sets a custom field, adding it when the game has none by that name.
@@ -578,6 +580,8 @@ Lists and manages the versions of games. Provided by the server; inject it into 
   - A game's versions, oldest first.
 - `Task<GameVersionInfo> GetLatestAsync(Guid gameId, CancellationToken cancellationToken)`
   - A game's latest version, or null when it has none yet.
+- `Task<GameVersionInfo> GetOrCreateLatestAsync(Guid gameId, CancellationToken cancellationToken)`
+  - The latest version, creating an empty initial version only when the game has none. Does not create a new version or publish a draft when a version already exists.
 - `Task<GameVersionInfo> GetVersionAsync(Guid id, CancellationToken cancellationToken)`
   - The version with the given id, or null.
 - `Task<GameVersionInfo> CreateAsync(Guid gameId, string version, string changelog, CancellationToken cancellationToken)`
@@ -586,6 +590,12 @@ Lists and manages the versions of games. Provided by the server; inject it into 
   - Writes a version's number, changelog, sort order, published state and option schema.
 - `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
   - Deletes a version along with its archive, file included, and its actions, scripts and save paths. Does nothing when there is no such version.
+- `Task<IReadOnlyList<GameVersionRedistributableInfo>> GetRedistributablesAsync(Guid versionId, CancellationToken cancellationToken)`
+  - A version's redistributables and their per-version option values.
+- `Task SetRedistributablesAsync(Guid versionId, IEnumerable<Guid> redistributableIds, CancellationToken cancellationToken)`
+  - Replaces a version's redistributables, preserving options for those kept. An empty list unlinks them all. The game's own list is mirrored according to the server's publishing rules.
+- `Task SetRedistributableOptionsAsync(Guid versionId, Guid redistributableId, string optionsJson, CancellationToken cancellationToken)`
+  - Sets option values as JSON for a redistributable already linked to the version.
 
 ### IKeyProvider
 
@@ -644,6 +654,21 @@ Manages the media of games. Provided by the server; inject it into a scoped plug
   - Opens the media's file for reading, or returns null when there is no such media or file.
 - `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
   - Deletes media and its file. Does nothing when there is no such media.
+
+### IMetadataLookup
+
+`interface` — `LANCommander.Server.Plugins.IMetadataLookup`
+
+Looks up game metadata through the server's configured providers. Provided by the server; inject it into a scoped plugin service or page. Lookups do not import or change games.
+
+**Methods**
+
+- `IReadOnlyList<string> GetProviderNames()`
+  - The names of available providers, ordered case-insensitively.
+- `Task<MetadataSearchPage> SearchGamesAsync(string providerName, string input, int limit, int offset, CancellationToken cancellationToken)`
+  - Searches a configured, available provider.
+- `Task<Game> GetGameAsync(string providerName, string gameId, CancellationToken cancellationToken)`
+  - Fetches full metadata by the provider's game id, or null when it has no such game.
 
 ### IMultiplayerModeProvider
 
@@ -982,6 +1007,17 @@ A version of a game. Each version has its own archive, actions, scripts, save pa
 - `DateTime CreatedOn { get; init; }`
   - Set by the server; ignored when writing.
 
+### GameVersionRedistributableInfo
+
+`record` — `LANCommander.Server.Plugins.GameVersionRedistributableInfo`
+
+A redistributable required by a game version, with that version's option values as JSON.
+
+**Properties**
+
+- `RedistributableInfo Redistributable { get; init; }`
+- `string Options { get; init; }`
+
 ### KeyInfo
 
 `record` — `LANCommander.Server.Plugins.KeyInfo`
@@ -1055,6 +1091,32 @@ An image, video or other file shown for a game, such as its cover or icon.
   - Set by the server; ignored when writing.
 - `Guid GameId { get; init; }`
   - Set by the server; ignored when writing.
+
+### MetadataGame
+
+`record` — `LANCommander.Server.Plugins.MetadataGame`
+
+A game returned by one of the server's configured metadata providers.
+
+**Properties**
+
+- `string Id { get; init; }`
+  - The provider's game id, used to fetch the full metadata.
+- `Game Data { get; init; }`
+  - The metadata supplied by the provider, not an imported server game.
+
+### MetadataSearchPage
+
+`record` — `LANCommander.Server.Plugins.MetadataSearchPage`
+
+A page of metadata search results.
+
+**Properties**
+
+- `IReadOnlyList<MetadataGame> Results { get; init; }`
+- `bool More { get; init; }`
+- `int Limit { get; init; }`
+- `int Offset { get; init; }`
 
 ### MultiplayerModeInfo
 

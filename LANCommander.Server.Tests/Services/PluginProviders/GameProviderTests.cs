@@ -169,4 +169,22 @@ public class GameProviderTests(ApplicationFixture fixture) : BaseTest(fixture)
 
         (await Games.GetCustomFieldsAsync(game.Id)).ShouldBeEmpty();
     }
+
+    [Fact]
+    public async Task CustomFieldsCanBeReadInBulkWithoutLosingTheirGameIdentity()
+    {
+        var first = await AddGameAsync();
+        var second = await AddGameAsync();
+        await Games.SetCustomFieldAsync(first.Id, "Catalog.Identity", "one");
+        await Games.SetCustomFieldAsync(second.Id, "Catalog.Identity", "two");
+
+        var fields = await Games.GetCustomFieldsAsync();
+
+        fields.ShouldContain(field => field.GameId == first.Id && field.Name == "Catalog.Identity" && field.Value == "one");
+        fields.ShouldContain(field => field.GameId == second.Id && field.Name == "Catalog.Identity" && field.Value == "two");
+        (await Games.GetCustomFieldsAsync(first.Id)).ShouldHaveSingleItem().Value.ShouldBe("one");
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+        await Should.ThrowAsync<OperationCanceledException>(() => Games.GetCustomFieldsAsync(cancellation.Token));
+    }
 }

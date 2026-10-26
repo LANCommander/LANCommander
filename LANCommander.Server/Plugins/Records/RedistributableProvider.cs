@@ -94,7 +94,7 @@ internal sealed class RedistributableProvider(
         entity.OptionSchema = info.OptionSchema;
     }
 
-    static RedistributableInfo Info(Redistributable entity) => new()
+    internal static RedistributableInfo Info(Redistributable entity) => new()
     {
         Id = entity.Id,
         Name = entity.Name,

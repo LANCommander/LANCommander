@@ -7,7 +7,8 @@ namespace LANCommander.Server.Plugins.Records;
 internal sealed class GameVersionProvider(
     GameService games,
     GameVersionService versions,
-    ArchiveService archives) : IGameVersionProvider
+    ArchiveService archives,
+    RedistributableService redistributables) : IGameVersionProvider
 {
     public async Task<IReadOnlyList<GameVersionInfo>> GetAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
@@ -36,6 +37,75 @@ internal sealed class GameVersionProvider(
         var version = await versions.Include(v => v.Archive!).GetAsync(id);
 
         return version == null ? null : Info(version);
+    }
+
+    public async Task<GameVersionInfo> GetOrCreateLatestAsync(Guid gameId, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!await games.ExistsAsync(gameId))
+            throw RecordGuard.NotFound("game", gameId);
+
+        return Info(await versions.GetOrCreateLatestAsync(gameId));
+    }
+
+    public async Task<IReadOnlyList<GameVersionRedistributableInfo>> GetRedistributablesAsync(
+        Guid versionId,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RecordGuard.Found(await versions.GetAsync(versionId), "game version", versionId);
+
+        var links = await versions.GetRedistributablesAsync(versionId);
+        if (links.Count == 0)
+            return [];
+
+        var ids = links.Select(link => link.RedistributableId).ToList();
+        var records = (await redistributables.Include(redistributable => redistributable.Archives!)
+                .GetAsync(redistributable => ids.Contains(redistributable.Id)))
+            .ToDictionary(redistributable => redistributable.Id);
+
+        return links
+            .Select(link => new GameVersionRedistributableInfo(
+                RedistributableProvider.Info(RecordGuard.Found(
+                    records.GetValueOrDefault(link.RedistributableId), "redistributable", link.RedistributableId)),
+                link.Options))
+            .OrderBy(link => link.Redistributable.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    public async Task SetRedistributablesAsync(
+        Guid versionId,
+        IEnumerable<Guid> redistributableIds,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(redistributableIds);
+        RecordGuard.Found(await versions.GetAsync(versionId), "game version", versionId);
+
+        var ids = redistributableIds.Distinct().ToList();
+        var found = ids.Count == 0 ? [] : (await redistributables.GetAsync(
+            redistributable => ids.Contains(redistributable.Id),
+            query => query.Select(redistributable => redistributable.Id))).ToList();
+
+        RecordGuard.AllFound(ids, found, "redistributable");
+
+        await versions.SetRedistributablesAsync(versionId, ids);
+    }
+
+    public async Task SetRedistributableOptionsAsync(
+        Guid versionId,
+        Guid redistributableId,
+        string? optionsJson,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        RecordGuard.Found(await versions.GetAsync(versionId), "game version", versionId);
+
+        if (!(await versions.GetRedistributablesAsync(versionId)).Any(link => link.RedistributableId == redistributableId))
+            throw RecordGuard.NotFound("game version redistributable", redistributableId);
+
+        await versions.SetRedistributableOptionsAsync(versionId, redistributableId, optionsJson);
     }
 
     public async Task<GameVersionInfo> CreateAsync(Guid gameId, string version, string? changelog = null, CancellationToken cancellationToken = default)

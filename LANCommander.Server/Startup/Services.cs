@@ -32,6 +32,7 @@ public static class Services
         // its service or data assemblies
         builder.Services.AddScoped<IPackageImporter, PackageImporter>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
+        builder.Services.AddScoped<IMetadataLookup, MetadataLookup>();
         builder.Services.AddScoped<IRedistributableProvider, RedistributableProvider>();
         builder.Services.AddScoped<IGameProvider, GameProvider>();
         builder.Services.AddScoped<IGameVersionProvider, GameVersionProvider>();

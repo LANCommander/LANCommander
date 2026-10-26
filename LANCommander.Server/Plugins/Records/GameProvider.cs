@@ -248,6 +248,25 @@ internal sealed class GameProvider(
         await cache.ExpireGameCacheAsync(gameId);
     }
 
+    public async Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        return await context.Set<GameCustomField>()
+            .AsNoTracking()
+            .Where(field => field.GameId != null)
+            .OrderBy(field => field.GameId)
+            .ThenBy(field => field.Name)
+            .Select(field => new GameCustomFieldInfo
+            {
+                Id = field.Id,
+                GameId = field.GameId!.Value,
+                Name = field.Name,
+                Value = field.Value,
+            })
+            .ToListAsync(cancellationToken);
+    }
+
     public async Task<IReadOnlyList<GameCustomFieldInfo>> GetCustomFieldsAsync(Guid gameId, CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

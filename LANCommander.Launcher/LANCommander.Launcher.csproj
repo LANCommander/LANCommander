@@ -6,9 +6,6 @@
     <AvaloniaUseCompiledBindingsByDefault>true</AvaloniaUseCompiledBindingsByDefault>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationIcon>LANCommanderDark.ico</ApplicationIcon>
-    <!-- Single source of truth: derives AssemblyVersion, FileVersion and InformationalVersion.
-         Release builds override it with -p:Version from the tag. -->
-    <Version>2.1.10</Version>
   </PropertyGroup>
 
   <!-- Plugin allowlist for the bundled VLC runtime. Imported before the NuGet's own

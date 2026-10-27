@@ -6,7 +6,6 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <!-- An unresolved component tag silently renders as a raw HTML element; fail the build instead -->
     <WarningsAsErrors>$(WarningsAsErrors);RZ10012</WarningsAsErrors>
-    <Version>1.1.0</Version>
     <Authors>pathartl</Authors>
     <Company>LANCommander</Company>
     <Description>A Blazor component library for building UIs on the LANCommander platform</Description>

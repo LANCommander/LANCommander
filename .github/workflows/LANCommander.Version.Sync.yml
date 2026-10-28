@@ -1,0 +1,82 @@
+name: LANCommander Release Version Sync
+
+on:
+  release:
+    types: [published]
+  workflow_call:
+    inputs:
+      release_tag:
+        description: Release tag to synchronize, without incrementing it.
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      release_tag:
+        description: Existing release tag to synchronize (for example v2.2.0-alpha.3).
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-version-sync
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    # Nightly and VLC releases are not LANCommander version releases.
+    if: inputs.release_tag != '' || startsWith(github.event.release.tag_name, 'v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.repository.default_branch }}
+
+      - name: Verify synchronization script
+        shell: pwsh
+        run: ./LANCommander.Build/Test-SyncReleaseVersion.ps1
+
+      - name: Synchronize version properties
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          $result = & ./LANCommander.Build/Sync-ReleaseVersion.ps1 -ReleaseTag $env:RELEASE_TAG
+          if ($result.Changed) {
+            "version=$($result.Version)" >> $env:GITHUB_OUTPUT
+          }
+
+      - name: Prepare pull request body
+        if: steps.version.outputs.version != ''
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ inputs.release_tag || github.event.release.tag_name }}
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $body = Get-Content '.github/PULL_REQUEST_TEMPLATE.md' -Raw
+          $body = $body.Replace('<!-- What does this PR do? Why is it needed? -->',
+            "Synchronize local build versions with release $env:RELEASE_TAG so local assemblies match the released plugin contracts. No future patch bump.")
+          $body = $body -replace '(?m)^- \r?$', '- Update only Version and AssemblyVersion in Directory.Build.props; keep prerelease text out of the numeric assembly identity.'
+          $body = $body.Replace('- [ ] I have added tests for new functionality (if applicable)',
+            '- [x] I have added tests for new functionality (if applicable)')
+          $body += "`n`n" + 'Validation: `pwsh -File LANCommander.Build/Test-SyncReleaseVersion.ps1` passed in GitHub Actions. Application builds and application tests were not run; only version properties changed.' + "`n"
+          $bodyPath = Join-Path $env:RUNNER_TEMP 'release-version-sync-pr.md'
+          [System.IO.File]::WriteAllText($bodyPath, $body)
+          "PR_BODY_PATH=$bodyPath" >> $env:GITHUB_ENV
+
+      - name: Create or update pull request
+        if: steps.version.outputs.version != ''
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          branch: automation/release-version-${{ steps.version.outputs.version }}
+          base: ${{ github.event.repository.default_branch }}
+          add-paths: Directory.Build.props
+          commit-message: "chore: sync version to ${{ steps.version.outputs.version }}"
+          title: "chore: sync version to ${{ steps.version.outputs.version }}"
+          body-path: ${{ env.PR_BODY_PATH }}

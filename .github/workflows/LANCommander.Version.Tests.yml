@@ -1,0 +1,27 @@
+name: LANCommander Version Sync Tests
+
+on:
+  pull_request:
+    paths:
+      - 'LANCommander.Build/*ReleaseVersion.ps1'
+      - '.github/workflows/LANCommander.Version.*.yml'
+      - 'Directory.Build.props'
+      - 'LANCommander.Launcher/LANCommander.Launcher.csproj'
+      - 'LANCommander.Server.UI/LANCommander.Server.UI.csproj'
+  push:
+    branches: [main]
+    paths:
+      - 'LANCommander.Build/*ReleaseVersion.ps1'
+      - '.github/workflows/LANCommander.Version.*.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test release version synchronization
+        shell: pwsh
+        run: ./LANCommander.Build/Test-SyncReleaseVersion.ps1

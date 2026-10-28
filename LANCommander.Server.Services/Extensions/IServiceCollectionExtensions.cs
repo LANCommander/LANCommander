@@ -119,6 +119,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<UserService>();
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();
+        services.AddScoped<PersonalAccessTokenService>();
         services.AddScoped<GameCustomFieldService>();
         services.AddScoped<ChatService>();
         services.AddScoped<ChatMessageService>();

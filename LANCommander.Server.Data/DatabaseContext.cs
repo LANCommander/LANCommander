@@ -99,6 +99,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<Role>();
             builder.ConfigureBaseRelationships<User>();
             builder.ConfigureBaseRelationships<UserCustomField>();
+            builder.ConfigureBaseRelationships<PersonalAccessToken>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -373,6 +374,12 @@ namespace LANCommander.Server.Data
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
 
+            builder.Entity<User>()
+                .HasMany(u => u.PersonalAccessTokens)
+                .WithOne(t => t.User)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
             builder.Entity<User>(b =>
             {
                 b.ToTable("Users");
@@ -612,6 +619,7 @@ namespace LANCommander.Server.Data
         public DbSet<StorageLocation>? StorageLocations { get; set; }
         public DbSet<Role>? Roles { get; set; }
         public DbSet<User>? Users { get; set; }
+        public DbSet<PersonalAccessToken>? PersonalAccessTokens { get; set; }
         public DbSet<ChatThread>? ChatThreads { get; set; }
         public DbSet<ChatMessage>? ChatMessages { get; set; }
         public DbSet<ChatThreadReadStatus>? ChatThreadReadStatuses { get; set; }

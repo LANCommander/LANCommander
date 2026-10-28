@@ -2,6 +2,7 @@ using System.Text;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Tokens;
 
@@ -52,6 +53,7 @@ public static class Identity
                     IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(settings.Server.Authentication.TokenSecret))
                 };
             })
+            .AddScheme<AuthenticationSchemeOptions, PersonalAccessTokenAuthenticationHandler>(PersonalAccessTokenAuthenticationHandler.SchemeName, null)
             .AddAuthenticationProviders(settings)
             .AddIdentityCookies();
 

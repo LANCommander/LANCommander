@@ -1,0 +1,35 @@
+@using Microsoft.JSInterop
+@inherits Dialog<string, bool>
+@inject IJSRuntime JS
+@inject NotificationService Notifications
+
+@* Shows a new token's secret, the only time it can be seen *@
+<Flex Vertical Gap="Gap.Medium">
+    <Alert Warning>Copy the token now. It is stored hashed, so it can't be shown again.</Alert>
+
+    <InputGroup Block>
+        <TextInput Value="@Options" ReadOnly Style="flex: 1; font-family: var(--lc-font-mono, monospace)" aria-label="Personal access token" />
+        <Button Icon="IconType.Copy" OnClick="CopyAsync">Copy</Button>
+    </InputGroup>
+
+    <Typography Secondary Small>
+        Send it as a bearer token: <Typography Code>Authorization: Bearer @Options</Typography>
+    </Typography>
+</Flex>
+
+@code {
+    async Task CopyAsync()
+    {
+        try
+        {
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", Options);
+
+            Notifications.Success("Token copied");
+        }
+        catch (JSException)
+        {
+            // Browsers only expose the clipboard on secure origins; plain-HTTP LAN servers aren't one
+            Notifications.Error("The browser blocked clipboard access. Select the token and copy it instead.");
+        }
+    }
+}

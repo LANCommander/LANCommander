@@ -1160,6 +1160,67 @@ namespace LANCommander.Migrations
                     b.ToTable("Pages");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ExpiresOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastUsedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("TokenPrefix")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2871,6 +2932,31 @@ namespace LANCommander.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("PersonalAccessTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3482,6 +3568,8 @@ namespace LANCommander.Migrations
                         .IsRequired();
 
                     b.Navigation("Media");
+
+                    b.Navigation("PersonalAccessTokens");
 
                     b.Navigation("PlaySessions");
 

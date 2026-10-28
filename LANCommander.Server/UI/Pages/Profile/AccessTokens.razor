@@ -1,0 +1,164 @@
+@page "/Profile/AccessTokens"
+@using LANCommander.Server.Endpoints
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Services.Models
+@using LANCommander.Server.UI.Pages.Profile.Components
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.Extensions.Logging.Abstractions
+@inject UserService UserService
+@inject PersonalAccessTokenService PersonalAccessTokenService
+@inject IEnumerable<IServerEndpointExtension> EndpointExtensions
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+@attribute [Authorize]
+
+<PageHeader Title="Access Tokens">
+    <Extra>
+        <Button Primary Icon="IconType.Plus" OnClick="CreateAsync" Disabled="User == null">New Token</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent Loading="User == null">
+    @if (User != null)
+    {
+        <Typography Secondary>
+            Personal access tokens let scripts, tools and other clients call the API as you, without your password.
+            A token can do anything your account can, unless you limit it to specific plugins.
+        </Typography>
+
+        <DataTable TItem="PersonalAccessToken"
+                   @ref="_table"
+                   Query="t => t.UserId == User.Id"
+                   SearchProperty="t => t.Name"
+                   EmptyText="No access tokens">
+            <Columns>
+                <BoundColumn Property="t => t.Name" Title="Name" Sortable />
+                <BoundColumn Property="t => t.TokenPrefix" Title="Token">
+                    <Typography Code>@(context.TokenPrefix)…</Typography>
+                </BoundColumn>
+                <BoundColumn Property="t => t.Scopes" Title="Access">
+                    @{ var scopes = PersonalAccessTokenScopes.Parse(context.Scopes); }
+                    @if (scopes.HasFullApi)
+                    {
+                        <Tag>Full API</Tag>
+                    }
+                    else
+                    {
+                        @foreach (var plugin in scopes.Plugins)
+                        {
+                            <Tag>@plugin</Tag>
+                        }
+                    }
+                </BoundColumn>
+                <BoundColumn Property="t => t.CreatedOn" Title="Created" Sortable DefaultSort="ColumnSort.Descending">
+                    <LocalTime Value="context.CreatedOn" />
+                </BoundColumn>
+                <BoundColumn Property="t => t.LastUsedOn" Title="Last Used" Sortable>
+                    @if (context.LastUsedOn.HasValue)
+                    {
+                        <LocalTime Value="context.LastUsedOn" Relative />
+                    }
+                    else
+                    {
+                        <Typography Secondary>Never</Typography>
+                    }
+                </BoundColumn>
+                <BoundColumn Property="t => t.ExpiresOn" Title="Expires" Sortable>
+                    @if (!context.ExpiresOn.HasValue)
+                    {
+                        <Typography Secondary>Never</Typography>
+                    }
+                    else if (context.ExpiresOn <= DateTime.UtcNow)
+                    {
+                        <Tag Danger>Expired</Tag>
+                    }
+                    else
+                    {
+                        <LocalTime Value="context.ExpiresOn" />
+                    }
+                </BoundColumn>
+                <ActionsColumn TItem="PersonalAccessToken">
+                    <Popconfirm OnConfirm="() => RevokeAsync(context)" Title="Revoke this token? Anything using it will stop working." OkText="Revoke" Danger>
+                        <Button Text Danger Icon="IconType.X" title="Revoke" />
+                    </Popconfirm>
+                </ActionsColumn>
+            </Columns>
+        </DataTable>
+    }
+</PageContent>
+
+@code {
+    DataTable<PersonalAccessToken>? _table;
+    User? User;
+    System.Security.Claims.ClaimsPrincipal? _principal;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        _principal = authState.User;
+
+        if (authState.User.Identity?.IsAuthenticated == true)
+            User = await UserService.GetAsync(authState.User.Identity.Name);
+
+        User ??= new();
+    }
+
+    async Task CreateAsync()
+    {
+        if (User == null)
+            return;
+
+        // Only offer plugins whose endpoints the user could call anyway
+        var plugins = PluginEndpoints.Resolve(EndpointExtensions, NullLogger.Instance)
+            .Where(e => e.Access.IsSatisfiedBy(_principal))
+            .Select(e => e.Extension.RoutePrefix)
+            .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        var request = await Dialogs.OpenAsync<NewAccessTokenDialog, NewAccessTokenOptions, NewAccessTokenRequest>(
+            "New Access Token",
+            new NewAccessTokenOptions(plugins),
+            new DialogSettings { OkText = "Create Token" });
+
+        if (request == null)
+            return;
+
+        string secret;
+
+        try
+        {
+            (_, secret) = await PersonalAccessTokenService.CreateAsync(User.Id, request.Name, request.Scopes, request.ExpiresOn);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The token could not be created");
+            return;
+        }
+
+        if (_table != null)
+            await _table.ReloadAsync();
+
+        await Dialogs.OpenAsync<AccessTokenCreatedDialog, string, bool>(
+            "Token Created",
+            secret,
+            new DialogSettings { NoCancel = true, OkText = "Done", Subtitle = request.Name });
+    }
+
+    async Task RevokeAsync(PersonalAccessToken token)
+    {
+        try
+        {
+            if (User != null && await PersonalAccessTokenService.RevokeAsync(User.Id, token.Id))
+                Notifications.Success("Token revoked");
+
+            if (_table != null)
+                await _table.ReloadAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The token could not be revoked");
+        }
+    }
+}

@@ -223,6 +223,8 @@ namespace LANCommander.Server.Services
             using var identityContext = await _identityContextFactory.CreateAsync();
             var user = await identityContext.UserManager.FindByNameAsync(userName);
             await identityContext.UserManager.AddToRoleAsync(user, roleName);
+
+            await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
         }
 
         public async Task AddToRolesAsync(string userName, IEnumerable<string> roleNames)
@@ -242,6 +244,8 @@ namespace LANCommander.Server.Services
             using var identityContext = await _identityContextFactory.CreateAsync();
             var user = await identityContext.UserManager.FindByNameAsync(userName);
             await identityContext.UserManager.RemoveFromRoleAsync(user, roleName);
+
+            await Cache.RemoveByTagAsync(["User/Security", "User/Roles", $"User/{user.Id}", $"Library/{user.Id}"]);
         }
 
         public async Task<bool> CheckPassword(string userName, string password)

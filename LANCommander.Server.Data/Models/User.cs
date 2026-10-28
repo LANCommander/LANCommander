@@ -67,6 +67,9 @@ namespace LANCommander.Server.Data.Models
         public ICollection<UserCustomField>? CustomFields { get; set; }
 
         [JsonIgnore]
+        public ICollection<PersonalAccessToken>? PersonalAccessTokens { get; set; }
+
+        [JsonIgnore]
         public bool Approved { get; set; }
 
         [JsonIgnore]

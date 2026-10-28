@@ -1165,6 +1165,67 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.ToTable("Pages");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("ExpiresOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<DateTime?>("LastUsedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("varchar(1024)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("varchar(64)");
+
+                    b.Property<string>("TokenPrefix")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("varchar(32)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("char(36)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2880,6 +2941,31 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("PersonalAccessTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3491,6 +3577,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                         .IsRequired();
 
                     b.Navigation("Media");
+
+                    b.Navigation("PersonalAccessTokens");
 
                     b.Navigation("PlaySessions");
 

@@ -1,3 +1,4 @@
+using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 
@@ -9,18 +10,29 @@ public class BearerClaimsPrincipalMiddleware(RequestDelegate next)
     {
         if (context.User.Identity is null || !context.User.Identity.IsAuthenticated)
         {
-            var authHeader = context.Request.Headers.Authorization.ToString();
+            var token = PersonalAccessTokenAuthenticationHandler.GetBearerToken(context.Request);
 
-            if (!String.IsNullOrEmpty(authHeader) &&
-                authHeader.StartsWith("Bearer ", StringComparison.OrdinalIgnoreCase))
+            if (!String.IsNullOrEmpty(token))
             {
-                var authResult = await context.AuthenticateAsync(JwtBearerDefaults.AuthenticationScheme);
-                
+                var scheme = PersonalAccessTokenService.IsPersonalAccessToken(token)
+                    ? PersonalAccessTokenAuthenticationHandler.SchemeName
+                    : JwtBearerDefaults.AuthenticationScheme;
+
+                var authResult = await context.AuthenticateAsync(scheme);
+
                 if (authResult.Succeeded && authResult.Principal is not null)
                     context.User = authResult.Principal;
+                else if (authResult.Failure is PersonalAccessTokenScopeException)
+                {
+                    context.Response.StatusCode = StatusCodes.Status403Forbidden;
+
+                    await context.Response.WriteAsync(authResult.Failure.Message);
+
+                    return;
+                }
             }
         }
-        
+
         await next(context);
     }
 }

@@ -1165,6 +1165,67 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.ToTable("Pages");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("ExpiresOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTime?>("LastUsedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Scopes")
+                        .IsRequired()
+                        .HasMaxLength(1024)
+                        .HasColumnType("character varying(1024)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<string>("TokenPrefix")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("PersonalAccessTokens");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2880,6 +2941,31 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PersonalAccessToken", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("PersonalAccessTokens")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Platform", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3491,6 +3577,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                         .IsRequired();
 
                     b.Navigation("Media");
+
+                    b.Navigation("PersonalAccessTokens");
 
                     b.Navigation("PlaySessions");
 

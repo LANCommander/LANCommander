@@ -183,6 +183,26 @@ A lookup does not import or change a game.
 Missing or unavailable providers throw `InvalidOperationException`; provider errors propagate.
 Cancellation stops waiting, but a provider without cancellation support may finish in the background.
 
+## Reading user accounts
+
+A plugin that lets users sign in to something it hosts with their LANCommander account, such as a
+directory service or a game server, can look accounts up through
+[`IUserDirectory`](/Plugins/API%20Reference#iuserdirectory):
+
+```csharp
+@inject IUserDirectory Users
+
+var account = await Users.FindAsync(userName, cancellationToken);
+
+if (account is { CanSignIn: true })
+{
+    // Check a credential the plugin keeps itself
+}
+```
+
+The directory is read-only and never exposes passwords. `CanSignIn` applies the server's own sign-in
+rules, lockout and approval, so a plugin that honours it refuses the same accounts the server does.
+
 ## Server UI extensions
 
 Server plugins can contribute routable Razor components and navigation entries through the
@@ -224,6 +244,7 @@ among the other plugin entries. To place it elsewhere, set `Section` to one of t
 | `Pages` | The Pages group |
 | `Settings` | The Settings group |
 | `Integrations` | The Integrations group inside Settings |
+| `Profile` | The profile menu under the signed-in user's name, alongside Change Password and Access Tokens. Shown to every signed-in user; `After` names a profile link such as `/Profile/AccessTokens` |
 
 `After` names a built-in link by its route, or a built-in group by its section:
 

@@ -1,5 +1,7 @@
 using Bunit;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.UI.Shared;
+using Microsoft.Extensions.DependencyInjection;
 using Xunit;
 
 namespace LANCommander.Server.UI.Tests.Components;
@@ -32,5 +34,33 @@ public class SidebarProfileComponentTests : BUnitTestContext
         // And they are siblings of the profile dropdown, not descendants of it
         Assert.Empty(cut.FindAll(".lc-sidebar-profile .lc-social"));
         Assert.Empty(cut.FindAll(".lc-sidebar-profile .lc-sidebar-version"));
+    }
+
+    [Fact]
+    public void PluginProfileEntriesAreListedInTheProfileMenu()
+    {
+        Services.AddSingleton<IServerNavigationExtension>(new Entry("pin", "Game PIN", "/Profile/AccessTokens"));
+        Services.AddSingleton<IServerNavigationExtension>(new Entry("last", "Last Entry", null));
+
+        var cut = Render<SidebarProfile>();
+
+        cut.Find(".lc-sidebar-profile-button").Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            var labels = cut.FindAll(".lc-menu-item-text").Select(item => item.TextContent.Trim()).ToList();
+
+            Assert.Equal(["Access Tokens", "Game PIN", "Last Entry", "Logout"], labels[^4..]);
+        });
+    }
+
+    private sealed class Entry(string id, string label, string? after) : IServerNavigationExtension
+    {
+        public string Id => id;
+        public string Label => label;
+        public string Href => $"/Plugins/{id}";
+        public string? Section => ServerNavigationSection.Profile;
+        public string? After => after;
+        public PluginAccessPolicy Access => PluginAccessPolicy.AuthenticatedUser;
     }
 }

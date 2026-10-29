@@ -17,6 +17,7 @@ internal sealed class PluginNavigation
         ServerNavigationSection.Pages,
         ServerNavigationSection.Settings,
         ServerNavigationSection.Integrations,
+        ServerNavigationSection.Profile,
     };
 
     readonly IReadOnlyList<IServerNavigationExtension> _entries;

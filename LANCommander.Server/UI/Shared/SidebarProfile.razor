@@ -1,14 +1,20 @@
 @using System.Security.Claims
 @using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Services.Abstractions
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IVersionProvider VersionProvider
+@inject ILogger<SidebarProfile> Logger
+@inject IEnumerable<IServerNavigationExtension> PluginNavigationExtensions
+@inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
 
 @* The signed-in user at the foot of the sidebar; their profile pages and sign-out open from it *@
 @if (_name != null)
 {
+    var anchors = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
     <Dropdown Class="lc-sidebar-profile">
         <ChildContent>
             <button type="button" class="lc-sidebar-profile-button" aria-label="Profile menu">
@@ -19,18 +25,20 @@
         </ChildContent>
         <Overlay>
             <Menu>
-                <MenuItem Href="/Profile" Exact Icon="IconType.User">General</MenuItem>
+                @PluginItems(_plugins.Start(ServerNavigationSection.Profile))
+                @Link(anchors, "/Profile", IconType.User, "General", exact: true)
                 @if (SettingsProvider.CurrentValue.Server.Library.EnableUserLibraries)
                 {
-                    <MenuItem Href="/Profile/Library" Icon="IconType.Books">Library</MenuItem>
+                    @Link(anchors, "/Profile/Library", IconType.Books, "Library")
                 }
-                <MenuItem Href="/Profile/ConnectedAccounts" Icon="IconType.Plugs">Connected Accounts</MenuItem>
+                @Link(anchors, "/Profile/ConnectedAccounts", IconType.Plugs, "Connected Accounts")
                 @if (SettingsProvider.CurrentValue.Server.Authentication.AllowPassword)
                 {
-                    <MenuItem Href="/Profile/ChangePassword" Icon="IconType.Password">Change Password</MenuItem>
+                    @Link(anchors, "/Profile/ChangePassword", IconType.Password, "Change Password")
                 }
-                <MenuItem Href="/Profile/Saves" Icon="IconType.FloppyDisk">Saves</MenuItem>
-                <MenuItem Href="/Profile/AccessTokens" Icon="IconType.Key">Access Tokens</MenuItem>
+                @Link(anchors, "/Profile/Saves", IconType.FloppyDisk, "Saves")
+                @Link(anchors, "/Profile/AccessTokens", IconType.Key, "Access Tokens")
+                @PluginItems(_plugins.End(ServerNavigationSection.Profile, anchors))
                 <MenuDivider />
                 <MenuItem Href="/Logout" Icon="IconType.SignOut">Logout</MenuItem>
             </Menu>
@@ -45,6 +53,7 @@
 @code {
     string? _name;
     string? _version;
+    PluginNavigation _plugins = new([]);
 
     protected override async Task OnInitializedAsync()
     {
@@ -53,6 +62,34 @@
         var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
 
         if (authState.User.Identity?.IsAuthenticated ?? false)
+        {
             _name = authState.User.Identity.Name;
+
+            var pluginAssemblies = UIRouteAssembly.ResolvePluginAssemblies(PluginRouteAssemblies);
+
+            _plugins = new(PluginNavigation.Resolve(PluginNavigationExtensions, Logger)
+                .Where(extension => PluginNavigationVisibility.IsVisible(extension, authState.User, pluginAssemblies)));
+        }
     }
+
+    // A built-in link, followed by the plugin entries anchored to it
+    RenderFragment Link(HashSet<string> anchors, string href, IconType icon, string label, bool exact = false)
+    {
+        anchors.Add(href);
+
+        return @<text>
+            <MenuItem Href="@href" Exact="exact" Icon="icon">@label</MenuItem>
+            @PluginItems(_plugins.After(ServerNavigationSection.Profile, href))
+        </text>;
+    }
+
+    RenderFragment? PluginItems(IReadOnlyList<IServerNavigationExtension> entries) => entries.Count == 0 ? null : @<text>
+        @foreach (var entry in entries)
+        {
+            <MenuItem Href="@entry.Href" Icon="@ParseIcon(entry.Icon)">@entry.Label</MenuItem>
+        }
+    </text>;
+
+    static IconType ParseIcon(string? icon) =>
+        Enum.TryParse<IconType>(icon, true, out var parsed) ? parsed : IconType.None;
 }

@@ -23,6 +23,7 @@ Use the version of the server the plugin targets.
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
 | `IMetadataLookup` | Searches configured metadata providers and fetches full game metadata without importing it. Provided by the server |
+| `IUserDirectory`, `UserAccount` | Reads user accounts, their roles and whether they may sign in, without passwords. Provided by the server |
 | `IGameProvider`, `IGameVersionProvider` | Manage games and add-ons, their links, external ids, custom fields and versions. Provided by the server |
 | `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |

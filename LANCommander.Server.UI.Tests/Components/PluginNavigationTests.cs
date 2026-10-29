@@ -88,6 +88,21 @@ public class PluginNavigationTests
     }
 
     [Fact]
+    public void ProfileEntriesGoToTheProfileMenuOnly()
+    {
+        var navigation = new PluginNavigation(
+        [
+            new Entry("pin", "PIN", ServerNavigationSection.Profile, "/Profile/AccessTokens"),
+            new Entry("last", "Last", ServerNavigationSection.Profile),
+        ]);
+
+        Assert.Empty(navigation.PluginArea);
+        Assert.Empty(navigation.End(null, Anchors()));
+        Assert.Equal(["PIN"], Labels(navigation.After(ServerNavigationSection.Profile, "/Profile/AccessTokens")));
+        Assert.Equal(["Last"], Labels(navigation.End(ServerNavigationSection.Profile, Anchors("/Profile/AccessTokens"))));
+    }
+
+    [Fact]
     public void ResolvingDropsInvalidAndDuplicateEntries()
     {
         var entries = PluginNavigation.Resolve(

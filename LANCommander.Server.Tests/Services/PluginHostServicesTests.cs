@@ -42,4 +42,39 @@ public class PluginHostServicesTests(ApplicationFixture fixture) : BaseTest(fixt
     [Fact]
     public void MetadataLookupIsAvailableToPlugins() =>
         GetService<IMetadataLookup>().ShouldNotBeNull();
+
+    [Fact]
+    public async Task TheUserDirectoryFindsAccountsWithTheirRolesAndSignInState()
+    {
+        var admin = await EnsureAdminUserCreatedAsync();
+        var userService = GetService<UserService>();
+        var directory = GetService<IUserDirectory>();
+
+        var lockedOut = await userService.AddAsync(new User
+        {
+            UserName = $"locked-{Guid.NewGuid():N}",
+            Alias = "Locked Out",
+            Approved = true,
+            LockoutEnabled = true,
+            LockoutEnd = DateTimeOffset.UtcNow.AddHours(1),
+        });
+
+        var found = await directory.FindAsync(admin.UserName!.ToUpperInvariant());
+
+        found.ShouldNotBeNull();
+        found.Id.ShouldBe(admin.Id);
+        found.IsAdministrator.ShouldBeTrue();
+        found.Roles.ShouldContain(RoleService.AdministratorRoleName);
+        found.CanSignIn.ShouldBeTrue();
+
+        var locked = await directory.GetAsync(lockedOut.Id);
+
+        locked.ShouldNotBeNull();
+        locked.Alias.ShouldBe("Locked Out");
+        locked.IsAdministrator.ShouldBeFalse();
+        locked.CanSignIn.ShouldBeFalse();
+
+        (await directory.GetAsync()).ShouldContain(account => account.Id == lockedOut.Id);
+        (await directory.FindAsync("nobody-by-this-name")).ShouldBeNull();
+    }
 }

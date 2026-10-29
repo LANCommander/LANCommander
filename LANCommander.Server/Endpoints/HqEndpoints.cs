@@ -10,15 +10,18 @@ public static class HqEndpoints
 {
     public static void MapHqEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/HQ")
-            .RequireAuthorization(policy => policy.RequireRole(RoleService.AdministratorRoleName));
+        var group = routes.MapGroup("/api/HQ");
 
-        // The callback writes the server's HQ credential, so it is guarded exactly like the settings
-        // page that starts the flow. It runs as a top-level navigation in a popup, so the session
-        // cookie is sent under SameSite=Lax.
-        group.MapGet("/Callback", CallbackAsync);
-        group.MapGet("/Status", StatusAsync);
-        group.MapPost("/Disconnect", DisconnectAsync);
+        // The callback writes the server's HQ credential, so it is guarded exactly like the pages
+        // that start the flow: an administrator once set up, anyone during first-time setup (whose
+        // pages are open to anyone until an administrator exists). It authorizes itself because a
+        // policy cannot express the second case. It runs as a top-level navigation in a popup, so
+        // the session cookie is sent under SameSite=Lax.
+        group.MapGet("/Callback", CallbackAsync).AllowAnonymous();
+        group.MapGet("/Status", StatusAsync)
+            .RequireAuthorization(policy => policy.RequireRole(RoleService.AdministratorRoleName));
+        group.MapPost("/Disconnect", DisconnectAsync)
+            .RequireAuthorization(policy => policy.RequireRole(RoleService.AdministratorRoleName));
     }
 
     private static async Task<IResult> CallbackAsync(
@@ -26,15 +29,27 @@ public static class HqEndpoints
         ClaimsPrincipal user,
         [FromServices] HqConnectionService hqConnection,
         [FromServices] HqAuthorizationStateStore stateStore,
+        [FromServices] SetupService setupService,
         CancellationToken cancellationToken)
     {
         if (string.IsNullOrWhiteSpace(code))
             return TypedResults.BadRequest("No authorization code provided.");
 
-        // Single-use, and only for an administrator who clicked Connect on this server in the last
-        // few minutes. Without it, an admin could be walked through a login of someone else's
-        // choosing and the server would silently adopt that account's credential.
-        if (!stateStore.TryConsume(user.Identity?.Name))
+        // Single-use, and only for a flow started from this server in the last few minutes. Without
+        // it, an admin could be walked through a login of someone else's choosing and the server
+        // would silently adopt that account's credential.
+        bool authorized;
+
+        if (user.IsInRole(RoleService.AdministratorRoleName))
+            authorized = stateStore.TryConsume(user.Identity?.Name);
+        else if (!await setupService.IsSetupInitialized())
+            authorized = stateStore.TryConsumeForSetup();
+        else if (user.Identity?.IsAuthenticated == true)
+            return TypedResults.Forbid();
+        else
+            return TypedResults.Challenge();
+
+        if (!authorized)
             return TypedResults.BadRequest("The LANCommander HQ authorization request has expired or is invalid. Start again from the HQ settings page.");
 
         // Exchanges the code, persists the resulting token pair, and verifies against HQ before we

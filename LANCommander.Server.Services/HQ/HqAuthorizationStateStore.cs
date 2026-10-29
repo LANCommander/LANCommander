@@ -20,6 +20,10 @@ public sealed class HqAuthorizationStateStore
 
     private readonly ConcurrentDictionary<string, DateTimeOffset> _pending = new(StringComparer.Ordinal);
 
+    // First-time setup links HQ before any administrator exists, so there is no identity to key on.
+    // Kept apart from the per-user entries so no user name can ever collide with it.
+    private long _setupExpiresAtTicks;
+
     /// <summary>Records that <paramref name="userName"/> has begun an HQ login.</summary>
     public void Issue(string? userName)
     {
@@ -50,6 +54,24 @@ public sealed class HqAuthorizationStateStore
         if (!string.IsNullOrWhiteSpace(userName))
             _pending.TryRemove(userName, out _);
     }
+
+    /// <summary>
+    /// Records that an HQ login was begun from first-time setup, where nobody is signed in yet.
+    /// </summary>
+    public void IssueForSetup() =>
+        Interlocked.Exchange(ref _setupExpiresAtTicks, (DateTimeOffset.UtcNow + Lifetime).UtcTicks);
+
+    /// <summary>
+    /// Consumes the pending first-time setup authorization. Single-use, like <see cref="TryConsume"/>.
+    /// </summary>
+    public bool TryConsumeForSetup()
+    {
+        var expiresAtTicks = Interlocked.Exchange(ref _setupExpiresAtTicks, 0);
+
+        return expiresAtTicks > DateTimeOffset.UtcNow.UtcTicks;
+    }
+
+    public void RevokeForSetup() => Interlocked.Exchange(ref _setupExpiresAtTicks, 0);
 
     private void Prune()
     {

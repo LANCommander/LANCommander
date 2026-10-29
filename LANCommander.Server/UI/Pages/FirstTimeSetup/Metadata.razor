@@ -1,7 +1,6 @@
 @page "/FirstTimeSetup/Metadata"
 @using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Components
-@using Microsoft.AspNetCore.Components.Authorization
 @using Microsoft.Extensions.Options
 @layout FirstTimeSetupLayout
 @inject SetupService SetupService
@@ -9,7 +8,6 @@
 @inject IOptions<Settings> Settings
 @inject IHqConnectionState HqConnection
 @inject HqAuthorizationStateStore HqAuthorizationState
-@inject AuthenticationStateProvider AuthenticationStateProvider
 @inject NavigationManager NavigationManager
 @inject NotificationService Notifications
 @inject IJSRuntime JS
@@ -171,10 +169,9 @@
             var tokenRelayUrl = $"{baseUrl}/Auth/TokenRelay?returnUrl={Uri.EscapeDataString(callbackUrl)}";
             var loginUrl = $"{baseUrl}/Auth/Login?returnUrl={Uri.EscapeDataString(tokenRelayUrl)}";
 
-            // Marks this administrator as having started the flow, which the callback requires
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-            HqAuthorizationState.Issue(authState.User.Identity?.Name);
+            // Marks setup as having started the flow, which the callback requires. No administrator
+            // exists yet, so there is no signed-in identity to key it on
+            HqAuthorizationState.IssueForSetup();
 
             _awaitingAuth = true;
 
@@ -192,9 +189,7 @@
     {
         try
         {
-            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
-
-            HqAuthorizationState.Revoke(authState.User.Identity?.Name);
+            HqAuthorizationState.RevokeForSetup();
 
             await HqConnection.DisconnectAsync();
 

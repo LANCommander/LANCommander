@@ -162,6 +162,94 @@ public void ConfigureServices(IServiceCollection services)
 A source that returns results in pages sets `SupportsPaging`; otherwise the server asks only for
 page 0. A source that throws is shown with its error, and the other sources' results still appear.
 
+## Server engines
+
+The server runs game servers as processes on its own machine (the Local engine) or through another
+LANCommander server (Remote). A plugin can run them somewhere else, such as in containers, by
+registering an [`IServerEngineExtension`](/Plugins/API%20Reference#iserverengineextension). It is
+offered as an engine on a server's General page, and the server's start and stop buttons, autostart,
+Monitor, consoles, actions and scripts all work through it.
+
+```csharp
+public sealed class MyEngine(MyClient client) : IServerEngineExtension
+{
+    public string Id => "com.mycompany.myplugin.engine";
+    public string Name => "My Cloud";
+    public ServerEngineFeatures Features => ServerEngineFeatures.Output;
+    public Type? EditorComponent => typeof(MyServerEditor);
+
+    public Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken)
+        => client.StartAsync(server.GetSettings<MyServerSettings>().InstanceId, cancellationToken);
+
+    public Task StopAsync(ServerEngineServer server, CancellationToken cancellationToken)
+        => client.StopAsync(server.GetSettings<MyServerSettings>().InstanceId, cancellationToken);
+
+    public async Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken)
+        => await client.IsRunningAsync(server.GetSettings<MyServerSettings>().InstanceId, cancellationToken)
+            ? ServerEngineStatus.Running
+            : ServerEngineStatus.Stopped;
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IServerEngineExtension, MyEngine>();
+}
+```
+
+The `Id` is stored with every server that uses the engine, so it must never change. A server whose
+engine's plugin isn't installed says so on its General page, and can't be started.
+
+### What the engine keeps about a server
+
+The server keeps a server's name, game, address, autostart, consoles and so on. Anything else the
+engine needs, such as which container a server is, goes in the server's engine settings: JSON the
+server stores with the server and hands the engine as `ServerEngineServer.Settings` on every call.
+Read it with `GetSettings<T>()`. Because the settings travel with the server, they are exported and
+imported with it, and go when it is deleted.
+
+The engine's `EditorComponent` edits them. It is shown on the General page in place of the Local
+engine's executable and process options, and gets a
+[`ServerEngineEditorContext`](/Plugins/API%20Reference#serverengineeditorcontext) as its `Context`
+parameter. Its changes join the page's other unsaved changes, and are saved or discarded with them:
+
+```razor
+@code {
+    [Parameter] public ServerEngineEditorContext Context { get; set; } = default!;
+
+    void Choose(string instanceId)
+    {
+        Context.SetSettings(new MyServerSettings { InstanceId = instanceId });
+
+        // Optionally fill in the address players connect to
+        Context.SetAddress("my-cloud.example", 27015);
+    }
+}
+```
+
+An engine can also add pages to the editors of the servers that use it, listed under its name in the
+editor's menu. Each [`ServerEngineSection`](/Plugins/API%20Reference#serverenginesection) is a
+component taking the `ServerEngineServer` as its `Server` parameter. Such a page saves its own
+changes; to change the server's engine settings, use
+[`IServerProvider`](/Plugins/API%20Reference#iserverprovider).
+
+### Running servers
+
+`StartAsync` returns once the server has started, not when it stops. The server runs the server's
+Before Start and After Stop scripts around `StartAsync` and `StopAsync`, and a start that throws is
+shown to the administrator with its message. `GetStatusAsync` is called every couple of seconds while
+anyone is looking at the server, so keep it cheap; one that throws shows the server as failed.
+
+`InitializeAsync` gives the engine an [`IServerEngineHost`](/Plugins/API%20Reference#iserverenginehost)
+to report what its servers do on their own: `ReportStatus` when one stops or fails without being asked,
+and `WriteOutput` for each line of output, shown on the server's Monitor. `ServersChangedAsync` is
+called with every server using the engine at startup and whenever one is added, changed or deleted,
+which is the time to start or stop following a server's output.
+
+`Features` declares what else the engine can do. `Output` shows the Monitor's output; `Input` lets
+commands typed on the Monitor reach `SendInputAsync`; `ProcessInfo` has the Monitor show the CPU,
+memory and uptime `GetProcessInfoAsync` samples. RCON consoles work with any engine, since the server
+sends RCON commands itself.
+
 ## Looking up metadata
 
 To consume the server's configured metadata providers, inject

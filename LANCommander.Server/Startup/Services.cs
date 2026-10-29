@@ -54,6 +54,10 @@ public static class Services
         // And what plugins offer the server: their media sources join the media search
         builder.Services.AddScoped<IMediaGrabberProvider, PluginMediaGrabbers>();
 
+        // and their server engines join the built-in Local and Remote ones
+        builder.Services.AddSingleton<PluginServerEngines>();
+        builder.Services.AddSingleton<IServerEngineProvider>(provider => provider.GetRequiredService<PluginServerEngines>());
+
         // Each plugin's own settings, in PluginData/{PluginId}/Settings.yaml
         builder.Services.AddSingleton(typeof(IPluginSettings<>), typeof(PluginSettings<>));
 

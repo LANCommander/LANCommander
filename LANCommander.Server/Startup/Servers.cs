@@ -57,7 +57,6 @@ public static class Servers
         private readonly ILogger<ServerEngineStatusService> _logger;
 
         public ServerEngineStatusService(
-            IServiceProvider serviceProvider,
             ServerManager serverManager,
             IHubContext<GameServerHub> hubContext,
             ILogger<ServerEngineStatusService> logger)
@@ -66,7 +65,7 @@ public static class Servers
             _hubContext = hubContext;
             _logger = logger;
 
-            foreach (var engine in serviceProvider.GetServices<IServerEngine>())
+            foreach (var engine in serverManager.Engines)
             {
                 engine.OnServerStatusUpdate += async (sender, args) =>
                 {

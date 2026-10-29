@@ -4,13 +4,13 @@
 @inject RemoteServerEngine RemoteServerEngine
 
 <Flex Vertical Gap="Gap.Large">
-    @if (!ServerEngines.Any())
+    @if (!Shown.Any())
     {
         <Empty Description="No engines have been configured" />
     }
 
     <Collapse>
-        @foreach (var serverEngine in ServerEngines)
+        @foreach (var serverEngine in Shown)
         {
             <Panel Header="@serverEngine.Name">
                 <Extra>
@@ -21,13 +21,6 @@
                         <FormItem Label="Name">
                             <TextInput @bind-Value="serverEngine.Name" Immediate />
                         </FormItem>
-
-                        @if (serverEngine.Type == ServerEngine.Docker)
-                        {
-                            <FormItem Label="Address">
-                                <TextInput @bind-Value="serverEngine.Address" />
-                            </FormItem>
-                        }
 
                         @if (serverEngine.Type == ServerEngine.Remote)
                         {
@@ -76,7 +69,6 @@
 
     <Flex Justify="Justify.Center" Gap="Gap.Small">
         <Button OnClick="() => AddAsync(ServerEngine.Local)">Add Local</Button>
-        <Button OnClick="() => AddAsync(ServerEngine.Docker)">Add Docker</Button>
         <Button Primary OnClick="() => AddAsync(ServerEngine.Remote)">Add Remote</Button>
     </Flex>
 </Flex>
@@ -95,6 +87,9 @@
     }
 
     List<ServerEngineConfiguration> ServerEngines = new();
+
+    // Docker hosts are kept until the Docker plugin takes them over, but are its to manage now
+    IEnumerable<ServerEngineConfiguration> Shown => ServerEngines.Where(e => e.Type != ServerEngine.Docker);
 
     Dictionary<Guid, RemoteEngineState> _remoteStates = new();
 

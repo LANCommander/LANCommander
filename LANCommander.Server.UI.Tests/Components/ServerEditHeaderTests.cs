@@ -164,7 +164,15 @@ public class ServerEditSnapshotTests
 
         server = NewServer();
         saved = ServerEditSnapshot.Of(server);
-        server.Engine = ServerEngine.Docker;
+        server.Engine = ServerEngine.Remote;
+        Assert.NotEqual(saved, ServerEditSnapshot.Of(server));
+
+        // A plugin engine's own settings count as an edit too
+        server = NewServer();
+        server.Engine = ServerEngine.Extension;
+        server.EngineExtensionId = "test.engine";
+        saved = ServerEditSnapshot.Of(server);
+        server.EngineSettings = "{\"containerId\":\"abc\"}";
         Assert.NotEqual(saved, ServerEditSnapshot.Of(server));
     }
 }

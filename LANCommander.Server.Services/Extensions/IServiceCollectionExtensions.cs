@@ -138,9 +138,6 @@ public static class IServiceCollectionExtensions
         
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
-        
-        services.AddSingleton<DockerServerEngine>();
-        services.AddSingleton<IServerEngine>(provider => provider.GetService<DockerServerEngine>());
 
         services.AddSingleton<RemoteServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());

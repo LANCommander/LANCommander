@@ -49,9 +49,11 @@ public class RecordProviderTests(ApplicationFixture fixture) : BaseTest(fixture)
         var servers = GetService<IServerProvider>();
         var game = await GetService<IGameProvider>().AddAsync(new GameInfo { Title = $"Served {Guid.NewGuid():N}" });
 
-        var server = await servers.AddAsync(new ServerInfo { Name = $"Server {Guid.NewGuid():N}", GameId = game.Id, Engine = ServerHostEngine.Docker, Port = 27015 });
+        var server = await servers.AddAsync(new ServerInfo { Name = $"Server {Guid.NewGuid():N}", GameId = game.Id, Engine = ServerHostEngine.Extension, EngineExtensionId = "test.engine", EngineSettings = "{\"hostId\":null}", Port = 27015 });
 
-        server.Engine.ShouldBe(ServerHostEngine.Docker);
+        server.Engine.ShouldBe(ServerHostEngine.Extension);
+        server.EngineExtensionId.ShouldBe("test.engine");
+        server.EngineSettings.ShouldBe("{\"hostId\":null}");
         server.GameId.ShouldBe(game.Id);
 
         (await servers.UpdateAsync(server with { Port = 27016, Autostart = true })).Port.ShouldBe(27016);

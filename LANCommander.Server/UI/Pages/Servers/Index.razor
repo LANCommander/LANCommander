@@ -1,14 +1,13 @@
 @page "/Servers"
 @using LANCommander.Server.Models
-@using LANCommander.Server.Services.Abstractions
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using ManifestType = LANCommander.SDK.Enums.ManifestType
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
+@inject ServerManager ServerManager
 @inject NavigationManager NavigationManager
 @inject DialogService Dialogs
 @inject NotificationService Notifications
-@inject IServiceProvider ServiceProvider
 
 <PageHeader Title="Servers" Subtitle="@Total.ToString()" />
 
@@ -97,36 +96,30 @@
 
     async Task StartServersAsync()
     {
-        foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
+        foreach (var server in SelectedServers)
         {
-            foreach (var server in SelectedServers.Where(s => engine.IsManaging(s.Id)))
+            try
             {
-                try
-                {
-                    await engine.StartAsync(server.Id);
-                }
-                catch (Exception ex)
-                {
-                    Notifications.Error(ex, $"{server.Name} could not be started");
-                }
+                await ServerManager.StartAsync(server.Id);
+            }
+            catch (Exception ex)
+            {
+                Notifications.Error(ex, $"{server.Name} could not be started");
             }
         }
     }
 
     async Task StopServersAsync()
     {
-        foreach (var engine in ServiceProvider.GetServices<IServerEngine>())
+        foreach (var server in SelectedServers)
         {
-            foreach (var server in SelectedServers.Where(s => engine.IsManaging(s.Id)))
+            try
             {
-                try
-                {
-                    await engine.StopAsync(server.Id);
-                }
-                catch (Exception ex)
-                {
-                    Notifications.Error(ex, $"{server.Name} could not be stopped");
-                }
+                await ServerManager.StopAsync(server.Id);
+            }
+            catch (Exception ex)
+            {
+                Notifications.Error(ex, $"{server.Name} could not be stopped");
             }
         }
     }

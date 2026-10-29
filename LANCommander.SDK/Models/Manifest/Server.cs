@@ -15,7 +15,15 @@ namespace LANCommander.SDK.Models.Manifest
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
-        public string ContainerId { get; set; }
+        /// <summary>Local, Remote, or Extension for a plugin's engine.</summary>
+        public string Engine { get; set; } = "Local";
+
+        /// <summary>For a plugin's engine: the engine's id.</summary>
+        public string EngineExtensionId { get; set; } = "";
+
+        /// <summary>For a plugin's engine: what it keeps about the server, as JSON.</summary>
+        public string EngineSettings { get; set; } = "";
+
         public string Host { get; set; }
         public int Port { get; set; }
 

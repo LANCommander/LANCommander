@@ -6,11 +6,11 @@ namespace LANCommander.Server.Plugins;
 public enum ServerHostEngine
 {
     /// <summary>A process on the LANCommander server's machine.</summary>
-    Local,
-    /// <summary>A Docker container.</summary>
-    Docker,
+    Local = 0,
     /// <summary>A server managed by another LANCommander server.</summary>
-    Remote,
+    Remote = 2,
+    /// <summary>A plugin's <see cref="IServerEngineExtension"/>, named by <see cref="ServerInfo.EngineExtensionId"/>.</summary>
+    Extension = 3,
 }
 
 /// <summary>A dedicated game server the LANCommander server runs and monitors.</summary>
@@ -36,11 +36,11 @@ public sealed record ServerInfo
     public bool UseShellExecute { get; init; }
     public ProcessTerminationMethod ProcessTerminationMethod { get; init; }
 
-    /// <summary>For <see cref="ServerHostEngine.Docker"/>: the Docker host.</summary>
-    public Guid? DockerHostId { get; init; }
+    /// <summary>For <see cref="ServerHostEngine.Extension"/>: the engine's <see cref="IServerEngineExtension.Id"/>.</summary>
+    public string EngineExtensionId { get; init; } = "";
 
-    /// <summary>For <see cref="ServerHostEngine.Docker"/>: the container.</summary>
-    public string ContainerId { get; init; } = "";
+    /// <summary>For <see cref="ServerHostEngine.Extension"/>: the engine's settings for the server, as JSON.</summary>
+    public string EngineSettings { get; init; } = "";
 
     /// <summary>For <see cref="ServerHostEngine.Remote"/>: the LANCommander server that manages it.</summary>
     public Guid? RemoteHostId { get; init; }

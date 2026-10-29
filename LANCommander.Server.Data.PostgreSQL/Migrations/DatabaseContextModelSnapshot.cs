@@ -1599,22 +1599,23 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<int>("AutostartMethod")
                         .HasColumnType("integer");
 
-                    b.Property<string>("ContainerId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("character varying(64)");
-
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<Guid?>("DockerHostId")
-                        .HasColumnType("uuid");
-
                     b.Property<int>("Engine")
                         .HasColumnType("integer");
+
+                    b.Property<string>("EngineExtensionId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("EngineSettings")
+                        .IsRequired()
+                        .HasColumnType("text");
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("uuid");

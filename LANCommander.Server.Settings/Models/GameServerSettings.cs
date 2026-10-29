@@ -24,11 +24,5 @@ public class GameServerSettings
             Name = "Local",
             Type = ServerEngine.Local,
         },
-        new()
-        {
-            Name = "Docker",
-            Type = ServerEngine.Docker,
-            Address = "unix:///var/run/docker.sock",
-        }
     ];
 }

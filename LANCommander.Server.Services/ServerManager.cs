@@ -18,12 +18,19 @@ namespace LANCommander.Server.Services;
 public sealed class ServerManager(
     ILogger<ServerManager> logger,
     IServiceScopeFactory scopeFactory,
-    IEnumerable<IServerEngine> serverEngines,
+    IEnumerable<IServerEngine> builtInEngines,
     SettingsProvider<Settings.Settings> settingsProvider,
-    IRconCommandSender rconCommandSender)
+    IRconCommandSender rconCommandSender,
+    IEnumerable<IServerEngineProvider>? engineProviders = null)
 {
     /// <summary>How many recent output lines are kept per server for <see cref="GetRecentLog"/>.</summary>
     public const int RecentLogCapacity = 1000;
+
+    private readonly IReadOnlyList<IServerEngine> serverEngines =
+        [.. builtInEngines, .. (engineProviders ?? []).SelectMany(provider => provider.GetEngines())];
+
+    /// <summary>Every engine, built-in and from plugins.</summary>
+    public IReadOnlyList<IServerEngine> Engines => serverEngines;
 
     // Pending debounced stops keyed by gameId. Held here (singleton) because the request-scoped
     // ServerService can't keep pending-stop state across requests.
@@ -40,8 +47,16 @@ public sealed class ServerManager(
 
         foreach (var engine in serverEngines)
         {
-            await engine.InitializeAsync();
-            await engine.RefreshTrackingAsync();
+            // One engine failing, e.g. a plugin's, mustn't keep the others from running servers
+            try
+            {
+                await engine.InitializeAsync();
+                await engine.RefreshTrackingAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Server engine {Engine} could not be initialized", engine.GetType().Name);
+            }
         }
     }
 
@@ -52,7 +67,16 @@ public sealed class ServerManager(
     public async Task RefreshTrackingAsync()
     {
         foreach (var engine in serverEngines)
-            await engine.RefreshTrackingAsync();
+        {
+            try
+            {
+                await engine.RefreshTrackingAsync();
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Server engine {Engine} could not refresh its servers", engine.GetType().Name);
+            }
+        }
     }
 
     public bool IsManaging(Guid serverId) => serverEngines.Any(engine => engine.IsManaging(serverId));

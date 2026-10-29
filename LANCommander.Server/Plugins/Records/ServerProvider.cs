@@ -192,8 +192,8 @@ internal sealed class ServerProvider(
         entity.GameId = info.GameId == Guid.Empty ? null : info.GameId;
         entity.Engine = info.Engine switch
         {
-            ServerHostEngine.Docker => ServerEngine.Docker,
             ServerHostEngine.Remote => ServerEngine.Remote,
+            ServerHostEngine.Extension => ServerEngine.Extension,
             _ => ServerEngine.Local,
         };
         entity.Path = info.Path ?? "";
@@ -203,8 +203,8 @@ internal sealed class ServerProvider(
         entity.OnStopScriptPath = info.OnStopScriptPath ?? "";
         entity.UseShellExecute = info.UseShellExecute;
         entity.ProcessTerminationMethod = info.ProcessTerminationMethod;
-        entity.DockerHostId = info.DockerHostId;
-        entity.ContainerId = info.ContainerId ?? "";
+        entity.EngineExtensionId = info.EngineExtensionId ?? "";
+        entity.EngineSettings = info.EngineSettings ?? "";
         entity.RemoteHostId = info.RemoteHostId;
         entity.RemoteServerId = info.RemoteServerId;
         entity.Host = info.Host ?? "";
@@ -243,8 +243,8 @@ internal sealed class ServerProvider(
         GameId = entity.GameId,
         Engine = entity.Engine switch
         {
-            ServerEngine.Docker => ServerHostEngine.Docker,
             ServerEngine.Remote => ServerHostEngine.Remote,
+            ServerEngine.Extension => ServerHostEngine.Extension,
             _ => ServerHostEngine.Local,
         },
         Path = entity.Path,
@@ -254,8 +254,8 @@ internal sealed class ServerProvider(
         OnStopScriptPath = entity.OnStopScriptPath,
         UseShellExecute = entity.UseShellExecute,
         ProcessTerminationMethod = entity.ProcessTerminationMethod,
-        DockerHostId = entity.DockerHostId,
-        ContainerId = entity.ContainerId,
+        EngineExtensionId = entity.EngineExtensionId,
+        EngineSettings = entity.EngineSettings,
         RemoteHostId = entity.RemoteHostId,
         RemoteServerId = entity.RemoteServerId,
         Host = entity.Host,

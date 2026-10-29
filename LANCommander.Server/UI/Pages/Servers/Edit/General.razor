@@ -5,6 +5,7 @@
 @using System.Runtime.InteropServices
 @using LANCommander.SDK.Enums
 @using LANCommander.Server.Models
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Enums
@@ -14,7 +15,7 @@
 @using Microsoft.Extensions.Options
 @inject ServerService ServerService
 @inject GameService GameService
-@inject DockerServerEngine DockerServerEngine
+@inject PluginServerEngines PluginEngines
 @inject RemoteServerEngine RemoteServerEngine
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
@@ -56,19 +57,21 @@
             </div>
 
             <FormItem Label="Engine">
-                <EnumSelect TEnum="ServerEngine" @bind-Value="context.Engine" />
+                <Select TValue="string" Items="EngineItems(context)" Value="EngineKey(context)" ValueChanged="key => SetEngine(context, key)" />
             </FormItem>
 
-            @if (context.Engine == ServerEngine.Docker)
+            @if (context.Engine == ServerEngine.Extension)
             {
-                <div class="edit-form-pair">
-                    <FormItem Label="Docker host">
-                        <Select TValue="Guid?" Items="HostItems(ServerEngine.Docker)" @bind-Value="context.DockerHostId" @bind-Value:after="() => LoadContainersAsync(context)" />
-                    </FormItem>
-                    <FormItem Label="Container" Class="edit-form-mono">
-                        <Select TValue="string" Items="ContainerItems" Disabled="!ContainerItems.Any()" @bind-Value="context.ContainerId" />
-                    </FormItem>
-                </div>
+                var extension = PluginEngines.Find(context.EngineExtensionId);
+
+                if (extension == null)
+                {
+                    <Alert Warning>The engine this server uses, @context.EngineExtensionId, isn't installed. Install the plugin it came from to run the server, or choose another engine.</Alert>
+                }
+                else if (extension.EditorComponent != null)
+                {
+                    <DynamicComponent @key="extension.Id" Type="extension.EditorComponent" Parameters="EditorParameters(context)" />
+                }
             }
 
             @if (context.Engine == ServerEngine.Remote)
@@ -83,7 +86,7 @@
                 </div>
             }
 
-            @if (context.Engine != ServerEngine.Remote)
+            @if (context.Engine == ServerEngine.Local)
             {
                 <Divider Class="edit-form-divider" />
 
@@ -119,7 +122,7 @@
                 </FormItem>
             </div>
 
-            @if (context.Engine != ServerEngine.Remote)
+            @if (context.Engine == ServerEngine.Local)
             {
                 <Divider Class="edit-form-divider" />
 
@@ -140,7 +143,6 @@
     [Parameter] public Guid Id { get; set; }
 
     IEnumerable<SelectItem<Guid?>> GameItems = [];
-    IEnumerable<SelectItem<string>> ContainerItems = [];
     IEnumerable<SelectItem<Guid?>> RemoteServerItems = [];
 
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
@@ -198,19 +200,79 @@
         return media != null ? $"/api/Media/{media.Id}/Download?fileId={media.FileId}" : null;
     }
 
-    async Task LoadContainersAsync(Server server)
+    const string ExtensionKeyPrefix = "Extension:";
+
+    /// <summary>Local, Remote, then the plugins' engines; and the server's own if its plugin has gone.</summary>
+    IEnumerable<SelectItem<string>> EngineItems(Server server)
     {
-        try
+        var items = new List<SelectItem<string>>
         {
-            ContainerItems = server.DockerHostId is { } hostId
-                ? (await DockerServerEngine.GetContainersAsync(hostId)).ToSelectItems(c => c.Id, c => c.Name).ToList()
-                : [];
-        }
-        catch (Exception ex)
+            new(nameof(ServerEngine.Local), ServerEngine.Local.GetDisplayName()),
+            new(nameof(ServerEngine.Remote), ServerEngine.Remote.GetDisplayName()),
+        };
+
+        items.AddRange(PluginEngines.Extensions
+            .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase)
+            .Select(e => new SelectItem<string>(ExtensionKeyPrefix + e.Id, e.Name)));
+
+        if (server.Engine == ServerEngine.Extension && PluginEngines.Find(server.EngineExtensionId) == null)
+            items.Add(new SelectItem<string>(EngineKey(server), $"{server.EngineExtensionId} (not installed)"));
+
+        return items;
+    }
+
+    static string EngineKey(Server server) => server.Engine == ServerEngine.Extension
+        ? ExtensionKeyPrefix + server.EngineExtensionId
+        : server.Engine.ToString();
+
+    void SetEngine(Server server, string key)
+    {
+        if (key == EngineKey(server))
+            return;
+
+        if (key.StartsWith(ExtensionKeyPrefix, StringComparison.Ordinal))
         {
-            ContainerItems = [];
-            Notifications.Error(ex, "The Docker host's containers could not be listed");
+            server.Engine = ServerEngine.Extension;
+            server.EngineExtensionId = key[ExtensionKeyPrefix.Length..];
         }
+        else
+        {
+            server.Engine = Enum.Parse<ServerEngine>(key);
+            server.EngineExtensionId = "";
+        }
+
+        // One engine's settings mean nothing to another
+        server.EngineSettings = "";
+        _editorContext = null;
+    }
+
+    ServerEngineEditorContext? _editorContext;
+    Server? _editorServer;
+
+    /// <summary>
+    /// The engine editor's parameters. Its context reads and writes the server on the page, so its
+    /// changes are saved, discarded and counted as unsaved with the page's own.
+    /// </summary>
+    Dictionary<string, object?> EditorParameters(Server server)
+    {
+        if (_editorContext == null || !ReferenceEquals(_editorServer, server))
+        {
+            _editorServer = server;
+            _editorContext = new ServerEngineEditorContext(
+                () => PluginServerEngines.ToEngineServer(server),
+                change =>
+                {
+                    var changed = change(PluginServerEngines.ToEngineServer(server));
+
+                    server.EngineSettings = changed.Settings;
+                    server.Host = changed.Host;
+                    server.Port = changed.Port;
+
+                    StateHasChanged();
+                });
+        }
+
+        return new() { ["Context"] = _editorContext };
     }
 
     async Task LoadRemoteServersAsync(Server server)

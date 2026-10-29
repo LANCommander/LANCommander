@@ -1592,22 +1592,23 @@ namespace LANCommander.Migrations
                     b.Property<int>("AutostartMethod")
                         .HasColumnType("INTEGER");
 
-                    b.Property<string>("ContainerId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("TEXT");
-
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid?>("DockerHostId")
-                        .HasColumnType("TEXT");
-
                     b.Property<int>("Engine")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("EngineExtensionId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EngineSettings")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("TEXT");

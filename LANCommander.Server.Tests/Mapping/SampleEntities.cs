@@ -204,7 +204,7 @@ public static class SampleEntities
             WorkingDirectory = "/swd/" + seed,
             OnStartScriptPath = "/start",
             OnStopScriptPath = "/stop",
-            ContainerId = "container" + seed,
+            EngineSettings = "{\"seed\":" + seed + "}",
             Host = "srvhost" + seed,
             Port = 27000 + seed,
             AutostartDelay = 5,

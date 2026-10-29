@@ -18,11 +18,15 @@ namespace LANCommander.Server.Data.Models
         public string OnStartScriptPath { get; set; } = "";
         public string OnStopScriptPath { get; set; } = "";
 
-        public Guid? DockerHostId { get; set; }
+        /// <summary>For <see cref="ServerEngine.Extension"/>: the plugin engine's id.</summary>
+        [MaxLength(128)]
+        public string EngineExtensionId { get; set; } = "";
+
+        /// <summary>For <see cref="ServerEngine.Extension"/>: what the plugin engine keeps about the server, as JSON.</summary>
+        public string EngineSettings { get; set; } = "";
+
         public Guid? RemoteHostId { get; set; }
         public Guid? RemoteServerId { get; set; }
-        [MaxLength(64)]
-        public string ContainerId { get; set; } = "";
         public string Host { get; set; } = "";
         public int Port { get; set; } = 0;
 

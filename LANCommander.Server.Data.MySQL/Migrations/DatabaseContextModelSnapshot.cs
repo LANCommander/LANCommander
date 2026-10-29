@@ -1599,22 +1599,23 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<int>("AutostartMethod")
                         .HasColumnType("int");
 
-                    b.Property<string>("ContainerId")
-                        .IsRequired()
-                        .HasMaxLength(64)
-                        .HasColumnType("varchar(64)");
-
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime>("CreatedOn")
                         .HasColumnType("datetime(6)");
 
-                    b.Property<Guid?>("DockerHostId")
-                        .HasColumnType("char(36)");
-
                     b.Property<int>("Engine")
                         .HasColumnType("int");
+
+                    b.Property<string>("EngineExtensionId")
+                        .IsRequired()
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
+
+                    b.Property<string>("EngineSettings")
+                        .IsRequired()
+                        .HasColumnType("longtext");
 
                     b.Property<Guid?>("GameId")
                         .HasColumnType("char(36)");

@@ -73,7 +73,9 @@ public class ServerImporter(
             existing.Autostart = record.Autostart;
             existing.AutostartMethod = record.AutostartMethod;
             existing.AutostartDelay = record.AutostartDelay;
-            existing.ContainerId = record.ContainerId;
+            existing.Engine = Enum.TryParse<Settings.Enums.ServerEngine>(record.Engine, out var engine) ? engine : Settings.Enums.ServerEngine.Local;
+            existing.EngineExtensionId = record.EngineExtensionId ?? "";
+            existing.EngineSettings = record.EngineSettings ?? "";
             existing.UseShellExecute = record.UseShellExecute;
             existing.Game = await gameService.FirstOrDefaultAsync(g =>
                 g.Id.ToString() == record.Game || g.Title == record.Game);

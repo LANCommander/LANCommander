@@ -813,6 +813,57 @@ Contributes HTTP endpoints to the server's API, for example for a launcher or an
 - `void MapEndpoints(IEndpointRouteBuilder endpoints)`
   - Maps the endpoints. `endpoints` is already rooted at `/api/Plugins/{RoutePrefix}` and carries the `Access` requirement, so routes are given relative to it. Called once, when the server starts.
 
+### IServerEngineExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerEngineExtension`
+
+Runs game servers somewhere other than as a process on the LANCommander server's machine, such as in a container. Each engine is offered on a server's General page alongside the built-in Local and Remote engines. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Id { get; }`
+  - Identifies the engine. Stored with every server that uses it, so it must never change, e.g. `com.mycompany.myplugin.engine`.
+- `string Name { get; }`
+  - The engine's name, as offered on a server's General page.
+- `ServerEngineFeatures Features { get; }`
+  - What the engine can do beyond starting and stopping a server.
+- `Type EditorComponent { get; }`
+  - A Razor component shown on a server's General page while the engine is selected, in place of the Local engine's executable, arguments and process options. It takes a `ServerEngineEditorContext` as its `Context` parameter, and is saved with the rest of the page. Null shows nothing.
+- `IReadOnlyList<ServerEngineSection> Sections { get; }`
+  - Further pages of a server's editor, listed under the engine's name in its menu once the server has been saved with this engine.
+
+**Methods**
+
+- `Task InitializeAsync(IServerEngineHost host, CancellationToken cancellationToken)`
+  - Called once, when the server starts, before any other call. `host` is how the engine reports what its servers do; keep it.
+- `Task ServersChangedAsync(IReadOnlyList<ServerEngineServer> servers, CancellationToken cancellationToken)`
+  - Called with every server using the engine when the engine is initialized and whenever one is added, changed or deleted, e.g. to follow the output of those that are running.
+- `Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken)`
+  - Starts a server, returning once it has started rather than when it stops. Throw to report that it could not be started; the server shows the message.
+- `Task StopAsync(ServerEngineServer server, CancellationToken cancellationToken)`
+  - Stops a server, returning once it has stopped.
+- `Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken)`
+  - Whether a server is running. Called every couple of seconds while anyone is looking at the server, so it should be cheap.
+- `Task<ServerEngineProcessInfo> GetProcessInfoAsync(ServerEngineServer server, CancellationToken cancellationToken)`
+  - Samples a running server's usage, for `ProcessInfo`. Null when it isn't running or can't be sampled.
+- `bool CanSendInput(ServerEngineServer server)`
+  - Whether `SendInputAsync` can deliver a line to the server now, for `Input`.
+- `Task<bool> SendInputAsync(ServerEngineServer server, string line, CancellationToken cancellationToken)`
+  - Writes a line to the server's input. Returns false if that isn't possible.
+
+### IServerEngineHost
+
+`interface` — `LANCommander.Server.Plugins.IServerEngineHost`
+
+How an `IServerEngineExtension` reports what its servers do. Thread safe.
+
+**Methods**
+
+- `void ReportStatus(Guid serverId, ServerEngineStatus status, string error)`
+  - Reports that a server's status changed on its own, e.g. it exited, so those watching it see so at once rather than at their next look. Changes made through the engine's own methods needn't be reported.
+- `void WriteOutput(Guid serverId, string line)`
+  - Reports a line of a server's output, for `Output`.
+
 ### IServerNavigationExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
@@ -1335,6 +1386,96 @@ A log file or RCON connection the LANCommander server shows for a game server.
 - `string Password { get; init; }`
   - For an RCON console: the password.
 
+### ServerEngineEditorContext
+
+`class` — `LANCommander.Server.Plugins.ServerEngineEditorContext`
+
+The server an `EditorComponent` edits, on its General page. Changes are kept with the page's other unsaved changes and saved with them.
+
+**Properties**
+
+- `ServerEngineServer Server { get; }`
+  - The server, with the page's unsaved changes. Its id is empty while it is being added.
+- `bool IsNew { get; }`
+  - Whether the server is being added, so has no id yet.
+
+**Methods**
+
+- `T GetSettings<T>()`
+  - The engine's settings for the server; see `GetSettings`.
+- `void SetSettings<T>(T settings)`
+  - Replaces the engine's settings for the server.
+- `void SetAddress(string host, int? port)`
+  - Sets the address players connect to, e.g. from a port the engine publishes. The administrator can still change it.
+
+### ServerEngineProcessInfo
+
+`record` — `LANCommander.Server.Plugins.ServerEngineProcessInfo`
+
+A sample of a running server's usage. Any member may be null when the engine can't tell.
+
+**Properties**
+
+- `int? Pid { get; init; }`
+  - The server's process id, where there is one the administrator would recognize.
+- `DateTime? StartTime { get; init; }`
+  - When the server started, in UTC.
+- `double? CpuPercent { get; init; }`
+  - CPU use as a share of the whole machine, from 0 to 100.
+- `long? MemoryBytes { get; init; }`
+  - Memory in use.
+
+### ServerEngineSection
+
+`record` — `LANCommander.Server.Plugins.ServerEngineSection`
+
+A page of a server's editor added by an `IServerEngineExtension`.
+
+**Properties**
+
+- `string Slug { get; init; }`
+  - The page's address under the server, `/Servers/{id}/Engine/{Slug}`: letters, digits and `-`, unique within the engine.
+- `string Title { get; init; }`
+  - The page's name in the menu and its title.
+- `Type Component { get; init; }`
+  - A Razor component rendered as the page, taking a `ServerEngineServer` as its `Server` parameter.
+
+### ServerEngineServer
+
+`record` — `LANCommander.Server.Plugins.ServerEngineServer`
+
+A game server as an `IServerEngineExtension` sees it.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+- `string Name { get; init; }`
+- `Guid? GameId { get; init; }`
+  - The game the server is for, if any.
+- `string Host { get; init; }`
+  - The address players connect to.
+- `int Port { get; init; }`
+- `string Settings { get; init; }`
+  - What the engine keeps about the server, as JSON, or empty when it has kept nothing yet. Read it with `GetSettings`.
+
+**Methods**
+
+- `T GetSettings<T>()`
+  - `Settings` read as `T`, or a new `T` when there are none or they can't be read.
+
+### ServerEngineSettings
+
+`class` — `LANCommander.Server.Plugins.ServerEngineSettings`
+
+Reads and writes `Settings`.
+
+**Methods**
+
+- `T Read<T>(string json)`
+  - Reads settings JSON as `T`; a new one when it is empty or can't be read.
+- `string Write<T>(T settings)`
+  - Writes settings as JSON.
+
 ### ServerHttpPathInfo
 
 `record` — `LANCommander.Server.Plugins.ServerHttpPathInfo`
@@ -1373,10 +1514,10 @@ A dedicated game server the LANCommander server runs and monitors.
 - `string OnStopScriptPath { get; init; }`
 - `bool UseShellExecute { get; init; }`
 - `ProcessTerminationMethod ProcessTerminationMethod { get; init; }`
-- `Guid? DockerHostId { get; init; }`
-  - For `Docker`: the Docker host.
-- `string ContainerId { get; init; }`
-  - For `Docker`: the container.
+- `string EngineExtensionId { get; init; }`
+  - For `Extension`: the engine's `Id`.
+- `string EngineSettings { get; init; }`
+  - For `Extension`: the engine's settings for the server, as JSON.
 - `Guid? RemoteHostId { get; init; }`
   - For `Remote`: the LANCommander server that manages it.
 - `Guid? RemoteServerId { get; init; }`
@@ -1541,6 +1682,33 @@ The kinds of record that own actions, scripts and the other child records.
 | `Tool` = `2` |  |
 | `Server` = `3` |  |
 
+### ServerEngineFeatures
+
+`enum` — `LANCommander.Server.Plugins.ServerEngineFeatures`
+
+What an `IServerEngineExtension` can do beyond starting and stopping a server.
+
+| Value | Description |
+| --- | --- |
+| `None` = `0` |  |
+| `Output` = `1` | The engine reports its servers' output through `WriteOutput`, shown on their Monitor page. |
+| `Input` = `2` | The engine can write lines to its servers' input, from their Monitor page. |
+| `ProcessInfo` = `4` | The engine samples its servers' CPU and memory use and uptime. |
+
+### ServerEngineStatus
+
+`enum` — `LANCommander.Server.Plugins.ServerEngineStatus`
+
+Whether a game server is running.
+
+| Value | Description |
+| --- | --- |
+| `Stopped` = `0` |  |
+| `Starting` = `1` |  |
+| `Running` = `2` |  |
+| `Stopping` = `3` |  |
+| `Error` = `4` | The server failed, e.g. it exited on its own with an error. |
+
 ### ServerHostEngine
 
 `enum` — `LANCommander.Server.Plugins.ServerHostEngine`
@@ -1550,8 +1718,8 @@ Where a game server runs.
 | Value | Description |
 | --- | --- |
 | `Local` = `0` | A process on the LANCommander server's machine. |
-| `Docker` = `1` | A Docker container. |
 | `Remote` = `2` | A server managed by another LANCommander server. |
+| `Extension` = `3` | A plugin's `IServerEngineExtension`, named by `EngineExtensionId`. |
 
 ### TaxonomyKind
 

@@ -1,0 +1,37 @@
+@page "/Servers/{id:guid}/Engine/{slug}"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.Server.UI.Pages.Servers.Components
+@inject PluginServerEngines PluginEngines
+
+@* A page a plugin's server engine adds to the editor of the servers it runs *@
+<ServerEditView Id="Id">
+    @{
+        var section = Section(context);
+    }
+
+    @if (section == null)
+    {
+        <Empty Description="This server's engine has no such page" />
+    }
+    else
+    {
+        <DynamicComponent @key="(context.Id, section.Slug)" Type="section.Component" Parameters="Parameters(context)" />
+    }
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Slug { get; set; } = "";
+
+    ServerEngineSection? Section(Server server) => server.Engine == ServerEngine.Extension
+        ? PluginEngines.Find(server.EngineExtensionId)?.Sections
+            .FirstOrDefault(s => string.Equals(s.Slug, Slug, StringComparison.OrdinalIgnoreCase))
+        : null;
+
+    static Dictionary<string, object?> Parameters(Server server) => new()
+    {
+        ["Server"] = PluginServerEngines.ToEngineServer(server),
+    };
+}

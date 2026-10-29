@@ -3,6 +3,7 @@
 @using Microsoft.EntityFrameworkCore
 @inject ServerService ServerService
 @inject ServerManager ServerManager
+@inject LANCommander.Server.Plugins.PluginServerEngines PluginEngines
 @inject NavigationManager NavigationManager
 @inject ILogger<ServerEditView> Logger
 @implements IDisposable
@@ -41,6 +42,16 @@
                         <MenuItem Href="@($"/Servers/{Id}/Monitor")">Monitor</MenuItem>
                     }
                 </MenuGroup>
+
+                @if (Extension is { Sections.Count: > 0 } extension)
+                {
+                    <MenuGroup Title="@extension.Name">
+                        @foreach (var section in extension.Sections)
+                        {
+                            <MenuItem Href="@($"/Servers/{Id}/Engine/{section.Slug}")">@section.Title</MenuItem>
+                        }
+                    </MenuGroup>
+                }
 
                 <MenuGroup Title="Behaviour">
                     <MenuItem Href="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
@@ -145,6 +156,12 @@
 
     bool IsNew => Id == Guid.Empty;
 
+    /// <summary>The plugin engine the server is saved with, if any and it is installed.</summary>
+    LANCommander.Server.Plugins.IServerEngineExtension? Extension => _savedEngineExtensionId == null ? null : PluginEngines.Find(_savedEngineExtensionId);
+
+    // As loaded, so the menu doesn't offer a section of an engine chosen but not yet saved
+    string? _savedEngineExtensionId;
+
     /// <summary>"ns2_veil · pid 4812 · up 2h 41m"</summary>
     string Meta
     {
@@ -153,7 +170,7 @@
             var parts = new List<string>();
             var lead = !String.IsNullOrWhiteSpace(Console) ? Console
                 : !String.IsNullOrWhiteSpace(Server.Path) ? System.IO.Path.GetFileNameWithoutExtension(Server.Path)
-                : Server.Engine.GetDisplayName();
+                : Extension?.Name ?? Server.Engine.GetDisplayName();
 
             if (!String.IsNullOrWhiteSpace(lead))
                 parts.Add(lead);
@@ -271,6 +288,8 @@
         }
         else
             Server = new Server();
+
+        _savedEngineExtensionId = Server.Engine == LANCommander.Server.Settings.Enums.ServerEngine.Extension ? Server.EngineExtensionId : null;
 
         _loading = false;
 

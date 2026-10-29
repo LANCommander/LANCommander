@@ -36,6 +36,14 @@ public sealed class PluginLoadContext : AssemblyLoadContext
         "Avalonia",
         "CommunityToolkit.Mvvm",
         "System.Management.Automation",
+        // A plugin's DbContext runs on the host's EF Core and database providers, at the versions
+        // the host pins; a private copy would be a second EF Core whose types the host can't use
+        "Microsoft.EntityFrameworkCore",
+        "Microsoft.Data.Sqlite",
+        "SQLitePCLRaw",
+        "Pomelo.EntityFrameworkCore",
+        "MySqlConnector",
+        "Npgsql",
     };
 
     public PluginLoadContext(string mainAssemblyPath)

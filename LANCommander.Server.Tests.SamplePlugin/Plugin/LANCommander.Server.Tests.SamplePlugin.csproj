@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    A plugin with a database context, for LANCommander.Server.Tests to load the way the server loads
+    plugins, check against every engine and migrate. Its migrations are in the projects beside it,
+    one per engine.
+  -->
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" />
+  </ItemGroup>
+
+</Project>

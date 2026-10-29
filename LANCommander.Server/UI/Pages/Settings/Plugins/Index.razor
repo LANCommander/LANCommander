@@ -7,6 +7,7 @@
 @using Microsoft.Extensions.Options
 @using NuGet.Versioning
 @inject PluginPackageService PluginPackages
+@inject LANCommander.Server.Plugins.Data.PluginDataManager PluginData
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject NotificationService Notifications
@@ -75,6 +76,11 @@
                                             <Tag Danger>Not loaded</Tag>
                                         </Tooltip>
                                         break;
+                                    case PluginInstallState.Disabled:
+                                        <Tooltip Title="The server loaded this plugin but turned it off. The reasons are shown below the list.">
+                                            <Tag Danger>Turned off</Tag>
+                                        </Tooltip>
+                                        break;
                                     case PluginInstallState.InstallPending:
                                         <Tag Info>Installs on restart</Tag>
                                         break;
@@ -98,6 +104,13 @@
                                     </Tooltip>
                                 }
 
+                                @if (context.State == PluginInstallState.Disabled && context.PluginId is not null)
+                                {
+                                    <Tooltip Title="Check and migrate its data again, and start it if that succeeds">
+                                        <Button Text Icon="IconType.ArrowClockwise" Loading="_busy.Contains(context.Folder)" OnClick="() => RetryAsync(context)" aria-label="Retry" />
+                                    </Tooltip>
+                                }
+
                                 @if (context.State is PluginInstallState.InstallPending or PluginInstallState.UpdatePending or PluginInstallState.RemovalPending)
                                 {
                                     <Tooltip Title="Undo the change waiting for a restart">
@@ -114,6 +127,18 @@
                             </ActionsColumn>
                         </Columns>
                     </Table>
+
+                    @foreach (var plugin in _installed.Where(p => p.State == PluginInstallState.Disabled))
+                    {
+                        <Alert Danger Title="@($"{plugin.Name} is turned off")">
+                            <ul style="margin: 0; padding-left: 20px">
+                                @foreach (var reason in plugin.DisabledReasons)
+                                {
+                                    <li>@reason</li>
+                                }
+                            </ul>
+                        </Alert>
+                    }
                 </Flex>
             </Tab>
 
@@ -346,6 +371,28 @@
         catch (Exception ex)
         {
             Notifications.Error(ex, $"{plugin.Name} could not be updated");
+        }
+        finally
+        {
+            _busy.Remove(plugin.Folder);
+            Refresh();
+        }
+    }
+
+    async Task RetryAsync(InstalledPlugin plugin)
+    {
+        _busy.Add(plugin.Folder);
+
+        try
+        {
+            if (await PluginData.RetryAsync(plugin.PluginId!))
+                Notifications.Success($"{plugin.Name} is running");
+            else
+                Notifications.Error($"{plugin.Name} is still turned off");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be retried");
         }
         finally
         {

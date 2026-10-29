@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 
 namespace LANCommander.SDK.Plugins;
@@ -20,6 +21,12 @@ public sealed class PluginManifest
     /// <summary>Absolute path to the folder the plugin was loaded from.</summary>
     public string Directory { get; init; } = string.Empty;
 
+    /// <summary>See <see cref="LANCommanderPluginAttribute.DataId"/>.</summary>
+    public string? DataId { get; init; }
+
+    /// <summary>See <see cref="LANCommanderPluginAttribute.MigrationAssemblies"/>.</summary>
+    public IReadOnlyList<string> MigrationAssemblies { get; init; } = Array.Empty<string>();
+
     /// <summary>Builds a manifest from an assembly-level plugin attribute.</summary>
     public static PluginManifest FromAttribute(LANCommanderPluginAttribute attribute, Assembly assembly, string directory)
         => new()
@@ -31,5 +38,7 @@ public sealed class PluginManifest
             Hosts = attribute.Hosts,
             Assembly = assembly,
             Directory = directory,
+            DataId = attribute.DataId,
+            MigrationAssemblies = attribute.MigrationAssemblies ?? Array.Empty<string>(),
         };
 }

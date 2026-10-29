@@ -28,6 +28,23 @@ public sealed class LANCommanderPluginAttribute : Attribute
     /// <summary>The hosts this plugin supports. Defaults to both server and launcher.</summary>
     public PluginHost Hosts { get; set; } = PluginHost.Server | PluginHost.Launcher;
 
+    /// <summary>
+    /// The name the plugin's database objects go by: with <c>DataId = "Timesheet"</c>, its tables are
+    /// <c>Plugin_Timesheet_Entries</c>, its keys <c>PK_Plugin_Timesheet_Entries</c>, and its migrations
+    /// history <c>__EFMigrationsHistory_Plugin_Timesheet</c>. A PascalCase name of letters and digits,
+    /// at most 24 characters, unique among installed plugins ignoring case. Required
+    /// only for a plugin with a database context; unlike <see cref="Id"/>, it must never change once
+    /// the plugin has been installed, since it names the plugin's tables.
+    /// </summary>
+    public string? DataId { get; set; }
+
+    /// <summary>
+    /// The plugin's migrations assemblies, by file or assembly name, one per database engine per
+    /// context, shipped in the plugin's folder. Each declares what it contains with
+    /// <c>[assembly: PluginMigrations(...)]</c>, which is what the host goes by.
+    /// </summary>
+    public string[]? MigrationAssemblies { get; set; }
+
     public LANCommanderPluginAttribute(Type entryPoint)
     {
         EntryPoint = entryPoint;

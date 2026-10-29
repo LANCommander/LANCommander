@@ -5,6 +5,7 @@ using LANCommander.SDK.Services;
 using LANCommander.Server.Clients;
 using LANCommander.Server.ImportExport.Extensions;
 using LANCommander.Server.Plugins;
+using LANCommander.Server.Plugins.Data;
 using LANCommander.Server.Plugins.Installation;
 using LANCommander.Server.Plugins.Records;
 using LANCommander.Server.Providers;
@@ -53,6 +54,9 @@ public static class Services
         // And what plugins offer the server: their media sources join the media search
         builder.Services.AddScoped<IMediaGrabberProvider, PluginMediaGrabbers>();
 
+        // Each plugin's own settings, in PluginData/{PluginId}/Settings.yaml
+        builder.Services.AddSingleton(typeof(IPluginSettings<>), typeof(PluginSettings<>));
+
         builder.Services.AddHttpClient();
         builder.Services.AddHttpContextAccessor();
         builder.AddServiceDefaults();
@@ -69,7 +73,11 @@ public static class Services
 
         // Plugin framework: discover drop-in plugins and let them register services. Must run last,
         // while the service collection is still open (the provider is built immediately after).
-        PluginBootstrap.ConfigurePlugins(builder.Services, PluginHost.Server);
+        var pluginLoader = PluginBootstrap.ConfigurePlugins(builder.Services, PluginHost.Server);
+
+        // The plugins' database contexts, which they asked for while configuring their services; the
+        // server registers them itself, gated until their migrations are checked and applied
+        PluginDataCatalog.Register(builder.Services, pluginLoader);
 
         return builder;
     }

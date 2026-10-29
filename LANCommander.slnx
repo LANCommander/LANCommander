@@ -33,6 +33,10 @@
     <Project Path="LANCommander.Packaging.Worker.Tests\LANCommander.Packaging.Worker.Tests.csproj" />
     <Project Path="LANCommander.SDK.Tests\LANCommander.SDK.Tests.csproj" />
     <Project Path="LANCommander.Server.Tests\LANCommander.Server.Tests.csproj" />
+    <Project Path="LANCommander.Server.Tests.SamplePlugin\Plugin\LANCommander.Server.Tests.SamplePlugin.csproj" />
+    <Project Path="LANCommander.Server.Tests.SamplePlugin\Migrations.Sqlite\LANCommander.Server.Tests.SamplePlugin.Migrations.Sqlite.csproj" />
+    <Project Path="LANCommander.Server.Tests.SamplePlugin\Migrations.MySql\LANCommander.Server.Tests.SamplePlugin.Migrations.MySql.csproj" />
+    <Project Path="LANCommander.Server.Tests.SamplePlugin\Migrations.PostgreSql\LANCommander.Server.Tests.SamplePlugin.Migrations.PostgreSql.csproj" />
     <Project Path="LANCommander.Server.UI.Tests\LANCommander.Server.UI.Tests.csproj" />
     <Project Path="LANCommander.Testing.Visual\LANCommander.Testing.Visual.csproj" />
   </Folder>

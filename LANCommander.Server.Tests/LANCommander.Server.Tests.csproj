@@ -31,6 +31,23 @@
         <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" />
     </ItemGroup>
 
+    <!--
+      A plugin with a database context and migrations for every engine. Built first, not referenced:
+      the tests deploy it to a plugins folder and load it the way the server loads plugins, in its
+      own load context, so its assemblies go to SamplePlugin\ rather than beside the tests'.
+    -->
+    <ItemGroup>
+        <SamplePluginProject Include="..\LANCommander.Server.Tests.SamplePlugin\**\*.csproj" />
+        <ProjectReference Include="@(SamplePluginProject)" ReferenceOutputAssembly="false" />
+    </ItemGroup>
+
+    <Target Name="CopySamplePlugin" AfterTargets="Build">
+        <MSBuild Projects="@(SamplePluginProject)" Targets="GetTargetPath">
+            <Output TaskParameter="TargetOutputs" ItemName="_SamplePluginAssembly" />
+        </MSBuild>
+        <Copy SourceFiles="@(_SamplePluginAssembly)" DestinationFolder="$(OutDir)SamplePlugin\" SkipUnchangedFiles="true" />
+    </Target>
+
     <ItemGroup>
       <None Update="Files\lotrbfme2.lcx">
         <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

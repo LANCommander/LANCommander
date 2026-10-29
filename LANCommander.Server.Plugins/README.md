@@ -24,6 +24,12 @@ Use the version of the server the plugin targets.
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
 | `IMetadataLookup` | Searches configured metadata providers and fetches full game metadata without importing it. Provided by the server |
 | `IUserDirectory`, `UserAccount` | Reads user accounts, their roles and whether they may sign in, without passwords. Provided by the server |
+| `Data.PluginDbContext`, `AddPluginDbContext<T>` | A plugin's own tables in the server's database, named and migrated by the server |
+| `Data.PluginMigrationsAttribute`, `Data.DatabaseEngine` | Declares a migrations assembly; a plugin ships one per engine (SQLite, MySQL, PostgreSQL) |
+| `Data.PluginValueConverters`, `Data.PortabilityRules` | Keeps a plugin model behaving the same on every engine |
+
+A plugin with a context needs `DataId` and `MigrationAssemblies` in its `[LANCommanderPlugin]`
+attribute. Plugin settings, `IPluginSettings<T>`, are in `LANCommander.SDK`.
 | `IGameProvider`, `IGameVersionProvider` | Manage games and add-ons, their links, external ids, custom fields and versions. Provided by the server |
 | `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |

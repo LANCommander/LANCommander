@@ -9,6 +9,7 @@
 @using MySqlConnector
 @using Npgsql
 @inject SetupService SetupService
+@inject LANCommander.Server.Plugins.Data.PluginDataManager PluginData
 @inject SettingsProvider<Settings> SettingsProvider
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
@@ -117,6 +118,9 @@
             try
             {
                 await SetupService.ChangeProviderAsync(Settings.Value.Server.Database.Provider, Settings.Value.Server.Database.ConnectionString);
+
+                // Plugins with database contexts were held back for want of a database; now there is one
+                await PluginData.PrepareAllAsync(initialize: true);
 
                 SettingsProvider.Update(s =>
                 {

@@ -203,6 +203,174 @@ if (account is { CanSignIn: true })
 The directory is read-only and never exposes passwords. `CanSignIn` applies the server's own sign-in
 rules, lockout and approval, so a plugin that honours it refuses the same accounts the server does.
 
+## Plugin settings
+
+A plugin keeps its settings in a YAML file of its own, `PluginData/{PluginId}/Settings.yaml` under the
+server's data directory, written the way the server's `Settings.yaml` is. Declare a plain class and
+inject [`IPluginSettings<T>`](/Plugins/API%20Reference#ipluginsettingstsettings) with it:
+
+```csharp
+public sealed class MySettings
+{
+    public bool Enabled { get; set; }
+    public int Port { get; set; } = 1234;
+}
+
+public sealed class MyService(IPluginSettings<MySettings> settings)
+{
+    public int Port => settings.Current.Port;
+
+    public void TurnOn() => settings.Update(s => s.Enabled = true);
+}
+```
+
+The server works out which plugin is asking from the assembly the settings type is declared in, so a
+plugin only ever reaches its own file. `Update` saves after a short delay, so a burst of changes is
+written once; call `FlushAsync` after changing something that must not be lost to a crash, such as a
+rotated credential. Properties the file doesn't have take their defaults, and ones the class no
+longer has are ignored. A file that can't be read gives the defaults and is left alone until the
+next save.
+
+## Storing data in the database
+
+A plugin that needs tables of its own gets them in the server's database through a context of its
+own, derived from [`PluginDbContext`](/Plugins/API%20Reference#plugindbcontext). The plugin defines
+its entities; the server owns the connection, which engine is used, the migrations, and naming.
+
+```csharp
+public sealed class TimesheetContext(DbContextOptions options) : PluginDbContext(options)
+{
+    public DbSet<Entry> Entries => Set<Entry>();
+
+    protected override void ConfigureModel(ModelBuilder modelBuilder)
+    {
+        modelBuilder.Entity<Entry>(entry =>
+        {
+            entry.Property(e => e.Name).HasMaxLength(100);
+            entry.Property(e => e.Hours).HasConversion(PluginValueConverters.ScaledInteger(2));
+            entry.HasIndex(e => e.Name);
+        });
+    }
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddPluginDbContext<TimesheetContext>();
+}
+```
+
+Inject the context, or `IDbContextFactory<TimesheetContext>`, where it's needed. Never call
+`Migrate()` or `EnsureCreated()`: the server applies the plugin's migrations itself, and won't hand
+the context out until they're applied.
+
+### Declaring the plugin's data
+
+A plugin with a context declares a `DataId` and its migrations assemblies in its attribute:
+
+```csharp
+[assembly: LANCommanderPlugin(typeof(TimesheetPlugin),
+    Id = "com.acme.timesheet",
+    DataId = "Timesheet",
+    MigrationAssemblies =
+    [
+        "Acme.Timesheet.Migrations.Sqlite",
+        "Acme.Timesheet.Migrations.MySql",
+        "Acme.Timesheet.Migrations.PostgreSql",
+    ])]
+```
+
+The `DataId` names the plugin's database objects, the way the server names its own:
+
+| Object | Name |
+| --- | --- |
+| Table | `Plugin_Timesheet_Entries` |
+| Primary key | `PK_Plugin_Timesheet_Entries` |
+| Index | `IX_Plugin_Timesheet_Entries_Name` |
+| Foreign key | `FK_Plugin_Timesheet_Entries_Projects_ProjectId` |
+| Migrations history | `__EFMigrationsHistory_Plugin_Timesheet` |
+
+A name the plugin sets itself, with `HasName` or `HasDatabaseName`, is prefixed the same way.
+
+The `DataId` is a PascalCase name of letters and digits, at most 24 characters. It must be unique
+among installed plugins ignoring case, since MySQL on Windows and macOS ignores case in table names,
+and it must never change once the plugin is installed, since its tables are named after it. Every
+name, prefix included, has to fit in 63 characters, PostgreSQL's limit, which leaves room for table
+names of 40 characters or so.
+
+### Migrations for every engine
+
+A LANCommander server runs on SQLite, MySQL or PostgreSQL, and the same plugin package has to install
+on all of them. A plugin with a context therefore ships one migrations assembly per engine, each
+declaring what it holds:
+
+```csharp
+[assembly: PluginMigrations(typeof(TimesheetContext), DatabaseEngine.MySql)]
+```
+
+Separate assemblies are needed because EF Core finds migrations by their context, so three sets in
+one assembly would collide. List them as `PluginAssembly` items so they're packed into the plugin's
+folder.
+
+Each migrations project generates its migrations with a design-time factory that names things the
+way the server will. Give EF the migrations assembly by name here; its design-time tooling ignores an
+`Assembly`:
+
+```csharp
+public sealed class DesignTimeFactory : IDesignTimeDbContextFactory<TimesheetContext>
+{
+    public TimesheetContext CreateDbContext(string[] args)
+    {
+        var builder = new DbContextOptionsBuilder();
+
+        builder.UseMySql("Server=design-time", new MySqlServerVersion(new Version(8, 0, 36)), options => options
+            .MigrationsAssembly(typeof(DesignTimeFactory).Assembly.GetName().Name)
+            .MigrationsHistoryTable(PluginDataIds.HistoryTable("Timesheet")));
+
+        return new TimesheetContext(builder.UsePluginIdentity("Timesheet").Options);
+    }
+}
+```
+
+Then add each migration to all three, giving every one the same name:
+
+```
+dotnet ef migrations add AddProjects --project Acme.Timesheet.Migrations.Sqlite --startup-project Acme.Timesheet.Migrations.Sqlite
+```
+
+No database is needed: the factory never connects.
+
+### What the server checks
+
+A server only ever uses one engine, but a plugin has to work on whichever one its host chooses, so
+before a plugin's startup code runs the server checks that its migrations exist for every engine:
+
+1. There is exactly one migrations assembly per engine, holding at least one migration.
+2. The engines have the same migrations, by name, in the same order.
+
+These are read from the assemblies as they are; the server needs nothing for the engines it doesn't
+use, and doesn't check that their migrations would run. The engine it does use is checked in full,
+since its migrations are about to run:
+
+3. Its migrations include a model snapshot.
+4. The context's model matches the snapshot, so no migration has been forgotten.
+5. The model keeps to the [portability rules](/Plugins/API%20Reference#portabilityrules): no
+   engine-specific column types or SQL defaults, no schemas or sequences, converters on `decimal`,
+   names of at most 63 characters, and maximum lengths of at most 191 on strings in keys and indexes.
+
+It then applies any pending migrations to the server's database, refusing one whose database already
+has migrations the plugin doesn't know (a downgrade), and checks nothing is left pending.
+
+Whether the other engines' migrations actually work is for the plugin's own tests to show, by
+applying them to a database of each kind.
+
+A plugin that fails any check stays loaded but is turned off: its `InitializeAsync` doesn't run, and
+its context throws `PluginDataUnavailableException`, carrying every error, if anything asks for it.
+**Settings → Plugins** shows why, and offers a retry once the cause is fixed. Before first-time setup
+has chosen a database, a plugin's migrations are checked and then applied once setup has one.
+
+String comparison is the one difference the checks can't see: MySQL usually ignores case, while
+PostgreSQL and SQLite don't. Store a lowercase copy of any column used for lookups.
+
 ## Server UI extensions
 
 Server plugins can contribute routable Razor components and navigation entries through the

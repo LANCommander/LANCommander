@@ -88,6 +88,7 @@ app.PrepareDirectories();
 
 await app.RunApplicationMigrationsAsync();
 await app.RunDatabaseMigrationsAsync();
+await app.PreparePluginDataAsync();
 
 #if DEBUG
 await app.SeedUIFixturesIfRequestedAsync();

@@ -108,12 +108,14 @@ public sealed class PluginPackageService
         var package = installed ? PluginPackageRecord.Read(_staging.GetInstalledPath(folder)) : null;
         var pending = pendingInstall ? PluginPackageRecord.Read(_staging.GetStagedPath(folder)) : null;
         var loaded = FindLoaded(folder);
+        var disabledReasons = loaded is null ? null : _loader.GetDisabledReasons(loaded.Manifest.Id);
 
         var state = (installed, pendingInstall) switch
         {
             (false, _) => PluginInstallState.InstallPending,
             (true, true) => PluginInstallState.UpdatePending,
             _ when _staging.IsRemovalPending(folder) => PluginInstallState.RemovalPending,
+            _ when disabledReasons is not null => PluginInstallState.Disabled,
             _ => loaded != null ? PluginInstallState.Loaded : PluginInstallState.NotLoaded,
         };
 
@@ -127,6 +129,7 @@ public sealed class PluginPackageService
             Author = loaded?.Plugin.Author ?? current?.Authors,
             PluginId = loaded?.Manifest.Id,
             State = state,
+            DisabledReasons = disabledReasons ?? [],
             Package = package,
             PendingPackage = pending,
         };

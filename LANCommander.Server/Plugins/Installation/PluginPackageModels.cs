@@ -6,6 +6,8 @@ public enum PluginInstallState
     Loaded,
     /// <summary>Installed, but the server did not load it; the log says why.</summary>
     NotLoaded,
+    /// <summary>Loaded, but turned off, e.g. because its data isn't ready; <see cref="InstalledPlugin.DisabledReasons"/> says why.</summary>
+    Disabled,
     /// <summary>Installs at the next restart.</summary>
     InstallPending,
     /// <summary>Installed, and replaced by another version at the next restart.</summary>
@@ -23,6 +25,9 @@ public sealed class InstalledPlugin
     public string? Author { get; init; }
     public string? PluginId { get; init; }
     public PluginInstallState State { get; init; }
+
+    /// <summary>Why the plugin is turned off, when its state is <see cref="PluginInstallState.Disabled"/>.</summary>
+    public IReadOnlyList<string> DisabledReasons { get; init; } = [];
 
     /// <summary>The package the installed folder came from; null when it was copied in by hand.</summary>
     public PluginPackageRecord? Package { get; init; }

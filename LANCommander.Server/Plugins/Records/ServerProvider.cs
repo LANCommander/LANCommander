@@ -1,4 +1,5 @@
 using LANCommander.Server.Data.Models;
+using ServerEntity = LANCommander.Server.Data.Models.Server;
 using LANCommander.Server.Services;
 using LANCommander.Server.Settings.Enums;
 
@@ -36,7 +37,7 @@ internal sealed class ServerProvider(
 
         await CheckReferencesAsync(server);
 
-        var entity = new Data.Models.Server { Id = server.Id };
+        var entity = new ServerEntity { Id = server.Id };
 
         Apply(server, entity);
 
@@ -185,7 +186,7 @@ internal sealed class ServerProvider(
             throw RecordGuard.NotFound("game", gameId);
     }
 
-    static void Apply(ServerInfo info, Data.Models.Server entity)
+    static void Apply(ServerInfo info, ServerEntity entity)
     {
         entity.Name = info.Name.Trim();
         entity.GameId = info.GameId == Guid.Empty ? null : info.GameId;
@@ -235,7 +236,7 @@ internal sealed class ServerProvider(
         entity.Path = info.Path;
     }
 
-    static ServerInfo Info(Data.Models.Server entity) => new()
+    static ServerInfo Info(ServerEntity entity) => new()
     {
         Id = entity.Id,
         Name = entity.Name,

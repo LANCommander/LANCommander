@@ -381,6 +381,8 @@ Data/
 !LANCommander.Server.UI/Controls/Upload/
 !LANCommander.Server.Tests/Data/
 !LANCommander.Server.UI.Fixtures/Data/
+!LANCommander.Server.Plugins/Data/
+!LANCommander.Server/Plugins/Data/
 
 # Visual test output — screenshots & diffs are CI artifacts, not committed.
 # Baselines/ is committed; everything else is transient.

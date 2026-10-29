@@ -1,8 +1,10 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Reflection;
+using System.Runtime.Loader;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.DependencyInjection;
@@ -23,6 +25,8 @@ namespace LANCommander.SDK.Plugins;
 public sealed class PluginLoaderService
 {
     private readonly List<LoadedPlugin> _loaded = new();
+    private readonly ConcurrentDictionary<string, IReadOnlyList<string>> _disabled = new(StringComparer.OrdinalIgnoreCase);
+    private readonly ConcurrentDictionary<string, bool> _initialized = new(StringComparer.OrdinalIgnoreCase);
     private PluginHost _host;
 
     /// <summary>Plugins successfully loaded and configured during discovery.</summary>
@@ -30,6 +34,32 @@ public sealed class PluginLoaderService
 
     /// <summary>The loaded plugins' entry points alongside their manifests.</summary>
     public IReadOnlyList<LoadedPlugin> Plugins => _loaded;
+
+    /// <summary>The loaded plugin <paramref name="assembly"/> belongs to: its main assembly, or one loaded into its context.</summary>
+    public LoadedPlugin? FindByAssembly(Assembly assembly)
+    {
+        var context = AssemblyLoadContext.GetLoadContext(assembly);
+
+        return _loaded.FirstOrDefault(p => p.Manifest.Assembly == assembly)
+               ?? (context is PluginLoadContext
+                   ? _loaded.FirstOrDefault(p => AssemblyLoadContext.GetLoadContext(p.Manifest.Assembly) == context)
+                   : null);
+    }
+
+    /// <summary>
+    /// Turns a loaded plugin off: its <see cref="IPlugin.InitializeAsync"/> isn't run, and the host
+    /// shows <paramref name="reasons"/> to administrators. The plugin stays loaded, since its services
+    /// are already part of the host's container.
+    /// </summary>
+    public void Disable(string pluginId, IReadOnlyList<string> reasons) => _disabled[pluginId] = reasons;
+
+    /// <summary>Turns a plugin back on. Doesn't initialize it; see <see cref="InitializeAsync"/>.</summary>
+    public void Enable(string pluginId) => _disabled.TryRemove(pluginId, out _);
+
+    /// <summary>Why a plugin is turned off, or null when it isn't.</summary>
+    public IReadOnlyList<string>? GetDisabledReasons(string pluginId) => _disabled.GetValueOrDefault(pluginId);
+
+    public bool IsInitialized(string pluginId) => _initialized.ContainsKey(pluginId);
 
     /// <summary>
     /// Phase 1: scans <paramref name="pluginsRoot"/> for plugins, loads each into its own
@@ -132,30 +162,48 @@ public sealed class PluginLoaderService
     /// </summary>
     public async Task InitializeAllAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
     {
-        var loggerFactory = serviceProvider.GetRequiredService<ILoggerFactory>();
-
         foreach (var loaded in _loaded)
+            await InitializeAsync(loaded, serviceProvider, cancellationToken).ConfigureAwait(false);
+    }
+
+    /// <summary>
+    /// Invokes one plugin's <see cref="IPlugin.InitializeAsync"/> within its own DI scope, unless the
+    /// plugin is turned off or has already been initialized. Returns whether it ran successfully.
+    /// </summary>
+    public async Task<bool> InitializeAsync(LoadedPlugin loaded, IServiceProvider serviceProvider, CancellationToken cancellationToken = default)
+    {
+        var logger = serviceProvider.GetRequiredService<ILoggerFactory>().CreateLogger($"Plugin:{loaded.Plugin.Id}");
+
+        if (_disabled.ContainsKey(loaded.Manifest.Id))
         {
-            var logger = loggerFactory.CreateLogger($"Plugin:{loaded.Plugin.Id}");
+            logger.LogWarning("Plugin '{Id}' is turned off and was not initialized: {Reasons}", loaded.Manifest.Id, string.Join(" ", _disabled[loaded.Manifest.Id]));
+            return false;
+        }
 
-            try
+        if (!_initialized.TryAdd(loaded.Manifest.Id, true))
+            return true;
+
+        try
+        {
+            using var scope = serviceProvider.CreateScope();
+
+            var context = new PluginContext
             {
-                using var scope = serviceProvider.CreateScope();
+                Host = _host,
+                Services = scope.ServiceProvider,
+                PluginDirectory = loaded.Manifest.Directory,
+                Logger = logger,
+            };
 
-                var context = new PluginContext
-                {
-                    Host = _host,
-                    Services = scope.ServiceProvider,
-                    PluginDirectory = loaded.Manifest.Directory,
-                    Logger = logger,
-                };
+            await loaded.Plugin.InitializeAsync(context, cancellationToken).ConfigureAwait(false);
 
-                await loaded.Plugin.InitializeAsync(context, cancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                logger.LogError(ex, "Plugin '{Id}' threw during InitializeAsync", loaded.Plugin.Id);
-            }
+            return true;
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Plugin '{Id}' threw during InitializeAsync", loaded.Plugin.Id);
+
+            return false;
         }
     }
 

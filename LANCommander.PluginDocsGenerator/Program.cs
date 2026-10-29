@@ -34,6 +34,7 @@ string[] namespaceOrder =
     "LANCommander.Launcher.Plugins.Extensions",
     "LANCommander.Launcher.Plugins",
     "LANCommander.Server.Plugins",
+    "LANCommander.Server.Plugins.Data",
 };
 
 var docs = new XmlDocLookup(assemblies);
@@ -99,9 +100,10 @@ static int KindRank(Type t) => t switch
 
 static void WriteType(StringBuilder sb, Type type, XmlDocLookup docs)
 {
-    sb.AppendLine($"### {type.Name}");
+    // Generic types by their parameters, IPluginSettings<TSettings>, rather than IPluginSettings`1
+    sb.AppendLine($"### {Signatures.Friendly(type)}");
     sb.AppendLine();
-    sb.AppendLine($"`{Kind(type)}` — `{type.FullName}`");
+    sb.AppendLine($"`{Kind(type)}` — `{type.Namespace}.{Signatures.Friendly(type)}`");
     sb.AppendLine();
 
     var summary = docs.GetSummary(XmlId.ForType(type));

@@ -77,6 +77,24 @@ Implemented by plugins that want to add PowerShell cmdlets or script modules int
 - `IEnumerable<string> GetModulePaths()`
   - Returns absolute paths to PowerShell script modules (.psm1/.psd1) shipped with the plugin that should be imported into each runspace.
 
+### IPluginSettings<TSettings>
+
+`interface` — `LANCommander.SDK.Plugins.IPluginSettings<TSettings>`
+
+A plugin's own settings, kept by the host in a YAML file of their own: `PluginData/{PluginId}/Settings.yaml` under the host's data directory. Inject it with the plugin's settings type; the host knows which plugin is asking from the assembly that type is declared in, so a plugin can only reach its own file.
+
+**Properties**
+
+- `TSettings Current { get; }`
+  - The settings, read from the file on first use, or the type's defaults when there is none.
+
+**Methods**
+
+- `void Update(Action<TSettings> mutator)`
+  - Changes the settings and schedules them to be written.
+- `Task FlushAsync(CancellationToken cancellationToken)`
+  - Writes a pending change now instead of after the debounce, for a value that must not be lost to a crash, such as a rotated credential.
+
 ### GameLobby
 
 `record` — `LANCommander.SDK.Plugins.GameLobby`
@@ -110,6 +128,10 @@ Assembly-level attribute that marks an assembly as a LANCommander plugin and dec
   - Maximum compatible host (SDK) version, inclusive. Null means no upper bound.
 - `PluginHost Hosts { get; set; }`
   - The hosts this plugin supports. Defaults to both server and launcher.
+- `string DataId { get; set; }`
+  - The name the plugin's database objects go by: with `DataId = "Timesheet"`, its tables are `Plugin_Timesheet_Entries`, its keys `PK_Plugin_Timesheet_Entries`, and its migrations history `__EFMigrationsHistory_Plugin_Timesheet`. A PascalCase name of letters and digits, at most 24 characters, unique among installed plugins ignoring case. Required only for a plugin with a database context; unlike `Id`, it must never change once the plugin has been installed, since it names the plugin's tables.
+- `string[] MigrationAssemblies { get; set; }`
+  - The plugin's migrations assemblies, by file or assembly name, one per database engine per context, shipped in the plugin's folder. Each declares what it contains with `[assembly: PluginMigrations(...)]`, which is what the host goes by.
 
 ### LoadedPlugin
 
@@ -195,10 +217,21 @@ Discovers, loads, and initializes plugins from a drop-in folder. Split into two 
 
 **Methods**
 
+- `LoadedPlugin FindByAssembly(Assembly assembly)`
+  - The loaded plugin `assembly` belongs to: its main assembly, or one loaded into its context.
+- `void Disable(string pluginId, IReadOnlyList<string> reasons)`
+  - Turns a loaded plugin off: its `InitializeAsync` isn't run, and the host shows `reasons` to administrators. The plugin stays loaded, since its services are already part of the host's container.
+- `void Enable(string pluginId)`
+  - Turns a plugin back on. Doesn't initialize it; see `InitializeAsync`.
+- `IReadOnlyList<string> GetDisabledReasons(string pluginId)`
+  - Why a plugin is turned off, or null when it isn't.
+- `bool IsInitialized(string pluginId)`
 - `void DiscoverAndConfigure(IServiceCollection services, PluginHost host, string pluginsRoot, string hostVersion, ILogger logger)`
   - Phase 1: scans `pluginsRoot` for plugins, loads each into its own `PluginLoadContext`, applies host + version gates, instantiates the entry point, and lets it register services. A failure in one plugin never aborts the batch.
 - `Task InitializeAllAsync(IServiceProvider serviceProvider, CancellationToken cancellationToken)`
   - Phase 2: invokes `InitializeAsync` for every loaded plugin, each within its own DI scope. A failure in one plugin never aborts the others.
+- `Task<bool> InitializeAsync(LoadedPlugin loaded, IServiceProvider serviceProvider, CancellationToken cancellationToken)`
+  - Invokes one plugin's `InitializeAsync` within its own DI scope, unless the plugin is turned off or has already been initialized. Returns whether it ran successfully.
 - `bool IsVersionCompatible(string hostVersion, string min, string max)`
   - Whether `hostVersion` falls within the inclusive SemVer bounds a plugin declares. A host version that cannot be parsed never blocks a plugin.
 
@@ -219,6 +252,10 @@ Parsed metadata describing a discovered plugin, derived from its `LANCommanderPl
   - The assembly the plugin was loaded from.
 - `string Directory { get; init; }`
   - Absolute path to the folder the plugin was loaded from.
+- `string DataId { get; init; }`
+  - See `DataId`.
+- `IReadOnlyList<string> MigrationAssemblies { get; init; }`
+  - See `MigrationAssemblies`.
 
 **Methods**
 
@@ -237,6 +274,24 @@ The NuGet package types a plugin package declares. Every plugin package declares
   - The package type a host searches for.
 - `IReadOnlyList<string> All(PluginHost hosts)`
   - Every package type a plugin targeting `hosts` declares.
+
+### PluginSettings<TSettings>
+
+`class` — `LANCommander.SDK.Plugins.PluginSettings<TSettings>`
+
+The host's `IPluginSettings`. Register it as an open generic singleton.
+
+**Properties**
+
+- `TSettings Current { get; }`
+
+**Methods**
+
+- `void Update(Action<TSettings> mutator)`
+- `Task FlushAsync(CancellationToken cancellationToken)`
+- `ValueTask DisposeAsync()`
+- `void Dispose()`
+  - For containers disposed synchronously.
 
 ### PluginHost
 
@@ -676,9 +731,9 @@ Looks up game metadata through the server's configured providers. Provided by th
 
 Manages the multiplayer modes of games. Provided by the server; inject it into a scoped plugin service or page.
 
-### IOwnedRecordProvider`1
+### IOwnedRecordProvider<TInfo>
 
-`interface` — `LANCommander.Server.Plugins.IOwnedRecordProvider`1`
+`interface` — `LANCommander.Server.Plugins.IOwnedRecordProvider<TInfo>`
 
 Lists and manages records that belong to a game, redistributable, tool or server: actions, scripts, save paths and the like. Each provider accepts only the owners its records can have, and throws `ArgumentException` for any other.
 
@@ -883,7 +938,7 @@ Lists and manages the server's tools. Provided by the server; inject it into a s
 
 `interface` — `LANCommander.Server.Plugins.IUserDirectory`
 
-Reads the server's user accounts, for example to let users sign in to something the plugin hosts with their LANCommander account. Provided by the server; inject it into a scoped plugin service or page. The directory is read-only and never exposes passwords or password hashes. A plugin that authenticates users must do so with a credential of its own, and should refuse any account whose `CanSignIn` is false.
+Reads the server's user accounts, for example to let users sign in to something the plugin hosts with their LANCommander account. Provided by the server; inject it into a scoped plugin service or page.
 
 **Methods**
 
@@ -1513,4 +1568,170 @@ The kinds of taxonomy record: named records games are linked to.
 | `Genre` = `4` |  |
 | `Platform` = `5` |  |
 | `Tag` = `6` |  |
+
+## `LANCommander.Server.Plugins.Data`
+
+### PluginDataIds
+
+`class` — `LANCommander.Server.Plugins.Data.PluginDataIds`
+
+The rules for a plugin's `DataId`, and the names it gives the plugin's database objects: tables `Plugin_Timesheet_Entries`, keys `PK_Plugin_Timesheet_Entries`, indexes `IX_Plugin_Timesheet_Entries_Name`, and history `__EFMigrationsHistory_Plugin_Timesheet`.
+
+**Methods**
+
+- `string TablePrefix(string dataId)`
+  - The prefix of the plugin's table names.
+- `string HistoryTable(string dataId)`
+  - The plugin's own migrations history table.
+- `string Prefixed(string dataId, string name)`
+  - Puts the plugin's prefix into the name of a table, key, index or foreign key, once. A name of EF Core's usual shape keeps its marker first, as the server's own do (`PK_Entries` becomes `PK_Plugin_Timesheet_Entries`); any other name is prefixed at the start.
+- `string Validate(string dataId)`
+  - Why `dataId` can't be used, or null when it can.
+
+### PluginDataServiceCollectionExtensions
+
+`class` — `LANCommander.Server.Plugins.Data.PluginDataServiceCollectionExtensions`
+
+**Methods**
+
+- `IServiceCollection AddPluginDbContext<TContext>(IServiceCollection services)`
+  - Asks the host to register `TContext`, scoped, along with an `IDbContextFactory<TContext>`. Call it from `IPlugin.ConfigureServices`.
+
+### PluginDataState
+
+`record` — `LANCommander.Server.Plugins.Data.PluginDataState`
+
+A plugin context's status, with every error that put it there.
+
+**Properties**
+
+- `PluginDataStatus Status { get; init; }`
+- `IReadOnlyList<string> Errors { get; init; }`
+
+### PluginDataUnavailableException
+
+`class` — `LANCommander.Server.Plugins.Data.PluginDataUnavailableException`
+
+A plugin context was asked for, or tried to connect, before it was ready. Carries the context's state and every error, so the plugin's log shows exactly which check failed.
+
+**Properties**
+
+- `Type ContextType { get; }`
+- `PluginDataState State { get; }`
+
+### PluginDbContext
+
+`class` — `LANCommander.Server.Plugins.Data.PluginDbContext`
+
+The base of a plugin's own `DbContext`. The plugin defines its entities in `ConfigureModel`; the host owns everything else: the connection, the engine, the migrations history table, and naming every table, key and index after the plugin, as in `Plugin_Timesheet_Entries` and `PK_Plugin_Timesheet_Entries`.
+
+**Properties**
+
+- `string DataId { get; }`
+  - The plugin's `DataId`, which prefixes its database objects.
+
+### PluginDbContextOptionsExtensions
+
+`class` — `LANCommander.Server.Plugins.Data.PluginDbContextOptionsExtensions`
+
+**Methods**
+
+- `DbContextOptionsBuilder UsePluginIdentity(DbContextOptionsBuilder builder, string dataId)`
+  - Gives a `PluginDbContext` the plugin's `DataId`. Called by the host, and by design-time factories that generate a plugin's migrations, so the migrations name things the way the host will.
+
+### PluginDbContextRegistration
+
+`record` — `LANCommander.Server.Plugins.Data.PluginDbContextRegistration`
+
+A plugin's request for the host to register one of its contexts.
+
+**Properties**
+
+- `Type ContextType { get; init; }`
+
+### PluginIdentityExtension
+
+`class` — `LANCommander.Server.Plugins.Data.PluginIdentityExtension`
+
+Carries a plugin's `DataId` into its context's options.
+
+**Properties**
+
+- `string DataId { get; }`
+- `DbContextOptionsExtensionInfo Info { get; }`
+
+**Methods**
+
+- `void ApplyServices(IServiceCollection services)`
+- `void Validate(IDbContextOptions options)`
+
+### PluginMigrationsAttribute
+
+`attribute` — `LANCommander.Server.Plugins.Data.PluginMigrationsAttribute`
+
+Declares that an assembly holds the migrations of one `PluginDbContext` for one database engine. A plugin ships one such assembly per engine per context, each with its own model snapshot, and lists them in `[LANCommanderPlugin(MigrationAssemblies = ...)]`.
+
+**Properties**
+
+- `Type ContextType { get; }`
+- `DatabaseEngine Engine { get; }`
+
+### PluginModelConventions
+
+`class` — `LANCommander.Server.Plugins.Data.PluginModelConventions`
+
+What the host does to every plugin model after the plugin has configured it: names its tables, keys and indexes after the plugin (see `Prefixed`), and gives date and time properties converters that behave the same on every engine.
+
+**Methods**
+
+- `void Apply(ModelBuilder modelBuilder, string dataId)`
+
+### PluginValueConverters
+
+`class` — `LANCommander.Server.Plugins.Data.PluginValueConverters`
+
+Converters that make types behave the same on every engine. The host applies `UtcDateTime` and `UtcTicks` to every `DateTime` and `DateTimeOffset` property itself; a `Decimal` property needs `ScaledInteger` applied by the plugin, since only the plugin knows its scale.
+
+**Methods**
+
+- `ValueConverter<decimal, long> ScaledInteger(int scale)`
+  - Stores `Decimal` as a whole number of 10^-`scale` units, which every engine can compare and order; SQLite otherwise stores decimals as text. Values are rounded to `scale` places.
+
+### PortabilityRules
+
+`class` — `LANCommander.Server.Plugins.Data.PortabilityRules`
+
+What a plugin model may not do, so it behaves the same on SQLite, MySQL and PostgreSQL. The host checks the model as its own engine builds it, and refuses a plugin that breaks any of these.
+
+**Methods**
+
+- `IReadOnlyList<string> Check(IModel model, DatabaseEngine engine, string dataId)`
+  - Every way `model` breaks the rules, as messages naming the entity and property.
+
+### DatabaseEngine
+
+`enum` — `LANCommander.Server.Plugins.Data.DatabaseEngine`
+
+The database engines a LANCommander server can run on.
+
+| Value | Description |
+| --- | --- |
+| `Sqlite` = `0` |  |
+| `MySql` = `1` |  |
+| `PostgreSql` = `2` |  |
+
+### PluginDataStatus
+
+`enum` — `LANCommander.Server.Plugins.Data.PluginDataStatus`
+
+Where a plugin context is in being made ready for use.
+
+| Value | Description |
+| --- | --- |
+| `Unvalidated` = `0` | Not checked yet. |
+| `Invalid` = `1` | Its migrations or model failed a check; the plugin is turned off. |
+| `Validated` = `2` | Its migrations passed every check, but haven't been applied, e.g. while the server has no database yet. |
+| `Migrating` = `3` | Its migrations are being applied. |
+| `MigrationFailed` = `4` | Applying its migrations failed; the plugin is turned off until an administrator retries. |
+| `Ready` = `5` | Checked and migrated; the context can be used. |
 

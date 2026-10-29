@@ -103,6 +103,8 @@ internal sealed class XmlDocLookup
         var withoutPrefix = cref.Length > 1 && cref[1] == ':' ? cref[2..] : cref;
         var withoutParameters = withoutPrefix.Split('(')[0];
         var segments = withoutParameters.Split('.');
-        return segments[^1];
+
+        // Without a generic arity: IPluginSettings`1 and AddPluginDbContext``1 read as their names
+        return segments[^1].Split('`')[0];
     }
 }

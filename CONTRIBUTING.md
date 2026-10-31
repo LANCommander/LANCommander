@@ -51,13 +51,54 @@ The launcher multi-targets `net10.0` and `net10.0-windows10.0.19041.0`, so `-f` 
 
 #### Reporting a different version
 
-The launcher sends its version to the server on every request and refuses to talk to a server with a different major version. A source build reports the version in `LANCommander.Launcher.csproj`, which won't match a server on another release. Set `LANCOMMANDER_VERSION` to override what the launcher reports:
+The launcher sends its version to the server on every request and refuses to talk to a server with a different major version. A source build reports the version in `Directory.Build.props`, which won't match a server on another release. Set `LANCOMMANDER_VERSION` to override what the launcher reports:
 
 ```bash
 LANCOMMANDER_VERSION=2.1.11 dotnet run --project LANCommander.Launcher -f net10.0-windows10.0.19041.0
 ```
 
 `LANCommander.Launcher/Properties/launchSettings.json` presets this for IDE debugging — edit the value there to match the server you're testing against. The variable is read at runtime, so no rebuild is needed.
+
+#### Release version synchronization
+
+`Directory.Build.props` is the single source of .NET build versions, including the
+launcher and the SDK, server plugin contracts and UI NuGet projects. `Version`
+tracks the release tag without `v` (for example `2.2.0-alpha.3`); `AssemblyVersion`
+is always numeric (`2.2.0.0`), matching release builds. The frontend `package.json`
+and lockfile versions describe webpack asset projects, not .NET identities or
+published npm packages, and are not synchronized. Dependency versions in
+`Directory.Packages.props` are also unchanged.
+
+`LANCommander.Version.Sync.yml` opens a reviewable, version-specific PR against the
+default branch when a version release is published. The tag release pipeline also
+calls it after successfully creating its draft release, because events created
+with `GITHUB_TOKEN` do not start other workflows. The workflow can be rerun or
+manually dispatched with an existing release tag to recover a missed update.
+Nightly and VLC release events are ignored; malformed version tags fail explicitly.
+The workflow checks out the default branch, not the tagged tree, so it retains
+current code. It updates only the two root version properties, never bumps a future
+patch, refuses to downgrade SemVer precedence, and reuses the same PR branch on
+reruns. Merge the PR to update ordinary local builds; already-built assemblies
+must be rebuilt. A rerun after merging is a no-op.
+
+This uses `GITHUB_TOKEN` with `contents: write` and `pull-requests: write`; no new
+secret is required. Enable **Allow GitHub Actions to create and approve pull
+requests** in repository **Settings > Actions > General > Workflow permissions**.
+PRs created with `GITHUB_TOKEN` do not automatically trigger PR workflows; use an
+approved GitHub App token instead if automatic PR CI is required, or run the
+existing manually dispatchable CI workflow before merging. The synchronization PR
+itself does not publish packages or create tags.
+
+To synchronize or verify locally with PowerShell 7 (no external test modules):
+
+```powershell
+pwsh -File LANCommander.Build/Sync-ReleaseVersion.ps1 -ReleaseTag v2.2.0-alpha.3
+pwsh -File LANCommander.Build/Test-SyncReleaseVersion.ps1
+```
+
+Tests cover stable/prerelease/build-metadata tags, numeric assembly components,
+invalid input, older releases, unchanged unrelated content, and byte-identical
+reruns. `LANCommander.Version.Tests.yml` runs them on relevant pull requests.
 
 ## How to Contribute
 

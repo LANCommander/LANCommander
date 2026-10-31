@@ -427,6 +427,16 @@ jobs:
             artifacts/LANCommander.Launcher-Linux-arm64-v${{ needs.prep.outputs.version_tag }}.AppImage
             artifacts/LANCommander.Launcher-Linux-x64-v${{ needs.prep.outputs.version_tag }}.AppImage
 
+  # GITHUB_TOKEN-created releases do not trigger another release workflow.
+  sync_release_version:
+    needs: [build_release]
+    permissions:
+      contents: write
+      pull-requests: write
+    uses: ./.github/workflows/LANCommander.Version.Sync.yml
+    with:
+      release_tag: ${{ github.ref_name }}
+
   publish_docker_image:
     needs:
       - prep

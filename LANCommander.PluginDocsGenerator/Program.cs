@@ -100,8 +100,9 @@ static int KindRank(Type t) => t switch
 
 static void WriteType(StringBuilder sb, Type type, XmlDocLookup docs)
 {
-    // Generic types by their parameters, IPluginSettings<TSettings>, rather than IPluginSettings`1
-    sb.AppendLine($"### {Signatures.Friendly(type)}");
+    // Generic types by their parameters, IPluginSettings<TSettings>, rather than IPluginSettings`1.
+    // Headings are MDX prose, so the `<` must be escaped or it is parsed as a JSX tag.
+    sb.AppendLine($"### {XmlDocLookup.EscapeMdx(Signatures.Friendly(type))}");
     sb.AppendLine();
     sb.AppendLine($"`{Kind(type)}` — `{type.Namespace}.{Signatures.Friendly(type)}`");
     sb.AppendLine();

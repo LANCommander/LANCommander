@@ -67,7 +67,7 @@ internal sealed class XmlDocLookup
     // defined". Backslash-escape them so they render as text. Only free text is escaped;
     // the backtick code spans synthesized by RenderElement are left alone because MDX
     // already treats code-span contents literally.
-    private static string EscapeMdx(string text) => text
+    internal static string EscapeMdx(string text) => text
         .Replace("{", "\\{")
         .Replace("}", "\\}")
         .Replace("<", "\\<");

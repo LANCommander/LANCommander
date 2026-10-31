@@ -750,6 +750,19 @@ Lists and manages records that belong to a game, redistributable, tool or server
 - `Task DeleteAsync(Guid id, CancellationToken cancellationToken)`
   - Deletes a record. Does nothing when there is no such record.
 
+### IPackageExporter
+
+`interface` — `LANCommander.Server.Plugins.IPackageExporter`
+
+Exports games, redistributables, servers and tools as LCX packages through the server's own export pipeline, the same one the export dialog uses. Provided by the server; inject it into a scoped plugin service or page.
+
+**Methods**
+
+- `Task<PackageContents> DescribeAsync(ImportExportRecordType recordType, Guid recordId, CancellationToken cancellationToken)`
+  - Describes what a package of the record would hold: the record itself and every child record the export dialog would offer, such as archives, media, scripts and keys. Nothing is written.
+- `Task ExportAsync(ImportExportRecordType recordType, Guid recordId, Stream output, IEnumerable<Guid> excludedItemIds, CancellationToken cancellationToken)`
+  - Writes an LCX package of the record to a stream, with every child record except those excluded.
+
 ### IPackageImporter
 
 `interface` — `LANCommander.Server.Plugins.IPackageImporter`
@@ -1257,6 +1270,25 @@ A way a game can be played with others.
 - `RecordOwner Owner { get; init; }`
   - Set by the server; ignored when writing.
 
+### PackageContents
+
+`record` — `LANCommander.Server.Plugins.PackageContents`
+
+What a package of a record would hold, from `DescribeAsync`.
+
+**Properties**
+
+- `Guid RecordId { get; init; }`
+  - Id of the record.
+- `ImportExportRecordType RecordType { get; init; }`
+  - The kind of record.
+- `string Name { get; init; }`
+  - The record's title or name.
+- `DateTime UpdatedOn { get; init; }`
+  - When the record itself was last changed.
+- `IReadOnlyList<PackageItem> Items { get; init; }`
+  - The child records a package would carry.
+
 ### PackageImportResult
 
 `record` — `LANCommander.Server.Plugins.PackageImportResult`
@@ -1271,6 +1303,25 @@ The outcome of an import run by `IPackageImporter`.
   - The kind of record the package held.
 - `int ImportedCount { get; init; }`
   - Number of records imported.
+
+### PackageItem
+
+`record` — `LANCommander.Server.Plugins.PackageItem`
+
+A child record a package would carry.
+
+**Properties**
+
+- `Guid Id { get; init; }`
+  - Id of the child record.
+- `ImportExportRecordType Type { get; init; }`
+  - The kind of child record, e.g. `Archive`.
+- `string Name { get; init; }`
+  - A name to show for it.
+- `long Size { get; init; }`
+  - Bytes of file the package would carry for it, such as an archive's; 0 for none.
+- `DateTime? UpdatedOn { get; init; }`
+  - When it was last changed, or null for records that don't track it.
 
 ### PluginAccessAttribute
 

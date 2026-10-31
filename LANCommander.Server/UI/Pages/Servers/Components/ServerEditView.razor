@@ -27,13 +27,17 @@
                 <MenuGroup Title="Console">
                     <MenuItem Href="@($"/Servers/{Id}/Consoles")">Consoles</MenuItem>
 
-                    @if (LogConsoles.Any())
+                    @if (LogConsoles.Any() || EngineConsoles.Count > 0)
                     {
                         <SubMenu Title="Monitor">
                             <MenuItem Href="@($"/Servers/{Id}/Monitor/Console")">Process output</MenuItem>
                             @foreach (var console in LogConsoles)
                             {
                                 <MenuItem Href="@($"/Servers/{Id}/Monitor/{console.Id}")">@console.Name</MenuItem>
+                            }
+                            @foreach (var console in EngineConsoles)
+                            {
+                                <MenuItem Href="@($"/Servers/{Id}/Monitor/Engine/{Uri.EscapeDataString(console.Id)}")">@console.Name</MenuItem>
                             }
                         </SubMenu>
                     }
@@ -239,6 +243,9 @@
     }
 
     public void Dispose() => _poll?.Dispose();
+
+    // Only once the server has been saved with its engine, which has then been told about it
+    IReadOnlyList<LANCommander.Server.Plugins.ServerEngineConsole> EngineConsoles => Extension == null ? [] : PluginEngines.GetConsoles(Id);
 
     IEnumerable<ServerConsole> LogConsoles => Server.ServerConsoles?.Where(c => c.Type == ServerConsoleType.LogFile) ?? [];
 

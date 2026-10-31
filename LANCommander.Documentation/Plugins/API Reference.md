@@ -898,6 +898,12 @@ Runs game servers somewhere other than as a process on the LANCommander server's
   - Whether `SendInputAsync` can deliver a line to the server now, for `Input`.
 - `Task<bool> SendInputAsync(ServerEngineServer server, string line, CancellationToken cancellationToken)`
   - Writes a line to the server's input. Returns false if that isn't possible.
+- `IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server)`
+  - The consoles the engine offers for a server, for `Consoles`, e.g. its log and a shell. Called whenever the server's pages are drawn, so it should be cheap and shouldn't reach out to anything; work it out from the server's settings. A console that can't be opened right now, e.g. because the server isn't running, should still be listed, and fail to open with a message saying why.
+- `IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ServerEngineServer server, string consoleId, ServerEngineLogRequest request, CancellationToken cancellationToken)`
+  - Reads one of the server's `Log` consoles, oldest line first. Throw to report that it can't be read; the server shows the message.
+- `Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)`
+  - Opens one of the server's `Terminal` consoles at the administrator's terminal's size. Throw to report that it can't be opened; the server shows the message.
 
 ### IServerEngineHost
 
@@ -911,6 +917,21 @@ How an `IServerEngineExtension` reports what its servers do. Thread safe.
   - Reports that a server's status changed on its own, e.g. it exited, so those watching it see so at once rather than at their next look. Changes made through the engine's own methods needn't be reported.
 - `void WriteOutput(Guid serverId, string line)`
   - Reports a line of a server's output, for `Output`.
+
+### IServerEngineTerminal
+
+`interface` — `LANCommander.Server.Plugins.IServerEngineTerminal`
+
+An open `Terminal` console. The server reads it and writes to it at the same time, from different threads; it is disposed when the administrator leaves the page, which should end the session.
+
+**Methods**
+
+- `ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)`
+  - Reads what the terminal writes, as UTF-8 that may split a character across reads. Returns 0 once the session has ended, e.g. the shell exited.
+- `ValueTask WriteAsync(ReadOnlyMemory<byte> input, CancellationToken cancellationToken)`
+  - Writes what the administrator typed or pasted, as UTF-8, escape sequences included.
+- `Task ResizeAsync(ServerEngineTerminalSize size, CancellationToken cancellationToken)`
+  - The administrator's terminal changed size. Engines that can't resize a session after opening it can ignore this.
 
 ### IServerNavigationExtension
 
@@ -1489,6 +1510,21 @@ A log file or RCON connection the LANCommander server shows for a game server.
 - `string Password { get; init; }`
   - For an RCON console: the password.
 
+### ServerEngineConsole
+
+`record` — `LANCommander.Server.Plugins.ServerEngineConsole`
+
+A console an `IServerEngineExtension` offers for one of its servers, listed under the server's Monitor beside the process output and the server's own log file consoles.
+
+**Properties**
+
+- `string Id { get; init; }`
+  - Identifies the console among the server's, e.g. `logs` or `shell`. It appears in the console's address, so keep it short; it is passed back to the engine when the console is opened.
+- `string Name { get; init; }`
+  - The console's name in the menu and the page's header.
+- `ServerEngineConsoleKind Kind { get; init; }`
+  - How the console is shown, which decides which of the engine's methods opens it.
+
 ### ServerEngineEditorContext
 
 `class` — `LANCommander.Server.Plugins.ServerEngineEditorContext`
@@ -1510,6 +1546,34 @@ The server an `EditorComponent` edits, on its General page. Changes are kept wit
   - Replaces the engine's settings for the server.
 - `void SetAddress(string host, int? port)`
   - Sets the address players connect to, e.g. from a port the engine publishes. The administrator can still change it.
+
+### ServerEngineLogLine
+
+`record` — `LANCommander.Server.Plugins.ServerEngineLogLine`
+
+A line of a `Log` console.
+
+**Properties**
+
+- `string Text { get; init; }`
+  - The line, without its line ending.
+- `DateTime? Timestamp { get; init; }`
+  - When it was written, in UTC, where the engine knows; otherwise when it was read.
+- `bool IsError { get; init; }`
+  - Whether it came from the server's error output, so is shown as an error.
+
+### ServerEngineLogRequest
+
+`record` — `LANCommander.Server.Plugins.ServerEngineLogRequest`
+
+What of a `Log` console to read.
+
+**Properties**
+
+- `int? Tail { get; init; }`
+  - How many of the latest lines to read back before following; null for all of them.
+- `bool Follow { get; init; }`
+  - Whether to go on returning lines as they are written, until the reader cancels or the log ends, e.g. because the server stopped. When false, return what is there and finish.
 
 ### ServerEngineProcessInfo
 
@@ -1742,6 +1806,17 @@ The record a child record (an action, script, save path, archive…) belongs to.
 - `RecordOwner Tool(Guid id)`
 - `RecordOwner Server(Guid id)`
 
+### ServerEngineTerminalSize
+
+`struct` — `LANCommander.Server.Plugins.ServerEngineTerminalSize`
+
+A terminal's size, in characters.
+
+**Properties**
+
+- `int Columns { get; init; }`
+- `int Rows { get; init; }`
+
 ### GameLinkKind
 
 `enum` — `LANCommander.Server.Plugins.GameLinkKind`
@@ -1785,6 +1860,17 @@ The kinds of record that own actions, scripts and the other child records.
 | `Tool` = `2` |  |
 | `Server` = `3` |  |
 
+### ServerEngineConsoleKind
+
+`enum` — `LANCommander.Server.Plugins.ServerEngineConsoleKind`
+
+How a `ServerEngineConsole` is shown.
+
+| Value | Description |
+| --- | --- |
+| `Log` = `0` | Lines the server has written, read back and then followed, e.g. a container's log, shown like the process output with the server's command bar under it. Opened with `ReadLogAsync`. |
+| `Terminal` = `1` | An interactive terminal, e.g. the server's own console or a shell beside it. Keystrokes go to the engine as they are typed and what it writes back is drawn as a terminal draws it, escape sequences included. Opened with `OpenTerminalAsync`. |
+
 ### ServerEngineFeatures
 
 `enum` — `LANCommander.Server.Plugins.ServerEngineFeatures`
@@ -1797,6 +1883,7 @@ What an `IServerEngineExtension` can do beyond starting and stopping a server.
 | `Output` = `1` | The engine reports its servers' output through `WriteOutput`, shown on their Monitor page. |
 | `Input` = `2` | The engine can write lines to its servers' input, from their Monitor page. |
 | `ProcessInfo` = `4` | The engine samples its servers' CPU and memory use and uptime. |
+| `Consoles` = `8` | The engine offers consoles of its own for its servers, e.g. a log or a terminal, listed under their Monitor; see `GetConsoles`. |
 
 ### ServerEngineStatus
 

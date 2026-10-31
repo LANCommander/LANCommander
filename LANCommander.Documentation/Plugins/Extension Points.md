@@ -250,6 +250,45 @@ commands typed on the Monitor reach `SendInputAsync`; `ProcessInfo` has the Moni
 memory and uptime `GetProcessInfoAsync` samples. RCON consoles work with any engine, since the server
 sends RCON commands itself.
 
+### Consoles
+
+An engine with the `Consoles` feature can offer consoles of its own for each server, listed under the
+server's Monitor beside the process output and its log file consoles. `GetConsoles` lists them as
+[`ServerEngineConsole`](/Plugins/API%20Reference#serverengineconsole)s; it is called whenever the
+server's pages are drawn, so work the list out from the server's settings rather than asking anything.
+Only consoles in the list can be opened, and a console that can't be opened right now (the server
+isn't running, say) is better listed and failing with a message than missing.
+
+A `Log` console is read with `ReadLogAsync`: the latest `Tail` lines, then, when `Follow` is set, new
+lines as they are written until the log ends or the page is left. It is shown like the process output,
+with the server's command bar under it. A `Terminal` console is opened with `OpenTerminalAsync` at the
+size of the administrator's terminal, and returns an
+[`IServerEngineTerminal`](/Plugins/API%20Reference#iserverengineterminal): raw bytes both ways, so the
+engine's prompt, colours and full-screen programs work, and `ResizeAsync` as the window changes size.
+The session is disposed when the administrator leaves the page.
+
+```csharp
+public IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) =>
+[
+    new("logs", "Container log", ServerEngineConsoleKind.Log),
+    new("shell", "Shell", ServerEngineConsoleKind.Terminal),
+];
+
+public async IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ServerEngineServer server, string consoleId,
+    ServerEngineLogRequest request, [EnumeratorCancellation] CancellationToken cancellationToken)
+{
+    await foreach (var (time, text) in client.ReadLogAsync(server.GetSettings<MySettings>().Container, request.Tail, request.Follow, cancellationToken))
+        yield return new ServerEngineLogLine(text, time);
+}
+
+public async Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId,
+    ServerEngineTerminalSize size, CancellationToken cancellationToken) =>
+    new MyShell(await client.ExecAsync(server.GetSettings<MySettings>().Container, ["/bin/sh"], size, cancellationToken));
+```
+
+Monitor pages are for administrators only. A terminal gives whoever opens it whatever the engine's
+session can do, so the server logs who opened which.
+
 ## Looking up metadata
 
 To consume the server's configured metadata providers, inject

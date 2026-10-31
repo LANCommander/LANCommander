@@ -7,12 +7,25 @@ using LogLevel = Microsoft.Extensions.Logging.LogLevel;
 
 namespace LANCommander.Server.UI.Components;
 
-public partial class Terminal : Xterm
+public partial class Terminal : Xterm, IAsyncDisposable
 {
     [Inject]
     ScriptProvider ScriptProvider { get; set; }
 
+    /// <summary>
+    /// Loads the readline addon for <see cref="ReadLineAsync"/>. Turn it off for a terminal whose
+    /// keystrokes go elsewhere as they are typed, e.g. to a shell, which readline would hold back.
+    /// </summary>
+    [Parameter]
+    public bool Readline { get; set; } = true;
+
+    /// <summary>Refits the terminal to its element whenever the element changes size.</summary>
+    [Parameter]
+    public bool FitToElement { get; set; }
+
     IJSObjectReference? _interop;
+    IJSObjectReference? _resizeObserver;
+    DotNetObjectReference<Terminal>? _self;
 
     protected override async Task OnAfterRenderAsync(bool firstRender)
     {
@@ -23,7 +36,9 @@ public partial class Terminal : Xterm
             if (Addons == null)
                 Addons = new HashSet<string>();
 
-            Addons.Add("readline");
+            if (Readline)
+                Addons.Add("readline");
+
             Addons.Add("addon-fit");
         }
         
@@ -33,7 +48,60 @@ public partial class Terminal : Xterm
         {
             await ApplyLineHeightAsync();
             await FitAsync();
+
+            if (FitToElement)
+                await ObserveResizeAsync();
         }
+    }
+
+    async Task ObserveResizeAsync()
+    {
+        if (_interop == null)
+            return;
+
+        try
+        {
+            _self = DotNetObjectReference.Create(this);
+            _resizeObserver = await _interop.InvokeAsync<IJSObjectReference>("ObserveResize", ElementReference, _self);
+        }
+        catch (JSException)
+        {
+            // A stale bundle without ObserveResize keeps the size the terminal first fitted to
+        }
+    }
+
+    /// <summary>Called from the module as the terminal's element changes size.</summary>
+    [JSInvokable]
+    public async Task ElementResized()
+    {
+        try
+        {
+            await FitAsync();
+        }
+        catch (JSException)
+        {
+            // The terminal is going
+        }
+    }
+
+    public new async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_resizeObserver != null)
+            {
+                await _resizeObserver.InvokeVoidAsync("Dispose");
+                await _resizeObserver.DisposeAsync();
+            }
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, and the page with it
+        }
+
+        _self?.Dispose();
+
+        await base.DisposeAsync();
     }
 
     /// <summary>

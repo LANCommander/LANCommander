@@ -1,13 +1,30 @@
 @page "/Servers/{id:guid}/Monitor"
 @page "/Servers/{id:guid}/Monitor/{logId}"
+@page "/Servers/{id:guid}/Monitor/Engine/{engineConsoleId}"
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.UI.Pages.Servers.Components
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <ServerEditView Id="Id" Title="Monitor" Console="@_consoleName">
     <div class="server-monitor">
         <div class="server-monitor-console">
-            @* "Console" (or no log) is the server process's own output; otherwise the Id of a log file or RCON console *@
-            @if (LogId == null || LogId == "Console")
+            @* "Console" (or no log) is the server process's own output; otherwise the Id of a log file or RCON console, or one of the engine's *@
+            @if (EngineConsoleId != null)
+            {
+                @if (_engineConsole == null)
+                {
+                    <NotFound SubTitle="This server has no such console." />
+                }
+                else if (_engineConsole.Kind == ServerEngineConsoleKind.Terminal)
+                {
+                    <EngineTerminal @key="_engineConsole.Id" ServerId="@context.Id" Console="_engineConsole" />
+                }
+                else
+                {
+                    <Console @key="_engineConsole.Id" ServerId="@context.Id" EngineConsoleId="@_engineConsole.Id" Server="context" />
+                }
+            }
+            else if (LogId == null || LogId == "Console")
             {
                 <Console ServerId="@context.Id" Server="context" />
             }
@@ -28,15 +45,28 @@
 @code {
     [Parameter] public Guid Id { get; set; }
     [Parameter] public string? LogId { get; set; }
+    [Parameter] public string? EngineConsoleId { get; set; }
 
     // The header leads with the console being followed; the process's own output leaves it to the executable
     string? _consoleName;
 
+    ServerEngineConsole? _engineConsole;
+
     [Inject] ServerConsoleService ServerConsoleService { get; set; } = default!;
+    [Inject] PluginServerEngines PluginEngines { get; set; } = default!;
 
     protected override async Task OnParametersSetAsync()
     {
         _consoleName = null;
+        _engineConsole = null;
+
+        if (EngineConsoleId != null)
+        {
+            _engineConsole = PluginEngines.GetConsoles(Id).FirstOrDefault(c => String.Equals(c.Id, EngineConsoleId, StringComparison.OrdinalIgnoreCase));
+            _consoleName = _engineConsole?.Name;
+
+            return;
+        }
 
         if (Guid.TryParse(LogId, out var consoleId) && consoleId != Guid.Empty)
         {

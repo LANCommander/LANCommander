@@ -277,6 +277,21 @@
     background: var(--lc-well);
 }
 
+// Ended, or not yet connected: the dot goes grey
+.server-console-follow-ended .server-console-follow-dot {
+    background: var(--lc-text-disabled-color);
+}
+
+// An engine's terminal fills the panel; xterm draws its own well
+.server-terminal {
+    padding: 10px 0 10px 14px;
+
+    > div {
+        flex: 1;
+        min-height: 0;
+    }
+}
+
 // ── Log lines: time | level (46px) | message ────────────────
 .server-log {
     flex: 1;

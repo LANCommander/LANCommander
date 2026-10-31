@@ -20,4 +20,24 @@ export class Terminal {
         if (terminal)
             terminal.options[name] = value;
     }
+
+    /** Tells the component whenever the terminal's element changes size, so it can refit. */
+    public ObserveResize(element: HTMLElement, component: any): { Dispose(): void } {
+        let pending = 0;
+
+        const observer = new ResizeObserver(() => {
+            // One refit per frame however many sizes a drag goes through
+            cancelAnimationFrame(pending);
+            pending = requestAnimationFrame(() => component.invokeMethodAsync("ElementResized"));
+        });
+
+        observer.observe(element);
+
+        return {
+            Dispose: () => {
+                cancelAnimationFrame(pending);
+                observer.disconnect();
+            },
+        };
+    }
 }

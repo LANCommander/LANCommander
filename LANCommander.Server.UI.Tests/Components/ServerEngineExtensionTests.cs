@@ -14,8 +14,8 @@ namespace LANCommander.Server.UI.Tests.Components;
 
 /// <summary>
 /// A plugin's server engine on the server editor: offered on the General page, its editor shown in
-/// place of the Local engine's process options and saved with the page, and its own pages listed under
-/// it once the server uses it.
+/// place of the Local engine's process options and saved with the page, and its own pages and consoles
+/// listed under it once the server uses it.
 /// </summary>
 [Collection("BUnit")]
 public class ServerEngineExtensionTests : BUnitTestContext
@@ -23,10 +23,13 @@ public class ServerEngineExtensionTests : BUnitTestContext
     private const string EngineId = "test.containers";
 
     private readonly Guid _serverId;
+    private readonly PluginServerEngines _engines;
 
     public ServerEngineExtensionTests(BUnitServerFixture fixture) : base(fixture)
     {
-        Services.AddSingleton(new PluginServerEngines([new FakeEngine()], Fixture.Factory.RealServices, NullLogger<PluginServerEngines>.Instance));
+        _engines = new PluginServerEngines([new FakeEngine()], Fixture.Factory.RealServices, NullLogger<PluginServerEngines>.Instance);
+
+        Services.AddSingleton(_engines);
 
         using var scope = Fixture.Factory.RealServices.CreateScope();
 
@@ -118,6 +121,36 @@ public class ServerEngineExtensionTests : BUnitTestContext
     }
 
     [Fact]
+    public async Task AServerUsingAPluginEngineListsItsConsolesAndShowsItsLog()
+    {
+        using (var scope = Fixture.Factory.RealServices.CreateScope())
+        {
+            var servers = scope.ServiceProvider.GetRequiredService<ServerService>();
+            var server = (await servers.GetAsync(_serverId))!;
+
+            server.Engine = ServerEngine.Extension;
+            server.EngineExtensionId = EngineId;
+            server.EngineSettings = """{"container":"arena"}""";
+
+            await servers.UpdateAsync(server);
+        }
+
+        // As the server does once a server has been saved
+        foreach (var engine in _engines.GetEngines())
+            await engine.RefreshTrackingAsync();
+
+        var cut = Render<LANCommander.Server.UI.Pages.Servers.Edit.Monitor>(parameters => parameters
+            .Add(p => p.Id, _serverId)
+            .Add(p => p.EngineConsoleId, "logs"));
+
+        cut.WaitForAssertion(() => Assert.Contains("Server ready on arena", cut.Markup), TimeSpan.FromSeconds(10));
+
+        Assert.Contains(cut.FindAll("a"), a => a.GetAttribute("href") == $"/Servers/{_serverId}/Monitor/Engine/logs");
+        Assert.Contains(cut.FindAll("a"), a => a.GetAttribute("href") == $"/Servers/{_serverId}/Monitor/Engine/shell");
+        cut.WaitForAssertion(() => Assert.Contains("The log has ended", cut.Markup));
+    }
+
+    [Fact]
     public async Task AServerWhosePluginIsGoneSaysSo()
     {
         using (var scope = Fixture.Factory.RealServices.CreateScope())
@@ -141,12 +174,26 @@ public class ServerEngineExtensionTests : BUnitTestContext
     {
         public string Id => EngineId;
         public string Name => "Containers";
+        public ServerEngineFeatures Features => ServerEngineFeatures.Consoles;
         public Type? EditorComponent => typeof(FakeEditor);
         public IReadOnlyList<ServerEngineSection> Sections { get; } = [new("Container", "Container", typeof(FakeSection))];
 
         public Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task StopAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
         public Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.FromResult(ServerEngineStatus.Stopped);
+
+        public IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) =>
+        [
+            new("logs", "Container log", ServerEngineConsoleKind.Log),
+            new("shell", "Shell", ServerEngineConsoleKind.Terminal),
+        ];
+
+        public async IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ServerEngineServer server, string consoleId, ServerEngineLogRequest request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+
+            yield return new ServerEngineLogLine($"Server ready on {server.GetSettings<FakeSettings>().Container}", DateTime.UtcNow);
+        }
     }
 
     public sealed class FakeSettings

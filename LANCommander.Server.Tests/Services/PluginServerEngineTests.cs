@@ -85,6 +85,58 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
 
             return Task.FromResult(true);
         }
+
+        public IReadOnlyList<ServerEngineConsole> Consoles { get; set; } =
+        [
+            new("logs", "Logs", ServerEngineConsoleKind.Log),
+            new("Shell", "Shell", ServerEngineConsoleKind.Terminal),
+        ];
+
+        public List<(string ConsoleId, ServerEngineTerminalSize Size)> Opened { get; } = new();
+
+        public IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) => Consoles;
+
+        public async IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ServerEngineServer server, string consoleId, ServerEngineLogRequest request, [System.Runtime.CompilerServices.EnumeratorCancellation] CancellationToken cancellationToken)
+        {
+            await Task.Yield();
+
+            yield return new ServerEngineLogLine($"{consoleId} of {server.GetSettings<Settings>().ContainerId}, last {request.Tail}");
+        }
+
+        public Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)
+        {
+            Opened.Add((consoleId, size));
+
+            return Task.FromResult<IServerEngineTerminal>(new EchoTerminal());
+        }
+    }
+
+    /// <summary>Writes back whatever is typed into it.</summary>
+    private sealed class EchoTerminal : IServerEngineTerminal
+    {
+        private readonly System.Threading.Channels.Channel<byte[]> _output = System.Threading.Channels.Channel.CreateUnbounded<byte[]>();
+
+        public async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken)
+        {
+            if (!await _output.Reader.WaitToReadAsync(cancellationToken))
+                return 0;
+
+            var bytes = await _output.Reader.ReadAsync(cancellationToken);
+
+            bytes.CopyTo(buffer);
+
+            return bytes.Length;
+        }
+
+        public ValueTask WriteAsync(ReadOnlyMemory<byte> input, CancellationToken cancellationToken) =>
+            _output.Writer.WriteAsync(input.ToArray(), cancellationToken);
+
+        public ValueTask DisposeAsync()
+        {
+            _output.Writer.TryComplete();
+
+            return ValueTask.CompletedTask;
+        }
     }
 
     private sealed class Rcon : IRconCommandSender
@@ -244,6 +296,102 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
         update.Server.Id.ShouldBe(server.Id);
         update.Status.ShouldBe(ServerProcessStatus.Error);
         update.Exception.Message.ShouldBe("Exited with code 1");
+    }
+
+    [Fact]
+    public async Task ConsolesNeedTheirFeature()
+    {
+        var without = new FakeExtension(NewEngineId());
+        var with = new FakeExtension(NewEngineId(), ServerEngineFeatures.Consoles);
+        var plain = await AddServerAsync(without.Id);
+        var featured = await AddServerAsync(with.Id);
+        var engines = CreateEngines(without, with);
+        await CreateManagerAsync(engines);
+
+        engines.GetConsoles(plain.Id).ShouldBeEmpty();
+        engines.GetConsoles(featured.Id).Select(c => c.Id).ShouldBe(["logs", "Shell"]);
+        engines.GetConsoles(Guid.NewGuid()).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ALogConsoleIsReadFromTheEngineWithTheServersSettings()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Consoles);
+        var server = await AddServerAsync(extension.Id, """{"containerId":"abc"}""");
+        var engines = CreateEngines(extension);
+        await CreateManagerAsync(engines);
+
+        var lines = new List<ServerEngineLogLine>();
+
+        await foreach (var line in engines.ReadLogAsync(server.Id, "LOGS", new ServerEngineLogRequest(50), CancellationToken.None))
+            lines.Add(line);
+
+        // The engine is given its own spelling of the console's id
+        lines.ShouldHaveSingleItem().Text.ShouldBe("logs of abc, last 50");
+    }
+
+    [Fact]
+    public async Task ATerminalConsoleOpensAtTheGivenSizeAndCarriesInputBothWays()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Consoles);
+        var server = await AddServerAsync(extension.Id);
+        var engines = CreateEngines(extension);
+        await CreateManagerAsync(engines);
+
+        await using var terminal = await engines.OpenTerminalAsync(server.Id, "shell", new ServerEngineTerminalSize(120, 40), CancellationToken.None);
+
+        extension.Opened.ShouldBe([("Shell", new ServerEngineTerminalSize(120, 40))]);
+
+        await terminal.WriteAsync("ls\r"u8.ToArray(), CancellationToken.None);
+
+        var buffer = new byte[64];
+        var read = await terminal.ReadAsync(buffer, CancellationToken.None);
+
+        System.Text.Encoding.UTF8.GetString(buffer, 0, read).ShouldBe("ls\r");
+    }
+
+    [Fact]
+    public async Task OnlyConsolesTheEngineListsCanBeOpened()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Consoles);
+        var server = await AddServerAsync(extension.Id);
+        var local = await GetService<ServerService>().AddAsync(new ServerModel { Name = Unique("Local"), Engine = ServerEngine.Local });
+        var engines = CreateEngines(extension);
+        await CreateManagerAsync(engines);
+
+        // Unknown, or of the other kind
+        await Should.ThrowAsync<InvalidOperationException>(() => engines.OpenTerminalAsync(server.Id, "root", new(80, 24), CancellationToken.None));
+        await Should.ThrowAsync<InvalidOperationException>(() => engines.OpenTerminalAsync(server.Id, "logs", new(80, 24), CancellationToken.None));
+        Should.Throw<InvalidOperationException>(() => engines.ReadLogAsync(server.Id, "shell", new(), CancellationToken.None));
+
+        // Not run by a plugin
+        await Should.ThrowAsync<InvalidOperationException>(() => engines.OpenTerminalAsync(local.Id, "shell", new(80, 24), CancellationToken.None));
+
+        extension.Opened.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task AnEngineThatCannotListItsConsolesOffersNone()
+    {
+        var extension = new ThrowingConsoles(NewEngineId());
+        var server = await AddServerAsync(extension.Id);
+        var engines = CreateEngines(extension);
+        await CreateManagerAsync(engines);
+
+        engines.GetConsoles(server.Id).ShouldBeEmpty();
+    }
+
+    private sealed class ThrowingConsoles(string id) : IServerEngineExtension
+    {
+        public string Id => id;
+        public string Name => "Throwing";
+        public ServerEngineFeatures Features => ServerEngineFeatures.Consoles;
+
+        public Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.FromResult(ServerEngineStatus.Stopped);
+
+        public IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) => throw new InvalidOperationException("Settings unreadable");
     }
 
     [Fact]

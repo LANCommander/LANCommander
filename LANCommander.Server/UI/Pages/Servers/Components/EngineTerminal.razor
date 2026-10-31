@@ -1,0 +1,241 @@
+@using System.Text
+@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.UI.Components
+@using XtermBlazor
+@inject PluginServerEngines PluginEngines
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ILogger<EngineTerminal> Logger
+@implements IAsyncDisposable
+
+@*
+    A terminal console of the server's engine, e.g. a shell in its container. Keystrokes go to the
+    engine as they are typed and what it writes back is drawn as it comes, so the engine's own
+    prompt, colours and full-screen programs work. The session ends when the page is left.
+*@
+<div class="server-console">
+    <div class="server-console-toolbar">
+        @switch (_state)
+        {
+            case SessionState.Connecting:
+                <span class="server-console-follow server-console-follow-ended">
+                    <span class="server-console-follow-dot" aria-hidden="true"></span>
+                    Connecting
+                </span>
+                break;
+
+            case SessionState.Connected:
+                <span class="server-console-follow">
+                    <span class="server-console-follow-dot" aria-hidden="true"></span>
+                    Connected
+                </span>
+                break;
+
+            default:
+                <span class="server-console-follow server-console-follow-ended">
+                    <span class="server-console-follow-dot" aria-hidden="true"></span>
+                    Disconnected
+                </span>
+
+                <Button Small OnClick="ReconnectAsync">Reconnect</Button>
+                break;
+        }
+    </div>
+
+    <div class="server-console-panel server-terminal">
+        <Terminal @ref="_terminal"
+                  Id="@_id"
+                  Options="_options"
+                  Readline="false"
+                  FitToElement
+                  OnFirstRender="ConnectAsync"
+                  OnData="WriteAsync"
+                  OnResize="ResizeAsync" />
+    </div>
+</div>
+
+@code {
+    [Parameter] public Guid ServerId { get; set; }
+
+    [Parameter] public ServerEngineConsole Console { get; set; } = default!;
+
+    enum SessionState { Connecting, Connected, Disconnected }
+
+    readonly string _id = $"engine-terminal-{Guid.NewGuid():N}";
+    readonly TerminalOptions _options = ConsolePalette.CreateOptions(CursorStyle.Block);
+
+    Terminal? _terminal;
+    SessionState _state = SessionState.Connecting;
+
+    // The open session and what reads it; replaced on reconnecting, ended when the page goes
+    IServerEngineTerminal? _session;
+    CancellationTokenSource? _reading;
+    readonly SemaphoreSlim _writeLock = new(1, 1);
+
+    async Task ConnectAsync()
+    {
+        if (_terminal == null)
+            return;
+
+        await CloseAsync();
+
+        _state = SessionState.Connecting;
+        StateHasChanged();
+
+        try
+        {
+            await _terminal.FitAsync();
+
+            var size = new ServerEngineTerminalSize(await _terminal.GetColumns(), await _terminal.GetRows());
+
+            _reading = new CancellationTokenSource();
+            _session = await PluginEngines.OpenTerminalAsync(ServerId, Console.Id, size, _reading.Token);
+
+            // A shell lets whoever opens it do anything the server can; keep a record of who did
+            var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User.Identity?.Name;
+
+            Logger.LogInformation("{User} opened the {Console} terminal of server {ServerId}", user, Console.Name, ServerId);
+
+            _state = SessionState.Connected;
+
+            _ = ReadAsync(_session, _reading.Token);
+
+            await _terminal.Focus();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not open the {Console} terminal of server {ServerId}", Console.Name, ServerId);
+
+            _state = SessionState.Disconnected;
+
+            await _terminal.WriteLine($"Could not connect: {ex.Message}", ConsoleLineKind.Error);
+        }
+
+        StateHasChanged();
+    }
+
+    async Task ReadAsync(IServerEngineTerminal session, CancellationToken cancellationToken)
+    {
+        var buffer = new byte[16 * 1024];
+        string? error = null;
+
+        try
+        {
+            while (true)
+            {
+                var read = await session.ReadAsync(buffer, cancellationToken);
+
+                if (read == 0)
+                    break;
+
+                var output = buffer[..read];
+
+                // xterm decodes UTF-8 itself, holding a character split across writes until the rest comes
+                await InvokeAsync(async () =>
+                {
+                    if (_terminal != null)
+                        await _terminal.Write(output);
+                });
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The page went, or is reconnecting
+            return;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "The {Console} terminal of server {ServerId} failed", Console.Name, ServerId);
+
+            error = ex.Message;
+        }
+
+        if (cancellationToken.IsCancellationRequested)
+            return;
+
+        await InvokeAsync(async () =>
+        {
+            if (_session != session)
+                return;
+
+            _state = SessionState.Disconnected;
+
+            if (_terminal != null)
+            {
+                await _terminal.WriteLine("");
+                await _terminal.WriteLine(error == null ? "The session has ended." : $"The session ended: {error}", error == null ? ConsoleLineKind.System : ConsoleLineKind.Error);
+            }
+
+            StateHasChanged();
+        });
+    }
+
+    async Task WriteAsync(string data)
+    {
+        if (_session is not { } session || _state != SessionState.Connected)
+            return;
+
+        // Keystrokes arrive one event each; keep them in order
+        await _writeLock.WaitAsync();
+
+        try
+        {
+            await session.WriteAsync(Encoding.UTF8.GetBytes(data), _reading?.Token ?? CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogDebug(ex, "Could not write to the {Console} terminal of server {ServerId}", Console.Name, ServerId);
+        }
+        finally
+        {
+            _writeLock.Release();
+        }
+    }
+
+    async Task ResizeAsync(ResizeEventArgs args)
+    {
+        if (_session is not { } session || args.Columns <= 0 || args.Rows <= 0)
+            return;
+
+        try
+        {
+            await session.ResizeAsync(new ServerEngineTerminalSize(args.Columns, args.Rows), _reading?.Token ?? CancellationToken.None);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            Logger.LogDebug(ex, "Could not resize the {Console} terminal of server {ServerId}", Console.Name, ServerId);
+        }
+    }
+
+    async Task ReconnectAsync()
+    {
+        if (_terminal != null)
+            await _terminal.Reset();
+
+        await ConnectAsync();
+    }
+
+    async Task CloseAsync()
+    {
+        var reading = Interlocked.Exchange(ref _reading, null);
+        var session = Interlocked.Exchange(ref _session, null);
+
+        reading?.Cancel();
+
+        if (session != null)
+        {
+            try
+            {
+                await session.DisposeAsync();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not close the {Console} terminal of server {ServerId}", Console.Name, ServerId);
+            }
+        }
+
+        // Left undisposed: a write or resize still in flight may yet look at its token
+    }
+
+    public async ValueTask DisposeAsync() => await CloseAsync();
+}

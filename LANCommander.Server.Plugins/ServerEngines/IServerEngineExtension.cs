@@ -89,6 +89,30 @@ public interface IServerEngineExtension
     /// <summary>Writes a line to the server's input. Returns false if that isn't possible.</summary>
     Task<bool> SendInputAsync(ServerEngineServer server, string line, CancellationToken cancellationToken)
         => Task.FromResult(false);
+
+    /// <summary>
+    /// The consoles the engine offers for a server, for <see cref="ServerEngineFeatures.Consoles"/>,
+    /// e.g. its log and a shell. Called whenever the server's pages are drawn, so it should be cheap and
+    /// shouldn't reach out to anything; work it out from the server's settings. A console that can't be
+    /// opened right now, e.g. because the server isn't running, should still be listed, and fail to open
+    /// with a message saying why.
+    /// </summary>
+    IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) => [];
+
+    /// <summary>
+    /// Reads one of the server's <see cref="ServerEngineConsoleKind.Log"/> consoles, oldest line first.
+    /// Throw to report that it can't be read; the server shows the message.
+    /// </summary>
+    IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ServerEngineServer server, string consoleId, ServerEngineLogRequest request, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine has no log console \"{consoleId}\".");
+
+    /// <summary>
+    /// Opens one of the server's <see cref="ServerEngineConsoleKind.Terminal"/> consoles at the
+    /// administrator's terminal's size. Throw to report that it can't be opened; the server shows the
+    /// message.
+    /// </summary>
+    Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine has no terminal console \"{consoleId}\".");
 }
 
 /// <summary>What an <see cref="IServerEngineExtension"/> can do beyond starting and stopping a server.</summary>
@@ -108,6 +132,12 @@ public enum ServerEngineFeatures
 
     /// <summary>The engine samples its servers' CPU and memory use and uptime.</summary>
     ProcessInfo = 4,
+
+    /// <summary>
+    /// The engine offers consoles of its own for its servers, e.g. a log or a terminal, listed under
+    /// their Monitor; see <see cref="IServerEngineExtension.GetConsoles"/>.
+    /// </summary>
+    Consoles = 8,
 }
 
 /// <summary>Whether a game server is running.</summary>

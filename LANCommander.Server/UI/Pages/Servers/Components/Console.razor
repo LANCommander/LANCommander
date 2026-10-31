@@ -5,6 +5,7 @@
 @using Microsoft.AspNetCore.Components.Web.Virtualization
 @inject ServerManager ServerManager
 @inject ServerConsoleService ServerConsoleService
+@inject LANCommander.Server.Plugins.PluginServerEngines PluginEngines
 @inject ScriptProvider ScriptProvider
 @inject TimeProvider TimeProvider
 @inject ILogger<Console> Logger
@@ -14,11 +15,21 @@
     Follows a server's process output, or one of its log file consoles, as it is written, with a bar
     underneath for sending it commands. Lines arrive from ServerManager already timestamped and
     classified; log files are read back whole and classified here. RCON consoles show only the
-    commands sent and their responses.
+    commands sent and their responses. A log console of the server's engine is read from the engine,
+    back to its latest lines and then followed.
 *@
 <div class="server-console">
     <div class="server-console-toolbar">
-        @if (_following)
+        @if (_logEnded)
+        {
+            <span class="server-console-follow server-console-follow-ended">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                The log has ended
+            </span>
+
+            <Button Small OnClick="ReloadAsync">Reload</Button>
+        }
+        else if (_following)
         {
             <span class="server-console-follow">
                 <span class="server-console-follow-dot" aria-hidden="true"></span>
@@ -58,6 +69,9 @@
     /// <summary>A log file or RCON console to follow instead of the process's own output.</summary>
     [Parameter] public Guid ServerConsoleId { get; set; }
 
+    /// <summary>A log console of the server's engine to follow instead; see <c>IServerEngineExtension.GetConsoles</c>.</summary>
+    [Parameter] public string? EngineConsoleId { get; set; }
+
     /// <summary>The server, with its consoles, when the page already has it; saves a lookup.</summary>
     [Parameter] public Server? Server { get; set; }
 
@@ -87,7 +101,13 @@
     string? _cannotSendReason;
     Timer? _poll;
 
+    // Reading an engine log console; cancelled when the page goes, or the log is read again
+    CancellationTokenSource? _engineLog;
+    bool _logEnded;
+
     bool IsRcon => _serverConsole?.Type == ServerConsoleType.RCON;
+
+    bool IsEngineLog => !String.IsNullOrEmpty(EngineConsoleId);
 
     protected override async Task OnInitializedAsync()
     {
@@ -98,10 +118,14 @@
         }
 
         // Subscribed before reading what's already there, so nothing is missed in between
-        if (!IsRcon)
+        if (!IsRcon && !IsEngineLog)
             ServerManager.OnServerLog += OnServerLog;
 
-        if (IsRcon)
+        if (IsEngineLog)
+        {
+            ReadEngineLog();
+        }
+        else if (IsRcon)
         {
             _emptyText = "Responses to the commands you send appear here.";
         }
@@ -148,6 +172,75 @@
 
             _emptyText = $"The log file could not be read: {ex.Message}";
         }
+    }
+
+    void ReadEngineLog()
+    {
+        _engineLog?.Cancel();
+        _engineLog?.Dispose();
+        _engineLog = new CancellationTokenSource();
+
+        _logEnded = false;
+        _emptyText = "Reading the log…";
+
+        _ = ReadEngineLogAsync(_engineLog.Token);
+    }
+
+    async Task ReadEngineLogAsync(CancellationToken cancellationToken)
+    {
+        try
+        {
+            await foreach (var line in PluginEngines.ReadLogAsync(ServerId, EngineConsoleId!, new LANCommander.Server.Plugins.ServerEngineLogRequest(MaxLines), cancellationToken))
+            {
+                if (line == null)
+                    continue;
+
+                var timestamp = line.Timestamp ?? DateTime.UtcNow;
+
+                Enqueue(line.IsError
+                    ? new ServerConsoleLine(timestamp, ServerLogLevel.Error, line.Text)
+                    : ServerConsoleLine.Classified(line.Text, timestamp));
+            }
+
+            await InvokeAsync(() =>
+            {
+                _logEnded = true;
+                _emptyText = "The log is empty.";
+                StateHasChanged();
+            });
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The page went, or the log is being read again
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not read engine console {ConsoleId} of server {ServerId}", EngineConsoleId, ServerId);
+
+            if (cancellationToken.IsCancellationRequested)
+                return;
+
+            await InvokeAsync(() =>
+            {
+                _logEnded = true;
+                _emptyText = $"The log could not be read: {ex.Message}";
+
+                if (_lines.Count > 0)
+                    Append(new ServerConsoleLine(DateTime.UtcNow, ServerLogLevel.Error, $"The log could not be read: {ex.Message}"));
+
+                StateHasChanged();
+            });
+        }
+    }
+
+    Task ReloadAsync()
+    {
+        _lines.Clear();
+        _incoming.Clear();
+
+        ReadEngineLog();
+
+        return ResumeAsync();
     }
 
     async Task RefreshCommandTargetAsync()
@@ -204,7 +297,12 @@
         if (_serverConsole == null ? args.Log != null : args.Log?.Id != ServerConsoleId)
             return;
 
-        _incoming.Enqueue(new ServerConsoleLine(args.Timestamp, args.Level, args.Line));
+        Enqueue(new ServerConsoleLine(args.Timestamp, args.Level, args.Line));
+    }
+
+    void Enqueue(ServerConsoleLine line)
+    {
+        _incoming.Enqueue(line);
 
         // One render for a burst of lines rather than one each
         if (Interlocked.Exchange(ref _flushQueued, 1) == 0)
@@ -273,8 +371,8 @@
         _incoming.Clear();
         _snapshotUntil = null;
 
-        // The file stays as it is; only the process's buffered output is forgotten
-        if (_serverConsole == null)
+        // The file, or the engine's log, stays as it is; only the process's buffered output is forgotten
+        if (_serverConsole == null && !IsEngineLog)
             ServerManager.ClearRecentLog(ServerId);
     }
 
@@ -323,6 +421,9 @@
     public async ValueTask DisposeAsync()
     {
         ServerManager.OnServerLog -= OnServerLog;
+
+        _engineLog?.Cancel();
+        _engineLog?.Dispose();
 
         if (_poll != null)
             await _poll.DisposeAsync();

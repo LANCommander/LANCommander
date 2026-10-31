@@ -54,6 +54,21 @@ internal sealed class PluginServerEngines : IServerEngineProvider
 
     public IEnumerable<IServerEngine> GetEngines() => _engines;
 
+    /// <summary>The consoles a server's engine offers for it; none when a plugin doesn't run it.</summary>
+    public IReadOnlyList<ServerEngineConsole> GetConsoles(Guid serverId) => EngineFor(serverId)?.GetConsoles(serverId) ?? [];
+
+    /// <summary>Reads one of a server's engine log consoles; see <see cref="IServerEngineExtension.ReadLogAsync"/>.</summary>
+    public IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(Guid serverId, string consoleId, ServerEngineLogRequest request, CancellationToken cancellationToken) =>
+        (EngineFor(serverId) ?? throw NotRunByPlugin()).ReadLogAsync(serverId, consoleId, request, cancellationToken);
+
+    /// <summary>Opens one of a server's engine terminal consoles; see <see cref="IServerEngineExtension.OpenTerminalAsync"/>.</summary>
+    public Task<IServerEngineTerminal> OpenTerminalAsync(Guid serverId, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken) =>
+        (EngineFor(serverId) ?? throw NotRunByPlugin()).OpenTerminalAsync(serverId, consoleId, size, cancellationToken);
+
+    private PluginServerEngine? EngineFor(Guid serverId) => _engines.FirstOrDefault(engine => engine.IsManaging(serverId));
+
+    private static InvalidOperationException NotRunByPlugin() => new("The server isn't run by a plugin's engine.");
+
     /// <summary>A server as its engine sees it.</summary>
     public static ServerEngineServer ToEngineServer(ServerEntity server) => new()
     {
@@ -219,6 +234,53 @@ internal sealed class PluginServerEngine(
             return false;
 
         return await extension.SendInputAsync(server, line, CancellationToken.None);
+    }
+
+    public IReadOnlyList<ServerEngineConsole> GetConsoles(Guid serverId)
+    {
+        if (!extension.Features.HasFlag(ServerEngineFeatures.Consoles) || !_servers.TryGetValue(serverId, out var server))
+            return [];
+
+        try
+        {
+            return extension.GetConsoles(server)
+                .Where(console => !string.IsNullOrWhiteSpace(console?.Id))
+                .DistinctBy(console => console.Id, StringComparer.OrdinalIgnoreCase)
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "The {Engine} engine could not list the consoles of server {ServerId}", extension.Name, serverId);
+
+            return [];
+        }
+    }
+
+    public IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(Guid serverId, string consoleId, ServerEngineLogRequest request, CancellationToken cancellationToken)
+    {
+        var (server, console) = FindConsole(serverId, consoleId, ServerEngineConsoleKind.Log);
+
+        return extension.ReadLogAsync(server, console.Id, request, cancellationToken);
+    }
+
+    public async Task<IServerEngineTerminal> OpenTerminalAsync(Guid serverId, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)
+    {
+        var (server, console) = FindConsole(serverId, consoleId, ServerEngineConsoleKind.Terminal);
+
+        return await extension.OpenTerminalAsync(server, console.Id, size, cancellationToken)
+            ?? throw new InvalidOperationException($"The {extension.Name} engine didn't open the terminal.");
+    }
+
+    // Only consoles the engine lists are opened, so an address typed by hand can't reach anything else
+    private (ServerEngineServer Server, ServerEngineConsole Console) FindConsole(Guid serverId, string consoleId, ServerEngineConsoleKind kind)
+    {
+        if (!_servers.TryGetValue(serverId, out var server))
+            throw new InvalidOperationException($"The server isn't run by the {extension.Name} engine.");
+
+        var console = GetConsoles(serverId).FirstOrDefault(console => console.Kind == kind && string.Equals(console.Id, consoleId, StringComparison.OrdinalIgnoreCase))
+            ?? throw new InvalidOperationException("The server has no such console.");
+
+        return (server, console);
     }
 
     void IServerEngineHost.ReportStatus(Guid serverId, ServerEngineStatus status, string? error)

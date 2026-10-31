@@ -168,7 +168,7 @@ public class PcGamingWikiMetadataProvider(
             game.Engine = new Engine { Name = engine };
 
         // Cargo date columns come back as "1998-11-19 00:00:00".
-        if (DateTime.TryParse(GetValue(core, "Released"), CultureInfo.InvariantCulture, DateTimeStyles.None, out var released))
+        if (DateTime.TryParse(GetValue(core, "Released"), CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var released))
             game.ReleasedOn = released;
 
         var externalIds = new List<GameExternalId>();
@@ -629,7 +629,7 @@ public class PcGamingWikiMetadataProvider(
                 {
                     var dateText = GetCellText(infoCell);
 
-                    if (DateTime.TryParse(dateText, out var date))
+                    if (DateTime.TryParse(dateText, CultureInfo.InvariantCulture, DateTimeStyles.AssumeUniversal | DateTimeStyles.AdjustToUniversal, out var date))
                         if (earliestRelease is null || date < earliestRelease)
                             earliestRelease = date;
 

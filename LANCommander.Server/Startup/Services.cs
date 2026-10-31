@@ -33,6 +33,7 @@ public static class Services
         // What the server offers plugins through LANCommander.Server.Plugins, so they never need
         // its service or data assemblies
         builder.Services.AddScoped<IPackageImporter, PackageImporter>();
+        builder.Services.AddScoped<IPackageExporter, PackageExporter>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
         builder.Services.AddScoped<IMetadataLookup, MetadataLookup>();
         builder.Services.AddScoped<IUserDirectory, UserDirectory>();

@@ -541,7 +541,15 @@ public class ExportContext(
             foreach (var record in records)
             {
                 if (record != null && record.GetType() == typeof(TEntity))
-                    yield return await exporter.GetExportInfoAsync(record);
+                {
+                    var info = await exporter.GetExportInfoAsync(record);
+
+                    // Set here rather than by each exporter, since every record keeps it the same way
+                    if (info != null && record is BaseModel model)
+                        info.UpdatedOn = model.UpdatedOn;
+
+                    yield return info;
+                }
             }
     }
     

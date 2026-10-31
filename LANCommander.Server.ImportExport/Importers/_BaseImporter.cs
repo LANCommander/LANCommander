@@ -52,7 +52,19 @@ public abstract class BaseImporter<TRecord> : IImporter<TRecord> where TRecord :
         return success;
     }
     
-    public void AddAsset(IImportAsset asset) => AssetQueue.Add(asset);
+    /// <summary>
+    /// Queues a file for the record. A record deferred until its parent is imported, such as a game's
+    /// archive, is added again when it's retried; its file is only queued once, so a large archive
+    /// isn't written twice.
+    /// </summary>
+    public void AddAsset(IImportAsset asset)
+    {
+        if (asset is ImportAssetArchiveEntry entry
+            && AssetQueue.OfType<ImportAssetArchiveEntry>().Any(queued => queued.RecordId == entry.RecordId && queued.Path == entry.Path))
+            return;
+
+        AssetQueue.Add(asset);
+    }
     
     public abstract string GetKey(TRecord record);
     public abstract Task<ImportItemInfo<TRecord>> GetImportInfoAsync(TRecord record);

@@ -37,6 +37,7 @@ public static class Endpoints
             endpoints.MapIssueEndpoints();
             endpoints.MapSaveEndpoints();
             endpoints.MapServerEndpoints();
+            endpoints.MapServerFileEndpoints();
             endpoints.MapSettingsEndpoints();
             endpoints.MapLogEndpoints();
             endpoints.MapHqEndpoints();

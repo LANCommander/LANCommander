@@ -109,6 +109,48 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
 
             return Task.FromResult<IServerEngineTerminal>(new EchoTerminal());
         }
+
+        /// <summary>The server's files by path, and every path the engine was asked about.</summary>
+        public ConcurrentDictionary<string, string> Files { get; } = new();
+        public List<string> FilePaths { get; } = new();
+
+        public Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        {
+            FilePaths.Add(path);
+
+            IReadOnlyList<ServerEngineFile> files =
+            [
+                .. Files.Keys.Where(key => key.StartsWith(path) && !key[path.Length..].TrimStart('/').Contains('/'))
+                    .Select(key => new ServerEngineFile(key[path.Length..].TrimStart('/'), false, Files[key].Length)),
+                // Nothing that isn't a name within the folder is passed on
+                new ServerEngineFile("../escape", false),
+                new ServerEngineFile("", false),
+            ];
+
+            return Task.FromResult(files);
+        }
+
+        public Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        {
+            FilePaths.Add(path);
+
+            return Task.FromResult<Stream>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(Files[path])));
+        }
+
+        public async Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)
+        {
+            FilePaths.Add(path);
+
+            Files[path] = await new StreamReader(content).ReadToEndAsync(cancellationToken);
+        }
+
+        public Task DeleteFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        {
+            FilePaths.Add(path);
+            Files.TryRemove(path, out _);
+
+            return Task.CompletedTask;
+        }
     }
 
     /// <summary>Writes back whatever is typed into it.</summary>
@@ -392,6 +434,58 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
         public Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.FromResult(ServerEngineStatus.Stopped);
 
         public IReadOnlyList<ServerEngineConsole> GetConsoles(ServerEngineServer server) => throw new InvalidOperationException("Settings unreadable");
+    }
+
+    [Fact]
+    public async Task FilesNeedTheirFeature()
+    {
+        var without = new FakeExtension(NewEngineId());
+        var plain = await AddServerAsync(without.Id);
+        var manager = await CreateManagerAsync(CreateEngines(without));
+
+        manager.SupportsFiles(plain.Id).ShouldBeFalse();
+        await Should.ThrowAsync<NotSupportedException>(() => manager.ListFilesAsync(plain.Id, ""));
+
+        without.FilePaths.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task FilesAreReadAndWrittenThroughTheEngine()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var manager = await CreateManagerAsync(CreateEngines(extension));
+
+        manager.SupportsFiles(server.Id).ShouldBeTrue();
+
+        await manager.WriteFileAsync(server.Id, @"\cfg\server.cfg", new MemoryStream("hostname LAN"u8.ToArray()));
+
+        var listed = (await manager.ListFilesAsync(server.Id, "cfg/")).ShouldHaveSingleItem();
+        listed.Path.ShouldBe("cfg/server.cfg");
+        listed.Size.ShouldBe(12);
+
+        await using (var stream = await manager.OpenFileAsync(server.Id, "cfg/server.cfg"))
+            (await new StreamReader(stream).ReadToEndAsync()).ShouldBe("hostname LAN");
+
+        await manager.DeleteFileAsync(server.Id, "cfg/server.cfg");
+        extension.Files.ShouldBeEmpty();
+
+        // The engine sees each path in its one spelling
+        extension.FilePaths.ShouldBe(["cfg/server.cfg", "cfg", "cfg/server.cfg", "cfg/server.cfg"]);
+    }
+
+    [Fact]
+    public async Task FilePathsCantLeaveTheServersFiles()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var manager = await CreateManagerAsync(CreateEngines(extension));
+
+        await Should.ThrowAsync<ArgumentException>(() => manager.ListFilesAsync(server.Id, "../.."));
+        await Should.ThrowAsync<ArgumentException>(() => manager.OpenFileAsync(server.Id, "cfg/../../secrets"));
+        await Should.ThrowAsync<ArgumentException>(() => manager.DeleteFileAsync(server.Id, "/"));
+
+        extension.FilePaths.ShouldBeEmpty();
     }
 
     [Fact]

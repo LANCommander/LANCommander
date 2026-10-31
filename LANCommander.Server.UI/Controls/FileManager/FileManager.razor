@@ -232,6 +232,9 @@
     /// </summary>
     [Parameter] public bool Borderless { get; set; }
 
+    /// <summary>Called when a file is double-clicked, e.g. to edit it. Folders are opened in place.</summary>
+    [Parameter] public EventCallback<FileManagerFile> OnOpenFile { get; set; }
+
     /// <summary>Where uploaded files are posted, with the destination folder as the "path" field.</summary>
     [Parameter] public string UploadAction { get; set; } = "/Upload/File";
 
@@ -387,6 +390,8 @@
     {
         if (entry is FileManagerDirectory directory)
             await ChangeDirectoryAsync(directory, true);
+        else if (entry is FileManagerFile file)
+            await OnOpenFile.InvokeAsync(file);
     }
 
     async Task NavigateBackAsync()

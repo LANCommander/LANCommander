@@ -19,6 +19,11 @@
                 {
                     <MenuItem Href="@($"/Servers/{Id}/Autostart")">Autostart</MenuItem>
                     <MenuItem Href="@($"/Servers/{Id}/HTTP")">HTTP</MenuItem>
+
+                    @if (ServerManager.SupportsFiles(Id))
+                    {
+                        <MenuItem Href="@($"/Servers/{Id}/Files")">Files</MenuItem>
+                    }
                 }
             </MenuGroup>
 

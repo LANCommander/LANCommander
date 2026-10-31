@@ -1,0 +1,125 @@
+@page "/Servers/{id:guid}/Files"
+@using LANCommander.Server.Endpoints
+@using LANCommander.Server.Services.Utilities
+@using LANCommander.Server.UI.Components
+@using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ServerManager ServerManager
+@inject DialogService Dialogs
+@inject AlertService Alerts
+@inject NotificationService Notifications
+
+<ServerEditView Id="Id" Title="Files">
+    <TitleExtraTemplate>
+        @if (ServerManager.SupportsFiles(context.Id))
+        {
+            <Button Icon="IconType.FilePlus" OnClick="NewFileAsync">New File</Button>
+        }
+    </TitleExtraTemplate>
+    <ChildContent>
+        <p class="edit-form-intro">The files the server uses, such as its configuration. Double-click a text file to edit it, or upload maps, mods and other files into the folder being shown; files with the same name are replaced.</p>
+
+        @if (!ServerManager.SupportsFiles(context.Id))
+        {
+            <Empty Description="This server's engine can't manage its files" />
+        }
+        else
+        {
+            <FileManager @key="context.Id"
+                         @ref="_fileManager"
+                         Source="SourceFor(context)"
+                         RootName="@RootName(context)"
+                         UploadAction="@ServerFileEndpoints.UploadUrl(context.Id)"
+                         CurrentPathChanged="d => _folder = d.Path"
+                         OnOpenFile="OpenAsync"
+                         Features="FileManagerFeatures.NavigationBack | FileManagerFeatures.NavigationForward | FileManagerFeatures.UpALevel | FileManagerFeatures.Refresh | FileManagerFeatures.Breadcrumbs | FileManagerFeatures.NewFolder | FileManagerFeatures.UploadFile | FileManagerFeatures.Delete | FileManagerFeatures.Filter"
+                         Class="server-files" />
+        }
+    </ChildContent>
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    FileManager? _fileManager;
+    ServerFileManagerSource? _source;
+    Guid _sourceServerId;
+
+    // The folder being shown, where new files go
+    string _folder = "";
+
+    // One per server, as the server switcher reuses the page
+    ServerFileManagerSource SourceFor(Server server)
+    {
+        if (_source == null || _sourceServerId != server.Id)
+        {
+            _source = new ServerFileManagerSource(ServerManager, server.Id, RootName(server));
+            _sourceServerId = server.Id;
+            _folder = "";
+        }
+
+        return _source;
+    }
+
+    // A local server's files are its working directory, so its path says where they are
+    static string RootName(Server server) =>
+        server.Engine == LANCommander.Server.Settings.Enums.ServerEngine.Local && !String.IsNullOrWhiteSpace(server.WorkingDirectory)
+            ? server.WorkingDirectory
+            : "Server files";
+
+    async Task OpenAsync(FileManagerFile file)
+    {
+        ServerTextFile text;
+
+        try
+        {
+            text = await ServerTextFile.ReadAsync(ServerManager, Id, file.Path);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{file.Name} could not be opened");
+            return;
+        }
+
+        await EditAsync(text, file.Name);
+    }
+
+    async Task NewFileAsync()
+    {
+        var name = await Alerts.PromptAsync("New File", "Name", okText: "Create", placeholder: "e.g. server.cfg");
+
+        if (String.IsNullOrWhiteSpace(name))
+            return;
+
+        try
+        {
+            var path = ServerFilePath.Combine(_folder, name);
+            var siblings = await ServerManager.ListFilesAsync(Id, ServerFilePath.GetDirectory(path));
+
+            if (siblings.Any(f => String.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)))
+            {
+                Notifications.Error($"{name} already exists");
+                return;
+            }
+
+            await EditAsync(ServerTextFile.New(Id, path), ServerFilePath.GetName(path));
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The file could not be created");
+        }
+    }
+
+    async Task EditAsync(ServerTextFile file, string name)
+    {
+        await Dialogs.OpenAsync<ServerFileEditorDialog, ServerTextFile, bool>(name, file, new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Save",
+        });
+
+        // Even when cancelled, it may have been saved with Ctrl+S
+        if (_fileManager != null)
+            await _fileManager.RefreshAsync();
+    }
+}

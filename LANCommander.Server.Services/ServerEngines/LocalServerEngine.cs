@@ -381,6 +381,43 @@ public class LocalServerEngine(
         return await executionContext.WriteInputLineAsync(line);
     }
 
+    public bool SupportsFiles(Guid serverId) => IsManaging(serverId);
+
+    public async Task<IReadOnlyList<ServerFile>> ListFilesAsync(Guid serverId, string path, CancellationToken cancellationToken = default)
+    {
+        var files = await GetFilesAsync(serverId);
+
+        return await Task.Run(() => files.List(path), cancellationToken);
+    }
+
+    public async Task<Stream> OpenFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        (await GetFilesAsync(serverId)).OpenRead(path);
+
+    public async Task WriteFileAsync(Guid serverId, string path, Stream content, CancellationToken cancellationToken = default) =>
+        await (await GetFilesAsync(serverId)).WriteAsync(path, content, cancellationToken);
+
+    public async Task DeleteFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default)
+    {
+        var files = await GetFilesAsync(serverId);
+
+        await Task.Run(() => files.Delete(path), cancellationToken);
+    }
+
+    public async Task CreateDirectoryAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        (await GetFilesAsync(serverId)).CreateDirectory(path);
+
+    // A local server's files are those in its working directory
+    private async Task<LocalServerFiles> GetFilesAsync(Guid serverId)
+    {
+        using var scope = serviceProvider.CreateScope();
+        var serverService = scope.ServiceProvider.GetRequiredService<ServerService>();
+
+        var server = await serverService.AsNoTracking().GetAsync(serverId)
+            ?? throw new InvalidOperationException("The server could not be found.");
+
+        return new LocalServerFiles(server.WorkingDirectory);
+    }
+
     private void TrackProcess(Guid serverId, ProcessExecutionContext executionContext, Process process)
     {
         int? pid = null;

@@ -1,0 +1,58 @@
+@using BlazorMonaco.Editor
+@inherits Dialog<ServerTextFile, bool>
+@inject ServerManager ServerManager
+@inject NotificationService Notifications
+
+@* Edits one of a server's text files, already read into Options. Ctrl+S saves without closing. *@
+<StandaloneCodeEditor @ref="_editor" Id="@_id" ConstructionOptions="ConstructionOptions" OnDidInit="InitializeAsync" CssClass="server-file-editor" />
+
+@code {
+    readonly string _id = $"server-file-editor-{Guid.NewGuid():N}";
+    StandaloneCodeEditor? _editor;
+
+    protected override RenderFragment TitleContent => @<Typography Code Secondary>@Options.Path</Typography>;
+
+    StandaloneEditorConstructionOptions ConstructionOptions(StandaloneCodeEditor editor) => new()
+    {
+        AutomaticLayout = true,
+        Language = Options.Language,
+        Value = Options.Contents,
+        Theme = "vs-dark",
+        Minimap = new EditorMinimapOptions { Enabled = false },
+        BracketPairColorization = new BracketPairColorizationOptions { Enabled = true },
+    };
+
+    async Task InitializeAsync()
+    {
+        if (_editor != null)
+            await _editor.AddCommand((int)BlazorMonaco.KeyMod.CtrlCmd | (int)BlazorMonaco.KeyCode.KeyS, async _ => await SaveFromShortcutAsync());
+    }
+
+    async Task SaveFromShortcutAsync()
+    {
+        try
+        {
+            await SaveAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The file could not be saved!");
+        }
+    }
+
+    protected override async Task<bool> OnOkAsync()
+    {
+        await SaveAsync();
+
+        Result = true;
+
+        return true;
+    }
+
+    async Task SaveAsync()
+    {
+        await Options.WriteAsync(ServerManager, await _editor!.GetValue());
+
+        Notifications.Success("File saved!");
+    }
+}

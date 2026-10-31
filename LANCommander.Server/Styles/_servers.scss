@@ -594,3 +594,13 @@
         flex-basis: auto;
     }
 }
+
+// Files: the manager fills the page below the intro, the editor most of its dialog
+.server-files {
+    height: calc(100vh - 300px);
+    min-height: 360px;
+}
+
+.server-file-editor {
+    height: 70vh;
+}

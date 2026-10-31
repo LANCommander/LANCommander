@@ -113,6 +113,41 @@ public interface IServerEngineExtension
     /// </summary>
     Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)
         => throw new NotSupportedException($"The {Name} engine has no terminal console \"{consoleId}\".");
+
+    // The server's files, for ServerEngineFeatures.Files. Every path is relative to wherever the
+    // engine keeps the server's files, e.g. a container's data volume, with "/" between folders and
+    // "" for the top. The server checks paths before passing them on: they never start with "/",
+    // and have no empty, "." or ".." segments, backslashes or colons. Throw to report that something
+    // can't be done; the server shows the message.
+
+    /// <summary>
+    /// Lists a folder of the server's files, for <see cref="ServerEngineFeatures.Files"/>. Throw
+    /// <see cref="DirectoryNotFoundException"/> when there is no such folder.
+    /// </summary>
+    Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine can't manage server files.");
+
+    /// <summary>
+    /// Opens one of the server's files to read. The server disposes the stream. Throw
+    /// <see cref="FileNotFoundException"/> when there is no such file.
+    /// </summary>
+    Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine can't manage server files.");
+
+    /// <summary>
+    /// Writes one of the server's files from <paramref name="content"/>, replacing it if it exists and
+    /// creating any folders it is in that don't.
+    /// </summary>
+    Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine can't manage server files.");
+
+    /// <summary>Deletes one of the server's files, or a folder and everything in it.</summary>
+    Task DeleteFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine can't manage server files.");
+
+    /// <summary>Creates a folder among the server's files, and any it is in that don't exist.</summary>
+    Task CreateDirectoryAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
+        => throw new NotSupportedException($"The {Name} engine can't manage server files.");
 }
 
 /// <summary>What an <see cref="IServerEngineExtension"/> can do beyond starting and stopping a server.</summary>
@@ -138,6 +173,13 @@ public enum ServerEngineFeatures
     /// their Monitor; see <see cref="IServerEngineExtension.GetConsoles"/>.
     /// </summary>
     Consoles = 8,
+
+    /// <summary>
+    /// The engine can list, read, write and delete its servers' files, e.g. their configuration, so
+    /// administrators can edit and upload them on the server's Files page; see
+    /// <see cref="IServerEngineExtension.ListFilesAsync"/>.
+    /// </summary>
+    Files = 16,
 }
 
 /// <summary>Whether a game server is running.</summary>

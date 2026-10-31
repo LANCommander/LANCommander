@@ -6,6 +6,7 @@ using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Mappers;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Services.Utilities;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -281,6 +282,44 @@ internal sealed class PluginServerEngine(
             ?? throw new InvalidOperationException("The server has no such console.");
 
         return (server, console);
+    }
+
+    public bool SupportsFiles(Guid serverId) => extension.Features.HasFlag(ServerEngineFeatures.Files) && _servers.ContainsKey(serverId);
+
+    public async Task<IReadOnlyList<ServerFile>> ListFilesAsync(Guid serverId, string path, CancellationToken cancellationToken = default)
+    {
+        var files = await extension.ListFilesAsync(FilesOf(serverId), path, cancellationToken) ?? [];
+
+        // Only names within the folder; anything else the engine lists couldn't be reached through it
+        return files
+            .Where(file => !string.IsNullOrWhiteSpace(file?.Name) && file.Name is not ("." or "..") && file.Name.IndexOfAny(['/', '\\']) < 0)
+            .DistinctBy(file => file.Name)
+            .Select(file => new ServerFile(file.Name, ServerFilePath.Combine(path, file.Name), file.IsDirectory, file.IsDirectory ? null : file.Size, file.LastModified))
+            .ToList();
+    }
+
+    public async Task<Stream> OpenFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        await extension.OpenFileAsync(FilesOf(serverId), path, cancellationToken)
+            ?? throw new InvalidOperationException($"The {extension.Name} engine didn't open the file.");
+
+    public Task WriteFileAsync(Guid serverId, string path, Stream content, CancellationToken cancellationToken = default) =>
+        extension.WriteFileAsync(FilesOf(serverId), path, content, cancellationToken);
+
+    public Task DeleteFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        extension.DeleteFileAsync(FilesOf(serverId), path, cancellationToken);
+
+    public Task CreateDirectoryAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        extension.CreateDirectoryAsync(FilesOf(serverId), path, cancellationToken);
+
+    private ServerEngineServer FilesOf(Guid serverId)
+    {
+        if (!_servers.TryGetValue(serverId, out var server))
+            throw new InvalidOperationException($"The server isn't run by the {extension.Name} engine.");
+
+        if (!extension.Features.HasFlag(ServerEngineFeatures.Files))
+            throw new NotSupportedException($"The {extension.Name} engine can't manage server files.");
+
+        return server;
     }
 
     void IServerEngineHost.ReportStatus(Guid serverId, ServerEngineStatus status, string? error)

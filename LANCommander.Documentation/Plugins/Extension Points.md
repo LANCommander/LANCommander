@@ -289,6 +289,37 @@ public async Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer se
 Monitor pages are for administrators only. A terminal gives whoever opens it whatever the engine's
 session can do, so the server logs who opened which.
 
+### Files
+
+An engine with the `Files` feature lets administrators manage each server's files on its Files page:
+browse folders, edit text files such as its configuration, upload maps and mods, create folders and
+delete. A Local server's files are its working directory; an engine decides where its servers' files
+are, e.g. a container's data volume, and implements `ListFilesAsync`, `OpenFileAsync`,
+`WriteFileAsync`, `DeleteFileAsync` and `CreateDirectoryAsync` over them.
+
+Paths are relative to the server's files, with `/` between folders and `""` for the top. The server
+checks every path before passing it on, so none starts with `/` or has `..`, `.`, empty segments,
+backslashes or colons; still, keep a path from resolving outside the server's files, e.g. through a
+symbolic link. `ListFilesAsync` returns [`ServerEngineFile`](/Plugins/API%20Reference#serverenginefile)s
+named within the folder; any other names are left out. Writing replaces a file and creates the
+folders it is in, and deleting a folder deletes what is in it.
+
+```csharp
+public async Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path,
+    CancellationToken cancellationToken) =>
+    (await client.ListAsync(server.GetSettings<MySettings>().Volume, path, cancellationToken))
+        .Select(entry => new ServerEngineFile(entry.Name, entry.IsDirectory, entry.Size, entry.ModifiedUtc))
+        .ToList();
+
+public Task WriteFileAsync(ServerEngineServer server, string path, Stream content,
+    CancellationToken cancellationToken) =>
+    client.UploadAsync(server.GetSettings<MySettings>().Volume, path, content, cancellationToken);
+```
+
+The page waits on these calls, so give up and throw rather than hang when the files can't be reached;
+the message is shown. Text files up to 4 MB are edited in the browser and written back in the encoding
+they were read in; anything else is uploaded.
+
 ## Looking up metadata
 
 To consume the server's configured metadata providers, inject

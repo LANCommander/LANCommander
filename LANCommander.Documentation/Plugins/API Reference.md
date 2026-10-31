@@ -904,6 +904,16 @@ Runs game servers somewhere other than as a process on the LANCommander server's
   - Reads one of the server's `Log` consoles, oldest line first. Throw to report that it can't be read; the server shows the message.
 - `Task<IServerEngineTerminal> OpenTerminalAsync(ServerEngineServer server, string consoleId, ServerEngineTerminalSize size, CancellationToken cancellationToken)`
   - Opens one of the server's `Terminal` consoles at the administrator's terminal's size. Throw to report that it can't be opened; the server shows the message.
+- `Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
+  - Lists a folder of the server's files, for `Files`. Throw `DirectoryNotFoundException` when there is no such folder.
+- `Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
+  - Opens one of the server's files to read. The server disposes the stream. Throw `FileNotFoundException` when there is no such file.
+- `Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)`
+  - Writes one of the server's files from `content`, replacing it if it exists and creating any folders it is in that don't.
+- `Task DeleteFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
+  - Deletes one of the server's files, or a folder and everything in it.
+- `Task CreateDirectoryAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
+  - Creates a folder among the server's files, and any it is in that don't exist.
 
 ### IServerEngineHost
 
@@ -1525,6 +1535,23 @@ A console an `IServerEngineExtension` offers for one of its servers, listed unde
 - `ServerEngineConsoleKind Kind { get; init; }`
   - How the console is shown, which decides which of the engine's methods opens it.
 
+### ServerEngineFile
+
+`record` — `LANCommander.Server.Plugins.ServerEngineFile`
+
+A file or folder among a server's files, for `Files`; see `ListFilesAsync`.
+
+**Properties**
+
+- `string Name { get; init; }`
+  - The entry's name within the folder listed, without any path.
+- `bool IsDirectory { get; init; }`
+  - Whether it is a folder.
+- `long? Size { get; init; }`
+  - A file's length in bytes, where the engine knows it.
+- `DateTime? LastModified { get; init; }`
+  - When it was last written, in UTC, where the engine knows.
+
 ### ServerEngineEditorContext
 
 `class` — `LANCommander.Server.Plugins.ServerEngineEditorContext`
@@ -1884,6 +1911,7 @@ What an `IServerEngineExtension` can do beyond starting and stopping a server.
 | `Input` = `2` | The engine can write lines to its servers' input, from their Monitor page. |
 | `ProcessInfo` = `4` | The engine samples its servers' CPU and memory use and uptime. |
 | `Consoles` = `8` | The engine offers consoles of its own for its servers, e.g. a log or a terminal, listed under their Monitor; see `GetConsoles`. |
+| `Files` = `16` | The engine can list, read, write and delete its servers' files, e.g. their configuration, so administrators can edit and upload them on the server's Files page; see `ListFilesAsync`. |
 
 ### ServerEngineStatus
 

@@ -4,6 +4,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
+using LANCommander.Server.Services.Utilities;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -285,6 +286,67 @@ public sealed class ServerManager(
         var serverConsoleService = scope.ServiceProvider.GetRequiredService<ServerConsoleService>();
 
         return await serverConsoleService.AsNoTracking().GetAsync(consoleId);
+    }
+
+    #endregion
+
+    #region Files
+
+    /// <summary>
+    /// Whether the server's engine can manage its files: a local server's working directory, or
+    /// whatever a plugin's engine offers.
+    /// </summary>
+    public bool SupportsFiles(Guid serverId) => GetEngine(serverId)?.SupportsFiles(serverId) ?? false;
+
+    /// <summary>
+    /// Lists a folder of the server's files, folders first. Paths are relative to the server's files,
+    /// with "/" between folders and "" for the top; see <see cref="ServerFilePath"/>.
+    /// </summary>
+    public async Task<IReadOnlyList<ServerFile>> ListFilesAsync(Guid serverId, string? path, CancellationToken cancellationToken = default)
+    {
+        var files = await FilesEngine(serverId).ListFilesAsync(serverId, ServerFilePath.Normalize(path), cancellationToken);
+
+        return files
+            .OrderByDescending(file => file.IsDirectory)
+            .ThenBy(file => file.Name, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>Opens one of the server's files to read; dispose the stream.</summary>
+    public Task<Stream> OpenFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        FilesEngine(serverId).OpenFileAsync(serverId, FilePath(path), cancellationToken);
+
+    /// <summary>Writes one of the server's files, replacing it and creating the folders it is in.</summary>
+    public Task WriteFileAsync(Guid serverId, string path, Stream content, CancellationToken cancellationToken = default) =>
+        FilesEngine(serverId).WriteFileAsync(serverId, FilePath(path), content, cancellationToken);
+
+    /// <summary>Deletes one of the server's files, or a folder and everything in it.</summary>
+    public Task DeleteFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        FilesEngine(serverId).DeleteFileAsync(serverId, FilePath(path), cancellationToken);
+
+    /// <summary>Creates a folder among the server's files.</summary>
+    public Task CreateDirectoryAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
+        FilesEngine(serverId).CreateDirectoryAsync(serverId, FilePath(path), cancellationToken);
+
+    private IServerEngine FilesEngine(Guid serverId)
+    {
+        var engine = GetEngine(serverId) ?? throw new InvalidOperationException("The server is not managed by any engine.");
+
+        if (!engine.SupportsFiles(serverId))
+            throw new NotSupportedException("This server's engine can't manage its files.");
+
+        return engine;
+    }
+
+    // Everything but listing names a file or folder inside the server's files, never the top itself
+    private static string FilePath(string path)
+    {
+        var normalized = ServerFilePath.Normalize(path);
+
+        if (normalized.Length == 0)
+            throw new ArgumentException("A file or folder must be named.", nameof(path));
+
+        return normalized;
     }
 
     #endregion

@@ -22,6 +22,7 @@ Use the version of the server the plugin targets.
 | `IMediaGrabberExtension`, `MediaGrabberItem` | Adds a source to the server's media search |
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IPackageExporter`, `PackageContents` | Describes and writes LCX packages of games, redistributables, servers and tools through the server's export pipeline. Provided by the server |
+| `IRecurringJobScheduler`, `IRecurringJobHandler` | Runs plugin work on cron schedules through the server's background jobs, on its dashboard. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
 | `IMetadataLookup` | Searches configured metadata providers and fetches full game metadata without importing it. Provided by the server |
 | `IUserDirectory`, `UserAccount` | Reads user accounts, their roles and whether they may sign in, without passwords. Provided by the server |

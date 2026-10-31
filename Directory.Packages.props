@@ -125,6 +125,8 @@
     <PackageVersion Include="Hangfire.AspNetCore" Version="1.8.17" />
     <PackageVersion Include="Hangfire.Core" Version="1.8.17" />
     <PackageVersion Include="Hangfire.InMemory" Version="1.0.0" />
+    <!-- The cron parser Hangfire embeds, for validating plugin job schedules -->
+    <PackageVersion Include="Cronos" Version="0.8.4" />
   </ItemGroup>
   <ItemGroup Label="PowerShell">
     <PackageVersion Include="Microsoft.PowerShell.Commands.Diagnostics" Version="7.4.19" />

@@ -776,6 +776,41 @@ Imports LCX packages through the server's own import pipeline, the same one the 
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
 
+### IRecurringJobHandler
+
+`interface` — `LANCommander.Server.Plugins.IRecurringJobHandler`
+
+Does the work of recurring jobs added through `IRecurringJobScheduler`. Register an implementation in `IPlugin.ConfigureServices`; it's resolved from a fresh scope for every run.
+
+**Properties**
+
+- `string Name { get; }`
+  - Identifies the handler to `AddOrUpdate`; start it with the plugin's id.
+
+**Methods**
+
+- `Task ExecuteAsync(string argument, CancellationToken cancellationToken)`
+  - Runs the job.
+
+### IRecurringJobScheduler
+
+`interface` — `LANCommander.Server.Plugins.IRecurringJobScheduler`
+
+Runs plugin work on a cron schedule through the server's background job processor, alongside the server's own recurring jobs and on its dashboard. Provided by the server; inject it anywhere, it's a singleton.
+
+**Methods**
+
+- `void AddOrUpdate(string jobId, string handler, string argument, string cronExpression, TimeZoneInfo timeZone)`
+  - Adds a recurring job, or changes the one with the same id.
+- `void Remove(string jobId)`
+  - Removes a recurring job. Does nothing when there's no such job.
+- `void Trigger(string jobId)`
+  - Runs a recurring job now, outside its schedule. Does nothing when there's no such job.
+- `RecurringJobInfo Get(string jobId)`
+  - The plugin recurring job with the given id, or null.
+- `bool IsValidCronExpression(string cronExpression)`
+  - Whether `cronExpression` is one `AddOrUpdate` accepts.
+
 ### IRedistributableProvider
 
 `interface` — `LANCommander.Server.Plugins.IRedistributableProvider`
@@ -1353,6 +1388,23 @@ Describes who may reach a plugin-contributed surface, such as a page or a naviga
   - Allows members of any of the supplied server-defined roles. Administrators also qualify.
 - `bool IsSatisfiedBy(ClaimsPrincipal user)`
   - Determines whether `user` satisfies this policy.
+
+### RecurringJobInfo
+
+`record` — `LANCommander.Server.Plugins.RecurringJobInfo`
+
+A plugin recurring job, from `Get`.
+
+**Properties**
+
+- `string JobId { get; init; }`
+  - The id it was added with.
+- `string CronExpression { get; init; }`
+  - Its schedule.
+- `DateTime? NextExecution { get; init; }`
+  - When it next runs, in UTC, if it's scheduled to.
+- `DateTime? LastExecution { get; init; }`
+  - When it last ran, in UTC, if it has since the server started.
 
 ### RedistributableInfo
 

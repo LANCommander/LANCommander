@@ -34,6 +34,8 @@ public static class Services
         // its service or data assemblies
         builder.Services.AddScoped<IPackageImporter, PackageImporter>();
         builder.Services.AddScoped<IPackageExporter, PackageExporter>();
+        builder.Services.AddSingleton<IRecurringJobScheduler, RecurringJobScheduler>();
+        builder.Services.AddTransient<PluginRecurringJobRunner>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
         builder.Services.AddScoped<IMetadataLookup, MetadataLookup>();
         builder.Services.AddScoped<IUserDirectory, UserDirectory>();

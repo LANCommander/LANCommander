@@ -53,6 +53,12 @@ public class PcGamingWikiMetadataProviderTests
         ParseFixture().ReleasedOn.ShouldBe(new DateTime(1998, 11, 19));
     }
 
+    [Fact]
+    public void ParseGameFromHtmlReturnsTheReleaseDateAsUtc()
+    {
+        ParseFixture().ReleasedOn.Kind.ShouldBe(DateTimeKind.Utc);
+    }
+
     #endregion
 
     #region Multiplayer

@@ -77,7 +77,7 @@ Implemented by plugins that want to add PowerShell cmdlets or script modules int
 - `IEnumerable<string> GetModulePaths()`
   - Returns absolute paths to PowerShell script modules (.psm1/.psd1) shipped with the plugin that should be imported into each runspace.
 
-### IPluginSettings<TSettings>
+### IPluginSettings\<TSettings>
 
 `interface` — `LANCommander.SDK.Plugins.IPluginSettings<TSettings>`
 
@@ -275,7 +275,7 @@ The NuGet package types a plugin package declares. Every plugin package declares
 - `IReadOnlyList<string> All(PluginHost hosts)`
   - Every package type a plugin targeting `hosts` declares.
 
-### PluginSettings<TSettings>
+### PluginSettings\<TSettings>
 
 `class` — `LANCommander.SDK.Plugins.PluginSettings<TSettings>`
 
@@ -731,7 +731,7 @@ Looks up game metadata through the server's configured providers. Provided by th
 
 Manages the multiplayer modes of games. Provided by the server; inject it into a scoped plugin service or page.
 
-### IOwnedRecordProvider<TInfo>
+### IOwnedRecordProvider\<TInfo>
 
 `interface` — `LANCommander.Server.Plugins.IOwnedRecordProvider<TInfo>`
 

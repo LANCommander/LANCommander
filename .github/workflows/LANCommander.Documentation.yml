@@ -5,6 +5,11 @@ on:
     branches: [main]
     paths:
       - "LANCommander.Documentation/**"
+      # Inputs to the generated plugin API reference
+      - "LANCommander.PluginDocsGenerator/**"
+      - "LANCommander.SDK/Plugins/**"
+      - "LANCommander.Launcher.Plugins/**"
+      - "LANCommander.Server.Plugins/**"
 
 jobs:
   publish:

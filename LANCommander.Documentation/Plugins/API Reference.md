@@ -1535,23 +1535,6 @@ A console an `IServerEngineExtension` offers for one of its servers, listed unde
 - `ServerEngineConsoleKind Kind { get; init; }`
   - How the console is shown, which decides which of the engine's methods opens it.
 
-### ServerEngineFile
-
-`record` — `LANCommander.Server.Plugins.ServerEngineFile`
-
-A file or folder among a server's files, for `Files`; see `ListFilesAsync`.
-
-**Properties**
-
-- `string Name { get; init; }`
-  - The entry's name within the folder listed, without any path.
-- `bool IsDirectory { get; init; }`
-  - Whether it is a folder.
-- `long? Size { get; init; }`
-  - A file's length in bytes, where the engine knows it.
-- `DateTime? LastModified { get; init; }`
-  - When it was last written, in UTC, where the engine knows.
-
 ### ServerEngineEditorContext
 
 `class` — `LANCommander.Server.Plugins.ServerEngineEditorContext`
@@ -1573,6 +1556,23 @@ The server an `EditorComponent` edits, on its General page. Changes are kept wit
   - Replaces the engine's settings for the server.
 - `void SetAddress(string host, int? port)`
   - Sets the address players connect to, e.g. from a port the engine publishes. The administrator can still change it.
+
+### ServerEngineFile
+
+`record` — `LANCommander.Server.Plugins.ServerEngineFile`
+
+A file or folder among a server's files, for `Files`; see `ListFilesAsync`.
+
+**Properties**
+
+- `string Name { get; init; }`
+  - The entry's name within the folder listed, without any path.
+- `bool IsDirectory { get; init; }`
+  - Whether it is a folder.
+- `long? Size { get; init; }`
+  - A file's length in bytes, where the engine knows it.
+- `DateTime? LastModified { get; init; }`
+  - When it was last written, in UTC, where the engine knows.
 
 ### ServerEngineLogLine
 

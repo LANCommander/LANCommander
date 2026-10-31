@@ -69,7 +69,8 @@ public class LocalServerEngine(
     private static readonly TimeSpan MinimumSampleInterval = TimeSpan.FromMilliseconds(500);
 
     private readonly ConcurrentDictionary<Guid, ServerRuntimeState> _servers = new();
-    private readonly Dictionary<Guid, LogFileMonitor> _logFileMonitors = new();
+    // The log file consoles followed while each server runs
+    private readonly ConcurrentDictionary<Guid, IReadOnlyList<LogFileMonitor>> _logFileMonitors = new();
     private readonly HashSet<Guid> _tracked = new();
 
     // Guards status transitions and the tracked set so concurrent start/stop/refresh
@@ -187,10 +188,7 @@ public class LocalServerEngine(
                     executionContext.AddVariable("GameId", server.Game?.Id.ToString());
                 }
 
-                foreach (var logFile in server.ServerConsoles.Where(sc => sc.Type == ServerConsoleType.LogFile))
-                {
-                    StartMonitoringLog(logFile, server);
-                }
+                await StartMonitoringLogsAsync(server);
 
                 executionContext.OutputDataReceived += (_, e) => EmitLog(serverId, e.Data);
                 executionContext.ErrorDataReceived += (_, e) => EmitLog(serverId, e.Data);
@@ -210,6 +208,8 @@ public class LocalServerEngine(
             }
             finally
             {
+                await StopMonitoringLogsAsync(serverId);
+
                 lock (_lock)
                 {
                     if (_servers.TryGetValue(serverId, out var state))
@@ -252,14 +252,11 @@ public class LocalServerEngine(
                 cancellationTokenSource = state?.Cancellation;
             }
 
+            // Its log files are followed until the process has exited, so its last lines are kept
             if (cancellationTokenSource != null)
                 await cancellationTokenSource.CancelAsync();
-
-            if (_logFileMonitors.ContainsKey(server.Id))
-            {
-                _logFileMonitors[server.Id].Dispose();
-                _logFileMonitors.Remove(server.Id);
-            }
+            else
+                await StopMonitoringLogsAsync(server.Id);
 
             foreach (var serverScript in server.Scripts.Where(s => s.Type == ScriptType.AfterStop))
             {
@@ -445,11 +442,48 @@ public class LocalServerEngine(
             OnServerStatusUpdate?.Invoke(this, new ServerStatusUpdateEventArgs(server, effectiveStatus, ex));
     }
     
-    private void StartMonitoringLog(ServerConsole log, Data.Models.Server server)
+    private async Task StartMonitoringLogsAsync(Data.Models.Server server)
     {
-        if (!_logFileMonitors.ContainsKey(server.Id))
+        // Anything left from an earlier run, e.g. one that ended without the monitors being stopped
+        await StopMonitoringLogsAsync(server.Id);
+
+        var monitors = new List<LogFileMonitor>();
+
+        foreach (var console in server.ServerConsoles?.Where(c => c.Type == ServerConsoleType.LogFile && !String.IsNullOrWhiteSpace(c.Path)) ?? [])
         {
-            _logFileMonitors[server.Id] = new LogFileMonitor(server, log);
+            try
+            {
+                monitors.Add(new LogFileMonitor(
+                    LogFileMonitor.ResolvePath(server, console),
+                    line => EmitConsoleLog(console, line)));
+            }
+            catch (Exception ex)
+            {
+                logger?.LogWarning(ex, "Could not follow log file console \"{ConsoleName}\" of server \"{ServerName}\"", console.Name, server.Name);
+            }
+        }
+
+        _logFileMonitors[server.Id] = monitors;
+    }
+
+    private async Task StopMonitoringLogsAsync(Guid serverId)
+    {
+        if (!_logFileMonitors.TryRemove(serverId, out var monitors))
+            return;
+
+        foreach (var monitor in monitors)
+            await monitor.DisposeAsync();
+    }
+
+    private void EmitConsoleLog(ServerConsole console, string line)
+    {
+        try
+        {
+            OnServerLog?.Invoke(this, new ServerLogEventArgs(line, console));
+        }
+        catch (Exception ex)
+        {
+            logger?.LogError(ex, "Could not publish a line of log file console {ConsoleId}", console.Id);
         }
     }
 }

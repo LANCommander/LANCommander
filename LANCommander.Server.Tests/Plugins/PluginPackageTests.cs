@@ -26,7 +26,7 @@ public class PluginPackageTests : IDisposable
     {
         Directory.CreateDirectory(_root);
 
-        _staging = new PluginStaging(Path.Combine(_root, "Plugins"), Path.Combine(_root, "PluginStaging"));
+        _staging = new PluginStaging(Path.Combine(_root, "Plugins"), Path.Combine(_root, "Plugins", PluginStaging.StagingFolderName));
 
         _service = CreateService(HostVersion);
     }
@@ -134,6 +134,19 @@ public class PluginPackageTests : IDisposable
         _staging.ApplyPending(NullLogger.Instance);
 
         PluginPackageRecord.Read(_staging.GetInstalledPath("Acme.Widgets"))!.Version.ShouldBe("1.1.0");
+    }
+
+    [Fact]
+    public async Task TheStagingFolderIsNotAPlugin()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+
+        using var update = PluginPackage("Acme.Widgets.Plugin", "1.1.0", "Acme.Widgets");
+        await _service.InstallAsync(update);
+
+        Directory.Exists(Path.Combine(_root, "Plugins", PluginStaging.StagingFolderName)).ShouldBeTrue();
+        _staging.GetInstalledFolders().ShouldBe(["Acme.Widgets"]);
+        _service.GetInstalled().ShouldHaveSingleItem().Folder.ShouldBe("Acme.Widgets");
     }
 
     [Fact]

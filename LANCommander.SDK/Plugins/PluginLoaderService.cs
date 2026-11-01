@@ -83,6 +83,9 @@ public sealed class PluginLoaderService
 
         foreach (var directory in Directory.GetDirectories(pluginsRoot))
         {
+            if (!PluginBootstrap.IsPluginFolder(Path.GetFileName(directory)))
+                continue;
+
             try
             {
                 TryLoadPlugin(services, host, directory, hostVersion, logger);

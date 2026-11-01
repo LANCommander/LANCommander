@@ -16,6 +16,12 @@ public static class PluginBootstrap
     public const string PluginsFolderName = "Plugins";
 
     /// <summary>
+    /// Whether a folder in the plugins folder holds a plugin. Folders named with a leading dot, such
+    /// as the server's <c>.staging</c>, belong to the host.
+    /// </summary>
+    public static bool IsPluginFolder(string name) => !name.StartsWith('.');
+
+    /// <summary>
     /// Discovers plugins for <paramref name="host"/> from <c>&lt;config&gt;/Plugins</c>, lets each register
     /// its services into <paramref name="services"/>, and registers the loader as a singleton so the
     /// same instance can drive Phase 2 initialization.

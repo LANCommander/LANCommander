@@ -11,13 +11,15 @@ namespace LANCommander.Server.Plugins.Installation;
 /// <remarks>
 /// <c>Install/&lt;folder&gt;</c> holds a plugin folder ready to move into the plugins folder, and an
 /// empty <c>Remove/&lt;folder&gt;</c> marks one to delete. <c>Temp</c> is where packages are unpacked
-/// while they are checked. Everything stays on the plugins folder's volume so a move is a rename.
+/// while they are checked. It all sits in <c>Plugins/.staging</c>, on the plugins folder's volume, so
+/// a move is a rename.
 /// Installing over a plugin keeps its <see cref="PluginManifest.DataFolderName"/> folder; removing
 /// one deletes it with the rest.
 /// </remarks>
 public sealed class PluginStaging
 {
-    public const string StagingFolderName = "PluginStaging";
+    /// <summary>Inside the plugins folder; the leading dot keeps it from being taken for a plugin.</summary>
+    public const string StagingFolderName = ".staging";
 
     public string PluginsRoot { get; }
     public string StagingRoot { get; }
@@ -35,7 +37,7 @@ public sealed class PluginStaging
     /// <summary>Staging for the server's own plugins folder.</summary>
     public static PluginStaging CreateDefault() => new(
         AppPaths.GetConfigPath(PluginBootstrap.PluginsFolderName),
-        AppPaths.GetConfigPath(StagingFolderName));
+        AppPaths.GetConfigPath(PluginBootstrap.PluginsFolderName, StagingFolderName));
 
     public string GetInstalledPath(string folder) => Path.Combine(PluginsRoot, ValidateFolder(folder));
 
@@ -53,7 +55,7 @@ public sealed class PluginStaging
         || (Directory.Exists(RemoveRoot) && Directory.EnumerateFiles(RemoveRoot).Any());
 
     public IEnumerable<string> GetInstalledFolders() => Directory.Exists(PluginsRoot)
-        ? Directory.GetDirectories(PluginsRoot).Select(Path.GetFileName).OfType<string>()
+        ? Directory.GetDirectories(PluginsRoot).Select(Path.GetFileName).OfType<string>().Where(PluginBootstrap.IsPluginFolder)
         : [];
 
     public IEnumerable<string> GetStagedFolders() => Directory.Exists(InstallRoot)
@@ -253,7 +255,7 @@ public sealed class PluginStaging
     private static string ValidateFolder(string folder)
     {
         if (string.IsNullOrWhiteSpace(folder)
-            || folder is "." or ".."
+            || !PluginBootstrap.IsPluginFolder(folder)
             || folder.IndexOfAny(Path.GetInvalidFileNameChars()) >= 0
             || folder.Contains('/') || folder.Contains('\\'))
             throw new ArgumentException($"'{folder}' is not a plugin folder name.", nameof(folder));

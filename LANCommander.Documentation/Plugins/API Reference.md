@@ -167,6 +167,8 @@ Convenience helper that centralizes plugin discovery so every host wires it iden
 
 **Methods**
 
+- `bool IsPluginFolder(string name)`
+  - Whether a folder in the plugins folder holds a plugin. Folders named with a leading dot, such as the server's `.staging`, belong to the host.
 - `PluginLoaderService ConfigurePlugins(IServiceCollection services, PluginHost host)`
   - Discovers plugins for `host` from `<config>/Plugins`, lets each register its services into `services`, and registers the loader as a singleton so the same instance can drive Phase 2 initialization.
 

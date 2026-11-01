@@ -81,7 +81,7 @@ Implemented by plugins that want to add PowerShell cmdlets or script modules int
 
 `interface` — `LANCommander.SDK.Plugins.IPluginSettings<TSettings>`
 
-A plugin's own settings, kept by the host in a YAML file of their own: `PluginData/{PluginId}/Settings.yaml` under the host's data directory. Inject it with the plugin's settings type; the host knows which plugin is asking from the assembly that type is declared in, so a plugin can only reach its own file.
+A plugin's own settings, kept by the host in a YAML file of their own: `Data/Settings.yaml` in the plugin's own folder (see `DataDirectory`). Inject it with the plugin's settings type; the host knows which plugin is asking from the assembly that type is declared in, so a plugin can only reach its own file.
 
 **Properties**
 
@@ -184,6 +184,8 @@ Runtime context handed to a plugin during `InitializeAsync`.
   - The host service provider scoped to the current `InitializeAsync` call. Resolve services needed during initialization, but do not retain this provider or scoped services after initialization completes.
 - `string PluginDirectory { get; init; }`
   - Absolute path to the folder the plugin was loaded from.
+- `string DataDirectory { get; init; }`
+  - See `DataDirectory`.
 - `ILogger Logger { get; init; }`
   - Logger scoped to the plugin.
 
@@ -252,6 +254,8 @@ Parsed metadata describing a discovered plugin, derived from its `LANCommanderPl
   - The assembly the plugin was loaded from.
 - `string Directory { get; init; }`
   - Absolute path to the folder the plugin was loaded from.
+- `string DataDirectory { get; }`
+  - Absolute path to the folder for the plugin's own files: its settings and anything else it keeps. It lives inside `Directory`, survives the plugin being upgraded, and goes when the plugin is removed. It may not exist yet.
 - `string DataId { get; init; }`
   - See `DataId`.
 - `IReadOnlyList<string> MigrationAssemblies { get; init; }`

@@ -200,18 +200,10 @@ body {
     background: var(--lc-canvas);
 }
 
-// First-time setup has no navigation, so its page keeps a Surface panel on the canvas
+// First-time setup has no navigation; its page brings its own Card, so the content sits bare on the canvas
 .lc-layout-basic .lc-layout-main {
     padding: var(--lc-layout-gutter);
     gap: var(--lc-layout-gutter);
-}
-
-.lc-layout-content-basic {
-    padding: 24px;
-    border: 1px solid var(--lc-border-card-color);
-    border-radius: var(--lc-radius-lg);
-    background: var(--lc-panel-background);
-    box-shadow: var(--lc-inset-highlight);
 }
 
 .lc-layout-footer {

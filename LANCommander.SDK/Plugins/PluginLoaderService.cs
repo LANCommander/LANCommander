@@ -142,12 +142,22 @@ public sealed class PluginLoaderService
             return;
         }
 
+        // A plugin built against a newer host can fail partway through, e.g. a TypeLoadException when a
+        // helper touches a contract this host lacks. Roll back whatever it registered before that, or a
+        // half-registered plugin (its route assembly, say) can still crash the host at startup.
+        var snapshot = services.ToList();
+
         try
         {
             plugin.ConfigureServices(services);
         }
         catch (Exception ex)
         {
+            services.Clear();
+
+            foreach (var descriptor in snapshot)
+                services.Add(descriptor);
+
             logger.LogError(ex, "Plugin '{Id}' threw during ConfigureServices; skipping", plugin.Id);
             return;
         }

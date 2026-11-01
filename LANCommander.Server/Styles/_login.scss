@@ -27,7 +27,6 @@
     position: relative;
     display: flex;
     justify-content: center;
-    gap: 16px;
     filter: drop-shadow(0px 0px 32px #000);
 
     &-logo {
@@ -63,13 +62,26 @@
     .login-download-pane {
         flex-basis: auto;
     }
+
+    // Stacked, the form rounds on top and the download pane underneath
+    .login-form-pane.login-form-pane {
+        border-right: 1px solid var(--lc-border-card-color);
+        border-bottom: 0;
+        border-radius: var(--lc-radius-lg) var(--lc-radius-lg) 0 0;
+    }
+
+    .login-download-pane.login-download-pane {
+        border-radius: 0 0 var(--lc-radius-lg) var(--lc-radius-lg);
+    }
 }
 
-// Bordered and rounded like a card, but kept translucent over the blurred screenshot
+// Bordered and rounded like a card, but kept translucent over the blurred screenshot. It joins the
+// download pane seamlessly, so only the outer corners round and the shared edge has no hairline.
 .login-form-pane {
     background: rgba(0, 0, 0, .75);
     border: 1px solid var(--lc-border-card-color);
-    border-radius: var(--lc-radius-lg);
+    border-right: 0;
+    border-radius: var(--lc-radius-lg) 0 0 var(--lc-radius-lg);
     box-shadow: var(--lc-inset-highlight);
     display: flex;
     flex-direction: column;
@@ -115,8 +127,7 @@
     position: relative;
     min-height: 50vh;
     overflow: hidden;
-    border: 1px solid var(--lc-border-card-color);
-    border-radius: var(--lc-radius-lg);
+    border-radius: 0 var(--lc-radius-lg) var(--lc-radius-lg) 0;
     background-size: cover;
     background-position: center;
     display: flex;

@@ -27,6 +27,7 @@
     position: relative;
     display: flex;
     justify-content: center;
+    gap: 16px;
     filter: drop-shadow(0px 0px 32px #000);
 
     &-logo {
@@ -64,8 +65,12 @@
     }
 }
 
+// Bordered and rounded like a card, but kept translucent over the blurred screenshot
 .login-form-pane {
     background: rgba(0, 0, 0, .75);
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    box-shadow: var(--lc-inset-highlight);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -109,6 +114,9 @@
 .login-download-pane {
     position: relative;
     min-height: 50vh;
+    overflow: hidden;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
     background-size: cover;
     background-position: center;
     display: flex;

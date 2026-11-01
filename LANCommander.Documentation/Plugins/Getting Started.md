@@ -230,6 +230,25 @@ resolves a plugin's assemblies from the top of its folder only, so assemblies un
 `runtimes/` are not found. Other files the plugin reads itself may sit in subfolders.
 :::
 
+### Launcher plugins
+
+A launcher plugin is packaged the same way, declaring `LANCommander.Plugin.Launcher` instead of (or as
+well as) `LANCommander.Plugin.Server`. Launchers get it in three ways:
+
+- **From the server.** On the server's **Settings → Plugins → Launcher** tab, administrators upload a
+  launcher plugin's `.nupkg` or add one from the server's package sources. The server doesn't install
+  it: it checks the package is a launcher plugin and keeps it, unchanged, for launchers to download from
+  `/api/Launcher/Plugins`. Turning on **Required** makes every launcher install it the next time it signs
+  in, and keeps players from uninstalling it.
+- **From a NuGet registry.** The launcher's **Settings → Plugins** page lists the registries it searches,
+  each with a checkbox to turn it on or off. The server it's connected to is on by default; nuget.org is
+  listed but off, and players can add other feeds.
+- **From a file**, with **Install from File** on the same page.
+
+The launcher checks a package the way the server does, against its own version and `Hosts`. Installs,
+updates and uninstalls take effect the next time the launcher starts, so a required plugin installed
+when a player signs in starts working after they restart the launcher.
+
 ## 7. Verify it loaded
 
 Start the host and check the logs. A successful load emits an entry like:

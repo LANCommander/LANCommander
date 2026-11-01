@@ -1,4 +1,4 @@
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 /// <summary>
 /// Which packages are official LANCommander plugins: those whose ID starts with
@@ -15,7 +15,7 @@ public static class OfficialPlugins
 
     /// <summary>Whether a package could be official, before asking nuget.org who owns it.</summary>
     public static bool IsCandidate(string sourceUrl, string packageId) =>
-        string.Equals(sourceUrl.Trim(), PluginPackageService.NuGetOrgUrl, StringComparison.OrdinalIgnoreCase)
+        string.Equals(sourceUrl.Trim(), PluginFeed.NuGetOrgUrl, StringComparison.OrdinalIgnoreCase)
         && packageId.StartsWith(IdPrefix, StringComparison.OrdinalIgnoreCase);
 
     public static bool IsOfficial(string sourceUrl, string packageId, IEnumerable<string>? owners) =>

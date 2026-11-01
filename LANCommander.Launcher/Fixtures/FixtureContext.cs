@@ -7,6 +7,9 @@ using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services.Platform;
+using LANCommander.Launcher.Services.Plugins;
+using LANCommander.PluginManagement;
+using LANCommander.SDK.Plugins;
 using LANCommander.Launcher.Plugins;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.Launcher.Views;
@@ -175,6 +178,12 @@ public sealed class FixtureContext : IDisposable
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<INavigationService, NavigationService>();
         services.AddSingleton<IViewRegistry>(_ => App.CreateViewRegistry());
+
+        // Plugins install into an empty scratch folder, and none are loaded
+        var pluginsPath = Path.Combine(Path.GetTempPath(), "LANCommander.Fixtures", "Plugins");
+        services.AddSingleton(new PluginStaging(pluginsPath, Path.Combine(pluginsPath, PluginStaging.StagingFolderName)));
+        services.AddSingleton<PluginLoaderService>();
+        services.AddSingleton<LauncherPluginService>();
 
         return services.BuildServiceProvider();
     }

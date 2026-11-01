@@ -1,4 +1,5 @@
 using Bunit;
+using LANCommander.PluginManagement;
 using LANCommander.SDK.Plugins;
 using LANCommander.Server.Plugins.Installation;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,14 +23,20 @@ public class PluginsSettingsComponentTests : BUnitTestContext
         UseServerVersion("2.2.0");
     }
 
-    private void UseServerVersion(string version) =>
-        Services.AddSingleton(new PluginPackageService(
-            Fixture.Factory.RealServices.GetRequiredService<SettingsProvider<Settings.Settings>>(),
+    private void UseServerVersion(string version, SettingsProvider<Settings.Settings>? settingsProvider = null)
+    {
+        var packages = new PluginPackageService(
+            settingsProvider ?? Fixture.Factory.RealServices.GetRequiredService<SettingsProvider<Settings.Settings>>(),
             new PluginLoaderService(),
             _staging,
             NullLogger<PluginPackageService>.Instance,
             version,
-            NuGetFramework.Parse("net10.0")));
+            NuGetFramework.Parse("net10.0"));
+
+        Services.AddSingleton(packages);
+        Services.AddSingleton(new LauncherPluginCache(
+            Path.Combine(_root, "LauncherPlugins"), packages, NullLogger<LauncherPluginCache>.Instance, NuGetFramework.Parse("net10.0")));
+    }
 
     protected override void Dispose(bool disposing)
     {
@@ -82,6 +89,43 @@ public class PluginsSettingsComponentTests : BUnitTestContext
         cut.FindAll("[role=tab]").First(tab => tab.TextContent.Contains("Sources")).Click();
 
         Assert.Contains("Always on while the server is a prerelease itself.", cut.Markup);
+    }
+
+    [Fact]
+    public void TheLauncherTabListsTheLauncherPluginsKeptForLaunchers()
+    {
+        // No package sources, so opening the tab searches nothing
+        var settings = new Settings.Settings();
+        settings.Server.Plugins.UseNuGetOrg = false;
+
+        UseServerVersion("2.2.0", new SettingsProvider<Settings.Settings>(new StubOptionsMonitor<Settings.Settings>(settings), Path.Combine(_root, "Settings.yml")));
+
+        var folder = Path.Combine(_root, "LauncherPlugins", "acme.overlay");
+        Directory.CreateDirectory(folder);
+        File.WriteAllText(Path.Combine(folder, "package.json"), System.Text.Json.JsonSerializer.Serialize(new CachedLauncherPlugin
+        {
+            Package = new PluginPackageRecord { Id = "Acme.Overlay", Version = "1.0.0", Title = "Acme Overlay" },
+            PluginId = "com.acme.overlay",
+            Required = true,
+            FileName = "acme.overlay.1.0.0.nupkg",
+        }));
+
+        var cut = Render<PluginsSettings>();
+
+        cut.FindAll("[role=tab]").First(tab => tab.TextContent.Contains("Launcher")).Click();
+
+        var row = cut.FindAll("tr").Single(r => r.TextContent.Contains("Acme Overlay"));
+        Assert.Contains("Uploaded", row.TextContent);
+        Assert.Contains("lc-switch-on", row.InnerHtml);
+        Assert.Contains("Click or drag launcher plugin .nupkg files here", cut.Markup);
+        Assert.Contains("No package sources", cut.Markup);
+    }
+
+    private sealed class StubOptionsMonitor<T>(T value) : Microsoft.Extensions.Options.IOptionsMonitor<T>
+    {
+        public T CurrentValue => value;
+        public T Get(string? name) => value;
+        public IDisposable? OnChange(Action<T, string?> listener) => null;
     }
 
     [Fact]

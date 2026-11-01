@@ -1,0 +1,327 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             x:Class="LANCommander.Launcher.Views.PluginsView"
+             x:DataType="vm:PluginsViewModel">
+
+    <UserControl.Styles>
+        <!-- A row inside a card's list: hairline divider under each -->
+        <Style Selector="Border.PluginRow">
+            <Setter Property="Padding" Value="0,10" />
+            <Setter Property="BorderBrush" Value="{DynamicResource HairlineDividerBrush}" />
+            <Setter Property="BorderThickness" Value="0,0,0,1" />
+        </Style>
+    </UserControl.Styles>
+
+    <Grid RowDefinitions="Auto,*">
+        <!-- Header -->
+        <Border Grid.Row="0" Padding="24,56,24,16" Background="{DynamicResource SurfaceBrush}">
+            <DockPanel>
+                <Button DockPanel.Dock="Left"
+                        Content="← Back"
+                        Classes="Glass"
+                        Command="{Binding GoBackCommand}"
+                        Padding="12,8"
+                        Margin="0,0,16,0" />
+
+                <Button DockPanel.Dock="Right"
+                        Classes="Secondary"
+                        Click="InstallFromFile_Click"
+                        IsEnabled="{Binding !IsBusy}"
+                        Padding="12,8">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Icon Type="Regular" Value="FileArrowUp" Width="14" Height="14" />
+                        <TextBlock Text="Install from File" />
+                    </StackPanel>
+                </Button>
+
+                <TextBlock Text="Plugins"
+                           FontSize="{DynamicResource FontSizeTitle}"
+                           FontWeight="Bold"
+                           VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
+
+        <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+            <StackPanel Spacing="24" Margin="24">
+
+                <TextBlock Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource AccentTextBrush}"
+                           TextWrapping="Wrap"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                <Border Classes="Notice Warning" IsVisible="{Binding RestartRequired}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <Icon Type="Regular" Value="ArrowCounterClockwise" Width="14" Height="14" VerticalAlignment="Center" />
+                        <TextBlock Text="Plugins are installed, updated and removed when the launcher restarts." VerticalAlignment="Center" />
+                    </StackPanel>
+                </Border>
+
+                <!-- Installed -->
+                <Border Classes="Card" Padding="16">
+                    <StackPanel Spacing="8">
+                        <TextBlock Text="Installed" FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSection}" />
+
+                        <TextBlock Text="No plugins are installed."
+                                   Opacity="0.5"
+                                   IsVisible="{Binding HasNoInstalled}" />
+
+                        <ItemsControl ItemsSource="{Binding Installed}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:InstalledPluginItem">
+                                    <Border Classes="PluginRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto">
+                                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <Border Classes="StatusTag" IsVisible="{Binding IsOfficial}" ToolTip.Tip="Published on nuget.org by the LANCommander organization">
+                                                        <TextBlock Text="OFFICIAL" />
+                                                    </Border>
+                                                    <Border Classes="StatusTag Warning" IsVisible="{Binding IsRequired}" ToolTip.Tip="The server requires this plugin, so it can't be uninstalled">
+                                                        <TextBlock Text="REQUIRED" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Classes="Caption" Opacity="0.6">
+                                                    <TextBlock.Text>
+                                                        <MultiBinding StringFormat="{}{0} · {1} · {2}">
+                                                            <Binding Path="PackageId" />
+                                                            <Binding Path="Version" />
+                                                            <Binding Path="Source" />
+                                                        </MultiBinding>
+                                                    </TextBlock.Text>
+                                                </TextBlock>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6" VerticalAlignment="Center" Margin="12,0">
+                                                <Border Classes="StatusTag Success" IsVisible="{Binding IsRunning}">
+                                                    <TextBlock Text="{Binding Status}" />
+                                                </Border>
+                                                <Border Classes="StatusTag" IsVisible="{Binding IsPending}">
+                                                    <TextBlock Text="{Binding Status}" />
+                                                </Border>
+                                                <Border Classes="StatusTag Error" IsVisible="{Binding IsFaulted}" ToolTip.Tip="The launcher log says why">
+                                                    <TextBlock Text="{Binding Status}" />
+                                                </Border>
+                                            </StackPanel>
+
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <Button Classes="Secondary"
+                                                        Padding="10,6"
+                                                        IsVisible="{Binding HasUpdate}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).UpdateCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                                        <Icon Type="Regular" Value="ArrowCircleUp" Width="14" Height="14" />
+                                                        <TextBlock Text="{Binding Update.Version, StringFormat='Update to {0}'}" />
+                                                    </StackPanel>
+                                                </Button>
+                                                <Button Classes="Text"
+                                                        Padding="8,6"
+                                                        IsVisible="{Binding CanUndo}"
+                                                        ToolTip.Tip="Undo the change waiting for a restart"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).UndoCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Icon Type="Regular" Value="ArrowCounterClockwise" Width="14" Height="14" />
+                                                </Button>
+                                                <Button Classes="Text Error"
+                                                        Padding="8,6"
+                                                        IsVisible="{Binding CanUninstall}"
+                                                        ToolTip.Tip="Uninstall"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).UninstallCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Icon Type="Regular" Value="Trash" Width="14" Height="14" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Browse -->
+                <Border Classes="Card" Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Browse" FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSection}" />
+
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBox Grid.Column="0"
+                                     Text="{Binding SearchTerm, Mode=TwoWay}"
+                                     Watermark="Search for plugins, or enter a package ID"
+                                     Margin="0,0,8,0"
+                                     KeyDown="Search_KeyDown" />
+                            <Button Grid.Column="1"
+                                    Classes="Primary"
+                                    Padding="16,8"
+                                    Command="{Binding SearchCommand}"
+                                    IsEnabled="{Binding !IsSearching}">
+                                <Panel>
+                                    <TextBlock Text="Search" IsVisible="{Binding !IsSearching}" />
+                                    <TextBlock Text="Searching..." IsVisible="{Binding IsSearching}" />
+                                </Panel>
+                            </Button>
+                        </Grid>
+
+                        <ItemsControl ItemsSource="{Binding SearchErrors}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="x:String">
+                                    <Border Classes="Notice Warning" Margin="0,0,0,4">
+                                        <TextBlock Text="{Binding StringFormat='A registry could not be searched: {0}'}" TextWrapping="Wrap" />
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <TextBlock Text="No plugins found. Turn on more registries below to find others."
+                                   Opacity="0.5"
+                                   IsVisible="{Binding HasNoResults}" />
+
+                        <ItemsControl ItemsSource="{Binding Results}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:PluginListingItem">
+                                    <Border Classes="PluginRow">
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel Grid.Column="0" Spacing="2" VerticalAlignment="Center" Margin="0,0,12,0">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" />
+                                                    <TextBlock Text="{Binding Version}" Classes="Mono" Opacity="0.6" VerticalAlignment="Center" />
+                                                    <Border Classes="StatusTag" IsVisible="{Binding IsOfficial}">
+                                                        <TextBlock Text="OFFICIAL" />
+                                                    </Border>
+                                                    <Border Classes="StatusTag Warning" IsVisible="{Binding IsRequired}">
+                                                        <TextBlock Text="REQUIRED" />
+                                                    </Border>
+                                                </StackPanel>
+                                                <TextBlock Text="{Binding Byline}" Classes="Caption" Opacity="0.6" />
+                                                <TextBlock Text="{Binding Description}"
+                                                           Classes="Caption"
+                                                           TextWrapping="Wrap"
+                                                           MaxLines="2"
+                                                           TextTrimming="CharacterEllipsis"
+                                                           IsVisible="{Binding Description, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                            </StackPanel>
+
+                                            <Panel Grid.Column="1" VerticalAlignment="Center">
+                                                <Button Classes="Primary"
+                                                        Padding="12,6"
+                                                        IsVisible="{Binding CanInstall}"
+                                                        IsEnabled="{Binding !$parent[ItemsControl].((vm:PluginsViewModel)DataContext).IsBusy}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).InstallCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Content="Install" />
+                                                <Button Classes="Secondary"
+                                                        Padding="12,6"
+                                                        IsVisible="{Binding CanUpdate}"
+                                                        IsEnabled="{Binding !$parent[ItemsControl].((vm:PluginsViewModel)DataContext).IsBusy}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).InstallCommand}"
+                                                        CommandParameter="{Binding}"
+                                                        Content="Update" />
+                                                <Border Classes="StatusTag Success" IsVisible="{Binding IsInstalled}">
+                                                    <TextBlock Text="INSTALLED" />
+                                                </Border>
+                                            </Panel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <!-- Registries -->
+                <Border Classes="Card" Padding="16">
+                    <StackPanel Spacing="12">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right"
+                                    Classes="Primary"
+                                    Padding="16,8"
+                                    Command="{Binding SaveRegistriesCommand}"
+                                    Content="Save" />
+                            <TextBlock Text="Registries" FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSection}" VerticalAlignment="Center" />
+                        </DockPanel>
+
+                        <TextBlock Text="Where plugins are found. Plugins the server requires are installed whether or not it is turned on here. Other registries are NuGet feeds: a v3 service index URL (usually ending in index.json), or a folder."
+                                   Opacity="0.5" FontSize="{DynamicResource FontSizeCaption}" TextWrapping="Wrap" />
+
+                        <ItemsControl ItemsSource="{Binding Registries}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate DataType="vm:PluginRegistryItem">
+                                    <Border Classes="PluginRow">
+                                        <!-- Fixed button columns, so the fields line up whichever buttons a row has -->
+                                        <Grid ColumnDefinitions="32,*,2*,64,36" RowDefinitions="Auto,Auto,Auto">
+                                            <CheckBox Grid.Column="0"
+                                                      IsChecked="{Binding Enabled}"
+                                                      VerticalAlignment="Center"
+                                                      ToolTip.Tip="Use this registry" />
+                                            <TextBox Grid.Column="1"
+                                                     Text="{Binding Name, Mode=TwoWay}"
+                                                     Watermark="Name"
+                                                     IsReadOnly="{Binding IsBuiltIn}"
+                                                     Margin="0,0,8,0" />
+                                            <TextBox Grid.Column="2"
+                                                     Classes="Mono"
+                                                     Text="{Binding Url, Mode=TwoWay}"
+                                                     Watermark="https://example.com/v3/index.json"
+                                                     IsReadOnly="{Binding IsBuiltIn}" />
+                                            <Button Grid.Column="3"
+                                                    Classes="Secondary"
+                                                    Padding="10,6"
+                                                    Margin="8,0,0,0"
+                                                    HorizontalAlignment="Stretch"
+                                                    HorizontalContentAlignment="Center"
+                                                    Content="Test"
+                                                    IsVisible="{Binding CanTest}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).TestRegistryCommand}"
+                                                    CommandParameter="{Binding}" />
+                                            <Button Grid.Column="4"
+                                                    Classes="Text Error"
+                                                    Padding="8,6"
+                                                    HorizontalAlignment="Right"
+                                                    IsVisible="{Binding IsEditable}"
+                                                    ToolTip.Tip="Remove"
+                                                    Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).RemoveRegistryCommand}"
+                                                    CommandParameter="{Binding}">
+                                                <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                                            </Button>
+
+                                            <TextBox Grid.Row="1" Grid.Column="1"
+                                                     Text="{Binding Username, Mode=TwoWay}"
+                                                     Watermark="Username (optional)"
+                                                     IsVisible="{Binding IsEditable}"
+                                                     Margin="0,6,8,0" />
+                                            <TextBox Grid.Row="1" Grid.Column="2"
+                                                     Text="{Binding Password, Mode=TwoWay}"
+                                                     PasswordChar="•"
+                                                     Watermark="Password or access token (optional)"
+                                                     IsVisible="{Binding IsEditable}"
+                                                     Margin="0,6,0,0" />
+
+                                            <TextBlock Grid.Row="2" Grid.Column="1" Grid.ColumnSpan="2"
+                                                       Text="{Binding TestResult}"
+                                                       Classes="Caption"
+                                                       Opacity="0.7"
+                                                       TextWrapping="Wrap"
+                                                       Margin="0,6,0,0"
+                                                       IsVisible="{Binding TestResult, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <Button Content="+ Add Registry"
+                                Command="{Binding AddRegistryCommand}"
+                                HorizontalAlignment="Left"
+                                Padding="12,8"
+                                Classes="Secondary" />
+
+                        <CheckBox IsChecked="{Binding IncludePrerelease}"
+                                  Content="Offer prerelease versions of plugins" />
+                    </StackPanel>
+                </Border>
+
+            </StackPanel>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

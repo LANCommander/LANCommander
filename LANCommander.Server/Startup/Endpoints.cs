@@ -46,6 +46,7 @@ public static class Endpoints
         endpoints.MapScriptEndpoints();
             endpoints.MapPluginEndpoints();
             endpoints.MapPluginPackageEndpoints();
+            endpoints.MapLauncherPluginEndpoints();
             endpoints.MapControllers();
             endpoints.MapFallbackToPage("/_Host");
         });

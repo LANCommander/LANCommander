@@ -1,3 +1,4 @@
+using LANCommander.PluginManagement;
 using LANCommander.Server.Plugins.Installation;
 using LANCommander.Server.Services;
 using Microsoft.AspNetCore.Mvc;

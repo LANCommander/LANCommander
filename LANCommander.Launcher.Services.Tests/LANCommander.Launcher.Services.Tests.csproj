@@ -16,6 +16,8 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
+    <!-- Compiles the plugin assemblies the plugin installation tests package -->
+    <PackageReference Include="Microsoft.CodeAnalysis.CSharp" />
     <PackageReference Include="Moq" />
     <PackageReference Include="Shouldly" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.InMemory" />
@@ -29,6 +31,7 @@
     <ProjectReference Include="..\LANCommander.Launcher.Data\LANCommander.Launcher.Data.csproj" />
     <ProjectReference Include="..\LANCommander.Launcher.Settings\LANCommander.Launcher.Settings.csproj" />
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+    <ProjectReference Include="..\LANCommander.PluginManagement\LANCommander.PluginManagement.csproj" />
   </ItemGroup>
 
 </Project>

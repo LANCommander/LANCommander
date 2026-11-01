@@ -116,6 +116,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\LANCommander.PluginManagement\LANCommander.PluginManagement.csproj" />
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data.MySQL\LANCommander.Server.Data.MySQL.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data.PostgreSQL\LANCommander.Server.Data.PostgreSQL.csproj" />

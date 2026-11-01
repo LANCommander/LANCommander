@@ -1,6 +1,6 @@
 using System.Text.Json;
 
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 /// <summary>
 /// The package a plugin folder was installed from, kept beside the plugin's files. A folder without

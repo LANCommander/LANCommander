@@ -179,6 +179,22 @@
                     </StackPanel>
                 </Border>
 
+                <!-- Plugins Section -->
+                <Border Classes="Card" Padding="16">
+                    <StackPanel Spacing="12">
+                        <TextBlock Text="Plugins" FontWeight="SemiBold" FontSize="{DynamicResource FontSizeSection}" />
+
+                        <TextBlock Text="Install plugins from the server, from NuGet registries, or from a package file, and choose which registries to use."
+                                   Opacity="0.5" FontSize="{DynamicResource FontSizeCaption}" TextWrapping="Wrap" />
+
+                        <Button Content="Manage Plugins"
+                                Command="{Binding ShowPluginsCommand}"
+                                HorizontalAlignment="Left"
+                                Padding="12,8"
+                                Classes="Secondary" />
+                    </StackPanel>
+                </Border>
+
                 <!-- Debug Section -->
                 <Border Classes="Card" Padding="16">
                     <StackPanel Spacing="12">

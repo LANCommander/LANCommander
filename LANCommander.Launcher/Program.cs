@@ -13,6 +13,7 @@ using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.Launcher.Services.Plugins;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Plugins;
@@ -136,7 +137,8 @@ class Program
 
         // Plugin framework: discover drop-in plugins and let them register services before the
         // provider is built. UI extensions register harmlessly but are never resolved in headless mode.
-        var pluginLoader = PluginBootstrap.ConfigurePlugins(services, PluginHost.Launcher);
+        // Staged plugin changes wait for the launcher's window, which may be running beside this.
+        var pluginLoader = services.AddLauncherPlugins(applyPending: false);
 
         UseRemoteScriptDebugger(services, args);
 

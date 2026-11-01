@@ -265,6 +265,14 @@ public partial class SettingsViewModel : ViewModelBase
     }
 
     [RelayCommand]
+    private void ShowPlugins()
+    {
+        var plugins = new PluginsViewModel(_serviceProvider);
+
+        _navigationService.NavigateTo(plugins, initializeAsync: plugins.LoadAsync);
+    }
+
+    [RelayCommand]
     private void GoBack()
     {
         _navigationService.GoBack();

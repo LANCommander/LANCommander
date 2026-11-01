@@ -43,6 +43,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<GameClient>();
         services.AddSingleton<IssueClient>();
         services.AddSingleton<LauncherClient>();
+        services.AddSingleton<LauncherPluginClient>();
         services.AddSingleton<LibraryClient>();
         services.AddSingleton<MediaClient>();
         services.AddSingleton<ModuleClient>();

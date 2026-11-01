@@ -2,13 +2,13 @@ using LANCommander.SDK.Plugins;
 using NuGet.Frameworks;
 using NuGet.Packaging;
 
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 /// <summary>Why a package can't be installed as a plugin; the message is shown to the administrator.</summary>
 public sealed class PluginPackageException(string message) : Exception(message);
 
-/// <summary>A plugin package unpacked into staging's temp area and checked, ready to stage.</summary>
-internal sealed record UnpackedPlugin(string Directory, PluginAssemblyInfo Plugin, PluginPackageRecord Package)
+/// <summary>A plugin package unpacked into a work folder and checked, ready to stage.</summary>
+public sealed record UnpackedPlugin(string Directory, PluginAssemblyInfo Plugin, PluginPackageRecord Package)
 {
     /// <summary>The plugin folder: named after the main assembly, which is how the loader finds it.</summary>
     public string Folder => Plugin.AssemblyName;
@@ -21,17 +21,22 @@ internal sealed record UnpackedPlugin(string Directory, PluginAssemblyInfo Plugi
 /// types (<see cref="PluginPackageTypes"/>) only make it findable; what the assembly declares decides
 /// whether it installs.
 /// </summary>
-internal static class PluginPackageReader
+public static class PluginPackageReader
 {
-    /// <summary>The framework the server runs on, which picks the package's lib folder.</summary>
+    /// <summary>The framework the host runs on, which picks the package's lib folder.</summary>
     public static NuGetFramework HostFramework { get; } = AppContext.TargetFrameworkName is { } name
         ? NuGetFramework.Parse(name)
         : NuGetFramework.Parse($"net{Environment.Version.Major}.{Environment.Version.Minor}");
 
+    /// <summary>
+    /// Unpacks <paramref name="package"/> into a new folder under <paramref name="workRoot"/> and checks
+    /// it runs on <paramref name="host"/>, and on <paramref name="hostVersion"/> unless that is null.
+    /// </summary>
     public static UnpackedPlugin Unpack(
         Stream package,
-        PluginStaging staging,
-        string hostVersion,
+        string workRoot,
+        PluginHost host,
+        string? hostVersion,
         NuGetFramework hostFramework,
         string? sourceName = null,
         string? sourceUrl = null,
@@ -67,7 +72,9 @@ internal static class PluginPackageReader
             if (group == null || !group.Items.Any())
                 throw new PluginPackageException($"{identity.Id} has no assemblies for {hostFramework.GetShortFolderName()} under lib/.");
 
-            var directory = staging.CreateTempDirectory();
+            var directory = Path.Combine(workRoot, Guid.NewGuid().ToString("N"));
+
+            Directory.CreateDirectory(directory);
 
             try
             {
@@ -75,12 +82,14 @@ internal static class PluginPackageReader
 
                 var plugin = FindPlugin(directory, identity.Id);
 
-                if ((plugin.Hosts & PluginHost.Server) == 0)
-                    throw new PluginPackageException($"{identity.Id} is a launcher plugin and does not run on the server.");
+                if ((plugin.Hosts & host) == 0)
+                    throw new PluginPackageException(host == PluginHost.Server
+                        ? $"{identity.Id} is a launcher plugin and does not run on the server."
+                        : $"{identity.Id} is a server plugin and does not run in the launcher.");
 
-                if (!PluginLoaderService.IsVersionCompatible(hostVersion, plugin.MinHostVersion, plugin.MaxHostVersion))
+                if (hostVersion != null && !PluginLoaderService.IsVersionCompatible(hostVersion, plugin.MinHostVersion, plugin.MaxHostVersion))
                     throw new PluginPackageException(
-                        $"{identity.Id} {identity.Version} needs LANCommander {plugin.MinHostVersion ?? "*"} to {plugin.MaxHostVersion ?? "*"}; this server is {hostVersion}.");
+                        $"{identity.Id} {identity.Version} needs LANCommander {plugin.MinHostVersion ?? "*"} to {plugin.MaxHostVersion ?? "*"}; this {(host == PluginHost.Server ? "server" : "launcher")} is {hostVersion}.");
 
                 var record = new PluginPackageRecord
                 {

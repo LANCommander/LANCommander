@@ -1,3 +1,4 @@
+using LANCommander.PluginManagement;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Plugins;
@@ -77,6 +78,9 @@ public static class Services
 
         builder.Services.AddSingleton(pluginStaging);
         builder.Services.AddSingleton<PluginPackageService>();
+
+        // Launcher plugins aren't installed on the server; their packages are kept for launchers
+        builder.Services.AddSingleton<LauncherPluginCache>();
 
         // Plugin framework: discover drop-in plugins and let them register services. Must run last,
         // while the service collection is still open (the provider is built immediately after).

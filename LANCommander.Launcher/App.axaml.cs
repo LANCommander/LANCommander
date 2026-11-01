@@ -17,6 +17,7 @@ using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services.Platform;
+using LANCommander.Launcher.Services.Plugins;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
@@ -390,9 +391,10 @@ public partial class App : Application
         // GameDetailViewModel rule via most-derived-first matching in ViewRegistry.
         services.AddSingleton<IViewRegistry>(_ => CreateViewRegistry());
 
-        // Plugin framework: discover drop-in plugins and let them register services. Must be the last
-        // registration step because the service provider is built immediately after this method returns.
-        LANCommander.SDK.Plugins.PluginBootstrap.ConfigurePlugins(services, LANCommander.SDK.Plugins.PluginHost.Launcher);
+        // Plugin framework: apply plugin installs staged since the last start, then discover plugins and
+        // let them register services. Must be the last registration step because the service provider
+        // is built immediately after this method returns.
+        services.AddLauncherPlugins();
     }
     
     /// <summary>
@@ -417,6 +419,7 @@ public partial class App : Application
         registry.Register<LibraryViewModel>(() => new GamesListView());
         registry.Register<GameDetailViewModel>(() => new GameDetailView());
         registry.Register<SettingsViewModel>(() => new SettingsView());
+        registry.Register<PluginsViewModel>(() => new PluginsView());
         registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
         registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
 

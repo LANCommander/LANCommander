@@ -60,6 +60,7 @@
   <Project Path="LANCommander.ServiceDefaults\LANCommander.ServiceDefaults.csproj" />
   <Folder Name="/Plugins/">
     <Project Path="LANCommander.PluginDocsGenerator\LANCommander.PluginDocsGenerator.csproj" />
+    <Project Path="LANCommander.PluginManagement\LANCommander.PluginManagement.csproj" />
     <Project Path="LANCommander.SamplePlugin\LANCommander.SamplePlugin.csproj" />
   </Folder>
 </Solution>

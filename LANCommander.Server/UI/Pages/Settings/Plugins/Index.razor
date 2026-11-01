@@ -1,5 +1,6 @@
 @page "/Settings/Plugins"
 @using LANCommander.Server.Endpoints
+@using LANCommander.PluginManagement
 @using LANCommander.Server.Plugins.Installation
 @using LANCommander.Server.Settings
 @using LANCommander.Server.Settings.Models
@@ -7,6 +8,7 @@
 @using Microsoft.Extensions.Options
 @using NuGet.Versioning
 @inject PluginPackageService PluginPackages
+@inject LauncherPluginCache LauncherPlugins
 @inject LANCommander.Server.Plugins.Data.PluginDataManager PluginData
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
@@ -208,6 +210,128 @@
                 </Flex>
             </Tab>
 
+            <Tab Title="Launcher" Icon="IconType.Monitor">
+                <Flex Vertical Gap="Gap.Medium">
+                    <Typography Secondary>Launcher plugins aren't installed on the server. Their packages are kept here for launchers to install, and a required plugin is installed by every launcher that signs in.</Typography>
+
+                    <Upload Action="@($"{LauncherPluginEndpoints.Root}/Upload")"
+                            Accept=".nupkg"
+                            Multiple
+                            Text="Click or drag launcher plugin .nupkg files here"
+                            Hint="Each package is checked when it uploads, and launchers can install it straight away"
+                            OnUploaded="RefreshLauncherPlugins"
+                            OnError="RefreshLauncherPlugins" />
+
+                    <Table TItem="CachedLauncherPlugin" Items="_launcherPlugins" Key="p => p.Id" Small NoPaging EmptyText="No launcher plugins are on this server">
+                        <Columns>
+                            <TemplateColumn Title="Plugin">
+                                <Flex Vertical>
+                                    <span>
+                                        <Typography Strong>@context.Name</Typography>
+                                        @if (context.Package.IsOfficial)
+                                        {
+                                            <OfficialPluginTag />
+                                        }
+                                    </span>
+                                    <Typography Secondary Small>@context.Id</Typography>
+                                </Flex>
+                            </TemplateColumn>
+                            <TemplateColumn Title="Version" Width="160px">
+                                <span>@context.Version</span>
+                                @if (LauncherUpdateFor(context) is { } update)
+                                {
+                                    <Tag Primary>@update.Version available</Tag>
+                                }
+                            </TemplateColumn>
+                            <TemplateColumn Title="Source" Width="160px">
+                                @(context.Package.SourceName ?? "Uploaded")
+                            </TemplateColumn>
+                            <TemplateColumn Title="Required" Width="120px">
+                                <Tooltip Title="Install on every launcher, which can't uninstall it">
+                                    <Switch Value="context.Required" ValueChanged="(bool required) => SetRequiredAsync(context, required)" aria-label="@($"Require {context.Name}")" />
+                                </Tooltip>
+                            </TemplateColumn>
+                            <ActionsColumn TItem="CachedLauncherPlugin" Width="96px">
+                                @if (LauncherUpdateFor(context) is { } update)
+                                {
+                                    <Tooltip Title="@($"Update to {update.Version}")">
+                                        <Button Text Icon="IconType.ArrowCircleUp" Loading="_busy.Contains(context.Id)" OnClick="() => UpdateLauncherPluginAsync(context, update)" aria-label="Update" />
+                                    </Tooltip>
+                                }
+
+                                <Popconfirm OnConfirm="() => RemoveLauncherPluginAsync(context)" Title="@($"Remove {context.Name}? Launchers that installed it keep it.")" OkText="Remove" Danger>
+                                    <Button Text Danger Icon="IconType.Trash" title="Remove" />
+                                </Popconfirm>
+                            </ActionsColumn>
+                        </Columns>
+                    </Table>
+
+                    <Typography Strong>Find Launcher Plugins</Typography>
+
+                    @if (!PluginPackages.GetEnabledSources().Any())
+                    {
+                        <Empty Title="No package sources" Description="Turn on nuget.org or add a package source to find launcher plugins.">
+                            <Button Primary OnClick="() => _tab = SourcesTab">Package Sources</Button>
+                        </Empty>
+                    }
+                    else
+                    {
+                        <Flex Gap="Gap.Small">
+                            <TextInput @bind-Value="_launcherTerm" Immediate Icon="IconType.MagnifyingGlass" Placeholder="Search for launcher plugins, or enter a package ID" OnEnter="SearchLauncherPluginsAsync" Style="flex: 1" />
+                            <Button Primary OnClick="SearchLauncherPluginsAsync" Loading="_searchingLauncher">Search</Button>
+                        </Flex>
+
+                        @foreach (var error in _launcherSearchErrors)
+                        {
+                            <Alert Warning Title="A source could not be searched">@error</Alert>
+                        }
+
+                        <Table TItem="PluginPackageListing" Items="_launcherResults" Key="p => (p.SourceUrl, p.Id)" Small NoPaging EmptyText="@(_searchedLauncher ? "No launcher plugins found" : "Searching...")">
+                            <Columns>
+                                <TemplateColumn Title="Package">
+                                    <Flex Gap="Gap.Medium" Align="Align.Center">
+                                        <Avatar Src="@context.IconUrl" Name="@context.DisplayName" Icon="IconType.PuzzlePiece" Square />
+                                        <Flex Vertical>
+                                            <span>
+                                                <Typography Strong>@context.DisplayName</Typography>
+                                                @if (context.IsOfficial)
+                                                {
+                                                    <OfficialPluginTag />
+                                                }
+                                                @if (!String.IsNullOrWhiteSpace(context.Authors))
+                                                {
+                                                    <Typography Secondary Small> by @context.Authors</Typography>
+                                                }
+                                            </span>
+                                            <Typography Secondary Small Ellipsis title="@context.Description">@(context.Description ?? context.Id)</Typography>
+                                        </Flex>
+                                    </Flex>
+                                </TemplateColumn>
+                                <BoundColumn Property="p => p.Version" Title="Latest" Width="120px" />
+                                <TemplateColumn Title="Downloads" Width="120px">
+                                    @context.DownloadCount?.ToString("N0")
+                                </TemplateColumn>
+                                <BoundColumn Property="p => p.SourceName" Title="Source" Width="140px" />
+                                <ActionsColumn TItem="PluginPackageListing" Width="140px">
+                                    @switch (CachedVersionOf(context))
+                                    {
+                                        case null:
+                                            <Button Small Icon="IconType.Plus" OnClick="() => AddLauncherPluginAsync(context)">Add</Button>
+                                            break;
+                                        case var cached when IsNewer(context.Version, cached):
+                                            <Button Small Icon="IconType.ArrowCircleUp" OnClick="() => AddLauncherPluginAsync(context)">Update</Button>
+                                            break;
+                                        default:
+                                            <Tag Success>Added</Tag>
+                                            break;
+                                    }
+                                </ActionsColumn>
+                            </Columns>
+                        </Table>
+                    }
+                </Flex>
+            </Tab>
+
             <Tab Title="Sources" Icon="IconType.Database">
                 <Form Model="_sources" OnSubmit="SaveSources">
                     <FormItem Label="nuget.org">
@@ -229,7 +353,7 @@
                     </FormItem>
 
                     <FormItem Label="Package Sources">
-                        <Typography Secondary>Other NuGet feeds to search: a v3 service index URL (usually ending in index.json), or a folder on the server. Most private feeds take a personal access token as the password.</Typography>
+                        <Typography Secondary>Other NuGet feeds to search for server and launcher plugins: a v3 service index URL (usually ending in index.json), or a folder on the server. Most private feeds take a personal access token as the password.</Typography>
                         <Flex Vertical Gap="Gap.Small">
                             @foreach (var source in _sources)
                             {
@@ -266,7 +390,8 @@
 
 @code {
     const int BrowseTab = 1;
-    const int SourcesTab = 2;
+    const int LauncherTab = 2;
+    const int SourcesTab = 3;
 
     int _tab;
 
@@ -281,6 +406,14 @@
     bool _searched;
     IReadOnlyList<PluginPackageListing> _results = [];
     IReadOnlyList<string> _searchErrors = [];
+
+    IReadOnlyList<CachedLauncherPlugin> _launcherPlugins = [];
+    IReadOnlyList<PluginUpdate> _launcherUpdates = [];
+    string? _launcherTerm;
+    bool _searchingLauncher;
+    bool _searchedLauncher;
+    IReadOnlyList<PluginPackageListing> _launcherResults = [];
+    IReadOnlyList<string> _launcherSearchErrors = [];
 
     bool _useNuGetOrg;
     bool _includePrerelease;
@@ -305,6 +438,7 @@
         }).ToList();
 
         Refresh();
+        RefreshLauncherPlugins();
     }
 
     void Refresh()
@@ -319,6 +453,9 @@
 
         if (tab == BrowseTab && !_searched && !_searching && PluginPackages.GetEnabledSources().Any())
             await SearchAsync();
+
+        if (tab == LauncherTab && !_searchedLauncher && !_searchingLauncher && PluginPackages.GetEnabledSources().Any())
+            await SearchLauncherPluginsAsync();
     }
 
     #region Installed
@@ -342,11 +479,14 @@
         try
         {
             _updates = await PluginPackages.CheckForUpdatesAsync();
+            _launcherUpdates = await LauncherPlugins.CheckForUpdatesAsync();
 
-            if (_updates.Count == 0)
+            var count = _updates.Count + _launcherUpdates.Count;
+
+            if (count == 0)
                 Notifications.Success("All plugins are up to date");
             else
-                Notifications.Info($"{_updates.Count} plugin {(_updates.Count == 1 ? "update is" : "updates are")} available");
+                Notifications.Info($"{count} plugin {(count == 1 ? "update is" : "updates are")} available");
         }
         catch (Exception ex)
         {
@@ -468,15 +608,118 @@
 
     async Task InstallAsync(PluginPackageListing listing)
     {
-        var result = await Dialogs.OpenAsync<PluginInstallDialog, PluginPackageListing, PluginInstallResult>(
-            "Install Plugin", listing, new DialogSettings { OkText = "Install" });
+        var version = await Dialogs.OpenAsync<PluginInstallDialog, PluginInstallRequest, string>(
+            "Install Plugin", new PluginInstallRequest(listing), new DialogSettings { OkText = "Install" });
 
-        if (result == null)
+        if (version == null)
             return;
 
-        Notifications.Success($"{listing.DisplayName} {result.Package.Version} installs when the server restarts");
+        Notifications.Success($"{listing.DisplayName} {version} installs when the server restarts");
 
         Refresh();
+    }
+
+    #endregion
+
+    #region Launcher
+
+    void RefreshLauncherPlugins() => _launcherPlugins = LauncherPlugins.GetAll();
+
+    PluginUpdate? LauncherUpdateFor(CachedLauncherPlugin plugin) =>
+        _launcherUpdates.FirstOrDefault(u => u.PackageId.Equals(plugin.Id, StringComparison.OrdinalIgnoreCase) && IsNewer(u.Version, plugin.Version));
+
+    string? CachedVersionOf(PluginPackageListing listing) => _launcherPlugins
+        .FirstOrDefault(p => p.Id.Equals(listing.Id, StringComparison.OrdinalIgnoreCase))
+        ?.Version;
+
+    async Task SearchLauncherPluginsAsync()
+    {
+        _searchingLauncher = true;
+
+        try
+        {
+            var result = await LauncherPlugins.SearchAsync(_launcherTerm);
+
+            _launcherResults = result.Packages;
+            _launcherSearchErrors = result.Errors;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not search for launcher plugins");
+        }
+        finally
+        {
+            _searchingLauncher = false;
+            _searchedLauncher = true;
+        }
+    }
+
+    async Task AddLauncherPluginAsync(PluginPackageListing listing)
+    {
+        var version = await Dialogs.OpenAsync<PluginInstallDialog, PluginInstallRequest, string>(
+            "Add Launcher Plugin", new PluginInstallRequest(listing, ForLaunchers: true), new DialogSettings { OkText = "Add" });
+
+        if (version == null)
+            return;
+
+        Notifications.Success($"Launchers can install {listing.DisplayName} {version}");
+
+        RefreshLauncherPlugins();
+    }
+
+    async Task UpdateLauncherPluginAsync(CachedLauncherPlugin plugin, PluginUpdate update)
+    {
+        _busy.Add(plugin.Id);
+
+        try
+        {
+            await LauncherPlugins.AddAsync(update.SourceUrl, update.PackageId, update.Version);
+
+            Notifications.Success($"Launchers can install {plugin.Name} {update.Version}");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be updated");
+        }
+        finally
+        {
+            _busy.Remove(plugin.Id);
+            RefreshLauncherPlugins();
+        }
+    }
+
+    async Task SetRequiredAsync(CachedLauncherPlugin plugin, bool required)
+    {
+        try
+        {
+            await LauncherPlugins.SetRequiredAsync(plugin.Id, required);
+
+            Notifications.Success(required
+                ? $"Every launcher installs {plugin.Name} when it next signs in"
+                : $"{plugin.Name} is no longer required");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be changed");
+        }
+
+        RefreshLauncherPlugins();
+    }
+
+    async Task RemoveLauncherPluginAsync(CachedLauncherPlugin plugin)
+    {
+        try
+        {
+            await LauncherPlugins.RemoveAsync(plugin.Id);
+
+            Notifications.Success($"{plugin.Name} is no longer offered to launchers");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, $"{plugin.Name} could not be removed");
+        }
+
+        RefreshLauncherPlugins();
     }
 
     #endregion
@@ -534,6 +777,9 @@
             _searched = false;
             _results = [];
             _searchErrors = [];
+            _searchedLauncher = false;
+            _launcherResults = [];
+            _launcherSearchErrors = [];
 
             Notifications.Success("Settings saved!");
         }

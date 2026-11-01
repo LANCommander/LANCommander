@@ -1,11 +1,12 @@
 using LANCommander.SDK;
 using LANCommander.SDK.Plugins;
+using Microsoft.Extensions.Logging;
 
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 /// <summary>
 /// Plugin installs and removals waiting for a restart. A loaded plugin stays loaded, with its files
-/// locked, until the server stops, so changes to the plugins folder are kept here and made at the
+/// locked, until the host stops, so changes to the plugins folder are kept here and made at the
 /// next start, before plugins are discovered.
 /// </summary>
 /// <remarks>
@@ -34,7 +35,7 @@ public sealed class PluginStaging
         StagingRoot = stagingRoot;
     }
 
-    /// <summary>Staging for the server's own plugins folder.</summary>
+    /// <summary>Staging for the plugins folder of the host this runs in: the server's or the launcher's.</summary>
     public static PluginStaging CreateDefault() => new(
         AppPaths.GetConfigPath(PluginBootstrap.PluginsFolderName),
         AppPaths.GetConfigPath(PluginBootstrap.PluginsFolderName, StagingFolderName));
@@ -61,16 +62,6 @@ public sealed class PluginStaging
     public IEnumerable<string> GetStagedFolders() => Directory.Exists(InstallRoot)
         ? Directory.GetDirectories(InstallRoot).Select(Path.GetFileName).OfType<string>()
         : [];
-
-    /// <summary>A new directory under <see cref="TempRoot"/> to unpack a package into.</summary>
-    internal string CreateTempDirectory()
-    {
-        var path = Path.Combine(TempRoot, Guid.NewGuid().ToString("N"));
-
-        Directory.CreateDirectory(path);
-
-        return path;
-    }
 
     /// <summary>
     /// Stages the plugin unpacked at <paramref name="source"/> to be installed as <paramref name="folder"/>,

@@ -1,5 +1,6 @@
 using System.IO.Compression;
 using System.Text;
+using LANCommander.PluginManagement;
 using LANCommander.SDK.Plugins;
 using LANCommander.Server.Plugins.Installation;
 using Microsoft.CodeAnalysis;
@@ -555,7 +556,7 @@ public class PluginPackageTests : IDisposable
     }
 
     /// <summary>An assembly marked as a plugin; the inspector reads metadata only, so the entry point needn't implement IPlugin.</summary>
-    private static byte[] PluginAssembly(string assemblyName, string? attributeArguments)
+    internal static byte[] PluginAssembly(string assemblyName, string? attributeArguments)
     {
         var arguments = string.IsNullOrWhiteSpace(attributeArguments) ? "" : $", {attributeArguments}";
 
@@ -593,7 +594,7 @@ public class PluginPackageTests : IDisposable
         return output.ToArray();
     }
 
-    private static MemoryStream Package(string id, string version, Dictionary<string, byte[]> files, string[]? packageTypes = null)
+    internal static MemoryStream Package(string id, string version, Dictionary<string, byte[]> files, string[]? packageTypes = null)
     {
         packageTypes ??= [PluginPackageTypes.Plugin, PluginPackageTypes.Server];
 

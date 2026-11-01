@@ -1,10 +1,10 @@
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 public enum PluginInstallState
 {
     /// <summary>Installed and running.</summary>
     Loaded,
-    /// <summary>Installed, but the server did not load it; the log says why.</summary>
+    /// <summary>Installed, but the host did not load it; the log says why.</summary>
     NotLoaded,
     /// <summary>Loaded, but turned off, e.g. because its data isn't ready; <see cref="InstalledPlugin.DisabledReasons"/> says why.</summary>
     Disabled,
@@ -67,3 +67,12 @@ public sealed record PluginInstallResult(string Folder, PluginPackageRecord Pack
 
 /// <summary>A newer version of an installed package, on the source it was installed from.</summary>
 public sealed record PluginUpdate(string Folder, string PackageId, string Version, string SourceName, string SourceUrl);
+
+/// <summary>A NuGet feed to find plugins on: a v3 service index URL or a local folder.</summary>
+public sealed record PluginFeed(string Name, string Url, string? Username = null, string? Password = null)
+{
+    public const string NuGetOrgName = "nuget.org";
+    public const string NuGetOrgUrl = "https://api.nuget.org/v3/index.json";
+
+    public static PluginFeed NuGetOrg { get; } = new(NuGetOrgName, NuGetOrgUrl);
+}

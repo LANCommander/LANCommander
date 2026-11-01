@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!-- Installing plugins from NuGet packages, shared by the server and the launcher. Hosts only; plugins never reference it. -->
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Server" />
+    <InternalsVisibleTo Include="LANCommander.Server.Tests" />
+    <InternalsVisibleTo Include="LANCommander.Server.UI.Tests" />
+    <InternalsVisibleTo Include="LANCommander.Launcher.Services" />
+    <InternalsVisibleTo Include="LANCommander.Launcher.Services.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="NuGet.Packaging" />
+    <PackageReference Include="NuGet.Protocol" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
+  </ItemGroup>
+
+</Project>

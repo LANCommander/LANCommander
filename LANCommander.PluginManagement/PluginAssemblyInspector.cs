@@ -2,10 +2,10 @@ using System.Reflection.Metadata;
 using System.Reflection.PortableExecutable;
 using LANCommander.SDK.Plugins;
 
-namespace LANCommander.Server.Plugins.Installation;
+namespace LANCommander.PluginManagement;
 
 /// <summary>What a plugin assembly declares in its <see cref="LANCommanderPluginAttribute"/>.</summary>
-internal sealed record PluginAssemblyInfo(
+public sealed record PluginAssemblyInfo(
     string AssemblyName,
     string Id,
     string? MinHostVersion,
@@ -14,10 +14,10 @@ internal sealed record PluginAssemblyInfo(
 
 /// <summary>
 /// Reads a plugin's <see cref="LANCommanderPluginAttribute"/> from assembly metadata, without loading
-/// the assembly: a package is checked before it is installed, and an assembly once loaded into the
-/// server stays loaded until it restarts.
+/// the assembly: a package is checked before it is installed, and an assembly once loaded into a
+/// host stays loaded until it restarts.
 /// </summary>
-internal static class PluginAssemblyInspector
+public static class PluginAssemblyInspector
 {
     private static readonly string AttributeNamespace = typeof(LANCommanderPluginAttribute).Namespace!;
     private static readonly string AttributeName = nameof(LANCommanderPluginAttribute);

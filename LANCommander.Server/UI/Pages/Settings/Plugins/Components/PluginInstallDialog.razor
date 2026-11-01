@@ -1,38 +1,41 @@
+@using LANCommander.PluginManagement
 @using LANCommander.Server.Plugins.Installation
-@inherits Dialog<PluginPackageListing, PluginInstallResult>
+@inherits Dialog<PluginInstallRequest, string>
 @inject PluginPackageService PluginPackages
+@inject LauncherPluginCache LauncherPlugins
 
-@* Picks the version of a package found on a source, and stages it to install at the next restart *@
+@* Picks the version of a package found on a source, and stages it to install at the next restart, or
+   for a launcher plugin, downloads it for launchers to install *@
 <Flex Vertical Gap="Gap.Medium">
     <Flex Gap="Gap.Medium" Align="Align.Center">
-        <Avatar Src="@Options.IconUrl" Name="@Options.DisplayName" Icon="IconType.PuzzlePiece" Square Large />
+        <Avatar Src="@Listing.IconUrl" Name="@Listing.DisplayName" Icon="IconType.PuzzlePiece" Square Large />
         <Flex Vertical>
             <span>
-                <Typography Strong>@Options.DisplayName</Typography>
-                @if (Options.IsOfficial)
+                <Typography Strong>@Listing.DisplayName</Typography>
+                @if (Listing.IsOfficial)
                 {
                     <OfficialPluginTag />
                 }
             </span>
             <Typography Secondary Small>
-                @Options.Id
-                @if (!String.IsNullOrWhiteSpace(Options.Authors))
+                @Listing.Id
+                @if (!String.IsNullOrWhiteSpace(Listing.Authors))
                 {
-                    <text> · by @Options.Authors</text>
+                    <text> · by @Listing.Authors</text>
                 }
-                <text> · @Options.SourceName</text>
+                <text> · @Listing.SourceName</text>
             </Typography>
         </Flex>
     </Flex>
 
-    @if (!String.IsNullOrWhiteSpace(Options.Description))
+    @if (!String.IsNullOrWhiteSpace(Listing.Description))
     {
-        <Typography>@Options.Description</Typography>
+        <Typography>@Listing.Description</Typography>
     }
 
-    @if (!String.IsNullOrWhiteSpace(Options.ProjectUrl))
+    @if (!String.IsNullOrWhiteSpace(Listing.ProjectUrl))
     {
-        <a href="@Options.ProjectUrl" target="_blank" rel="noopener noreferrer">Project website</a>
+        <a href="@Listing.ProjectUrl" target="_blank" rel="noopener noreferrer">Project website</a>
     }
 
     <Flex Vertical Gap="Gap.Small">
@@ -51,10 +54,19 @@
         }
     </Flex>
 
-    <Typography Secondary Small>The package is checked now and installed when the server restarts.</Typography>
+    @if (Options.ForLaunchers)
+    {
+        <Typography Secondary Small>The package is checked and downloaded now, and launchers can install it straight away.</Typography>
+    }
+    else
+    {
+        <Typography Secondary Small>The package is checked now and installed when the server restarts.</Typography>
+    }
 </Flex>
 
 @code {
+    PluginPackageListing Listing => Options.Listing;
+
     IEnumerable<SelectItem<string>>? _versions;
     string? _version;
     string? _error;
@@ -65,10 +77,10 @@
     {
         try
         {
-            var versions = await PluginPackages.GetVersionsAsync(Options.SourceUrl, Options.Id);
+            var versions = await PluginPackages.GetVersionsAsync(Listing.SourceUrl, Listing.Id);
 
-            _versions = versions.Select(v => new SelectItem<string>(v, v == Options.Version ? $"{v} (latest)" : v)).ToList();
-            _version = versions.Contains(Options.Version) ? Options.Version : versions.FirstOrDefault();
+            _versions = versions.Select(v => new SelectItem<string>(v, v == Listing.Version ? $"{v} (latest)" : v)).ToList();
+            _version = versions.Contains(Listing.Version) ? Listing.Version : versions.FirstOrDefault();
         }
         catch (Exception ex)
         {
@@ -78,7 +90,9 @@
 
     protected override async Task<bool> OnOkAsync()
     {
-        Result = await PluginPackages.InstallAsync(Options.SourceUrl, Options.Id, _version!);
+        Result = Options.ForLaunchers
+            ? (await LauncherPlugins.AddAsync(Listing.SourceUrl, Listing.Id, _version!)).Version
+            : (await PluginPackages.InstallAsync(Listing.SourceUrl, Listing.Id, _version!)).Package.Version;
 
         return true;
     }

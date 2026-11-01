@@ -11,6 +11,7 @@ using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Import;
+using LANCommander.Launcher.Services.Plugins;
 using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -45,6 +46,7 @@ public partial class ShellViewModel : ViewModelBase
         DepotGameDetailViewModel gd => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
         GameDetailViewModel gd   => !string.IsNullOrEmpty(gd.Title) ? gd.Title : string.Empty,
         SettingsViewModel _      => "Settings",
+        PluginsViewModel _       => "Plugins",
         DownloadQueueViewModel _ => "Downloads",
         VerifyFilesViewModel _   => "Verify Files",
         PackagingWizardViewModel _ => "Package a Game",
@@ -264,6 +266,9 @@ public partial class ShellViewModel : ViewModelBase
         await ImportAndLoadAsync();
         _ = Profile.LoadAsync(IsOfflineMode);
 
+        if (!IsOfflineMode)
+            _ = InstallRequiredPluginsAsync();
+
         // Default to the library whenever user libraries are enabled; fall back to the depot only
         // when libraries are turned off server-side.
         if (AreUserLibrariesEnabled)
@@ -272,6 +277,26 @@ public partial class ShellViewModel : ViewModelBase
             ShowDepot();
 
         _logger.LogInformation("ShellViewModel initialization complete");
+    }
+
+    /// <summary>
+    /// Installs the plugins the server requires that this launcher lacks. They load at the next
+    /// start, so the player is told to restart when any were installed.
+    /// </summary>
+    private async Task InstallRequiredPluginsAsync()
+    {
+        try
+        {
+            var staged = await _serviceProvider.GetRequiredService<LauncherPluginService>().InstallRequiredAsync();
+
+            if (staged.Count > 0)
+                await Views.AlertOverlay.ShowAsync("Plugins Installed",
+                    $"The server requires {string.Join(", ", staged.Select(p => p.Package.Title ?? p.Package.Id))}. Restart the launcher to start using {(staged.Count == 1 ? "it" : "them")}.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not install the plugins the server requires");
+        }
     }
 
     private async Task ImportAndLoadAsync()

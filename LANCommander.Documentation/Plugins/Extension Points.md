@@ -825,8 +825,10 @@ Once registered, `Get-MyGreeting` is callable from any LANCommander script. To s
 ## Plugin data
 
 Anything a plugin writes belongs in the `Data` folder inside its own folder, e.g.
-`Plugins/LANCommander.Plugins.GOG/Data`. `PluginContext.DataDirectory` gives its path, and
-`IPluginSettings<T>` keeps its file there. The server keeps `Data` when it installs an update over
+`Plugins/LANCommander.Plugins.GOG/Data`. `PluginPaths.GetDataDirectory<MyPlugin>()` gives its path
+from any type in the plugin's main assembly, so it works in `ConfigureServices`;
+`PluginContext.DataDirectory` gives the same path during `InitializeAsync`. `IPluginSettings<T>`
+keeps its file there. The server keeps `Data` when it installs an update over
 the plugin, even one that renames the plugin's folder, and deletes it when the plugin is uninstalled.
 Everything else in the plugin's folder is replaced on update, so write nowhere else in it.
 

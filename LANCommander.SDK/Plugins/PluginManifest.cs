@@ -27,7 +27,7 @@ public sealed class PluginManifest
     /// <summary>
     /// Absolute path to the folder for the plugin's own files: its settings and anything else it keeps.
     /// It lives inside <see cref="Directory"/>, survives the plugin being upgraded, and goes when the
-    /// plugin is removed. It may not exist yet.
+    /// plugin is removed. It may not exist yet. Plugins get it with <see cref="PluginPaths.GetDataDirectory{T}"/>.
     /// </summary>
     public string DataDirectory => System.IO.Path.Combine(Directory, DataFolderName);
 

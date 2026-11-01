@@ -18,8 +18,18 @@ public sealed class PluginManifest
     /// <summary>The assembly the plugin was loaded from.</summary>
     public Assembly Assembly { get; init; } = default!;
 
+    /// <summary>The folder, inside a plugin's folder, that holds what the plugin writes.</summary>
+    public const string DataFolderName = "Data";
+
     /// <summary>Absolute path to the folder the plugin was loaded from.</summary>
     public string Directory { get; init; } = string.Empty;
+
+    /// <summary>
+    /// Absolute path to the folder for the plugin's own files: its settings and anything else it keeps.
+    /// It lives inside <see cref="Directory"/>, survives the plugin being upgraded, and goes when the
+    /// plugin is removed. It may not exist yet.
+    /// </summary>
+    public string DataDirectory => System.IO.Path.Combine(Directory, DataFolderName);
 
     /// <summary>See <see cref="LANCommanderPluginAttribute.DataId"/>.</summary>
     public string? DataId { get; init; }

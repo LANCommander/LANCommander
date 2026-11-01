@@ -202,6 +202,7 @@ public sealed class PluginLoaderService
                 Host = _host,
                 Services = scope.ServiceProvider,
                 PluginDirectory = loaded.Manifest.Directory,
+                DataDirectory = loaded.Manifest.DataDirectory,
                 Logger = logger,
             };
 

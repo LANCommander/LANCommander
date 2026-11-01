@@ -12,6 +12,8 @@ namespace LANCommander.Server.Plugins.Installation;
 /// <c>Install/&lt;folder&gt;</c> holds a plugin folder ready to move into the plugins folder, and an
 /// empty <c>Remove/&lt;folder&gt;</c> marks one to delete. <c>Temp</c> is where packages are unpacked
 /// while they are checked. Everything stays on the plugins folder's volume so a move is a rename.
+/// Installing over a plugin keeps its <see cref="PluginManifest.DataFolderName"/> folder; removing
+/// one deletes it with the rest.
 /// </remarks>
 public sealed class PluginStaging
 {
@@ -86,7 +88,11 @@ public sealed class PluginStaging
     }
 
     /// <summary>Marks an installed plugin for removal and drops any install staged for it.</summary>
-    internal void StageRemoval(string folder)
+    /// <param name="dataTo">
+    /// The folder of a staged install to hand the plugin's data to, when the plugin is being replaced
+    /// by itself under a new folder name. Otherwise its data is deleted with it.
+    /// </param>
+    internal void StageRemoval(string folder, string? dataTo = null)
     {
         DeleteStagedInstall(folder);
 
@@ -94,7 +100,7 @@ public sealed class PluginStaging
             return;
 
         Directory.CreateDirectory(RemoveRoot);
-        File.WriteAllText(Path.Combine(RemoveRoot, ValidateFolder(folder)), string.Empty);
+        File.WriteAllText(Path.Combine(RemoveRoot, ValidateFolder(folder)), dataTo is null ? string.Empty : ValidateFolder(dataTo));
     }
 
     /// <summary>Forgets whatever was staged for <paramref name="folder"/>.</summary>
@@ -121,7 +127,14 @@ public sealed class PluginStaging
                     var installed = GetInstalledPath(folder);
 
                     if (Directory.Exists(installed))
+                    {
+                        var dataTo = File.ReadAllText(marker).Trim();
+
+                        if (dataTo.Length > 0 && IsInstallPending(dataTo))
+                            KeepData(installed, GetStagedPath(dataTo));
+
                         Directory.Delete(installed, true);
+                    }
 
                     File.Delete(marker);
 
@@ -145,7 +158,12 @@ public sealed class PluginStaging
                     var installed = GetInstalledPath(folder);
 
                     if (Directory.Exists(installed))
+                    {
+                        // An upgrade keeps the plugin's data
+                        KeepData(installed, staged);
+
                         Directory.Delete(installed, true);
+                    }
 
                     Directory.CreateDirectory(PluginsRoot);
                     MoveDirectory(staged, installed);
@@ -168,6 +186,26 @@ public sealed class PluginStaging
         {
             logger.LogWarning(ex, "Could not clear {TempRoot}", TempRoot);
         }
+    }
+
+    /// <summary>
+    /// Moves the data folder of the plugin at <paramref name="installed"/> into the staged install at
+    /// <paramref name="staged"/>, in place of any the package shipped. Done before the installed folder
+    /// is deleted, so if anything after fails the data is still staged for the next start.
+    /// </summary>
+    private static void KeepData(string installed, string staged)
+    {
+        var data = Path.Combine(installed, PluginManifest.DataFolderName);
+
+        if (!Directory.Exists(data))
+            return;
+
+        var stagedData = Path.Combine(staged, PluginManifest.DataFolderName);
+
+        if (Directory.Exists(stagedData))
+            Directory.Delete(stagedData, true);
+
+        MoveDirectory(data, stagedData);
     }
 
     private void DeleteStagedInstall(string folder)

@@ -21,6 +21,9 @@ public sealed class PluginContext
     /// <summary>Absolute path to the folder the plugin was loaded from.</summary>
     public string PluginDirectory { get; init; } = string.Empty;
 
+    /// <summary>See <see cref="PluginManifest.DataDirectory"/>.</summary>
+    public string DataDirectory { get; init; } = string.Empty;
+
     /// <summary>Logger scoped to the plugin.</summary>
     public ILogger Logger { get; init; } = default!;
 }

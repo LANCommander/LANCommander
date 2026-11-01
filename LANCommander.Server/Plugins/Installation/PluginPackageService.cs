@@ -489,8 +489,9 @@ public sealed class PluginPackageService
 
             _staging.StageInstall(unpacked.Directory, folder);
 
+            // The same plugin under a new folder name, so its data goes with it
             foreach (var old in superseded)
-                _staging.StageRemoval(old);
+                _staging.StageRemoval(old, dataTo: folder);
 
             return new PluginInstallResult(folder, unpacked.Package);
         }

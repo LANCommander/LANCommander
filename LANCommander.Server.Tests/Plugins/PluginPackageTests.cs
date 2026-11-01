@@ -137,6 +137,59 @@ public class PluginPackageTests : IDisposable
     }
 
     [Fact]
+    public async Task AnUpdateKeepsThePluginsData()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+        var settings = WriteData("Acme.Widgets");
+
+        using var update = PluginPackage("Acme.Widgets.Plugin", "1.1.0", "Acme.Widgets");
+        await _service.InstallAsync(update);
+        _staging.ApplyPending(NullLogger.Instance);
+
+        PluginPackageRecord.Read(_staging.GetInstalledPath("Acme.Widgets"))!.Version.ShouldBe("1.1.0");
+        File.ReadAllText(settings).ShouldBe("kept");
+    }
+
+    [Fact]
+    public async Task AnUpdateThatRenamesTheAssemblyTakesTheDataAlong()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+        WriteData("Acme.Widgets");
+
+        using var update = PluginPackage("Acme.Widgets.Plugin", "2.0.0", "Acme.Widgets.Server");
+        await _service.InstallAsync(update);
+        _staging.ApplyPending(NullLogger.Instance);
+
+        _staging.IsInstalled("Acme.Widgets").ShouldBeFalse();
+        File.ReadAllText(DataFile("Acme.Widgets.Server")).ShouldBe("kept");
+    }
+
+    [Fact]
+    public async Task UninstallDeletesThePluginsData()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+        var settings = WriteData("Acme.Widgets");
+
+        await _service.UninstallAsync("Acme.Widgets");
+        _staging.ApplyPending(NullLogger.Instance);
+
+        File.Exists(settings).ShouldBeFalse();
+    }
+
+    private string DataFile(string folder) =>
+        Path.Combine(_staging.GetInstalledPath(folder), PluginManifest.DataFolderName, "Nested", "Settings.yaml");
+
+    private string WriteData(string folder)
+    {
+        var path = DataFile(folder);
+
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+        File.WriteAllText(path, "kept");
+
+        return path;
+    }
+
+    [Fact]
     public async Task AnUpdateThatRenamesTheAssemblyRemovesTheOldFolder()
     {
         await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");

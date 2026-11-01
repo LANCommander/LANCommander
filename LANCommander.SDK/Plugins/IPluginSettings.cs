@@ -6,7 +6,7 @@ namespace LANCommander.SDK.Plugins;
 
 /// <summary>
 /// A plugin's own settings, kept by the host in a YAML file of their own:
-/// <c>PluginData/{PluginId}/Settings.yaml</c> under the host's data directory. Inject it with the
+/// <c>Data/Settings.yaml</c> in the plugin's own folder (see <see cref="PluginManifest.DataDirectory"/>). Inject it with the
 /// plugin's settings type; the host knows which plugin is asking from the assembly that type is
 /// declared in, so a plugin can only reach its own file.
 /// </summary>

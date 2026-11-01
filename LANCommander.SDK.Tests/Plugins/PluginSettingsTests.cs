@@ -6,7 +6,7 @@ public sealed class PluginSettingsTests : IDisposable
 {
     private readonly string _directory = Path.Combine(Path.GetTempPath(), "lancommander-plugin-settings-tests", Guid.NewGuid().ToString("N"));
 
-    private string FilePath => Path.Combine(_directory, "PluginData", "com.example.test", PluginSettings<TestSettings>.FileName);
+    private string FilePath => Path.Combine(_directory, "Plugins", "Example.Test", PluginManifest.DataFolderName, PluginSettings<TestSettings>.FileName);
 
     public void Dispose()
     {

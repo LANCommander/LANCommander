@@ -98,7 +98,7 @@ public sealed class PluginSettings<TSettings> : IPluginSettings<TSettings>, IAsy
                      ?? throw new InvalidOperationException(
                          $"{typeof(TSettings).FullName} is not declared by a loaded plugin, so there is no plugin to keep its settings for.");
 
-        return AppPaths.GetConfigPath("PluginData", plugin.Manifest.Id, FileName);
+        return Path.Combine(plugin.Manifest.DataDirectory, FileName);
     }
 
     private TSettings Load()

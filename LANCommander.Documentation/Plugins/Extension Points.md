@@ -363,8 +363,8 @@ rules, lockout and approval, so a plugin that honours it refuses the same accoun
 
 ## Plugin settings
 
-A plugin keeps its settings in a YAML file of its own, `PluginData/{PluginId}/Settings.yaml` under the
-server's data directory, written the way the server's `Settings.yaml` is. Declare a plain class and
+A plugin keeps its settings in a YAML file of its own, `Data/Settings.yaml` in the plugin's folder
+(`Plugins/{Folder}/Data/Settings.yaml`), written the way the server's `Settings.yaml` is. Declare a plain class and
 inject [`IPluginSettings<T>`](/Plugins/API%20Reference#ipluginsettingstsettings) with it:
 
 ```csharp
@@ -821,6 +821,16 @@ public sealed class MyPowerShellExtension : IPluginPowerShellExtension
 Once registered, `Get-MyGreeting` is callable from any LANCommander script. To ship script modules
 (`.psm1`/`.psd1`) instead of (or in addition to) cmdlets, return their absolute paths from
 `GetModulePaths()`. The plugin directory is available to you via `PluginContext.PluginDirectory`.
+
+## Plugin data
+
+Anything a plugin writes belongs in the `Data` folder inside its own folder, e.g.
+`Plugins/LANCommander.Plugins.GOG/Data`. `PluginContext.DataDirectory` gives its path, and
+`IPluginSettings<T>` keeps its file there. The server keeps `Data` when it installs an update over
+the plugin, even one that renames the plugin's folder, and deletes it when the plugin is uninstalled.
+Everything else in the plugin's folder is replaced on update, so write nowhere else in it.
+
+`Data` may not exist yet; create it before writing.
 
 ## Lifecycle events
 

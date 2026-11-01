@@ -257,7 +257,7 @@ Parsed metadata describing a discovered plugin, derived from its `LANCommanderPl
 - `string Directory { get; init; }`
   - Absolute path to the folder the plugin was loaded from.
 - `string DataDirectory { get; }`
-  - Absolute path to the folder for the plugin's own files: its settings and anything else it keeps. It lives inside `Directory`, survives the plugin being upgraded, and goes when the plugin is removed. It may not exist yet.
+  - Absolute path to the folder for the plugin's own files: its settings and anything else it keeps. It lives inside `Directory`, survives the plugin being upgraded, and goes when the plugin is removed. It may not exist yet. Plugins get it with `GetDataDirectory`.
 - `string DataId { get; init; }`
   - See `DataId`.
 - `IReadOnlyList<string> MigrationAssemblies { get; init; }`
@@ -280,6 +280,20 @@ The NuGet package types a plugin package declares. Every plugin package declares
   - The package type a host searches for.
 - `IReadOnlyList<string> All(PluginHost hosts)`
   - Every package type a plugin targeting `hosts` declares.
+
+### PluginPaths
+
+`class` — `LANCommander.SDK.Plugins.PluginPaths`
+
+Where a plugin keeps its files, for code that runs before `PluginContext` is available, such as service registrations in `ConfigureServices`.
+
+**Methods**
+
+- `string GetDataDirectory<T>()`
+  - The plugin's data folder (see `DataDirectory`), found from any type in the plugin's main assembly: `PluginPaths.GetDataDirectory<MyPlugin>()`. It may not exist yet.
+- `string GetDataDirectory(Assembly assembly)`
+- `string GetPluginDirectory(Assembly assembly)`
+  - The folder the plugin was loaded from (see `Directory`).
 
 ### PluginSettings\<TSettings>
 

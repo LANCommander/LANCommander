@@ -11,7 +11,7 @@ sidebar_position: 2
 - **An account with permission to create games** on the connected server. Without it the packaging entry point is not shown, because the server would reject the upload anyway.
 - **The game's original installer.**
 
-Nothing extra to install: the packaging workers ship inside the launcher, under `Packaging\win-x64\` and `Packaging\win-x86\` next to the launcher executable.
+Nothing extra to install: the launcher captures 64-bit installers itself, and the worker for 32-bit installers ships with it under `Data\Libraries\Packaging\x86\` next to the launcher executable.
 
 ## Opening the wizard
 

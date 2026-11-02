@@ -243,6 +243,9 @@ public partial class App : Application
             // copied; without this the only symptom is a menu entry that never appears.
             (Services!.GetService<IPackagingWorkerFactory>() as PackagingWorkerFactory)?.LogDiscovery();
 
+            // An update extracts over the previous release, which kept these beside the executable
+            LauncherLibraries.RemoveLegacyLayout(_logger);
+
             // Initialize the view model on the UI thread
             var mainViewModel = Services!.GetRequiredService<MainWindowViewModel>();
             _logger?.LogInformation("Initializing view model...");

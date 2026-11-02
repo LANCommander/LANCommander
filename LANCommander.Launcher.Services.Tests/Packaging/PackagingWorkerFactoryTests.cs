@@ -1,4 +1,3 @@
-using System.Runtime.InteropServices;
 using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Packaging;
 using Shouldly;
@@ -12,19 +11,22 @@ namespace LANCommander.Launcher.Services.Tests.Packaging;
 public class PackagingWorkerFactoryTests
 {
     [Theory]
-    [InlineData(ProcessArchitecture.X64, "win-x64")]
-    [InlineData(ProcessArchitecture.X86, "win-x86")]
-    public void LooksUnderTheApplicationDirectory(ProcessArchitecture architecture, string runtimeIdentifier)
+    [InlineData(ProcessArchitecture.X64, "x64")]
+    [InlineData(ProcessArchitecture.X86, "x86")]
+    public void LooksUnderTheApplicationDirectory(ProcessArchitecture architecture, string directoryName)
     {
         // The regression: resolution used only Environment.ProcessPath, which is dotnet.exe when
         // the launcher runs through the shared host. Discovery then pointed at the SDK install
         // and the packaging entry point silently never appeared.
         var candidates = PackagingWorkerFactory.GetCandidateWorkerPaths(architecture).ToList();
 
-        candidates.ShouldContain(p =>
-            p.StartsWith(AppContext.BaseDirectory, StringComparison.OrdinalIgnoreCase) &&
-            p.Contains(runtimeIdentifier, StringComparison.OrdinalIgnoreCase) &&
-            p.EndsWith(PackagingWorkerFactory.WorkerExecutableName, StringComparison.OrdinalIgnoreCase));
+        candidates.ShouldContain(Path.Combine(
+            AppContext.BaseDirectory,
+            "Data",
+            "Libraries",
+            "Packaging",
+            directoryName,
+            PackagingWorkerFactory.WorkerExecutableName));
     }
 
     [Fact]
@@ -40,8 +42,10 @@ public class PackagingWorkerFactoryTests
 
         var expected = Path.Combine(
             processDirectory,
-            PackagingWorkerFactory.WorkersDirectoryName,
-            "win-x64",
+            LauncherLibraries.DataDirectoryName,
+            LauncherLibraries.LibrariesDirectoryName,
+            LauncherLibraries.PackagingDirectoryName,
+            "x64",
             PackagingWorkerFactory.WorkerExecutableName);
 
         // Only when the two directories actually differ; otherwise the app-base candidate covers it.
@@ -73,7 +77,42 @@ public class PackagingWorkerFactoryTests
     [Fact]
     public void ResolvesNothingWhenNoWorkerIsDeployed()
     {
-        // The test host has no Packaging directory, so this exercises the not-found path.
+        // The test host has no Data\Libraries\Packaging directory, so this exercises the not-found path.
         PackagingWorkerFactory.ResolveWorkerPath(ProcessArchitecture.Arm64).ShouldBeNull();
+        PackagingWorkerFactory.ResolveWorker(ProcessArchitecture.Arm64).ShouldBeNull();
+    }
+
+    [Fact]
+    public void OnlyTheLauncherStartsItselfAsAWorker()
+    {
+        // Any other host using the factory (this test runner included) would otherwise start
+        // itself with worker arguments it does not understand, and wait for a handshake that
+        // never comes.
+        var previous = PackagingWorkerFactory.LauncherHostsWorker;
+
+        try
+        {
+            PackagingWorkerFactory.LauncherHostsWorker = false;
+
+            PackagingWorkerFactory.ResolveWorker(ProcessArchitectureReader.Current)?.IsLauncher.ShouldNotBe(true);
+
+            PackagingWorkerFactory.LauncherHostsWorker = true;
+
+            var own = PackagingWorkerFactory.ResolveWorker(ProcessArchitectureReader.Current);
+
+            if (LauncherLibraries.GetArchitectureDirectoryName(ProcessArchitectureReader.Current) == null)
+            {
+                own.ShouldBeNull();
+                return;
+            }
+
+            own.ShouldNotBeNull();
+            own.IsLauncher.ShouldBeTrue();
+            own.Arguments.ShouldContain(PackagingWorkerFactory.LauncherWorkerArgument);
+        }
+        finally
+        {
+            PackagingWorkerFactory.LauncherHostsWorker = previous;
+        }
     }
 }

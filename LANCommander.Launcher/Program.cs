@@ -13,7 +13,10 @@ using LANCommander.Launcher.Views;
 using LANCommander.Launcher.Data;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
+using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Launcher.Services.Plugins;
+using LANCommander.Interposer;
+using LANCommander.Packaging.Worker;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Plugins;
@@ -41,6 +44,19 @@ class Program
     [STAThread]
     public static void Main(string[] args)
     {
+        // The Interposer's binaries ship under Data\Libraries\ rather than beside the executable
+        InterposerService.LibraryDirectory = LauncherLibraries.InterposerDirectory;
+
+        // The launcher is the packaging worker for its own architecture. A worker shares nothing
+        // with the window: no single-instance lock, no data directory, no services.
+        PackagingWorkerFactory.LauncherHostsWorker = true;
+
+        if (args.Contains(PackagingWorkerFactory.LauncherWorkerArgument))
+        {
+            Environment.ExitCode = WorkerHost.RunAsync(args).GetAwaiter().GetResult();
+            return;
+        }
+
         if (args.Any(a => CliVerbs.Any(v => v.Equals(a, StringComparison.OrdinalIgnoreCase)))
             || args.Any(a => a is "--help" or "--version"))
         {

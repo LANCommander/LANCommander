@@ -4,11 +4,12 @@
     <!--
       The Interposer release the launcher and packaging worker ship. 1.3.0 is the first with the
       network relay and cross-architecture injection; 1.4.0 adds the per-launch config overlay and
-      base directory the launcher's bundled copy needs, and the redistributable's option schema. To
-      build against an unreleased Interposer, pack it into a folder and pass
-      -p:InterposerVersion=<version> -p:RestoreAdditionalProjectSources=<folder>.
+      base directory the launcher's bundled copy needs, and the redistributable's option schema;
+      1.5.0 adds InterposerService.LibraryDirectory and InterposerNativeOutputPath, which put the
+      binaries under Data\Libraries\Interposer\. To build against an unreleased Interposer, pack it
+      into a folder and pass -p:InterposerVersion=<version> -p:RestoreAdditionalProjectSources=<folder>.
     -->
-    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.4.0</InterposerVersion>
+    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.5.0</InterposerVersion>
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />

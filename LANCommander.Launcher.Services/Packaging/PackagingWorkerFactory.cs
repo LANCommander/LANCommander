@@ -12,12 +12,25 @@ namespace LANCommander.Launcher.Services.Packaging;
 /// <summary>
 /// Starts the per-architecture worker processes and hands the session connected channels.
 /// </summary>
+/// <remarks>
+/// The worker for the launcher's own architecture is the launcher itself, started again with
+/// <see cref="LauncherWorkerArgument"/>, when the host has opted in with
+/// <see cref="LauncherHostsWorker"/>. Only the other architecture needs a separate worker, under
+/// <c>Data\Libraries\Packaging\{arch}\</c>.
+/// </remarks>
 public class PackagingWorkerFactory : IPackagingWorkerFactory
 {
-    /// <summary>Directory the CI publish step places the workers into, beside the apphost.</summary>
-    public const string WorkersDirectoryName = "Packaging";
-
     public const string WorkerExecutableName = "LANCommander.Packaging.Worker.exe";
+
+    /// <summary>Starts the launcher as a packaging worker instead of its window.</summary>
+    public const string LauncherWorkerArgument = "--packaging-worker";
+
+    /// <summary>
+    /// Whether the running executable handles <see cref="LauncherWorkerArgument"/>. Set by the
+    /// launcher's entry point; any other host that uses this factory (tests, tools) would otherwise
+    /// start itself as a worker that never connects.
+    /// </summary>
+    public static bool LauncherHostsWorker { get; set; }
 
     private static readonly ProcessArchitecture[] Architectures =
     [
@@ -38,7 +51,7 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
         OperatingSystem.IsWindows() && SupportedArchitectures.Count > 0;
 
     public IReadOnlyList<ProcessArchitecture> SupportedArchitectures =>
-        [.. Architectures.Where(a => ResolveWorkerPath(a) != null)];
+        [.. Architectures.Where(a => ResolveWorker(a) != null)];
 
     /// <summary>
     /// Logs which workers were found, once, at startup.
@@ -55,12 +68,12 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
 
         foreach (var architecture in Architectures)
         {
-            var resolved = ResolveWorkerPath(architecture);
+            var resolved = ResolveWorker(architecture);
 
             if (resolved != null)
             {
                 _logger.LogInformation(
-                    "Packaging worker found: {Architecture} at {Path}", architecture, resolved);
+                    "Packaging worker found: {Architecture} at {Path}", architecture, resolved.FileName);
 
                 continue;
             }
@@ -75,49 +88,17 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
     }
 
     /// <summary>
-    /// Directories the workers may sit in, most likely first.
-    /// </summary>
-    /// <remarks>
-    /// Both are needed, because neither is correct on its own:
-    /// <list type="bullet">
-    /// <item><see cref="AppContext.BaseDirectory"/> is the application's own directory, including
-    /// under single-file publish, but is not what a host-launched process reports.</item>
-    /// <item><see cref="Environment.ProcessPath"/> is the actual executable — which is
-    /// <c>dotnet.exe</c> when the launcher is started through the shared host rather than its
-    /// apphost, and then points at the SDK install rather than the app.</item>
-    /// </list>
-    /// </remarks>
-    private static IEnumerable<string> GetCandidateBaseDirectories()
-    {
-        var appBase = AppContext.BaseDirectory;
-
-        if (!string.IsNullOrEmpty(appBase))
-            yield return appBase;
-
-        var processDirectory = Path.GetDirectoryName(Environment.ProcessPath);
-
-        if (!string.IsNullOrEmpty(processDirectory) &&
-            !string.Equals(
-                Path.TrimEndingDirectorySeparator(processDirectory),
-                Path.TrimEndingDirectorySeparator(appBase ?? string.Empty),
-                StringComparison.OrdinalIgnoreCase))
-        {
-            yield return processDirectory;
-        }
-    }
-
-    /// <summary>
-    /// Every location a worker for <paramref name="architecture"/> could be deployed to.
+    /// Every location a separate worker for <paramref name="architecture"/> could be deployed to.
     /// </summary>
     public static IEnumerable<string> GetCandidateWorkerPaths(ProcessArchitecture architecture)
     {
-        var runtimeIdentifier = ProcessArchitectureReader.GetWorkerRuntimeIdentifier(architecture);
+        var directoryName = LauncherLibraries.GetArchitectureDirectoryName(architecture);
 
-        if (runtimeIdentifier == null)
+        if (directoryName == null)
             yield break;
 
-        foreach (var baseDirectory in GetCandidateBaseDirectories())
-            yield return Path.Combine(baseDirectory, WorkersDirectoryName, runtimeIdentifier, WorkerExecutableName);
+        foreach (var root in LauncherLibraries.GetCandidateRoots())
+            yield return Path.Combine(root, LauncherLibraries.PackagingDirectoryName, directoryName, WorkerExecutableName);
     }
 
     /// <summary>
@@ -125,6 +106,44 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
     /// </summary>
     public static string? ResolveWorkerPath(ProcessArchitecture architecture) =>
         GetCandidateWorkerPaths(architecture).FirstOrDefault(File.Exists);
+
+    /// <summary>
+    /// How to start the worker for <paramref name="architecture"/>: the launcher itself when it
+    /// is that architecture, otherwise the separate worker. Null when neither is available.
+    /// </summary>
+    public static WorkerCommand? ResolveWorker(ProcessArchitecture architecture)
+    {
+        if (architecture == ProcessArchitectureReader.Current &&
+            LauncherLibraries.GetArchitectureDirectoryName(architecture) != null &&
+            GetLauncherWorkerCommand() is { } launcher)
+        {
+            return launcher;
+        }
+
+        var path = ResolveWorkerPath(architecture);
+
+        return path == null ? null : new WorkerCommand(path, [], IsLauncher: false);
+    }
+
+    private static WorkerCommand? GetLauncherWorkerCommand()
+    {
+        var processPath = Environment.ProcessPath;
+
+        if (!LauncherHostsWorker || string.IsNullOrEmpty(processPath))
+            return null;
+
+        // Started through the shared host, the launcher is an argument to dotnet.exe
+        if (string.Equals(Path.GetFileNameWithoutExtension(processPath), "dotnet", StringComparison.OrdinalIgnoreCase))
+        {
+            var entryAssembly = System.Reflection.Assembly.GetEntryAssembly()?.Location;
+
+            return string.IsNullOrEmpty(entryAssembly)
+                ? null
+                : new WorkerCommand(processPath, [entryAssembly, LauncherWorkerArgument], IsLauncher: true);
+        }
+
+        return new WorkerCommand(processPath, [LauncherWorkerArgument], IsLauncher: true);
+    }
 
     public async Task<IReadOnlyList<IPackagingWorkerChannel>> StartWorkersAsync(
         Guid sessionId, bool elevated, CancellationToken cancellationToken)
@@ -152,7 +171,10 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
             return [];
         }
 
-        var pending = available.Select(architecture =>
+        // The launcher's own worker goes first so that, when elevating, it is the one that goes
+        // through UAC and starts the separate worker as its companion; the companion is then
+        // always a plain executable.
+        var pending = available.OrderByDescending(a => ResolveWorker(a)?.IsLauncher == true).Select(architecture =>
         {
             var pipeName = PackagingProtocol.BuildPipeName(
                 Environment.ProcessId, sessionId, DeterministicWorkerId(sessionId, architecture));
@@ -217,9 +239,9 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
     [SupportedOSPlatform("windows")]
     private Process? StartWorkerProcess(PendingWorker worker, List<PendingWorker> companions, bool elevated)
     {
-        var workerPath = ResolveWorkerPath(worker.Architecture);
+        var command = ResolveWorker(worker.Architecture);
 
-        if (workerPath == null)
+        if (command == null)
         {
             _logger.LogWarning(
                 "No {Architecture} packaging worker is deployed; that architecture will not be captured",
@@ -228,9 +250,9 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
             return null;
         }
 
-        var startInfo = new ProcessStartInfo(workerPath)
+        var startInfo = new ProcessStartInfo(command.FileName)
         {
-            WorkingDirectory = Path.GetDirectoryName(workerPath),
+            WorkingDirectory = Path.GetDirectoryName(command.FileName),
             // ShellExecute is required for the runas verb, and forbidden without it if we want
             // to suppress a console window.
             UseShellExecute = elevated,
@@ -238,7 +260,7 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
             Verb = elevated ? "runas" : string.Empty,
         };
 
-        var arguments = new List<string>
+        var arguments = new List<string>(command.Arguments)
         {
             "--pipe", worker.PipeName,
             "--token", worker.Token,
@@ -246,7 +268,8 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
         };
 
         // Only one companion is ever needed today (x86 alongside x64), and the worker CLI
-        // accepts a single spawn request.
+        // accepts a single spawn request. It is started by path alone, so it has to be a separate
+        // worker rather than the launcher, which the ordering above guarantees.
         var companion = companions.FirstOrDefault();
 
         var companionPath = companion == null ? null : ResolveWorkerPath(companion.Architecture);
@@ -372,6 +395,11 @@ public class PackagingWorkerFactory : IPackagingWorkerFactory
 
         return new Guid(bytes);
     }
+
+    /// <summary>
+    /// An executable and the arguments that make it a worker, ahead of the per-session ones.
+    /// </summary>
+    public sealed record WorkerCommand(string FileName, IReadOnlyList<string> Arguments, bool IsLauncher);
 
     private sealed class PendingWorker(
         ProcessArchitecture architecture, string pipeName, NamedPipeServerStream pipe)

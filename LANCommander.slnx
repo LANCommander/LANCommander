@@ -54,6 +54,7 @@
   <Project Path="LANCommander.Packaging\LANCommander.Packaging.csproj" />
   <Project Path="LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
   <Project Path="LANCommander.Packaging.Worker\LANCommander.Packaging.Worker.csproj" />
+  <Project Path="LANCommander.Packaging.Worker.Core\LANCommander.Packaging.Worker.Core.csproj" />
   <Project Path="LANCommander.SDK.SourceGenerators\LANCommander.SDK.SourceGenerators.csproj" />
   <Project Path="LANCommander.SDK\LANCommander.SDK.csproj" />
   <Project Path="LANCommander.SchemaGenerator\LANCommander.SchemaGenerator.csproj" />

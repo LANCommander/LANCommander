@@ -4,10 +4,9 @@
     Out-of-process API-hook monitor.
 
     DLL injection via CreateRemoteThread/LoadLibraryW only works when the injector and the
-    target share a bitness, so this is published once per architecture (win-x86 and win-x64)
-    and the launcher routes work to whichever worker matches a given process. That is the whole
-    reason this project exists: it means only this small executable ships per architecture
-    rather than an entire copy of the application.
+    target share a bitness. The launcher is the worker for its own architecture (it hosts
+    LANCommander.Packaging.Worker.Core itself), so this executable only ships for the other one,
+    under Data\Libraries\Packaging\{arch}\. The logic lives in Worker.Core; this is just the host.
   -->
   <PropertyGroup>
     <!-- WinExe, not Exe: the elevated worker is started with ShellExecute/runas, which ignores
@@ -26,10 +25,18 @@
     <TrimMode>partial</TrimMode>
     <InvariantGlobalization>true</InvariantGlobalization>
 
-    <!-- Loose files rather than a single file: keeps each architecture's native
-         LANCommander.Interposer.dll beside its own worker, and avoids extracting an executable
-         that injects DLLs into %TEMP% on every launch. -->
-    <PublishSingleFile>false</PublishSingleFile>
+    <!-- One native executable of a few MB. Native AOT links with MSVC, so it needs the "Desktop
+         development with C++" workload and a Windows build machine; pass
+         -p:PackagingWorkerAot=false to publish a self-contained single file instead. Neither
+         extracts anything at run time. -->
+    <PublishAot Condition="'$(PackagingWorkerAot)' != 'false'">true</PublishAot>
+    <PublishSingleFile Condition="'$(PackagingWorkerAot)' == 'false'">true</PublishSingleFile>
+    <EnableCompressionInSingleFile Condition="'$(PackagingWorkerAot)' == 'false'">true</EnableCompressionInSingleFile>
+    <CopyOutputSymbolsToPublishDirectory>false</CopyOutputSymbolsToPublishDirectory>
+
+    <!-- The launcher deploys the Interposer under Data\Libraries\Interposer\, which Program.cs
+         points the worker at. -->
+    <InterposerCopyNativeBinaries>false</InterposerCopyNativeBinaries>
 
     <!-- asInvoker; the worker escalates on demand rather than prompting every session.
          See app.manifest. -->
@@ -37,15 +44,20 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="LANCommander.Interposer" />
+    <!-- Referenced directly only to drop the package's own runtime native asset, which would
+         otherwise land beside the executable as a second copy of the DLL. -->
+    <PackageReference Include="LANCommander.Interposer" ExcludeAssets="native" />
   </ItemGroup>
 
   <ItemGroup>
-    <InternalsVisibleTo Include="LANCommander.Packaging.Worker.Tests" />
+    <ProjectReference Include="..\LANCommander.Packaging.Worker.Core\LANCommander.Packaging.Worker.Core.csproj" />
   </ItemGroup>
 
-  <ItemGroup>
-    <ProjectReference Include="..\LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
-  </ItemGroup>
+  <!-- CopyOutputSymbolsToPublishDirectory covers this project's symbols, not its references'. -->
+  <Target Name="RemoveReferencedSymbolsFromPublish" AfterTargets="ComputeResolvedFilesToPublishList">
+    <ItemGroup>
+      <ResolvedFileToPublish Remove="@(ResolvedFileToPublish)" Condition="'%(Extension)' == '.pdb'" />
+    </ItemGroup>
+  </Target>
 
 </Project>

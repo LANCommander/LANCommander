@@ -24,7 +24,7 @@
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\LANCommander.Packaging.Worker\LANCommander.Packaging.Worker.csproj"/>
+        <ProjectReference Include="..\LANCommander.Packaging.Worker.Core\LANCommander.Packaging.Worker.Core.csproj"/>
     </ItemGroup>
 
 </Project>

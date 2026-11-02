@@ -138,7 +138,8 @@ Use the [GitHub Issues](https://github.com/LANCommander/LANCommander/issues) pag
 | `LANCommander.Server` | ASP.NET Blazor web application (server/admin) |
 | `LANCommander.Launcher` | Avalonia desktop client (launcher) |
 | `LANCommander.Packaging` | Packaging domain logic (LCX building, script generation) |
-| `LANCommander.Packaging.Worker` | Out-of-process API-hook monitor, published per architecture |
+| `LANCommander.Packaging.Worker.Core` | Out-of-process API-hook monitor, hosted by the launcher for its own architecture |
+| `LANCommander.Packaging.Worker` | Native AOT host for the monitor, shipped for the other architecture under `Data\Libraries\Packaging\` |
 | `LANCommander.SDK` | .NET SDK for building custom clients |
 | `LANCommander.Server.Data` | Entity Framework data models and migrations |
 | `LANCommander.Server.Services` | Server business logic |

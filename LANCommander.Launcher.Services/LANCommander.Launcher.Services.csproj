@@ -1,5 +1,11 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
+  <!-- Copies made here would flow into the launcher's output beside the executable; the launcher
+       deploys the Interposer's binaries under Data\Libraries\ itself. -->
+  <PropertyGroup>
+    <InterposerCopyNativeBinaries>false</InterposerCopyNativeBinaries>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="Emzi0767.NtfsDataStreams" />
     <!-- Starts LAN games under the Interposer so they can join the server's network relay -->

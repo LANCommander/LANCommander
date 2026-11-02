@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    The out-of-process API-hook monitor, as a library: hosted by LANCommander.Packaging.Worker for
+    the architecture the launcher is not, and by the launcher itself for the one it is.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <IsPackable>false</IsPackable>
+    <RootNamespace>LANCommander.Packaging.Worker</RootNamespace>
+    <IsAotCompatible>true</IsAotCompatible>
+
+    <!-- The hosts deploy the native binaries; a library has nowhere to put them. -->
+    <InterposerCopyNativeBinaries>false</InterposerCopyNativeBinaries>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="LANCommander.Interposer" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <InternalsVisibleTo Include="LANCommander.Packaging.Worker.Tests" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -745,6 +745,30 @@ Looks up game metadata through the server's configured providers. Provided by th
 - `Task<Game> GetGameAsync(string providerName, string gameId, CancellationToken cancellationToken)`
   - Fetches full metadata by the provider's game id, or null when it has no such game.
 
+### IMetadataProviderExtension
+
+`interface` — `LANCommander.Server.Plugins.IMetadataProviderExtension`
+
+Adds a source of game metadata, alongside the built-in ones such as HQ, IGDB and PCGamingWiki. Administrators pick it when looking up a game, the launcher's packaging wizard lists it, and `IMetadataLookup` searches it. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Name { get; }`
+  - The name the source is shown and chosen by. Must be unique among the server's metadata providers; a plugin source named like a built-in one is ignored.
+- `bool IsAvailable { get; }`
+  - Whether the source can be used right now, e.g. false until it has been given an API key. Unavailable sources aren't listed. Read each time the providers are listed, so keep it cheap.
+
+**Methods**
+
+- `Task<MetadataSearchPage> SearchGamesAsync(string input, string subProvider, int limit, int offset, CancellationToken cancellationToken)`
+  - Searches the source for games. A failure is shown to the administrator searching.
+- `Task<Game> GetGameAsync(string gameId, CancellationToken cancellationToken)`
+  - Fetches a game's full metadata by the id a search returned, or null if the source has no such game.
+- `Task<IReadOnlyList<MetadataSubProviderInfo>> GetSubProvidersAsync(CancellationToken cancellationToken)`
+  - Parts of the source a search can be narrowed to, e.g. the services an aggregator draws on. Empty when there are none.
+- `Task<MetadataGame> ResolveByExternalIdAsync(string provider, string externalId, CancellationToken cancellationToken)`
+  - Finds the game a game's id on another service (its external id, e.g. a Steam AppID) refers to, so a game that already has one is matched exactly instead of by title. Null when the source can't, and the server falls back to searching.
+
 ### IMultiplayerModeProvider
 
 `interface` — `LANCommander.Server.Plugins.IMultiplayerModeProvider`
@@ -1142,6 +1166,32 @@ An archive of files for a game, redistributable or tool.
 - `long UncompressedSize { get; init; }`
 - `DateTime CreatedOn { get; init; }`
 
+### ArchiveUploadedEvent
+
+`record` — `LANCommander.Server.Plugins.ArchiveUploadedEvent`
+
+Raised after an uploaded archive is stored and linked to what it belongs to, and for a game, to its version. Exactly one of `GameId`, `RedistributableId` and `ToolId` is set. Archives an import or packaging creates don't raise it.
+
+**Properties**
+
+- `Guid ArchiveId { get; init; }`
+- `Guid? GameId { get; init; }`
+- `Guid? GameVersionId { get; init; }`
+- `Guid? RedistributableId { get; init; }`
+- `Guid? ToolId { get; init; }`
+- `string Version { get; init; }`
+
+### GameCreatedEvent
+
+`record` — `LANCommander.Server.Plugins.GameCreatedEvent`
+
+Raised after a game or add-on is added, by hand, by an import or through `IGameProvider`.
+
+**Properties**
+
+- `Guid GameId { get; init; }`
+- `string Title { get; init; }`
+
 ### GameCustomFieldInfo
 
 `record` — `LANCommander.Server.Plugins.GameCustomFieldInfo`
@@ -1154,6 +1204,17 @@ A named value an administrator or plugin records against a game.
 - `Guid GameId { get; init; }`
 - `string Name { get; init; }`
 - `string Value { get; init; }`
+
+### GameDeletedEvent
+
+`record` — `LANCommander.Server.Plugins.GameDeletedEvent`
+
+Raised after a game or add-on is deleted along with its archives and media.
+
+**Properties**
+
+- `Guid GameId { get; init; }`
+- `string Title { get; init; }`
 
 ### GameExternalIdInfo
 
@@ -1203,6 +1264,17 @@ A game or add-on on the server: its own fields only. Its links, children and fil
 - `DateTime UpdatedOn { get; init; }`
   - Set by the server; ignored when writing.
 
+### GameUpdatedEvent
+
+`record` — `LANCommander.Server.Plugins.GameUpdatedEvent`
+
+Raised after a game or add-on is saved.
+
+**Properties**
+
+- `Guid GameId { get; init; }`
+- `string Title { get; init; }`
+
 ### GameVersionInfo
 
 `record` — `LANCommander.Server.Plugins.GameVersionInfo`
@@ -1237,6 +1309,31 @@ A redistributable required by a game version, with that version's option values 
 
 - `RedistributableInfo Redistributable { get; init; }`
 - `string Options { get; init; }`
+
+### IssueCreatedEvent
+
+`record` — `LANCommander.Server.Plugins.IssueCreatedEvent`
+
+Raised after a user reports an issue with a game.
+
+**Properties**
+
+- `Guid IssueId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid? ReportedByUserId { get; init; }`
+- `string Description { get; init; }`
+
+### IssueResolvedEvent
+
+`record` — `LANCommander.Server.Plugins.IssueResolvedEvent`
+
+Raised after an issue is marked resolved.
+
+**Properties**
+
+- `Guid IssueId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid ResolvedByUserId { get; init; }`
 
 ### KeyInfo
 
@@ -1338,6 +1435,19 @@ A page of metadata search results.
 - `int Limit { get; init; }`
 - `int Offset { get; init; }`
 
+### MetadataSubProviderInfo
+
+`record` — `LANCommander.Server.Plugins.MetadataSubProviderInfo`
+
+A part of an `IMetadataProviderExtension` a search can be narrowed to.
+
+**Properties**
+
+- `string Slug { get; init; }`
+  - Identifies it to `SearchGamesAsync`.
+- `string Name { get; init; }`
+  - What administrators see.
+
 ### MultiplayerModeInfo
 
 `record` — `LANCommander.Server.Plugins.MultiplayerModeInfo`
@@ -1408,6 +1518,35 @@ A child record a package would carry.
   - Bytes of file the package would carry for it, such as an archive's; 0 for none.
 - `DateTime? UpdatedOn { get; init; }`
   - When it was last changed, or null for records that don't track it.
+
+### PlaySessionEndedEvent
+
+`record` — `LANCommander.Server.Plugins.PlaySessionEndedEvent`
+
+Raised when a play session ends. Times are UTC.
+
+**Properties**
+
+- `Guid SessionId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid UserId { get; init; }`
+- `DateTime Start { get; init; }`
+- `DateTime End { get; init; }`
+- `bool TimedOut { get; init; }`
+  - The launcher stopped reporting in, so the server ended the session at the last time it heard from it.
+
+### PlaySessionStartedEvent
+
+`record` — `LANCommander.Server.Plugins.PlaySessionStartedEvent`
+
+Raised when a player starts a game.
+
+**Properties**
+
+- `Guid SessionId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid UserId { get; init; }`
+- `DateTime Start { get; init; }`
 
 ### PluginAccessAttribute
 
@@ -1760,6 +1899,20 @@ Special values for `After`. Any other value is the route of a built-in link, or 
 
 Identifiers of the server navigation sections a plugin entry can be placed in through `Section`. A group's identifier is also the `After` anchor that places an entry after the group.
 
+### ServerStatusChangedEvent
+
+`record` — `LANCommander.Server.Plugins.ServerStatusChangedEvent`
+
+Raised when a game server's status changes, whichever engine runs it, including one a plugin adds.
+
+**Properties**
+
+- `Guid ServerId { get; init; }`
+- `string ServerName { get; init; }`
+- `ServerEngineStatus Status { get; init; }`
+- `string Error { get; init; }`
+  - Why the server failed, when `Status` is `Error`.
+
 ### StorageLocationInfo
 
 `record` — `LANCommander.Server.Plugins.StorageLocationInfo`
@@ -1829,6 +1982,41 @@ A user account on the server.
 - `bool CanSignIn { get; init; }`
   - Whether the server would let the user sign in right now: the account is not locked out and, where the server requires it, has been approved by an administrator. Read from the account each time, so a lockout or a withdrawn approval takes effect immediately.
 - `DateTime CreatedOn { get; init; }`
+
+### UserApprovedEvent
+
+`record` — `LANCommander.Server.Plugins.UserApprovedEvent`
+
+Raised when an administrator approves an account that wasn't approved.
+
+**Properties**
+
+- `Guid UserId { get; init; }`
+- `string UserName { get; init; }`
+
+### UserCreatedEvent
+
+`record` — `LANCommander.Server.Plugins.UserCreatedEvent`
+
+Raised after a user account is created, by registration, an administrator or an external sign-in. The server's default role may be added to the account just after.
+
+**Properties**
+
+- `Guid UserId { get; init; }`
+- `string UserName { get; init; }`
+- `bool Approved { get; init; }`
+  - Whether the account was approved on creation; if not, `UserApprovedEvent` follows when it is.
+
+### UserDeletedEvent
+
+`record` — `LANCommander.Server.Plugins.UserDeletedEvent`
+
+Raised after a user account is deleted.
+
+**Properties**
+
+- `Guid UserId { get; init; }`
+- `string UserName { get; init; }`
 
 ### RecordOwner
 

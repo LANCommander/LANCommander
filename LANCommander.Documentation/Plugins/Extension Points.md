@@ -120,16 +120,39 @@ public sealed class MyPageExtension : INavigationPageExtension
 
 ## Server metadata providers
 
-On the server, a plugin can contribute additional metadata providers by registering an
-`IMetadataProvider` (from `LANCommander.Server.Services`). Registered providers are picked up by the
-server's provider enumeration and used alongside the built-in ones.
+A plugin can add a source of game metadata by registering an `IMetadataProviderExtension`. It is
+offered alongside HQ, IGDB and PCGamingWiki wherever administrators look a game up, in the launcher's
+packaging wizard, and to other plugins through `IMetadataLookup`. Its `Name` must not be one the server
+already uses; a plugin source named like a built-in provider is ignored. Set `IsAvailable` to false
+while the source can't be used, for example before it has been given an API key, and it isn't listed.
 
 ```csharp
+public sealed class MyMetadataProvider : IMetadataProviderExtension
+{
+    public string Name => "My Source";
+
+    public async Task<MetadataSearchPage> SearchGamesAsync(
+        string input, string? subProvider, int limit, int offset, CancellationToken cancellationToken)
+    {
+        // Search for input and return a MetadataGame per result: the source's id and what it knows
+    }
+
+    public async Task<Game?> GetGameAsync(string gameId, CancellationToken cancellationToken)
+    {
+        // Fetch full metadata for an id a search returned, or null
+    }
+}
+
 public void ConfigureServices(IServiceCollection services)
 {
-    services.AddSingleton<IMetadataProvider, MyMetadataProvider>();
+    services.AddSingleton<IMetadataProviderExtension, MyMetadataProvider>();
 }
 ```
+
+Two members are optional. `GetSubProvidersAsync` lists parts of the source a search can be narrowed
+to, whose `Slug` is then passed to `SearchGamesAsync`. `ResolveByExternalIdAsync` finds a game by its
+id on another service, such as a Steam AppID, so games that already have one are matched exactly
+instead of by title.
 
 ## Server media sources
 

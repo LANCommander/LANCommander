@@ -44,6 +44,11 @@ public class PluginHostServicesTests(ApplicationFixture fixture) : BaseTest(fixt
         GetService<IMetadataLookup>().ShouldNotBeNull();
 
     [Fact]
+    public void PluginMetadataSourcesJoinTheMetadataService() =>
+        GetService<IEnumerable<Server.Services.Abstractions.IMetadataProviderSource>>()
+            .ShouldContain(source => source is PluginMetadataProviders);
+
+    [Fact]
     public async Task TheUserDirectoryFindsAccountsWithTheirRolesAndSignInState()
     {
         var admin = await EnsureAdminUserCreatedAsync();

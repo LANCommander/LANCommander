@@ -44,8 +44,7 @@ rather than shipping (and loading) its own duplicates:
 ```
 
 A server plugin does not reference `LANCommander.Server`, `LANCommander.Server.Data` or the other
-server assemblies; what the server offers plugins is in `LANCommander.Server.Plugins`. The exception for
-now is `IMetadataProvider`, which still lives in `LANCommander.Server.Services`.
+server assemblies; what the server offers plugins is in `LANCommander.Server.Plugins`.
 
 Launcher UI extension points are in `LANCommander.Launcher.Plugins`, which is not published as a package
 yet; reference it from a LANCommander checkout with `Private="false"`.

@@ -1,20 +1,19 @@
 using LANCommander.SDK.Models.Manifest;
-using LANCommander.Server.Services.Providers.Metadata;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.SamplePlugin;
 
 /// <summary>
-/// Minimal metadata provider added by the sample plugin. Returns no results; its purpose is to
-/// prove that a plugin-registered <see cref="IMetadataProvider"/> is picked up by the server's
-/// provider enumeration.
+/// Minimal metadata source added by the sample plugin. Returns no results; its purpose is to
+/// prove that a plugin-registered <see cref="IMetadataProviderExtension"/> is listed among the
+/// server's metadata providers.
 /// </summary>
-public sealed class SampleMetadataProvider : IMetadataProvider
+public sealed class SampleMetadataProvider : IMetadataProviderExtension
 {
-    public string ProviderName => "Sample Plugin Provider";
+    public string Name => "Sample Plugin Provider";
 
-    public Task<MetadataSearchResultsCollection<Game>?> SearchGamesAsync(string input, int limit = 10, int offset = 0)
-        => Task.FromResult<MetadataSearchResultsCollection<Game>?>(
-            new MetadataSearchResultsCollection<Game>(new List<MetadataSearchResult<Game>>(), More: false, limit, offset));
+    public Task<MetadataSearchPage> SearchGamesAsync(string input, string? subProvider, int limit, int offset, CancellationToken cancellationToken)
+        => Task.FromResult(new MetadataSearchPage([], More: false, limit, offset));
 
-    public Task<Game?> GetGameAsync(string gameId) => Task.FromResult<Game?>(null);
+    public Task<Game?> GetGameAsync(string gameId, CancellationToken cancellationToken) => Task.FromResult<Game?>(null);
 }

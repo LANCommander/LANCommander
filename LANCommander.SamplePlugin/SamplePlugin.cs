@@ -2,7 +2,7 @@ using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.SamplePlugin;
 using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Plugins.Events;
-using LANCommander.Server.Services.Providers.Metadata;
+using LANCommander.Server.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 
@@ -28,7 +28,7 @@ public sealed class SamplePlugin : IPlugin
     public void ConfigureServices(IServiceCollection services)
     {
         // Server: add an additional metadata provider that appears in the host's enumeration.
-        services.AddSingleton<IMetadataProvider, SampleMetadataProvider>();
+        services.AddSingleton<IMetadataProviderExtension, SampleMetadataProvider>();
 
         // Launcher: add a settings section rendered by a code-built control.
         services.AddSingleton<ISettingsPageExtension, SampleSettingsExtension>();

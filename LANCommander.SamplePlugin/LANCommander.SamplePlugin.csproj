@@ -16,7 +16,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" Private="false" />
     <ProjectReference Include="..\LANCommander.Launcher.Plugins\LANCommander.Launcher.Plugins.csproj" Private="false" />
-    <ProjectReference Include="..\LANCommander.Server.Services\LANCommander.Server.Services.csproj" Private="false" />
+    <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" Private="false" />
   </ItemGroup>
 
 </Project>

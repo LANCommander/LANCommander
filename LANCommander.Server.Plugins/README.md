@@ -25,6 +25,7 @@ Use the version of the server the plugin targets.
 | `IServerEngineExtension`, `IServerEngineTerminal` | Runs game servers somewhere other than as a local process, e.g. in containers, with editor pages, Monitor consoles (logs, terminals) and server files of its own |
 | `IRecurringJobScheduler`, `IRecurringJobHandler` | Runs plugin work on cron schedules through the server's background jobs, on its dashboard. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
+| `IMetadataProviderExtension`, `MetadataSubProviderInfo` | Adds a source of game metadata alongside HQ, IGDB and PCGamingWiki |
 | `IMetadataLookup` | Searches configured metadata providers and fetches full game metadata without importing it. Provided by the server |
 | `IUserDirectory`, `UserAccount` | Reads user accounts, their roles and whether they may sign in, without passwords. Provided by the server |
 | `Data.PluginDbContext`, `AddPluginDbContext<T>` | A plugin's own tables in the server's database, named and migrated by the server |

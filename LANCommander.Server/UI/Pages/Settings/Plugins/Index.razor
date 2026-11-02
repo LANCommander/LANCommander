@@ -333,55 +333,71 @@
             </Tab>
 
             <Tab Title="Sources" Icon="IconType.Database">
-                <Form Model="_sources" OnSubmit="SaveSources">
-                    <FormItem Label="nuget.org">
-                        <Typography Secondary>Search the official NuGet registry, where plugin developers publish their plugins.</Typography>
-                        <Switch @bind-Value="_useNuGetOrg" />
-                    </FormItem>
+                <Form Model="_sources" OnSubmit="SaveSources" Class="edit-form">
+                    <Switch @bind-Value="_useNuGetOrg" Class="edit-form-switch">
+                        <span class="edit-form-switch-title">Search nuget.org</span>
+                        <span class="edit-form-switch-help">The official NuGet registry, where plugin developers publish their plugins.</span>
+                    </Switch>
 
-                    <FormItem Label="Prerelease Versions">
-                        <Typography Secondary>Offer prerelease versions of plugins when searching and checking for updates.</Typography>
-                        @if (PluginPackages.ServerIsPrerelease)
-                        {
-                            <Switch Value="true" Disabled aria-label="Prerelease Versions" />
-                            <Typography Secondary Small>Always on while the server is a prerelease itself.</Typography>
-                        }
-                        else
-                        {
-                            <Switch @bind-Value="_includePrerelease" />
-                        }
-                    </FormItem>
+                    @if (PluginPackages.ServerIsPrerelease)
+                    {
+                        <Switch Value="true" Disabled Class="edit-form-switch">
+                            <span class="edit-form-switch-title">Include prerelease versions</span>
+                            <span class="edit-form-switch-help">Always on while the server is a prerelease itself.</span>
+                        </Switch>
+                    }
+                    else
+                    {
+                        <Switch @bind-Value="_includePrerelease" Class="edit-form-switch">
+                            <span class="edit-form-switch-title">Include prerelease versions</span>
+                            <span class="edit-form-switch-help">Offer prerelease versions of plugins when searching and checking for updates.</span>
+                        </Switch>
+                    }
 
-                    <FormItem Label="Package Sources">
-                        <Typography Secondary>Other NuGet feeds to search for server and launcher plugins: a v3 service index URL (usually ending in index.json), or a folder on the server. Most private feeds take a personal access token as the password.</Typography>
-                        <Flex Vertical Gap="Gap.Small">
-                            @foreach (var source in _sources)
-                            {
-                                <Card @key="source" Small>
-                                    <Flex Vertical Gap="Gap.Small">
-                                        <Flex Gap="Gap.Small" Align="Align.Center">
-                                            <TextInput @bind-Value="source.Name" Placeholder="Name" aria-label="Name" Style="flex: 1" />
-                                            <TextInput @bind-Value="source.Url" Placeholder="https://example.com/v3/index.json" aria-label="URL" Style="flex: 3" />
-                                            <Switch @bind-Value="source.Enabled" aria-label="Enabled" />
-                                        </Flex>
-                                        <Flex Gap="Gap.Small" Align="Align.Center">
-                                            <TextInput @bind-Value="source.Username" Placeholder="Username (optional)" aria-label="Username" Style="flex: 1" />
-                                            <PasswordInput @bind-Value="source.Password" Placeholder="Password or access token (optional)" aria-label="Password" Style="flex: 1" />
-                                            <Button Small Icon="IconType.Plugs" Loading="_testing.Contains(source)" Disabled="String.IsNullOrWhiteSpace(source.Url)" OnClick="() => TestSourceAsync(source)">Test</Button>
-                                            <Button Text Small Danger Icon="IconType.X" title="Remove" OnClick="() => _sources.Remove(source)" />
-                                        </Flex>
-                                    </Flex>
-                                </Card>
-                            }
-                            <div>
-                                <Button Small Icon="IconType.Plus" OnClick="AddSource">Add Source</Button>
-                            </div>
-                        </Flex>
-                    </FormItem>
+                    <Divider Class="edit-form-divider" />
 
-                    <FormItem>
+                    <div>
+                        <Typography Strong>Package Sources</Typography>
+                        <p class="edit-form-intro" style="margin: 4px 0 0">Other NuGet feeds to search for server and launcher plugins: a v3 service index URL (usually ending in index.json), or a folder on the server. Most private feeds take a personal access token as the password.</p>
+                    </div>
+
+                    @foreach (var source in _sources)
+                    {
+                        <Card @key="source" Small Title="@(String.IsNullOrWhiteSpace(source.Name) ? "Unnamed source" : source.Name)">
+                            <Extra>
+                                <Flex Gap="Gap.Small" Align="Align.Center">
+                                    <Switch @bind-Value="source.Enabled">Enabled</Switch>
+                                    <Button Small Icon="IconType.Plugs" Loading="_testing.Contains(source)" Disabled="String.IsNullOrWhiteSpace(source.Url)" OnClick="() => TestSourceAsync(source)">Test</Button>
+                                    <Button Text Small Danger Icon="IconType.Trash" title="Remove" aria-label="Remove" OnClick="() => _sources.Remove(source)" />
+                                </Flex>
+                            </Extra>
+                            <ChildContent>
+                                <Flex Vertical Gap="Gap.Medium">
+                                    <div class="edit-form-pair">
+                                        <FormItem Label="Name">
+                                            <TextInput @bind-Value="source.Name" Immediate />
+                                        </FormItem>
+                                        <FormItem Label="URL or folder" Class="edit-form-mono">
+                                            <TextInput @bind-Value="source.Url" Placeholder="https://example.com/v3/index.json" />
+                                        </FormItem>
+                                    </div>
+                                    <div class="edit-form-pair">
+                                        <FormItem Label="Username" Help="Optional">
+                                            <TextInput @bind-Value="source.Username" />
+                                        </FormItem>
+                                        <FormItem Label="Password or access token" Help="Optional">
+                                            <PasswordInput @bind-Value="source.Password" />
+                                        </FormItem>
+                                    </div>
+                                </Flex>
+                            </ChildContent>
+                        </Card>
+                    }
+
+                    <Flex Gap="Gap.Small">
+                        <Button Icon="IconType.Plus" OnClick="AddSource">Add Source</Button>
                         <Button Primary Submit>Save</Button>
-                    </FormItem>
+                    </Flex>
                 </Form>
             </Tab>
         </Tabs>

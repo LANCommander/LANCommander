@@ -1,4 +1,4 @@
-﻿// Licensed to the .NET Foundation under one or more agreements.
+// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 #nullable disable
 
@@ -25,6 +25,8 @@ using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Models;
 using Microsoft.Extensions.Options;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.UI.Pages.Account
 {
@@ -43,6 +45,7 @@ namespace LANCommander.Server.UI.Pages.Account
         private readonly RoleManager<Role> RoleManager;
         private readonly UserCustomFieldService UserCustomFieldService;
         private readonly IOptions<Server.Settings.Settings> Settings;
+        private readonly IPluginEventBus PluginEventBus;
 
         public RegisterModel(
             UserManager<User> userManager,
@@ -51,7 +54,8 @@ namespace LANCommander.Server.UI.Pages.Account
             ILogger<RegisterModel> logger,
             RoleManager<Role> roleManager,
             UserCustomFieldService userCustomFieldService,
-            IOptions<Server.Settings.Settings> settings)
+            IOptions<Server.Settings.Settings> settings,
+            IPluginEventBus pluginEventBus)
         {
             UserManager = userManager;
             UserStore = userStore;
@@ -60,6 +64,7 @@ namespace LANCommander.Server.UI.Pages.Account
             RoleManager = roleManager;
             UserCustomFieldService = userCustomFieldService;
             Settings = settings;
+            PluginEventBus = pluginEventBus;
         }
 
         /// <summary>
@@ -160,6 +165,8 @@ namespace LANCommander.Server.UI.Pages.Account
                         if (defaultRole != null)
                             await UserManager.AddToRoleAsync(user, defaultRole.Name);
                     }
+
+                    await PluginEventBus.PublishAsync(new UserCreatedEvent(user.Id, user.UserName, user.Approved));
                     
                     // Registering using SSO
                     if (Model.RegistrationType == RegistrationType.AuthenticationProvider)

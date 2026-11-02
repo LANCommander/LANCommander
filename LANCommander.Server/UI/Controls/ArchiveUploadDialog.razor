@@ -209,6 +209,8 @@ else
             await GameVersionService.LinkArchiveAsync(archive.Id, versionId);
         }
 
+        await ArchiveService.PublishUploadedAsync(archive.Id);
+
         return archive.Id;
     }
 

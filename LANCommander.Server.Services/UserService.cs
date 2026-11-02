@@ -11,6 +11,8 @@ using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Data;
 using Microsoft.Extensions.Options;
 using ZiggyCreatures.Caching.Fusion;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.Services
 {
@@ -21,6 +23,7 @@ namespace LANCommander.Server.Services
         private readonly IDbContextFactory<DatabaseContext> ContextFactory;
         private readonly IFusionCache Cache;
         private readonly IOptions<IdentityOptions> _identityOptions;
+        private readonly IPluginEventBus _pluginEventBus;
 
         protected readonly List<Func<IQueryable<User>, IQueryable<User>>> _modifiers = new();
 
@@ -31,13 +34,15 @@ namespace LANCommander.Server.Services
             CollectionService collectionService,
             IDbContextFactory<DatabaseContext> contextFactory,
             IdentityContextFactory identityContextFactory,
-            IOptions<IdentityOptions> identityOptions) : base(logger, settingsProvider)
+            IOptions<IdentityOptions> identityOptions,
+            IPluginEventBus pluginEventBus) : base(logger, settingsProvider)
         {
             _identityContextFactory = identityContextFactory;
             CollectionService = collectionService;
             ContextFactory = contextFactory;
             Cache = cache;
             _identityOptions = identityOptions;
+            _pluginEventBus = pluginEventBus;
         }
 
         public void Reconfigure()
@@ -212,7 +217,11 @@ namespace LANCommander.Server.Services
             if (result.Succeeded)
             {
                 using var findContext = await _identityContextFactory.CreateAsync();
-                return await findContext.UserManager.FindByNameAsync(user.UserName);
+                var created = await findContext.UserManager.FindByNameAsync(user.UserName);
+
+                await _pluginEventBus.PublishAsync(new UserCreatedEvent(created.Id, created.UserName, created.Approved));
+
+                return created;
             }
             else
                 throw new UserRegistrationException(result, "Could not create user");
@@ -538,10 +547,13 @@ namespace LANCommander.Server.Services
             if (user == null)
             {
                 using var identityContext = await _identityContextFactory.CreateAsync();
-                await identityContext.UserManager.CreateAsync(entity);
+                var created = await identityContext.UserManager.CreateAsync(entity);
 
                 result.Existing = false;
                 result.Value = await identityContext.UserManager.FindByNameAsync(entity.UserName);
+
+                if (created.Succeeded && result.Value != null)
+                    await _pluginEventBus.PublishAsync(new UserCreatedEvent(result.Value.Id, result.Value.UserName, result.Value.Approved));
             }
             else
             {
@@ -576,6 +588,8 @@ namespace LANCommander.Server.Services
 
             var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
+            var approving = !user.Approved && entity.Approved;
+
             user.UserName = entity.UserName;
             user.PhoneNumber = entity.PhoneNumber;
             user.Email = entity.Email;
@@ -587,9 +601,12 @@ namespace LANCommander.Server.Services
             user.DownloadSpeedKBps = entity.DownloadSpeedKBps;
             user.EnableSaves = entity.EnableSaves;
 
-            await identityContext.UserManager.UpdateAsync(user);
+            var result = await identityContext.UserManager.UpdateAsync(user);
 
             await Cache.RemoveByTagAsync($"User/{entity.Id}");
+
+            if (approving && result.Succeeded)
+                await _pluginEventBus.PublishAsync(new UserApprovedEvent(user.Id, user.UserName));
 
             return user;
         }
@@ -600,7 +617,10 @@ namespace LANCommander.Server.Services
 
             var user = await identityContext.UserManager.FindByIdAsync(entity.Id.ToString());
 
-            await identityContext.UserManager.DeleteAsync(user);
+            var result = await identityContext.UserManager.DeleteAsync(user);
+
+            if (result.Succeeded)
+                await _pluginEventBus.PublishAsync(new UserDeletedEvent(user.Id, user.UserName));
         }
 
         public IBaseDatabaseService<User> AsNoTracking()

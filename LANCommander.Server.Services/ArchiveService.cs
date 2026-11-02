@@ -1,4 +1,4 @@
-﻿using LANCommander.Server.Data;
+using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Helpers;
 using System.IO.Compression;
@@ -14,6 +14,8 @@ using Microsoft.Extensions.Logging;
 using Microsoft.EntityFrameworkCore;
 using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
 using LANCommander.SDK;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.Services
 {
@@ -23,7 +25,8 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> dbContextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, httpContextAccessor, dbContextFactory), IArchiveClient
+        StorageLocationService storageLocationService,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Archive>(logger, settingsProvider, cache, httpContextAccessor, dbContextFactory), IArchiveClient
     {
         public async Task<Archive> GetLatestArchiveAsync(Expression<Func<Archive, bool>> predicate)
         {
@@ -135,6 +138,26 @@ namespace LANCommander.Server.Services
                 await DeleteAsync(replaced);
 
             return (archive, replaced?.GameVersionId);
+        }
+
+        /// <summary>
+        /// Tells plugins an uploaded archive is ready. Call once the upload is complete and, for a game,
+        /// linked to its version.
+        /// </summary>
+        public async Task PublishUploadedAsync(Guid archiveId)
+        {
+            var archive = await GetAsync(archiveId);
+
+            if (archive == null)
+                return;
+
+            await pluginEventBus.PublishAsync(new ArchiveUploadedEvent(
+                archive.Id,
+                archive.GameId,
+                archive.GameVersionId,
+                archive.RedistributableId,
+                archive.ToolId,
+                archive.Version));
         }
 
         public override async Task<ExistingEntityResult<Archive>> AddMissingAsync(Expression<Func<Archive, bool>> predicate, Archive entity)

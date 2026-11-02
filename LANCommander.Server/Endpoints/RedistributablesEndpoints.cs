@@ -177,12 +177,14 @@ public static class RedistributablesEndpoints
 
         try
         {
-            await archiveService.CompleteUploadAsync(
+            var (archive, _) = await archiveService.CompleteUploadAsync(
                 request.ObjectKey,
                 request.StorageLocationId,
                 request.Version,
                 a => a.RedistributableId = request.Id,
                 a => a.RedistributableId == request.Id && a.Version == request.Version);
+
+            await archiveService.PublishUploadedAsync(archive.Id);
 
             return TypedResults.Ok();
         }

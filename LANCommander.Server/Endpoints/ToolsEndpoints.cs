@@ -147,12 +147,14 @@ public static class ToolsEndpoints
 
         try
         {
-            await archiveService.CompleteUploadAsync(
+            var (archive, _) = await archiveService.CompleteUploadAsync(
                 request.ObjectKey,
                 request.StorageLocationId,
                 request.Version,
                 a => a.ToolId = request.Id,
                 a => a.ToolId == request.Id && a.Version == request.Version);
+
+            await archiveService.PublishUploadedAsync(archive.Id);
 
             return TypedResults.Ok();
         }

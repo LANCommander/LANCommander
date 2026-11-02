@@ -1,6 +1,8 @@
 using System.Collections.Concurrent;
 using System.Linq.Expressions;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
@@ -22,7 +24,8 @@ public sealed class ServerManager(
     IEnumerable<IServerEngine> builtInEngines,
     SettingsProvider<Settings.Settings> settingsProvider,
     IRconCommandSender rconCommandSender,
-    IEnumerable<IServerEngineProvider>? engineProviders = null)
+    IEnumerable<IServerEngineProvider>? engineProviders = null,
+    IPluginEventBus? pluginEventBus = null)
 {
     /// <summary>How many recent output lines are kept per server for <see cref="GetRecentLog"/>.</summary>
     public const int RecentLogCapacity = 1000;
@@ -45,6 +48,7 @@ public sealed class ServerManager(
     public async Task InitializeAsync()
     {
         SubscribeToEngineLogs();
+        SubscribeToEngineStatus();
 
         foreach (var engine in serverEngines)
         {
@@ -414,6 +418,51 @@ public sealed class ServerManager(
             logger.LogError(ex, "A server output handler failed");
         }
     }
+
+    #endregion
+
+    #region Plugin events
+
+    private int _statusSubscribed;
+    private readonly object _statusLock = new();
+    private Task _statusPublishing = Task.CompletedTask;
+
+    private void SubscribeToEngineStatus()
+    {
+        if (pluginEventBus == null || Interlocked.Exchange(ref _statusSubscribed, 1) == 1)
+            return;
+
+        foreach (var engine in serverEngines)
+            engine.OnServerStatusUpdate += HandleServerStatus;
+    }
+
+    private void HandleServerStatus(object? sender, ServerStatusUpdateEventArgs args)
+    {
+        if (ToEngineStatus(args.Status) is not { } status)
+            return;
+
+        // Engines raise this synchronously, from their own start/stop paths or process callbacks, so
+        // plugin handlers mustn't hold them up. Chained so plugins see changes in the order they
+        // happened. The bus logs handler failures itself.
+        var @event = new ServerStatusChangedEvent(args.Server.Id, args.Server.Name, status, args.Exception?.Message);
+
+        lock (_statusLock)
+            _statusPublishing = _statusPublishing.ContinueWith(
+                _ => pluginEventBus!.PublishAsync(@event),
+                CancellationToken.None,
+                TaskContinuationOptions.None,
+                TaskScheduler.Default).Unwrap();
+    }
+
+    private static ServerEngineStatus? ToEngineStatus(ServerProcessStatus status) => status switch
+    {
+        ServerProcessStatus.Stopped => ServerEngineStatus.Stopped,
+        ServerProcessStatus.Starting => ServerEngineStatus.Starting,
+        ServerProcessStatus.Running => ServerEngineStatus.Running,
+        ServerProcessStatus.Stopping => ServerEngineStatus.Stopping,
+        ServerProcessStatus.Error => ServerEngineStatus.Error,
+        _ => null,
+    };
 
     #endregion
 

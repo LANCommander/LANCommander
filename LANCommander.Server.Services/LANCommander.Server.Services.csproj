@@ -32,6 +32,7 @@
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Data\LANCommander.Server.Data.csproj" />
+    <ProjectReference Include="..\LANCommander.Server.Plugins\LANCommander.Server.Plugins.csproj" />
     <ProjectReference Include="..\LANCommander.Server.Settings\LANCommander.Server.Settings.csproj" />
   </ItemGroup>
 

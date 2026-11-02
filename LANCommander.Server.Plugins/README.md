@@ -30,14 +30,32 @@ Use the version of the server the plugin targets.
 | `Data.PluginDbContext`, `AddPluginDbContext<T>` | A plugin's own tables in the server's database, named and migrated by the server |
 | `Data.PluginMigrationsAttribute`, `Data.DatabaseEngine` | Declares a migrations assembly; a plugin ships one per engine (SQLite, MySQL, PostgreSQL) |
 | `Data.PluginValueConverters`, `Data.PortabilityRules` | Keeps a plugin model behaving the same on every engine |
-
-A plugin with a context needs `DataId` and `MigrationAssemblies` in its `[LANCommanderPlugin]`
-attribute. Plugin settings, `IPluginSettings<T>`, are in `LANCommander.SDK`.
 | `IGameProvider`, `IGameVersionProvider` | Manage games and add-ons, their links, external ids, custom fields and versions. Provided by the server |
 | `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |
 | `ITaxonomyProvider` | Manage categories, collections, companies, engines, genres, platforms and tags. Provided by the server |
 | `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths. Provided by the server |
+| `GameCreatedEvent`, `ArchiveUploadedEvent`, `UserCreatedEvent`, `PlaySessionStartedEvent`, `IssueCreatedEvent`, `ServerStatusChangedEvent`, ... | Server events, raised through the SDK's `IPluginEventBus` |
+
+A plugin with a context needs `DataId` and `MigrationAssemblies` in its `[LANCommanderPlugin]`
+attribute. Plugin settings, `IPluginSettings<T>`, are in `LANCommander.SDK`.
+
+Subscribe to server events in `InitializeAsync` and dispose the subscription when the plugin stops:
+
+```csharp
+var events = context.Services.GetRequiredService<IPluginEventBus>();
+
+_subscription = events.Subscribe<PlaySessionStartedEvent>((e, ct) =>
+{
+    // Runs on the request that started the session: hand slow work off
+    return Task.CompletedTask;
+});
+```
+
+The events are games created, updated and deleted; archives uploaded; user accounts created,
+approved and deleted; play sessions started and ended; issues reported and resolved; and game
+server status changes. Handlers of all but the last run on the request that caused the change and
+are awaited, so keep them quick. A handler that throws is logged and changes nothing else.
 
 The [documentation site](https://docs.lancommander.app/) has a walkthrough under Plugins.
 

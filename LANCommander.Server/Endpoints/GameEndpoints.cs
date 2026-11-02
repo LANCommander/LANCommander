@@ -650,6 +650,8 @@ public static class GameEndpoints
 
             await gameVersionService.LinkArchiveAsync(archive.Id, targetVersionId, request.Changelog);
 
+            await archiveService.PublishUploadedAsync(archive.Id);
+
             return TypedResults.Ok();
         }
         catch (Exception ex)

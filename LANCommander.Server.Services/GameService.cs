@@ -1,4 +1,4 @@
-﻿using System.IO.Compression;
+using System.IO.Compression;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
@@ -11,6 +11,8 @@ using LANCommander.Server.Services.Models;
 using Microsoft.Extensions.Logging;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.Services
 {
@@ -27,13 +29,14 @@ namespace LANCommander.Server.Services
         MediaService mediaService,
         StorageLocationService storageLocationService,
         GameCustomFieldService gameCustomFieldService,
-        SDK.Services.ScriptClient scriptClient) : BaseDatabaseService<Game>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        SDK.Services.ScriptClient scriptClient,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Game>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Game> AddAsync(Game entity)
         {
             await cache.ExpireGameCacheAsync(entity.Id);
 
-            return await base.AddAsync(entity, async context =>
+            var game = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(g => g.Actions);
                 await context.UpdateRelationshipAsync(g => g.Archives);
@@ -57,6 +60,10 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.Tags);
                 await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
+
+            await pluginEventBus.PublishAsync(new GameCreatedEvent(game.Id, game.Title));
+
+            return game;
         }
 
         public override async Task<ExistingEntityResult<Game>> AddMissingAsync(Expression<Func<Game, bool>> predicate, Game entity)
@@ -99,6 +106,8 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(g => g.ExternalIds);
             });
 
+            await pluginEventBus.PublishAsync(new GameUpdatedEvent(update.Id, update.Title));
+
             return update;
         }
 
@@ -119,6 +128,8 @@ namespace LANCommander.Server.Services
 
             await cache.ExpireGameCacheAsync(game.Id);
             await base.DeleteAsync(game);
+
+            await pluginEventBus.PublishAsync(new GameDeletedEvent(game.Id, game.Title));
         }
 
         public async Task<ICollection<Game>> GetAddonsAsync(Game game)

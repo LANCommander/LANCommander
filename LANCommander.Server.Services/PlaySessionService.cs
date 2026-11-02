@@ -2,6 +2,8 @@
 using LANCommander.Server.Data.Models;
 using Microsoft.EntityFrameworkCore;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
@@ -15,7 +17,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         PlaySessionKeepAliveTracker keepAliveTracker,
-        ServerService serverService) : BaseDatabaseService<PlaySession>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        ServerService serverService,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<PlaySession>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<PlaySession> AddAsync(PlaySession entity)
         {
@@ -49,9 +52,11 @@ namespace LANCommander.Server.Services
                 Start = DateTime.UtcNow
             };
 
-            await AddAsync(session);
+            session = await AddAsync(session);
 
             await keepAliveTracker.TouchAsync(gameId, userId);
+
+            await pluginEventBus.PublishAsync(new PlaySessionStartedEvent(session.Id, gameId, userId, session.Start ?? session.CreatedOn));
         }
 
         public async Task EndSessionAsync(Guid gameId, Guid userId)
@@ -66,6 +71,9 @@ namespace LANCommander.Server.Services
             }
 
             await keepAliveTracker.RemoveAsync(gameId, userId);
+
+            if (existingSession != null)
+                await PublishEndedAsync(existingSession, timedOut: false);
         }
 
         /// <summary>
@@ -105,9 +113,20 @@ namespace LANCommander.Server.Services
 
                 if (session.GameId.HasValue)
                     affectedGameIds.Add(session.GameId.Value);
+
+                await PublishEndedAsync(session, timedOut: true);
             }
 
             return affectedGameIds;
+        }
+
+        private async Task PublishEndedAsync(PlaySession session, bool timedOut)
+        {
+            // A session whose game has since been deleted has nothing to report against
+            if (session.GameId is not { } gameId || session.End is not { } end)
+                return;
+
+            await pluginEventBus.PublishAsync(new PlaySessionEndedEvent(session.Id, gameId, session.UserId, session.Start ?? session.CreatedOn, end, timedOut));
         }
     }
 }

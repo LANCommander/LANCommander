@@ -1,6 +1,8 @@
 ﻿using System.Configuration;
+using LANCommander.SDK.Plugins;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Plugins;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -14,15 +16,20 @@ namespace LANCommander.Server.Services
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Issue>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Issue>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Issue> AddAsync(Issue entity)
         {
-            return await base.AddAsync(entity, async context =>
+            var issue = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(i => i.Game);
                 await context.UpdateRelationshipAsync(i => i.ResolvedBy);
             });
+
+            await pluginEventBus.PublishAsync(new IssueCreatedEvent(issue.Id, issue.GameId, issue.CreatedById, issue.Description));
+
+            return issue;
         }
 
         public override async Task<Issue> UpdateAsync(Issue entity)
@@ -33,7 +40,7 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(i => i.ResolvedBy);
             });
         }
-        
+
         public async Task ResolveAsync(Guid issueId, Guid userId)
         {
             var issue = await GetAsync(issueId);
@@ -43,6 +50,8 @@ namespace LANCommander.Server.Services
             issue.ResolvedBy = user;
 
             await UpdateAsync(issue);
+
+            await pluginEventBus.PublishAsync(new IssueResolvedEvent(issue.Id, issue.GameId, userId));
         }
     }
 }

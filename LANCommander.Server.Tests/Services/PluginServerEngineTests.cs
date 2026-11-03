@@ -7,6 +7,8 @@ using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging.Abstractions;
+using Microsoft.EntityFrameworkCore;
+using LANCommander.Server.Data;
 using Shouldly;
 using ServerModel = LANCommander.Server.Data.Models.Server;
 using ServerSettings = LANCommander.Server.Settings.Settings;
@@ -113,15 +115,33 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
         /// <summary>The server's files by path, and every path the engine was asked about.</summary>
         public ConcurrentDictionary<string, string> Files { get; } = new();
         public List<string> FilePaths { get; } = new();
+        public Exception? FileFailure { get; set; }
+        public bool NullFileList { get; set; }
+        public CancellationToken FileToken { get; private set; }
+        public Action? OnOpen { get; set; }
+        public Stream? OpenedFile { get; private set; }
+        public DateTime Modified { get; } = new(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+        private void CheckFiles(CancellationToken cancellationToken)
+        {
+            FileToken = cancellationToken;
+            cancellationToken.ThrowIfCancellationRequested();
+            if (FileFailure != null)
+                throw FileFailure;
+        }
 
         public Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
         {
+            CheckFiles(cancellationToken);
             FilePaths.Add(path);
+
+            if (NullFileList)
+                return Task.FromResult<IReadOnlyList<ServerEngineFile>>(null!);
 
             IReadOnlyList<ServerEngineFile> files =
             [
                 .. Files.Keys.Where(key => key.StartsWith(path) && !key[path.Length..].TrimStart('/').Contains('/'))
-                    .Select(key => new ServerEngineFile(key[path.Length..].TrimStart('/'), false, Files[key].Length)),
+                    .Select(key => new ServerEngineFile(key[path.Length..].TrimStart('/'), false, Files[key].Length, Modified)),
                 // Nothing that isn't a name within the folder is passed on
                 new ServerEngineFile("../escape", false),
                 new ServerEngineFile("", false),
@@ -132,13 +152,21 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
 
         public Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
         {
+            CheckFiles(cancellationToken);
             FilePaths.Add(path);
 
-            return Task.FromResult<Stream>(new MemoryStream(System.Text.Encoding.UTF8.GetBytes(Files[path])));
+            if (!Files.TryGetValue(path, out var content))
+                throw new FileNotFoundException("No such file", path);
+
+            OpenedFile = new NonseekableStream(System.Text.Encoding.UTF8.GetBytes(content));
+            OnOpen?.Invoke();
+
+            return Task.FromResult(OpenedFile);
         }
 
         public async Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)
         {
+            CheckFiles(cancellationToken);
             FilePaths.Add(path);
 
             Files[path] = await new StreamReader(content).ReadToEndAsync(cancellationToken);
@@ -151,6 +179,18 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
 
             return Task.CompletedTask;
         }
+    }
+
+    private sealed class NonseekableStream(byte[] bytes) : MemoryStream(bytes)
+    {
+        public override bool CanSeek => false;
+        public override long Length => throw new NotSupportedException();
+        public override long Position
+        {
+            get => throw new NotSupportedException();
+            set => throw new NotSupportedException();
+        }
+        public override long Seek(long offset, SeekOrigin loc) => throw new NotSupportedException();
     }
 
     /// <summary>Writes back whatever is typed into it.</summary>
@@ -219,6 +259,207 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
             EngineExtensionId = engineId,
             EngineSettings = settings,
         });
+
+    private IServerProvider CreateFileProvider(ServerManager manager) => new LANCommander.Server.Plugins.Records.ServerProvider(
+        GetService<ServerService>(), GetService<ServerConsoleService>(), GetService<ServerHttpPathService>(),
+        GetService<GameService>(), manager, GetService<IDbContextFactory<DatabaseContext>>());
+
+    [Fact]
+    public async Task HostRegisteredProviderUsesLocalWorkingDirectoryWithoutARunningProcess()
+    {
+        var root = GetTemporaryDirectory();
+        try
+        {
+            var provider = GetService<IServerProvider>();
+            var server = await provider.AddAsync(new ServerInfo
+            {
+                Name = Unique("Local files"),
+                Engine = ServerHostEngine.Local,
+                WorkingDirectory = root,
+            });
+            await GetService<ServerManager>().RefreshTrackingAsync();
+            using var content = new MemoryStream("startup config"u8.ToArray());
+
+            await provider.WriteFileAsync(server.Id, "cfg/startup.cfg", content);
+            content.CanRead.ShouldBeTrue();
+            File.ReadAllText(Path.Combine(root, "cfg", "startup.cfg")).ShouldBe("startup config");
+            var folder = (await provider.ListFilesAsync(server.Id, "")).ShouldHaveSingleItem();
+            folder.IsDirectory.ShouldBeTrue();
+            folder.Size.ShouldBeNull();
+            var file = (await provider.ListFilesAsync(server.Id, folder.Path)).ShouldHaveSingleItem();
+            file.Size.ShouldBe(14);
+            file.LastModified!.Value.Kind.ShouldBe(DateTimeKind.Utc);
+            await using (var stream = await provider.OpenFileAsync(server.Id, file.Path))
+            {
+                using var reader = new StreamReader(stream, leaveOpen: true);
+                (await reader.ReadToEndAsync()).ShouldBe("startup config");
+            }
+            await Should.ThrowAsync<DirectoryNotFoundException>(() => provider.ListFilesAsync(server.Id, "optional"));
+            await Should.ThrowAsync<FileNotFoundException>(() => provider.OpenFileAsync(server.Id, "missing.pk3"));
+            await provider.DeleteAsync(server.Id);
+        }
+        finally
+        {
+            Directory.Delete(root, recursive: true);
+        }
+    }
+
+    [Fact]
+    public async Task ProviderFilesRouteToTheSelectedEngineWithMetadataAndCallerOwnedStreams()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var other = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var provider = CreateFileProvider(await CreateManagerAsync(CreateEngines(extension, other)));
+        using var cancellation = new CancellationTokenSource();
+        using var content = new MemoryStream("xxhostname LAN"u8.ToArray()) { Position = 2 };
+
+        await provider.WriteFileAsync(server.Id, @"cfg\server.cfg", content, cancellation.Token);
+        content.CanRead.ShouldBeTrue();
+        extension.Files["cfg/server.cfg"].ShouldBe("hostname LAN");
+
+        var file = (await provider.ListFilesAsync(server.Id, "./cfg//", cancellation.Token)).ShouldHaveSingleItem();
+        file.ShouldBe(new ServerFileInfo("server.cfg", "cfg/server.cfg", false, 12, extension.Modified));
+        (await provider.ListFilesAsync(server.Id, "", cancellation.Token)).ShouldBeEmpty();
+
+        await using (var stream = await provider.OpenFileAsync(server.Id, file.Path, cancellation.Token))
+        {
+            stream.CanSeek.ShouldBeFalse();
+            stream.CanRead.ShouldBeTrue();
+            using var reader = new StreamReader(stream, leaveOpen: true);
+            (await reader.ReadToEndAsync(cancellation.Token)).ShouldBe("hostname LAN");
+        }
+        extension.OpenedFile!.CanRead.ShouldBeFalse();
+
+        using var nonseekable = new NonseekableStream("map"u8.ToArray());
+        await provider.WriteFileAsync(server.Id, "maps/loose.bsp", nonseekable, cancellation.Token);
+        nonseekable.CanRead.ShouldBeTrue();
+        extension.Files["maps/loose.bsp"].ShouldBe("map");
+        extension.FileToken.ShouldBe(cancellation.Token);
+        other.FilePaths.ShouldBeEmpty();
+    }
+
+    [Theory]
+    [InlineData("../maps")]
+    [InlineData("maps/../secret")]
+    [InlineData(@"maps\..\secret")]
+    [InlineData("/etc/passwd")]
+    [InlineData(@"\\host\share")]
+    [InlineData("C:/Windows")]
+    [InlineData("file:stream")]
+    [InlineData("file\0")]
+    [InlineData("\t")]
+    [InlineData("maps/.. /secret")]
+    [InlineData("maps./secret")]
+    [InlineData("maps/*.bsp")]
+    public async Task ProviderRejectsInvalidPathsBeforeCallingAnEngine(string path)
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var provider = CreateFileProvider(await CreateManagerAsync(CreateEngines(extension)));
+        using var content = new MemoryStream();
+
+        await Should.ThrowAsync<ArgumentException>(() => provider.ListFilesAsync(server.Id, path));
+        await Should.ThrowAsync<ArgumentException>(() => provider.OpenFileAsync(server.Id, path));
+        await Should.ThrowAsync<ArgumentException>(() => provider.WriteFileAsync(server.Id, path, content));
+        extension.FilePaths.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ProviderRequiresAFileNameAndReadableContent()
+    {
+        var provider = GetService<IServerProvider>();
+        using var content = new MemoryStream();
+        await Should.ThrowAsync<ArgumentException>(() => provider.OpenFileAsync(Guid.NewGuid(), ""));
+        await Should.ThrowAsync<ArgumentException>(() => provider.WriteFileAsync(Guid.NewGuid(), ".", content));
+        await Should.ThrowAsync<ArgumentNullException>(() => provider.ListFilesAsync(Guid.NewGuid(), null!));
+        await Should.ThrowAsync<ArgumentNullException>(() => provider.WriteFileAsync(Guid.NewGuid(), "cfg", null!));
+        content.Dispose();
+        await Should.ThrowAsync<ArgumentException>(() => provider.WriteFileAsync(Guid.NewGuid(), "cfg", content));
+    }
+
+    [Fact]
+    public async Task ProviderDistinguishesMissingServersEnginesAndFileCapabilities()
+    {
+        var extension = new FakeExtension(NewEngineId());
+        var server = await AddServerAsync(extension.Id);
+        var untracked = await AddServerAsync(NewEngineId());
+        var provider = CreateFileProvider(await CreateManagerAsync(CreateEngines(extension)));
+        using var content = new MemoryStream();
+
+        foreach (var operation in new Func<Guid, Task>[]
+        {
+            id => provider.ListFilesAsync(id, ""),
+            id => provider.OpenFileAsync(id, "server.cfg"),
+            id => provider.WriteFileAsync(id, "server.cfg", content),
+        })
+        {
+            await Should.ThrowAsync<KeyNotFoundException>(() => operation(Guid.NewGuid()));
+            await Should.ThrowAsync<InvalidOperationException>(() => operation(untracked.Id));
+            await Should.ThrowAsync<NotSupportedException>(() => operation(server.Id));
+        }
+        extension.FilePaths.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task ProviderPreservesMissingPathsAndUnavailableEngineErrors()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var provider = CreateFileProvider(await CreateManagerAsync(CreateEngines(extension)));
+        using var content = new MemoryStream();
+
+        extension.FileFailure = new DirectoryNotFoundException("Optional maps absent");
+        (await Should.ThrowAsync<DirectoryNotFoundException>(() => provider.ListFilesAsync(server.Id, "maps")))
+            .ShouldBeSameAs(extension.FileFailure);
+        extension.FileFailure = null;
+        await Should.ThrowAsync<FileNotFoundException>(() => provider.OpenFileAsync(server.Id, "missing.pk3"));
+
+        foreach (var failure in new Exception[]
+        {
+            new InvalidOperationException("Container stopped"),
+            new HttpRequestException("Docker host unavailable"),
+            new UnauthorizedAccessException("Access denied"),
+        })
+        {
+            extension.FileFailure = failure;
+            (await Should.ThrowAsync<Exception>(() => provider.ListFilesAsync(server.Id, ""))).ShouldBeSameAs(failure);
+            (await Should.ThrowAsync<Exception>(() => provider.OpenFileAsync(server.Id, "server.cfg"))).ShouldBeSameAs(failure);
+            (await Should.ThrowAsync<Exception>(() => provider.WriteFileAsync(server.Id, "server.cfg", content))).ShouldBeSameAs(failure);
+            content.CanRead.ShouldBeTrue();
+        }
+        extension.FileFailure = null;
+        extension.NullFileList = true;
+        await Should.ThrowAsync<InvalidOperationException>(() => provider.ListFilesAsync(server.Id, ""));
+    }
+
+    [Fact]
+    public async Task ProviderCancellationIsForwardedAndAnUnreturnedStreamIsDisposed()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Files);
+        var server = await AddServerAsync(extension.Id);
+        var provider = CreateFileProvider(await CreateManagerAsync(CreateEngines(extension)));
+        using var content = new MemoryStream();
+        using var canceled = new CancellationTokenSource();
+        canceled.Cancel();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.ListFilesAsync(server.Id, "", canceled.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.OpenFileAsync(server.Id, "cfg", canceled.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.WriteFileAsync(server.Id, "cfg", content, canceled.Token));
+        extension.FilePaths.ShouldBeEmpty();
+
+        using var duringOpen = new CancellationTokenSource();
+        extension.Files["cfg"] = "config";
+        extension.OnOpen = duringOpen.Cancel;
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.OpenFileAsync(server.Id, "cfg", duringOpen.Token));
+        extension.FileToken.ShouldBe(duringOpen.Token);
+        extension.OpenedFile!.CanRead.ShouldBeFalse();
+
+        extension.FileFailure = new OperationCanceledException();
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.ListFilesAsync(server.Id, ""));
+        await Should.ThrowAsync<OperationCanceledException>(() => provider.WriteFileAsync(server.Id, "cfg", content));
+        content.CanRead.ShouldBeTrue();
+    }
 
     [Fact]
     public async Task TheEngineRunsOnlyTheServersSavedWithItsId()

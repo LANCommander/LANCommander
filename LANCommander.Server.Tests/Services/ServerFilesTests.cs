@@ -95,4 +95,20 @@ public class ServerFilesTests : IDisposable
         Should.Throw<ArgumentException>(() => files.OpenRead("../cfg/server.cfg"));
         Should.Throw<ArgumentException>(() => files.Delete(".."));
     }
+
+    [Fact]
+    public async Task CanceledWritesDoNotTruncateExistingFilesOrCreateFolders()
+    {
+        var files = new LocalServerFiles(_root);
+        using var content = new MemoryStream("replacement"u8.ToArray());
+        using var cancellation = new CancellationTokenSource();
+        cancellation.Cancel();
+
+        await Should.ThrowAsync<OperationCanceledException>(() => files.WriteAsync("cfg/server.cfg", content, cancellation.Token));
+        await Should.ThrowAsync<OperationCanceledException>(() => files.WriteAsync("new/startup.cfg", content, cancellation.Token));
+
+        File.ReadAllText(Path.Combine(_root, "cfg", "server.cfg")).ShouldBe("hostname \"LAN\"");
+        Directory.Exists(Path.Combine(_root, "new")).ShouldBeFalse();
+        content.CanRead.ShouldBeTrue();
+    }
 }

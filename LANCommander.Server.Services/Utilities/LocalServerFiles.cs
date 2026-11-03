@@ -54,6 +54,8 @@ public sealed class LocalServerFiles
 
     public async Task WriteAsync(string path, Stream content, CancellationToken cancellationToken)
     {
+        cancellationToken.ThrowIfCancellationRequested();
+
         var file = Resolve(path);
 
         if (file == _root || Directory.Exists(file))

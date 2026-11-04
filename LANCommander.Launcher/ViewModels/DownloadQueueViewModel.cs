@@ -203,14 +203,16 @@ public partial class DownloadQueueViewModel : ViewModelBase
             }
             else
             {
-                var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred);
-                var totalBytes = ByteSize.FromBytes(progress.TotalBytes);
+                // Fixed decimal places keep the text width stable between ticks; the default
+                // "0.##" format drops trailing zeros and makes the footer layout jitter
+                var bytesDownloaded = ByteSize.FromBytes(progress.BytesTransferred).ToString("0.00");
+                var totalBytes = ByteSize.FromBytes(progress.TotalBytes).ToString("0.00");
 
                 CurrentProgressText = $"{bytesDownloaded} / {totalBytes} ({percent:P0})";
             }
 
             // Format transfer speed
-            TransferSpeedText = progress.TransferSpeed > 0 ? $"{ByteSize.FromBytes(progress.TransferSpeed)}/s" : string.Empty;
+            TransferSpeedText = progress.TransferSpeed > 0 ? $"{ByteSize.FromBytes(progress.TransferSpeed).ToString("0.0")}/s" : string.Empty;
 
             // Format time remaining
             var bytesRemaining = progress.TotalBytes - progress.BytesTransferred;
@@ -223,9 +225,9 @@ public partial class DownloadQueueViewModel : ViewModelBase
                 string remaining;
 
                 if (ts.TotalHours >= 1)
-                    remaining = $"{(int)ts.TotalHours}h {ts.Minutes}m";
+                    remaining = $"{(int)ts.TotalHours}h {ts.Minutes:00}m";
                 else if (ts.TotalMinutes >= 1)
-                    remaining = $"{ts.Minutes}m {ts.Seconds}s";
+                    remaining = $"{ts.Minutes}m {ts.Seconds:00}s";
                 else
                     remaining = $"{ts.Seconds}s";
 

@@ -138,13 +138,19 @@
                                        FontSize="{DynamicResource FontSizeCaption}"
                                        Foreground="{DynamicResource TextSecondaryBrush}"
                                        VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       MinWidth="168"
                                        Margin="12,0,0,0" />
+                            <!-- MinWidths reserve room (~7.2px per Roboto Mono glyph at 12px) so the
+                                 progress bar doesn't resize as the numbers tick over -->
                             <TextBlock Grid.Column="4"
                                        Classes="Mono"
                                        Text="{Binding DownloadQueue.TransferSpeedText}"
                                        FontSize="{DynamicResource FontSizeCaption}"
                                        Foreground="{DynamicResource TextTertiaryBrush}"
                                        VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       MinWidth="80"
                                        Margin="12,0,0,0" />
                             <TextBlock Grid.Column="5"
                                        Classes="Mono"
@@ -152,6 +158,8 @@
                                        FontSize="{DynamicResource FontSizeCaption}"
                                        Foreground="{DynamicResource TextTertiaryBrush}"
                                        VerticalAlignment="Center"
+                                       TextAlignment="Right"
+                                       MinWidth="124"
                                        Margin="12,0,0,0"
                                        IsVisible="{Binding DownloadQueue.TimeRemainingText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
                         </Grid>

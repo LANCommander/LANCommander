@@ -1,7 +1,10 @@
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Data;
 using ServerEntity = LANCommander.Server.Data.Models.Server;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Utilities;
 using LANCommander.Server.Settings.Enums;
+using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Plugins.Records;
 
@@ -10,8 +13,78 @@ internal sealed class ServerProvider(
     ServerService servers,
     ServerConsoleService consoles,
     ServerHttpPathService httpPaths,
-    GameService games) : IServerProvider
+    GameService games,
+    ServerManager serverManager,
+    IDbContextFactory<DatabaseContext> contextFactory) : IServerProvider
 {
+    public async Task<IReadOnlyList<ServerFileInfo>> ListFilesAsync(Guid serverId, string relativePath, CancellationToken cancellationToken = default)
+    {
+        var path = await RequireFilesAsync(serverId, relativePath, false, cancellationToken);
+        var files = await serverManager.ListFilesAsync(serverId, path, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return files.Select(file => new ServerFileInfo(file.Name, file.Path, file.IsDirectory, file.Size, file.LastModified)).ToList();
+    }
+
+    public async Task<Stream> OpenFileAsync(Guid serverId, string relativePath, CancellationToken cancellationToken = default)
+    {
+        var path = await RequireFilesAsync(serverId, relativePath, true, cancellationToken);
+        var stream = await serverManager.OpenFileAsync(serverId, path, cancellationToken);
+
+        if (cancellationToken.IsCancellationRequested)
+        {
+            await stream.DisposeAsync();
+            cancellationToken.ThrowIfCancellationRequested();
+        }
+
+        return stream;
+    }
+
+    public async Task WriteFileAsync(Guid serverId, string relativePath, Stream content, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(content);
+
+        if (!content.CanRead)
+            throw new ArgumentException("The content stream must be readable.", nameof(content));
+
+        var path = await RequireFilesAsync(serverId, relativePath, true, cancellationToken);
+
+        await serverManager.WriteFileAsync(serverId, path, content, cancellationToken);
+
+        cancellationToken.ThrowIfCancellationRequested();
+    }
+
+    private async Task<string> RequireFilesAsync(Guid serverId, string relativePath, bool requireFile, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        ArgumentNullException.ThrowIfNull(relativePath);
+
+        // The file manager also accepts root-looking paths for navigation; plugins promise relative
+        // paths, so reject those and platform-specific aliases before using its shared normalizer.
+        if (relativePath.StartsWith('/') || relativePath.StartsWith('\\')
+            || relativePath.Any(char.IsControl)
+            || relativePath.Split(['/', '\\']).Any(segment =>
+                segment is not ("" or ".") && (segment.EndsWith('.') || segment.EndsWith(' ')
+                    || segment.IndexOfAny(['*', '?', '"', '<', '>', '|']) >= 0)))
+            throw new ArgumentException("A relative server file path is required.", nameof(relativePath));
+
+        var path = ServerFilePath.Normalize(relativePath);
+
+        if (requireFile && path.Length == 0)
+            throw new ArgumentException("A file must be named.", nameof(relativePath));
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        if (!await context.Set<ServerEntity>().AnyAsync(server => server.Id == serverId, cancellationToken))
+            throw RecordGuard.NotFound("server", serverId);
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return path;
+    }
+
     public async Task<IReadOnlyList<ServerInfo>> GetAsync(CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();

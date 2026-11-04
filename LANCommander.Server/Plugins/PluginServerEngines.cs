@@ -288,7 +288,8 @@ internal sealed class PluginServerEngine(
 
     public async Task<IReadOnlyList<ServerFile>> ListFilesAsync(Guid serverId, string path, CancellationToken cancellationToken = default)
     {
-        var files = await extension.ListFilesAsync(FilesOf(serverId), path, cancellationToken) ?? [];
+        var files = await extension.ListFilesAsync(FilesOf(serverId), path, cancellationToken)
+            ?? throw new InvalidOperationException($"The {extension.Name} engine didn't list the files.");
 
         // Only names within the folder; anything else the engine lists couldn't be reached through it
         return files

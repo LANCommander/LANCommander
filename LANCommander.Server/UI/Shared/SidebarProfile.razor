@@ -18,7 +18,7 @@
     <Dropdown Class="lc-sidebar-profile">
         <ChildContent>
             <button type="button" class="lc-sidebar-profile-button" aria-label="Profile menu">
-                <Avatar Square Name="@_name" />
+                <Avatar Square Name="@_name" Src="@($"/api/Profile/{Uri.EscapeDataString(_name)}/Avatar")" />
                 <span class="lc-sidebar-profile-name">@_name</span>
                 <Icon Type="IconType.CaretDown" Class="lc-sidebar-profile-caret" />
             </button>

@@ -26,27 +26,45 @@
 
     <Divider>Server Engines</Divider>
 
-    <ServerEngineEditor @bind-Values="Settings.Value.Server.GameServers.ServerEngines" Save="Save" />
+    <ServerEngineEditor @ref="_engineEditor" @bind-Values="Settings.Value.Server.GameServers.ServerEngines" Save="Save" />
 </PageContent>
 
 @code {
     string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory());
 
-    void Save()
+    ServerEngineEditor? _engineEditor;
+
+    // Saves the built-in settings and every plugin engine's, each regardless of the others
+    async Task Save()
     {
+        var saved = true;
+
         try
         {
             SettingsProvider.Update(s =>
             {
                 s.Server.GameServers = Settings.Value.Server.GameServers;
             });
-
-            Notifications.Success("Settings saved!");
         }
         catch (Exception ex)
         {
+            saved = false;
+
             Notifications.Error(ex, "The settings could not be saved");
         }
+
+        if (_engineEditor != null)
+        {
+            foreach (var (engine, error) in await _engineEditor.SaveExtensionsAsync())
+            {
+                saved = false;
+
+                Notifications.Error(error, $"The {engine} engine's settings could not be saved");
+            }
+        }
+
+        if (saved)
+            Notifications.Success("Settings saved!");
     }
 
     void OnPathSelected(string path)

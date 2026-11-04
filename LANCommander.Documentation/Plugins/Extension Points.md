@@ -249,6 +249,57 @@ parameter. Its changes join the page's other unsaved changes, and are saved or d
 }
 ```
 
+### Configuring the engine
+
+What the engine needs regardless of server, such as the hosts it runs servers on, is configured on
+**Settings › Servers**, where the engine is listed under its name with the built-in Local and Remote
+engines. Set `SettingsComponent` to a component that edits it:
+
+```csharp
+public Type? SettingsComponent => typeof(MyEngineSettings);
+```
+
+The plugin keeps the configuration itself, typically in [`IPluginSettings<T>`](#plugin-settings).
+The component gets a [`ServerEngineSettingsContext`](/Plugins/API%20Reference#serverenginesettingscontext)
+as its `Context` parameter; register with `OnSave` to save the configuration when the administrator
+saves the page:
+
+```razor
+@implements IDisposable
+@inject IPluginSettings<MyEngineConfiguration> Settings
+
+@code {
+    [Parameter] public ServerEngineSettingsContext Context { get; set; } = default!;
+
+    // Edited on the page, written only when it is saved
+    MyEngineConfiguration _editing = new();
+    IDisposable? _onSave;
+
+    protected override void OnInitialized()
+    {
+        _editing = Settings.Current.Clone();
+
+        _onSave = Context.OnSave(async cancellationToken =>
+        {
+            Settings.Update(current => current.CopyFrom(_editing));
+
+            await Settings.FlushAsync(cancellationToken);
+        });
+    }
+
+    public void Dispose() => _onSave?.Dispose();
+}
+```
+
+The component is created when its panel is opened and disposed when it is closed, so dispose the
+registration with it, and keep unsaved changes somewhere longer-lived if they should survive the
+panel being closed. A save that throws is reported under the engine's name, and the rest of the
+page, including other engines, is saved regardless. A component that throws while it is drawn is
+shown as an error in its own panel without affecting the rest of the page. An engine with no
+`SettingsComponent` isn't listed.
+
+### Pages of the engine's own
+
 An engine can also add pages to the editors of the servers that use it, listed under its name in the
 editor's menu. Each [`ServerEngineSection`](/Plugins/API%20Reference#serverenginesection) is a
 component taking the `ServerEngineServer` as its `Server` parameter. Such a page saves its own

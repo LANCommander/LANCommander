@@ -1,10 +1,12 @@
 @using LANCommander.Server.Services.ServerEngines
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
+@using LANCommander.Server.Plugins
 @inject RemoteServerEngine RemoteServerEngine
+@inject PluginServerEngines PluginEngines
 
 <Flex Vertical Gap="Gap.Large">
-    @if (!Shown.Any())
+    @if (!Shown.Any() && !PluginSettings.Any())
     {
         <Empty Description="No engines have been configured" />
     }
@@ -65,6 +67,21 @@
                 </ChildContent>
             </Panel>
         }
+
+        @* Plugins' engines configure themselves, and are saved with the page through their context *@
+        @foreach (var extension in PluginSettings)
+        {
+            <Panel Header="@extension.Name" Class="server-engine-extension" data-engine="@extension.Id">
+                <Extra>
+                    <Tag>Plugin</Tag>
+                </Extra>
+                <ChildContent>
+                    <ErrorHandler Inline Title="@($"The {extension.Name} engine's settings could not be displayed")">
+                        <DynamicComponent @key="extension.Id" Type="extension.SettingsComponent" Parameters="SettingsParameters(extension)" />
+                    </ErrorHandler>
+                </ChildContent>
+            </Panel>
+        }
     </Collapse>
 
     <Flex Justify="Justify.Center" Gap="Gap.Small">
@@ -92,6 +109,78 @@
     IEnumerable<ServerEngineConfiguration> Shown => ServerEngines.Where(e => e.Type != ServerEngine.Docker);
 
     Dictionary<Guid, RemoteEngineState> _remoteStates = new();
+
+    // Plugins' engines that have something to configure, after the built-in ones
+    IEnumerable<IServerEngineExtension> PluginSettings => PluginEngines.Extensions
+        .Where(e => e.SettingsComponent != null)
+        .OrderBy(e => e.Name, StringComparer.CurrentCultureIgnoreCase);
+
+    // What each plugin engine's settings component has asked to run when the page is saved, by engine id
+    readonly Dictionary<string, List<Func<CancellationToken, Task>>> _saveHandlers = new(StringComparer.OrdinalIgnoreCase);
+    readonly Dictionary<string, Dictionary<string, object?>> _settingsParameters = new(StringComparer.OrdinalIgnoreCase);
+
+    // Kept per engine so the component isn't handed a new context, and re-rendered, on every render
+    Dictionary<string, object?> SettingsParameters(IServerEngineExtension extension)
+    {
+        if (!_settingsParameters.TryGetValue(extension.Id, out var parameters))
+        {
+            parameters = new()
+            {
+                ["Context"] = new ServerEngineSettingsContext(save => Register(extension.Id, save)),
+            };
+
+            _settingsParameters[extension.Id] = parameters;
+        }
+
+        return parameters;
+    }
+
+    IDisposable Register(string engineId, Func<CancellationToken, Task> save)
+    {
+        if (!_saveHandlers.TryGetValue(engineId, out var handlers))
+            _saveHandlers[engineId] = handlers = new();
+
+        handlers.Add(save);
+
+        return new Registration(() => handlers.Remove(save));
+    }
+
+    sealed class Registration(System.Action remove) : IDisposable
+    {
+        System.Action? _remove = remove;
+
+        public void Dispose() => Interlocked.Exchange(ref _remove, null)?.Invoke();
+    }
+
+    /// <summary>
+    /// Saves the plugin engines' settings, each regardless of whether the others could be. Returns
+    /// those that couldn't be, by engine name.
+    /// </summary>
+    public async Task<IReadOnlyList<(string Engine, Exception Error)>> SaveExtensionsAsync(CancellationToken cancellationToken = default)
+    {
+        var failures = new List<(string, Exception)>();
+
+        foreach (var extension in PluginSettings)
+        {
+            if (!_saveHandlers.TryGetValue(extension.Id, out var handlers))
+                continue;
+
+            // A handler may unregister itself while saving
+            foreach (var save in handlers.ToList())
+            {
+                try
+                {
+                    await save(cancellationToken);
+                }
+                catch (Exception ex)
+                {
+                    failures.Add((extension.Name, ex));
+                }
+            }
+        }
+
+        return failures;
+    }
 
     protected override void OnParametersSet()
     {

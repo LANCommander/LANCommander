@@ -3,7 +3,8 @@ namespace LANCommander.Server.Plugins;
 /// <summary>
 /// Runs game servers somewhere other than as a process on the LANCommander server's machine, such as
 /// in a container. Each engine is offered on a server's General page alongside the built-in Local and
-/// Remote engines. Register an implementation in <c>IPlugin.ConfigureServices</c>.
+/// Remote engines, and may be configured on Settings › Servers through its
+/// <see cref="SettingsComponent"/>. Register an implementation in <c>IPlugin.ConfigureServices</c>.
 /// </summary>
 /// <remarks>
 /// <para>
@@ -39,6 +40,16 @@ public interface IServerEngineExtension
     /// rest of the page. Null shows nothing.
     /// </summary>
     Type? EditorComponent => null;
+
+    /// <summary>
+    /// A Razor component listed under the engine's name with the built-in engines on the server's
+    /// Settings › Servers page, configuring the engine itself rather than any one server, e.g. the
+    /// hosts it runs servers on. It takes a <see cref="ServerEngineSettingsContext"/> as its
+    /// <c>Context</c> parameter, keeps its configuration wherever the plugin does, such as in
+    /// <c>IPluginSettings&lt;T&gt;</c>, and saves it when the page is saved by registering with
+    /// <see cref="ServerEngineSettingsContext.OnSave"/>. Null leaves the engine off the page.
+    /// </summary>
+    Type? SettingsComponent => null;
 
     /// <summary>
     /// Further pages of a server's editor, listed under the engine's name in its menu once the server

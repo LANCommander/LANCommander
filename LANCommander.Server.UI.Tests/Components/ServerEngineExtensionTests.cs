@@ -170,12 +170,128 @@ public class ServerEngineExtensionTests : BUnitTestContext
         Assert.Contains(cut.FindComponents<Select<string>>().First().Instance.Items!, item => item.Label == "uninstalled.engine (not installed)");
     }
 
+    [Fact]
+    public void APluginEngineIsConfiguredWithTheBuiltInOnes()
+    {
+        var cut = Render<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor>(parameters => parameters
+            .Add(p => p.Values, [new LANCommander.Server.Settings.Models.ServerEngineConfiguration { Name = "This machine" }]));
+
+        var panel = cut.Find(".server-engine-extension");
+
+        Assert.Equal(EngineId, panel.GetAttribute("data-engine"));
+        Assert.Contains("Containers", panel.TextContent);
+        Assert.DoesNotContain("No engines have been configured", cut.Markup);
+
+        // Listed after the built-in engines, and opened like them
+        Assert.Contains("This machine", cut.Markup);
+        Assert.True(cut.Markup.IndexOf("This machine", StringComparison.Ordinal) < cut.Markup.IndexOf("server-engine-extension", StringComparison.Ordinal));
+
+        cut.Find(".server-engine-extension .lc-panel-toggle").Click();
+
+        cut.WaitForAssertion(() => Assert.NotNull(cut.Find(".server-engine-extension .fake-engine-settings")));
+    }
+
+    [Fact]
+    public async Task APluginEnginesSettingsAreSavedWithThePageAndABrokenOneIsContained()
+    {
+        // A second engine whose settings throw, both while drawn and while saved
+        var engines = new PluginServerEngines([new FakeEngine(), new BrokenEngine()], Fixture.Factory.RealServices, NullLogger<PluginServerEngines>.Instance);
+
+        Services.AddSingleton(engines);
+
+        FakeEngineSettings.Saves = 0;
+
+        var cut = Render<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor>();
+
+        foreach (var toggle in cut.FindAll(".server-engine-extension .lc-panel-toggle").ToList())
+            await toggle.ClickAsync(new());
+
+        // The broken engine says so in its own panel; the other still works
+        cut.WaitForAssertion(() => Assert.Contains("The Broken engine's settings could not be displayed", cut.Markup));
+        Assert.NotNull(cut.Find(".fake-engine-settings"));
+
+        var failures = await cut.InvokeAsync(() => cut.Instance.SaveExtensionsAsync());
+
+        Assert.Equal(1, FakeEngineSettings.Saves);
+        Assert.Empty(failures);
+
+        // Closing the panel disposes the component, which stops it being saved
+        await cut.Find($".server-engine-extension[data-engine=\"{EngineId}\"] .lc-panel-toggle").ClickAsync(new());
+        await cut.InvokeAsync(() => cut.Instance.SaveExtensionsAsync());
+
+        Assert.Equal(1, FakeEngineSettings.Saves);
+    }
+
+    [Fact]
+    public async Task AFailedSaveIsReportedByEngine()
+    {
+        var engines = new PluginServerEngines([new FailingSaveEngine()], Fixture.Factory.RealServices, NullLogger<PluginServerEngines>.Instance);
+
+        Services.AddSingleton(engines);
+
+        var cut = Render<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor>();
+
+        await cut.Find(".server-engine-extension .lc-panel-toggle").ClickAsync(new());
+
+        var failures = await cut.InvokeAsync(() => cut.Instance.SaveExtensionsAsync());
+
+        var failure = Assert.Single(failures);
+
+        Assert.Equal("Failing", failure.Engine);
+        Assert.Equal("host unreachable", failure.Error.Message);
+    }
+
+    private sealed class BrokenEngine : MinimalEngine
+    {
+        public override string Id => "test.broken";
+        public override string Name => "Broken";
+        public override Type? SettingsComponent => typeof(BrokenEngineSettings);
+    }
+
+    private sealed class FailingSaveEngine : MinimalEngine
+    {
+        public override string Id => "test.failing";
+        public override string Name => "Failing";
+        public override Type? SettingsComponent => typeof(FailingSaveSettings);
+    }
+
+    private abstract class MinimalEngine : IServerEngineExtension
+    {
+        public abstract string Id { get; }
+        public abstract string Name { get; }
+        public abstract Type? SettingsComponent { get; }
+
+        public Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task StopAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
+        public Task<ServerEngineStatus> GetStatusAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.FromResult(ServerEngineStatus.Stopped);
+    }
+
+    public sealed class BrokenEngineSettings : ComponentBase
+    {
+        [Parameter] public ServerEngineSettingsContext Context { get; set; } = default!;
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder) => throw new InvalidOperationException("plugin bug");
+    }
+
+    public sealed class FailingSaveSettings : ComponentBase, IDisposable
+    {
+        [Parameter] public ServerEngineSettingsContext Context { get; set; } = default!;
+
+        IDisposable? _registration;
+
+        protected override void OnInitialized() =>
+            _registration = Context.OnSave(_ => throw new InvalidOperationException("host unreachable"));
+
+        public void Dispose() => _registration?.Dispose();
+    }
+
     private sealed class FakeEngine : IServerEngineExtension
     {
         public string Id => EngineId;
         public string Name => "Containers";
         public ServerEngineFeatures Features => ServerEngineFeatures.Consoles;
         public Type? EditorComponent => typeof(FakeEditor);
+        public Type? SettingsComponent => typeof(FakeEngineSettings);
         public IReadOnlyList<ServerEngineSection> Sections { get; } = [new("Container", "Container", typeof(FakeSection))];
 
         public Task StartAsync(ServerEngineServer server, CancellationToken cancellationToken) => Task.CompletedTask;
@@ -219,6 +335,32 @@ public class ServerEngineExtensionTests : BUnitTestContext
             }));
             builder.AddContent(5, "Use arena");
             builder.CloseElement();
+            builder.CloseElement();
+        }
+    }
+
+    public sealed class FakeEngineSettings : ComponentBase, IDisposable
+    {
+        public static int Saves;
+
+        [Parameter] public ServerEngineSettingsContext Context { get; set; } = default!;
+
+        IDisposable? _registration;
+
+        protected override void OnInitialized() => _registration = Context.OnSave(_ =>
+        {
+            Interlocked.Increment(ref Saves);
+
+            return Task.CompletedTask;
+        });
+
+        public void Dispose() => _registration?.Dispose();
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenElement(0, "div");
+            builder.AddAttribute(1, "class", "fake-engine-settings");
+            builder.AddContent(2, "Hosts");
             builder.CloseElement();
         }
     }

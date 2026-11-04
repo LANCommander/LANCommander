@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
+             x:Class="LANCommander.Launcher.Views.Components.PathPicker">
+
+    <!-- A path text box with a Browse button that opens a folder or file picker, per Mode -->
+    <Grid ColumnDefinitions="*,Auto">
+        <TextBox Grid.Column="0" Classes="Mono"
+                 Text="{Binding $parent[components:PathPicker].Text, Mode=TwoWay}"
+                 Watermark="{Binding $parent[components:PathPicker].Watermark}" />
+
+        <Button Grid.Column="1" Classes="Secondary"
+                Content="Browse..."
+                Click="OnBrowseClick"
+                Margin="8,0,0,0"
+                Padding="14,6"
+                VerticalAlignment="Stretch" />
+    </Grid>
+</UserControl>

@@ -55,10 +55,12 @@
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="vm:InstallDirectoryItem">
                                         <Grid ColumnDefinitions="*,Auto" Margin="0,0,0,4">
-                                            <TextBox Grid.Column="0" Classes="Mono"
-                                                     Text="{Binding Path, Mode=TwoWay}" 
-                                                     Watermark="Enter install directory path..."
-                                                     Margin="0,0,8,0" />
+                                            <components:PathPicker Grid.Column="0"
+                                                                   Mode="Directory"
+                                                                   DialogTitle="Choose an install directory"
+                                                                   Text="{Binding Path, Mode=TwoWay}"
+                                                                   Watermark="Enter install directory path..."
+                                                                   Margin="0,0,8,0" />
                                             <Button Grid.Column="1"
                                                     Command="{Binding $parent[ItemsControl].((vm:SettingsViewModel)DataContext).RemoveInstallDirectoryCommand}"
                                                     CommandParameter="{Binding}"
@@ -97,8 +99,10 @@
                         
                         <StackPanel Spacing="4">
                             <TextBlock Text="Storage Path" Opacity="0.7" />
-                            <TextBox Classes="Mono" Text="{Binding MediaStoragePath, Mode=TwoWay}" 
-                                     Watermark="Path to store media files..." />
+                            <components:PathPicker Mode="Directory"
+                                                   DialogTitle="Choose where to store media"
+                                                   Text="{Binding MediaStoragePath, Mode=TwoWay}"
+                                                   Watermark="Path to store media files..." />
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -207,8 +211,10 @@
                         
                         <StackPanel Spacing="4">
                             <TextBlock Text="Logging Path" Opacity="0.7" />
-                            <TextBox Classes="Mono" Text="{Binding LoggingPath, Mode=TwoWay}" 
-                                     Watermark="Path for log files..." />
+                            <components:PathPicker Mode="Directory"
+                                                   DialogTitle="Choose where to write log files"
+                                                   Text="{Binding LoggingPath, Mode=TwoWay}"
+                                                   Watermark="Path for log files..." />
                         </StackPanel>
                         
                         <StackPanel Spacing="4">

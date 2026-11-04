@@ -951,9 +951,9 @@ Runs game servers somewhere other than as a process on the LANCommander server's
 - `Task<IReadOnlyList<ServerEngineFile>> ListFilesAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
   - Lists a folder of the server's files, for `Files`. Throw `DirectoryNotFoundException` when there is no such folder.
 - `Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
-  - Opens one of the server's files to read. The server disposes the stream. Throw `FileNotFoundException` when there is no such file.
+  - Opens one of the server's files to read. The host or calling plugin disposes the stream, which may be nonseekable. Throw `FileNotFoundException` when there is no such file.
 - `Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)`
-  - Writes one of the server's files from `content`, replacing it if it exists and creating any folders it is in that don't.
+  - Writes one of the server's files from `content`, replacing it if it exists and creating any folders it is in that don't. Read from its current position without seeking or disposing it; the caller owns the stream. Cancellation may leave a partial file.
 - `Task DeleteFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
   - Deletes one of the server's files, or a folder and everything in it.
 - `Task CreateDirectoryAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)`
@@ -1016,10 +1016,16 @@ Contributes a link to the server's primary navigation. Register an implementatio
 
 `interface` — `LANCommander.Server.Plugins.IServerProvider`
 
-Lists and manages the server's game servers, with their consoles and HTTP paths. Provided by the server; inject it into a scoped plugin service or page. Their actions and scripts are managed through `IActionProvider` and `IScriptProvider`.
+Lists and manages the server's game servers, with their consoles and HTTP paths. Provided by the server; inject it into a scoped plugin service or page. Their actions and scripts are managed through `IActionProvider` and `IScriptProvider`. Like the other record providers, this is a trusted host service, not an authorization boundary: plugins must protect their pages and endpoints with the appropriate access policy.
 
 **Methods**
 
+- `Task<IReadOnlyList<ServerFileInfo>> ListFilesAsync(Guid serverId, string relativePath, CancellationToken cancellationToken)`
+  - Lists one folder through the server's selected host engine. An empty path lists the engine's file root (the working directory for local servers). Paths are relative, not machine paths; absolute paths, traversal and malformed names are rejected. No engine failure becomes an empty list.
+- `Task<Stream> OpenFileAsync(Guid serverId, string relativePath, CancellationToken cancellationToken)`
+  - Opens a file through the selected host engine, using the same relative paths and errors as `ListFilesAsync`. The caller owns and must dispose the returned stream before its plugin scope ends. It may be nonseekable; pass cancellation to subsequent reads as well.
+- `Task WriteFileAsync(Guid serverId, string relativePath, Stream content, CancellationToken cancellationToken)`
+  - Writes a file through the selected host engine, replacing it and creating parent folders. Uses the same relative paths and errors as `ListFilesAsync`. Reads content from its current position to the end without seeking or disposing it; the caller retains ownership. Cancellation or failure may leave a partial file; writes are not atomic.
 - `Task<IReadOnlyList<ServerInfo>> GetAsync(CancellationToken cancellationToken)`
   - Every game server, ordered by name.
 - `Task<ServerInfo> GetAsync(Guid id, CancellationToken cancellationToken)`
@@ -1828,6 +1834,25 @@ Reads and writes `Settings`.
   - Reads settings JSON as `T`; a new one when it is empty or can't be read.
 - `string Write<T>(T settings)`
   - Writes settings as JSON.
+
+### ServerFileInfo
+
+`record` — `LANCommander.Server.Plugins.ServerFileInfo`
+
+A file or folder returned by `ListFilesAsync`.
+
+**Properties**
+
+- `string Name { get; init; }`
+  - The entry's name within the listed folder.
+- `string Path { get; init; }`
+  - The path relative to the engine's file root, with "/" between folders.
+- `bool IsDirectory { get; init; }`
+  - Whether the entry is a folder.
+- `long? Size { get; init; }`
+  - A file's length in bytes, or null when unknown or a folder.
+- `DateTime? LastModified { get; init; }`
+  - The last write time in UTC, or null when unknown.
 
 ### ServerHttpPathInfo
 

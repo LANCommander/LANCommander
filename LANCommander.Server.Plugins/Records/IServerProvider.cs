@@ -104,13 +104,53 @@ public sealed record ServerHttpPathInfo
     public string Path { get; init; } = "";
 }
 
+/// <summary>A file or folder returned by <see cref="IServerProvider.ListFilesAsync"/>.</summary>
+/// <param name="Name">The entry's name within the listed folder.</param>
+/// <param name="Path">The path relative to the engine's file root, with "/" between folders.</param>
+/// <param name="IsDirectory">Whether the entry is a folder.</param>
+/// <param name="Size">A file's length in bytes, or null when unknown or a folder.</param>
+/// <param name="LastModified">The last write time in UTC, or null when unknown.</param>
+public sealed record ServerFileInfo(string Name, string Path, bool IsDirectory, long? Size = null, DateTime? LastModified = null);
+
 /// <summary>
 /// Lists and manages the server's game servers, with their consoles and HTTP paths. Provided by the
 /// server; inject it into a scoped plugin service or page. Their actions and scripts are managed
 /// through <see cref="IActionProvider"/> and <see cref="IScriptProvider"/>.
+/// Like the other record providers, this is a trusted host service, not an authorization boundary:
+/// plugins must protect their pages and endpoints with the appropriate access policy.
 /// </summary>
 public interface IServerProvider
 {
+    /// <summary>
+    /// Lists one folder through the server's selected host engine. An empty path lists the engine's
+    /// file root (the working directory for local servers). Paths are relative, not machine paths;
+    /// absolute paths, traversal and malformed names are rejected. No engine failure becomes an empty list.
+    /// </summary>
+    /// <exception cref="ArgumentException">The path is not a valid relative server file path.</exception>
+    /// <exception cref="KeyNotFoundException">The game server does not exist.</exception>
+    /// <exception cref="NotSupportedException">The engine does not support files.</exception>
+    /// <exception cref="InvalidOperationException">No engine manages the server, or its files are unavailable (for example, a stopped container).</exception>
+    /// <exception cref="DirectoryNotFoundException">The folder does not exist.</exception>
+    Task<IReadOnlyList<ServerFileInfo>> ListFilesAsync(Guid serverId, string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Opens a file through the selected host engine, using the same relative paths and errors as
+    /// <see cref="ListFilesAsync"/>. The caller owns and must dispose the returned stream before its
+    /// plugin scope ends. It may be nonseekable; pass cancellation to subsequent reads as well.
+    /// </summary>
+    /// <exception cref="FileNotFoundException">The file does not exist.</exception>
+    /// <exception cref="ArgumentException">The path is invalid or does not name a file.</exception>
+    Task<Stream> OpenFileAsync(Guid serverId, string relativePath, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Writes a file through the selected host engine, replacing it and creating parent folders.
+    /// Uses the same relative paths and errors as <see cref="ListFilesAsync"/>. Reads content from its
+    /// current position to the end without seeking or disposing it; the caller retains ownership.
+    /// Cancellation or failure may leave a partial file; writes are not atomic.
+    /// </summary>
+    /// <exception cref="ArgumentException">The path is invalid, does not name a file, or content is not readable.</exception>
+    Task WriteFileAsync(Guid serverId, string relativePath, Stream content, CancellationToken cancellationToken = default);
+
     /// <summary>Every game server, ordered by name.</summary>
     Task<IReadOnlyList<ServerInfo>> GetAsync(CancellationToken cancellationToken = default);
 

@@ -35,7 +35,7 @@ Use the version of the server the plugin targets.
 | `IActionProvider`, `IScriptProvider`, `ISavePathProvider`, `IMultiplayerModeProvider`, `IKeyProvider` | Manage the records that belong to a game, redistributable, tool or server (`RecordOwner`). Provided by the server |
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |
 | `ITaxonomyProvider` | Manage categories, collections, companies, engines, genres, platforms and tags. Provided by the server |
-| `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths. Provided by the server |
+| `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths; list, read and write server files through their selected engine. Provided by the server |
 | `GameCreatedEvent`, `ArchiveUploadedEvent`, `UserCreatedEvent`, `PlaySessionStartedEvent`, `IssueCreatedEvent`, `ServerStatusChangedEvent`, ... | Server events, raised through the SDK's `IPluginEventBus` |
 
 A plugin with a context needs `DataId` and `MigrationAssemblies` in its `[LANCommanderPlugin]`
@@ -65,3 +65,33 @@ ids, for bulk provenance checks. `IGameVersionProvider` can read and replace a v
 redistributables and set their per-version option values; keeping a redistributable keeps its
 options, and creating a new version carries those options forward. `GetOrCreateLatestAsync`
 creates an empty initial version only when the game has none, without publishing an existing draft.
+
+`IServerProvider.ListFilesAsync(serverId, relativePath, cancellationToken)`,
+`OpenFileAsync(serverId, relativePath, cancellationToken)` and
+`WriteFileAsync(serverId, relativePath, content, cancellationToken)` use the host's checked file
+routing, not a plugin's engine implementation or credentials. An empty list path means the engine's
+file root: a local working directory or the root configured by an extension (not necessarily its
+executable directory). Paths must be relative; traversal, absolute paths and malformed names throw.
+Listing returns `ServerFileInfo` with `Name`, root-relative `Path` (using `/`), `IsDirectory`,
+nullable `Size` in bytes and nullable UTC `LastModified`.
+
+Missing servers throw `KeyNotFoundException`, missing engines throw `InvalidOperationException`,
+and engines without file support throw `NotSupportedException`. Engine failures propagate, including
+unavailable or stopped containers; they are not empty inventories. Missing folders and files remain
+`DirectoryNotFoundException` and `FileNotFoundException` respectively. The engine is responsible for
+reporting availability; local files do not require a running game process.
+
+Dispose an opened stream before the plugin service scope ends. It may be nonseekable; use
+cancellable reads rather than assuming `Length` or `Position` are available. Writes read from the
+content stream's current position and leave it open. Writes replace existing content, create parent
+folders and are not atomic; cancellation can leave partial content. These trusted host services do
+not authorize callers: protect plugin pages/endpoints with `PluginAccess`/endpoint access policies
+and use a host-created scope for background work.
+
+These file-provider methods are an unreleased addition, not part of published `2.2.0-beta.1`.
+For source validation, pack the SDK, server plugin contracts and server UI with the same explicit
+local version (for example `-p:Version=2.2.0-beta.1-fileaccess.local.1`) into a private local feed.
+Reference that version only for the consumer under development, keeping `ExcludeAssets="runtime"`.
+An actual host built from the matching source is required; installing compile-time packages does
+not add the implementation to an existing beta.1 host. Publication and release integration are
+separate prerequisites.

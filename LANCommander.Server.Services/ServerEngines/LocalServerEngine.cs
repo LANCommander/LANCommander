@@ -390,8 +390,14 @@ public class LocalServerEngine(
         return await Task.Run(() => files.List(path), cancellationToken);
     }
 
-    public async Task<Stream> OpenFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default) =>
-        (await GetFilesAsync(serverId)).OpenRead(path);
+    public async Task<Stream> OpenFileAsync(Guid serverId, string path, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        var files = await GetFilesAsync(serverId);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        return files.OpenRead(path);
+    }
 
     public async Task WriteFileAsync(Guid serverId, string path, Stream content, CancellationToken cancellationToken = default) =>
         await (await GetFilesAsync(serverId)).WriteAsync(path, content, cancellationToken);

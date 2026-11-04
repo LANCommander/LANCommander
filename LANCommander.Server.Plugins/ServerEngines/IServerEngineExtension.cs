@@ -128,7 +128,8 @@ public interface IServerEngineExtension
         => throw new NotSupportedException($"The {Name} engine can't manage server files.");
 
     /// <summary>
-    /// Opens one of the server's files to read. The server disposes the stream. Throw
+    /// Opens one of the server's files to read. The host or calling plugin disposes the stream,
+    /// which may be nonseekable. Throw
     /// <see cref="FileNotFoundException"/> when there is no such file.
     /// </summary>
     Task<Stream> OpenFileAsync(ServerEngineServer server, string path, CancellationToken cancellationToken)
@@ -136,7 +137,8 @@ public interface IServerEngineExtension
 
     /// <summary>
     /// Writes one of the server's files from <paramref name="content"/>, replacing it if it exists and
-    /// creating any folders it is in that don't.
+    /// creating any folders it is in that don't. Read from its current position without seeking
+    /// or disposing it; the caller owns the stream. Cancellation may leave a partial file.
     /// </summary>
     Task WriteFileAsync(ServerEngineServer server, string path, Stream content, CancellationToken cancellationToken)
         => throw new NotSupportedException($"The {Name} engine can't manage server files.");

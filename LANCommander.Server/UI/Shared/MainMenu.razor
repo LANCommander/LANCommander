@@ -18,8 +18,8 @@
 @* The sidebar's navigation. Items that front a list carry a count of it, never the records themselves *@
 <Menu Variant="MenuVariant.Sidebar" Insertions="this">
     <SubMenu Name="@ServerNavigationSection.Dashboards" Title="Dashboards" Icon="IconType.Gauge">
-        <MenuItem Href="/" Exact>Overview</MenuItem>
-        <MenuItem Href="/Dashboard/SessionPlaytime">Average Session Playtime</MenuItem>
+        <MenuItem Href="/" Icon="IconType.SquaresFour" Exact>Overview</MenuItem>
+        <MenuItem Href="/Dashboard/SessionPlaytime" Icon="IconType.Timer">Average Session Playtime</MenuItem>
     </SubMenu>
     <MenuDivider />
 
@@ -27,54 +27,54 @@
     {
         <MenuItem Href="/Games" Icon="IconType.GameController" Count="_games">Games</MenuItem>
         <SubMenu Name="@ServerNavigationSection.Metadata" Title="Metadata" Icon="IconType.Tag">
-            <MenuItem Href="/Metadata/Collections">Collections</MenuItem>
-            <MenuItem Href="/Metadata/Companies">Companies</MenuItem>
-            <MenuItem Href="/Metadata/Engines">Engines</MenuItem>
-            <MenuItem Href="/Metadata/Genres">Genres</MenuItem>
-            <MenuItem Href="/Metadata/Platforms">Platforms</MenuItem>
-            <MenuItem Href="/Metadata/Tags">Tags</MenuItem>
+            <MenuItem Href="/Metadata/Collections" Icon="IconType.Stack">Collections</MenuItem>
+            <MenuItem Href="/Metadata/Companies" Icon="IconType.Buildings">Companies</MenuItem>
+            <MenuItem Href="/Metadata/Engines" Icon="IconType.Engine">Engines</MenuItem>
+            <MenuItem Href="/Metadata/Genres" Icon="IconType.MaskHappy">Genres</MenuItem>
+            <MenuItem Href="/Metadata/Platforms" Icon="IconType.Desktop">Platforms</MenuItem>
+            <MenuItem Href="/Metadata/Tags" Icon="IconType.Tag">Tags</MenuItem>
         </SubMenu>
         <MenuItem Href="/Redistributables" Icon="IconType.Package">Redistributables</MenuItem>
         <MenuItem Href="/Tools" Icon="IconType.Wrench">Tools</MenuItem>
         <MenuItem Href="/Servers" Icon="IconType.HardDrives" Extra="@RunningServers">Servers</MenuItem>
         <SubMenu Name="@ServerNavigationSection.Scripting" Title="Scripting" Icon="IconType.Code">
-            <MenuItem Href="/Scripting/Snippets">Snippets</MenuItem>
-            <MenuItem Href="/Scripting/Modules">Modules</MenuItem>
+            <MenuItem Href="/Scripting/Snippets" Icon="IconType.Scissors">Snippets</MenuItem>
+            <MenuItem Href="/Scripting/Modules" Icon="IconType.Cube">Modules</MenuItem>
         </SubMenu>
         <MenuDivider />
         <SubMenu Name="@ServerNavigationSection.Pages" Title="Pages" Icon="IconType.BookOpen">
-            <MenuItem Href="/Pages/Edit">Edit</MenuItem>
-            <MenuItem Href="/Pages" Exact>View</MenuItem>
+            <MenuItem Href="/Pages/Edit" Icon="IconType.PencilSimple">Edit</MenuItem>
+            <MenuItem Href="/Pages" Icon="IconType.Eye" Exact>View</MenuItem>
         </SubMenu>
         <MenuItem Href="/Issues" Icon="IconType.Bug" Count="@(_openIssues is > 0 ? _openIssues : null)">Issues</MenuItem>
         <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
         <SubMenu Name="@ServerNavigationSection.Settings" Title="Settings" Icon="IconType.Gear">
-            <MenuItem Href="/Settings/General">General</MenuItem>
-            <MenuItem Href="/Settings/Database">Database</MenuItem>
-            <MenuItem Href="/Settings/Users">Users</MenuItem>
-            <MenuItem Href="/Settings/Roles">Roles</MenuItem>
-            <MenuItem Href="/Settings/Authentication">Authentication</MenuItem>
-            <MenuItem Href="/Settings/Appearance">Appearance</MenuItem>
-            <MenuItem Href="/Settings/UserSaves">User Saves</MenuItem>
-            <MenuItem Href="/Settings/Library">Library</MenuItem>
-            <MenuItem Href="/Settings/Archives">Archives</MenuItem>
-            <MenuItem Href="/Settings/Media">Media</MenuItem>
-            <MenuItem Href="/Settings/Scripts">Scripts</MenuItem>
-            <MenuItem Href="/Settings/IPXRelay">IPX Relay</MenuItem>
-            <MenuItem Href="/Settings/Servers">Servers</MenuItem>
-            <MenuItem Href="/Settings/Beacon">Beacon</MenuItem>
-            <MenuItem Href="/Settings/Tools">Tools</MenuItem>
-            <MenuItem Href="/Settings/Logs">Logs</MenuItem>
-            <MenuItem Href="/Settings/Launcher">Launcher</MenuItem>
-            <MenuItem Href="/Settings/Plugins">Plugins</MenuItem>
-            <MenuItem Href="/Settings/Updates">Updates</MenuItem>
-            <SubMenu Name="@ServerNavigationSection.Integrations" Title="Integrations">
-                <MenuItem Href="/Settings/Integrations/HQ">HQ</MenuItem>
-                <MenuItem Href="/Settings/Integrations/IGDB">IGDB</MenuItem>
-                <MenuItem Href="/Settings/Integrations/PCGamingWiki">PCGamingWiki</MenuItem>
-                <MenuItem Href="/Settings/Integrations/SteamGridDB">SteamGridDB</MenuItem>
+            <MenuItem Href="/Settings/General" Icon="IconType.Sliders">General</MenuItem>
+            <MenuItem Href="/Settings/Database" Icon="IconType.Database">Database</MenuItem>
+            <MenuItem Href="/Settings/Users" Icon="IconType.Users">Users</MenuItem>
+            <MenuItem Href="/Settings/Roles" Icon="IconType.ShieldCheck">Roles</MenuItem>
+            <MenuItem Href="/Settings/Authentication" Icon="IconType.Key">Authentication</MenuItem>
+            <MenuItem Href="/Settings/Appearance" Icon="IconType.Palette">Appearance</MenuItem>
+            <MenuItem Href="/Settings/UserSaves" Icon="IconType.FloppyDisk">User Saves</MenuItem>
+            <MenuItem Href="/Settings/Library" Icon="IconType.Books">Library</MenuItem>
+            <MenuItem Href="/Settings/Archives" Icon="IconType.Archive">Archives</MenuItem>
+            <MenuItem Href="/Settings/Media" Icon="IconType.Image">Media</MenuItem>
+            <MenuItem Href="/Settings/Scripts" Icon="IconType.Scroll">Scripts</MenuItem>
+            <MenuItem Href="/Settings/IPXRelay" Icon="IconType.Network">IPX Relay</MenuItem>
+            <MenuItem Href="/Settings/Servers" Icon="IconType.HardDrives">Servers</MenuItem>
+            <MenuItem Href="/Settings/Beacon" Icon="IconType.Broadcast">Beacon</MenuItem>
+            <MenuItem Href="/Settings/Tools" Icon="IconType.Wrench">Tools</MenuItem>
+            <MenuItem Href="/Settings/Logs" Icon="IconType.Article">Logs</MenuItem>
+            <MenuItem Href="/Settings/Launcher" Icon="IconType.Rocket">Launcher</MenuItem>
+            <MenuItem Href="/Settings/Plugins" Icon="IconType.PuzzlePiece">Plugins</MenuItem>
+            <MenuItem Href="/Settings/Updates" Icon="IconType.ArrowsClockwise">Updates</MenuItem>
+            <SubMenu Name="@ServerNavigationSection.Integrations" Title="Integrations" Icon="IconType.PlugsConnected">
+                <MenuItem Href="/Settings/Integrations/HQ" Icon="IconType.Cloud">HQ</MenuItem>
+                <MenuItem Href="/Settings/Integrations/IGDB" Icon="IconType.MagnifyingGlass">IGDB</MenuItem>
+                <MenuItem Href="/Settings/Integrations/PCGamingWiki" Icon="IconType.BookOpenText">PCGamingWiki</MenuItem>
+                <MenuItem Href="/Settings/Integrations/SteamGridDB" Icon="IconType.ImageSquare">SteamGridDB</MenuItem>
             </SubMenu>
-            <MenuItem Href="/api">API</MenuItem>
+            <MenuItem Href="/api" Icon="IconType.BracketsCurly">API</MenuItem>
         </SubMenu>
     }
     else

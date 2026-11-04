@@ -922,7 +922,7 @@ Runs game servers somewhere other than as a process on the LANCommander server's
 - `Type EditorComponent { get; }`
   - A Razor component shown on a server's General page while the engine is selected, in place of the Local engine's executable, arguments and process options. It takes a `ServerEngineEditorContext` as its `Context` parameter, and is saved with the rest of the page. Null shows nothing.
 - `Type SettingsComponent { get; }`
-  - A Razor component listed under the engine's name with the built-in engines on the server's Settings › Servers page, configuring the engine itself rather than any one server, e.g. the hosts it runs servers on. It takes a `ServerEngineSettingsContext` as its `Context` parameter, keeps its configuration wherever the plugin does, such as in `IPluginSettings<T>`, and saves it when the page is saved by registering with `ServerEngineSettingsContext.OnSave`. Null leaves the engine off the page.
+  - A Razor component listed under the engine's name with the built-in engines on the server's Settings › Servers page, configuring the engine itself rather than any one server, e.g. the hosts it runs servers on. It takes a `ServerEngineSettingsContext` as its `Context` parameter, keeps its configuration wherever the plugin does, such as in `IPluginSettings<T>`, and saves it when the page is saved by registering with `OnSave`. Null leaves the engine off the page.
 - `IReadOnlyList<ServerEngineSection> Sections { get; }`
   - Further pages of a server's editor, listed under the engine's name in its menu once the server has been saved with this engine.
 
@@ -1841,7 +1841,7 @@ Reads and writes `Settings`.
 
 `class` — `LANCommander.Server.Plugins.ServerEngineSettingsContext`
 
-Given to a `SettingsComponent` on Settings › Servers, so the engine's configuration is saved along with the rest of the page.
+Given to an `SettingsComponent` on Settings › Servers, so the engine's configuration is saved along with the rest of the page.
 
 **Methods**
 

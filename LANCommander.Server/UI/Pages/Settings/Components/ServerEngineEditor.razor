@@ -2,7 +2,9 @@
 @using LANCommander.Server.Settings.Enums
 @using LANCommander.Server.Settings.Models
 @using LANCommander.Server.Plugins
+@using Microsoft.Extensions.Logging
 @inject RemoteServerEngine RemoteServerEngine
+@inject ILogger<ServerEngineEditor> Logger
 @inject PluginServerEngines PluginEngines
 
 <Flex Vertical Gap="Gap.Large">
@@ -14,7 +16,7 @@
     <Collapse>
         @foreach (var serverEngine in Shown)
         {
-            <Panel Header="@serverEngine.Name">
+            <Panel @key="serverEngine.Id" Header="@serverEngine.Name" Open="IsOpen(serverEngine.Id.ToString())" OpenChanged="open => SetOpen(serverEngine.Id.ToString(), open)">
                 <Extra>
                     <Button Text Small Danger Icon="IconType.X" title="Remove" OnClick="() => RemoveAsync(serverEngine)" />
                 </Extra>
@@ -71,7 +73,7 @@
         @* Plugins' engines configure themselves, and are saved with the page through their context *@
         @foreach (var extension in PluginSettings)
         {
-            <Panel Header="@extension.Name" Class="server-engine-extension" data-engine="@extension.Id">
+            <Panel @key="ExtensionKey(extension)" Header="@extension.Name" Class="server-engine-extension" data-engine="@extension.Id" Open="IsOpen(ExtensionKey(extension))" OpenChanged="open => SetOpen(ExtensionKey(extension), open)">
                 <Extra>
                     <Tag>Plugin</Tag>
                 </Extra>
@@ -84,9 +86,23 @@
         }
     </Collapse>
 
-    <Flex Justify="Justify.Center" Gap="Gap.Small">
-        <Button OnClick="() => AddAsync(ServerEngine.Local)">Add Local</Button>
-        <Button Primary OnClick="() => AddAsync(ServerEngine.Remote)">Add Remote</Button>
+    @* Every kind of engine that can be added, the built-in ones first, then the plugins' *@
+    <Flex Justify="Justify.Center">
+        <Dropdown Class="server-engine-add">
+            <Overlay>
+                <Menu>
+                    <MenuItem Icon="IconType.Desktop" OnClick="() => AddAsync(ServerEngine.Local)">Local</MenuItem>
+                    <MenuItem Icon="IconType.GlobeSimple" OnClick="() => AddAsync(ServerEngine.Remote)">Remote</MenuItem>
+                    @foreach (var extension in PluginSettings)
+                    {
+                        <MenuItem Icon="IconType.PuzzlePiece" data-engine="@extension.Id" OnClick="() => AddExtension(extension)">@extension.Name</MenuItem>
+                    }
+                </Menu>
+            </Overlay>
+            <ChildContent>
+                <Button Primary Icon="IconType.Plus">Add Engine <Icon Type="IconType.CaretDown" /></Button>
+            </ChildContent>
+        </Dropdown>
     </Flex>
 </Flex>
 
@@ -126,13 +142,80 @@
         {
             parameters = new()
             {
-                ["Context"] = new ServerEngineSettingsContext(save => Register(extension.Id, save)),
+                ["Context"] = new ServerEngineSettingsContext(save => Register(extension.Id, save), add => RegisterAdd(extension.Id, add)),
             };
 
             _settingsParameters[extension.Id] = parameters;
         }
 
         return parameters;
+    }
+
+    // What each plugin engine's settings component runs when it's chosen from the Add menu, by engine id
+    readonly Dictionary<string, Func<Task>> _addHandlers = new(StringComparer.OrdinalIgnoreCase);
+
+    // Engines chosen from the Add menu before their settings component registered for it
+    readonly HashSet<string> _pendingAdds = new(StringComparer.OrdinalIgnoreCase);
+
+    IDisposable RegisterAdd(string engineId, Func<Task> add)
+    {
+        _addHandlers[engineId] = add;
+
+        // Chosen while its panel was closed: the component has only just been created to handle it
+        if (_pendingAdds.Remove(engineId))
+            _ = InvokeAsync(() => RunAddAsync(engineId, add));
+
+        return new Registration(() =>
+        {
+            if (_addHandlers.TryGetValue(engineId, out var current) && current == add)
+                _addHandlers.Remove(engineId);
+        });
+    }
+
+    async Task RunAddAsync(string engineId, Func<Task> add)
+    {
+        try
+        {
+            await add();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "The {Engine} server engine could not start adding", engineId);
+        }
+
+        StateHasChanged();
+    }
+
+    async Task AddExtension(IServerEngineExtension extension)
+    {
+        SetOpen(ExtensionKey(extension), true);
+
+        if (_addHandlers.TryGetValue(extension.Id, out var add))
+            await RunAddAsync(extension.Id, add);
+        else
+            _pendingAdds.Add(extension.Id);
+    }
+
+    // Which panels are open, by engine id
+    readonly HashSet<string> _open = new(StringComparer.OrdinalIgnoreCase);
+
+    static string ExtensionKey(IServerEngineExtension extension) => $"extension:{extension.Id}";
+
+    bool IsOpen(string key) => _open.Contains(key);
+
+    void SetOpen(string key, bool open)
+    {
+        if (open)
+        {
+            _open.Add(key);
+        }
+        else
+        {
+            _open.Remove(key);
+
+            // Closed before its component took up the add
+            _pendingAdds.RemoveWhere(id => key == $"extension:{id}");
+        }
     }
 
     IDisposable Register(string engineId, Func<CancellationToken, Task> save)
@@ -199,6 +282,8 @@
         };
 
         ServerEngines.Add(newEngine);
+
+        SetOpen(newEngine.Id.ToString(), true);
 
         if (type == ServerEngine.Remote)
             _remoteStates[newEngine.Id] = new RemoteEngineState();

@@ -222,6 +222,62 @@ public class ServerEngineExtensionTests : BUnitTestContext
         Assert.Equal(1, FakeEngineSettings.Saves);
     }
 
+    // The menu is a lazy popup, drawn once it's first opened
+    private static async Task OpenAddMenuAsync(IRenderedComponent<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor> cut)
+    {
+        if (cut.FindAll(".lc-menu-item").Count == 0)
+            await cut.Find(".server-engine-add").ClickAsync(new());
+
+        cut.WaitForAssertion(() => Assert.NotEmpty(cut.FindAll(".lc-menu-item")));
+    }
+
+    [Fact]
+    public async Task TheAddMenuListsTheBuiltInAndPluginEngines()
+    {
+        IEnumerable<LANCommander.Server.Settings.Models.ServerEngineConfiguration>? values = null;
+
+        var cut = Render<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor>(parameters => parameters
+            .Add(p => p.ValuesChanged, v => values = v));
+
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Trim() is "Add Local" or "Add Remote");
+
+        await OpenAddMenuAsync(cut);
+
+        var items = cut.FindComponents<MenuItem>();
+
+        Assert.Equal(["Local", "Remote", "Containers"], items.Select(i => i.Find(".lc-menu-item-text").TextContent.Trim()));
+
+        // A built-in engine is added, and opened
+        await items.First().Find("button").ClickAsync(new());
+
+        var added = Assert.Single(values!);
+
+        Assert.Equal(ServerEngine.Local, added.Type);
+    }
+
+    [Fact]
+    public async Task ChoosingAPluginEngineFromTheAddMenuOpensItsPanelAndAsksItToAdd()
+    {
+        FakeEngineSettings.Adds = 0;
+
+        var cut = Render<LANCommander.Server.UI.Pages.Settings.Components.ServerEngineEditor>();
+
+        Assert.Empty(cut.FindAll(".fake-engine-settings"));
+
+        // Chosen while its panel is closed: it's opened, and the add waits for its component
+        await OpenAddMenuAsync(cut);
+        await cut.Find($".lc-menu-item[data-engine=\"{EngineId}\"] button").ClickAsync(new());
+
+        cut.WaitForAssertion(() => Assert.Contains("Adding", cut.Find(".fake-engine-settings").TextContent));
+        Assert.Equal(1, FakeEngineSettings.Adds);
+
+        // Chosen again with it open, it's asked straight away
+        await OpenAddMenuAsync(cut);
+        await cut.Find($".lc-menu-item[data-engine=\"{EngineId}\"] button").ClickAsync(new());
+
+        cut.WaitForAssertion(() => Assert.Equal(2, FakeEngineSettings.Adds));
+    }
+
     [Fact]
     public async Task AFailedSaveIsReportedByEngine()
     {
@@ -342,25 +398,43 @@ public class ServerEngineExtensionTests : BUnitTestContext
     public sealed class FakeEngineSettings : ComponentBase, IDisposable
     {
         public static int Saves;
+        public static int Adds;
 
         [Parameter] public ServerEngineSettingsContext Context { get; set; } = default!;
 
         IDisposable? _registration;
+        IDisposable? _addRegistration;
+        bool _adding;
 
-        protected override void OnInitialized() => _registration = Context.OnSave(_ =>
+        protected override void OnInitialized()
         {
-            Interlocked.Increment(ref Saves);
+            _registration = Context.OnSave(_ =>
+            {
+                Interlocked.Increment(ref Saves);
 
-            return Task.CompletedTask;
-        });
+                return Task.CompletedTask;
+            });
 
-        public void Dispose() => _registration?.Dispose();
+            _addRegistration = Context.OnAdd(() =>
+            {
+                Interlocked.Increment(ref Adds);
+                _adding = true;
+
+                return Task.CompletedTask;
+            });
+        }
+
+        public void Dispose()
+        {
+            _registration?.Dispose();
+            _addRegistration?.Dispose();
+        }
 
         protected override void BuildRenderTree(RenderTreeBuilder builder)
         {
             builder.OpenElement(0, "div");
             builder.AddAttribute(1, "class", "fake-engine-settings");
-            builder.AddContent(2, "Hosts");
+            builder.AddContent(2, _adding ? "Adding a host" : "Hosts");
             builder.CloseElement();
         }
     }

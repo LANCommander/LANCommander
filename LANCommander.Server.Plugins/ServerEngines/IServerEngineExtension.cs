@@ -47,7 +47,9 @@ public interface IServerEngineExtension
     /// hosts it runs servers on. It takes a <see cref="ServerEngineSettingsContext"/> as its
     /// <c>Context</c> parameter, keeps its configuration wherever the plugin does, such as in
     /// <c>IPluginSettings&lt;T&gt;</c>, and saves it when the page is saved by registering with
-    /// <see cref="ServerEngineSettingsContext.OnSave"/>. Null leaves the engine off the page.
+    /// <see cref="ServerEngineSettingsContext.OnSave"/>. The engine is also listed in the page's Add
+    /// menu with the built-in engines; register with <see cref="ServerEngineSettingsContext.OnAdd"/> to
+    /// act on being chosen there. Null leaves the engine off the page.
     /// </summary>
     Type? SettingsComponent => null;
 

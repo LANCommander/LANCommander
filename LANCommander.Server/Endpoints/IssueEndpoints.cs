@@ -35,12 +35,13 @@ public static class IssueEndpoints
                 var issue = new Issue
                 {
                     GameId = game.Id,
-                    Description = game.Description,
+                    Description = issueRequest.Description,
                 };
 
                 await issueService.AddAsync(issue);
 
-                return TypedResults.Ok();
+                // IssueClient.Open deserializes the body as bool; an empty 200 reads as false
+                return TypedResults.Ok(true);
             }
         }
         catch (Exception ex)

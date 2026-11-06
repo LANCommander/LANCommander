@@ -190,7 +190,7 @@
                                                                 MinHeight="30" Padding="12,0"
                                                                 VerticalContentAlignment="Center">
                                                             <StackPanel Orientation="Horizontal" Spacing="6">
-                                                                <Icon Type="Regular" Value="Play" Width="12" Height="12" />
+                                                                <Icon Type="Fill" Value="Play" Width="12" Height="12" />
                                                                 <TextBlock Text="{DynamicResource Play}" FontSize="{DynamicResource FontSizeLabel}"
                                                                            FontWeight="SemiBold" VerticalAlignment="Center" />
                                                             </StackPanel>

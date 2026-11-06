@@ -35,7 +35,7 @@ else
     <div class="script-editor">
         <div class="script-editor-toolbar" role="toolbar" aria-label="Script">
             <Tooltip Title="@(CanRun ? "Save and run" : "Only packaging scripts run on the server")">
-                <Button Primary Small Icon="IconType.Play" Disabled="@(!CanRun || _runState == ConsoleRunState.Running)" OnClick="RunAsync">Run</Button>
+                <Button Primary Small Icon="IconType.Play" IconFill Disabled="@(!CanRun || _runState == ConsoleRunState.Running)" OnClick="RunAsync">Run</Button>
             </Tooltip>
             <Button Danger Small Icon="IconType.Stop" Disabled="@(_runState != ConsoleRunState.Running)" OnClick="StopAsync">Stop</Button>
 

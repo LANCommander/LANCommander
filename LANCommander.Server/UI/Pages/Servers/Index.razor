@@ -24,7 +24,7 @@
         <RightToolbar>
             @if (SelectedServers.Any())
             {
-                <Button Primary Icon="IconType.Play" OnClick="StartServersAsync">Start</Button>
+                <Button Primary Icon="IconType.Play" IconFill OnClick="StartServersAsync">Start</Button>
                 <Popconfirm OnConfirm="StopServersAsync" Title="Are you sure you want to kill these server processes?" OkText="Stop" Danger>
                     <Button Primary Danger Icon="IconType.Stop">Stop</Button>
                 </Popconfirm>

@@ -104,7 +104,7 @@
                   Command="{Binding RunCommand}"
                   IsEnabled="{Binding CanRun}"
                   ToolTip.Tip="{Binding IsStopped, Converter={x:Static views:ScriptDebuggerWindow.RunTip}}">
-            <Icon Type="Regular" Value="Play" />
+            <Icon Type="Fill" Value="Play" />
           </Button>
           <Button Classes="Error" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" ToolTip.Tip="Stop (Shift+F5)">
             <Icon Type="Regular" Value="Stop" />

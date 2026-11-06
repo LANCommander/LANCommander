@@ -138,7 +138,7 @@
                                         <Button Classes="rowAction"
                                                 Command="{Binding TestCommand}"
                                                 ToolTip.Tip="Run this action now, to check the path and arguments">
-                                            <Icon Type="Regular" Value="Play" Width="12" Height="12" Foreground="{DynamicResource SuccessTextBrush}" />
+                                            <Icon Type="Fill" Value="Play" Width="12" Height="12" Foreground="{DynamicResource SuccessTextBrush}" />
                                         </Button>
 
                                         <Button Classes="rowAction"

@@ -922,7 +922,7 @@ Runs game servers somewhere other than as a process on the LANCommander server's
 - `Type EditorComponent { get; }`
   - A Razor component shown on a server's General page while the engine is selected, in place of the Local engine's executable, arguments and process options. It takes a `ServerEngineEditorContext` as its `Context` parameter, and is saved with the rest of the page. Null shows nothing.
 - `Type SettingsComponent { get; }`
-  - A Razor component listed under the engine's name with the built-in engines on the server's Settings › Servers page, configuring the engine itself rather than any one server, e.g. the hosts it runs servers on. It takes a `ServerEngineSettingsContext` as its `Context` parameter, keeps its configuration wherever the plugin does, such as in `IPluginSettings<T>`, and saves it when the page is saved by registering with `OnSave`. Null leaves the engine off the page.
+  - A Razor component listed under the engine's name with the built-in engines on the server's Settings › Servers page, configuring the engine itself rather than any one server, e.g. the hosts it runs servers on. It takes a `ServerEngineSettingsContext` as its `Context` parameter, keeps its configuration wherever the plugin does, such as in `IPluginSettings<T>`, and saves it when the page is saved by registering with `OnSave`. The engine is also listed in the page's Add menu with the built-in engines; register with `OnAdd` to act on being chosen there. Null leaves the engine off the page.
 - `IReadOnlyList<ServerEngineSection> Sections { get; }`
   - Further pages of a server's editor, listed under the engine's name in its menu once the server has been saved with this engine.
 
@@ -1847,6 +1847,8 @@ Given to an `SettingsComponent` on Settings › Servers, so the engine's configu
 
 - `IDisposable OnSave(Func<CancellationToken, Task> save)`
   - Runs `save` whenever the administrator saves the page. Register it when the component is initialized, and dispose the result when it is disposed: the component is only created while its panel is open. Throw to report that the configuration couldn't be saved; the page shows the message, and the rest of the page is saved regardless.
+- `IDisposable OnAdd(Func<Task> add)`
+  - Runs `add` when the administrator chooses the engine from the page's Add menu, listed with the built-in engines, e.g. to start adding a host. The engine's panel is opened first, so register when the component is initialized; if the engine was chosen before then, `add` runs as soon as it is registered. Dispose the result when the component is disposed. Without it, choosing the engine just opens its panel.
 
 ### ServerFileInfo
 

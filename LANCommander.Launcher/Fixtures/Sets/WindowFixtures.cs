@@ -52,6 +52,23 @@ public static class WindowFixtures
             return new ChatWindow { DataContext = chat };
         }) { Width = 760, Height = 540 },
 
+        new("Chat.Conversation.Playing", "A conversation in which one of the others is in a game", context =>
+        {
+            var chat = new ChatWindowViewModel(context.Services);
+
+            FixturePresence.Playing(Sam.Id, Sam.Name, FixtureGames.UnrealTournament2004, 42, FixturePresence.InAMatch);
+
+            var lanNight = Thread("LAN night", [Me, Sam, Jordan],
+                (Sam, 0, "Server's up, **ONS-Torlan** first"),
+                (Jordan, 6, "Running late, save me a spot on red"),
+                (Sam, 7, "Hurry, we're two down"));
+
+            chat.Threads = new ObservableCollection<ChatThreadViewModel>([lanNight]);
+            chat.SelectedThread = lanNight;
+
+            return new ChatWindow { DataContext = chat };
+        }) { Width = 760, Height = 540 },
+
         new("Chat.NewChat", "Picking people for a new conversation", context =>
         {
             var chat = new ChatWindowViewModel(context.Services)

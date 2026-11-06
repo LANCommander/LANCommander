@@ -6,10 +6,11 @@
       network relay and cross-architecture injection; 1.4.0 adds the per-launch config overlay and
       base directory the launcher's bundled copy needs, and the redistributable's option schema;
       1.5.0 adds InterposerService.LibraryDirectory and InterposerNativeOutputPath, which put the
-      binaries under Data\Libraries\Interposer\. To build against an unreleased Interposer, pack it
+      binaries under Data\Libraries\Interposer\; 1.5.1 reports the game's rich presence to the
+      launcher (InterposerService.PresenceChanged), with or without Discord. To build against an unreleased Interposer, pack it
       into a folder and pass -p:InterposerVersion=<version> -p:RestoreAdditionalProjectSources=<folder>.
     -->
-    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.5.0</InterposerVersion>
+    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.5.1</InterposerVersion>
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />

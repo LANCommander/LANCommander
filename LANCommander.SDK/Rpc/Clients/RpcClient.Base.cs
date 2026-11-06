@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 
 namespace LANCommander.SDK.Rpc.Clients;
 
-internal partial class RpcSubscriber(ITokenProvider tokenProvider, ILogger<RpcSubscriber> logger) : IRpcSubscriber
+internal partial class RpcSubscriber(ITokenProvider tokenProvider, PresenceClient presence, ILogger<RpcSubscriber> logger) : IRpcSubscriber
 {
     private HubConnection _connection = default!;
     
@@ -29,7 +29,15 @@ internal partial class RpcSubscriber(ITokenProvider tokenProvider, ILogger<RpcSu
 
             _ = _connection.ClientRegistration<IRpcSubscriber>(this);
 
+            _connection.Closed += _ =>
+            {
+                presence.OnDisconnected();
+                return Task.CompletedTask;
+            };
+
             await _connection.StartAsync();
+
+            presence.OnConnected();
 
             return true;
         }

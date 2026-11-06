@@ -184,6 +184,49 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     /// <summary>The running game's place on the server's network relay; hidden when it is not on it.</summary>
     public RelayStatusViewModel Relay { get; } = new();
 
+    /// <summary>The other players in this game right now; the card over each says what they are doing.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPlayingNow))]
+    private ObservableCollection<PlayerPresenceViewModel> _playingNow = new();
+
+    public bool HasPlayingNow => PlayingNow.Count > 0;
+
+    partial void OnGameIdChanged(Guid value) => FollowPresence(value);
+
+    partial void OnPlayingNowChanged(ObservableCollection<PlayerPresenceViewModel>? oldValue, ObservableCollection<PlayerPresenceViewModel> newValue)
+    {
+        if (oldValue != null)
+            oldValue.CollectionChanged -= OnPlayingNowCollectionChanged;
+
+        newValue.CollectionChanged += OnPlayingNowCollectionChanged;
+    }
+
+    private void OnPlayingNowCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => OnPropertyChanged(nameof(HasPlayingNow));
+
+    private void FollowPresence(Guid gameId)
+    {
+        if (gameId == Guid.Empty || PresenceDirectory.Current is not { } directory)
+        {
+            PlayingNow = new();
+            return;
+        }
+
+        // This player shows as running in the play button instead
+        var self = Guid.Empty;
+
+        try
+        {
+            self = _serviceProvider.GetService<AuthenticationService>()?.GetUserId() ?? Guid.Empty;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogDebug(ex, "Could not tell who the current user is");
+        }
+
+        PlayingNow = directory.ForGame(gameId, self);
+    }
+
     public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting;
 
     /// <summary>

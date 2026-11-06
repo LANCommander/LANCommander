@@ -112,6 +112,19 @@
                             <MenuItem Header="Package a Game..."
                                       Command="{Binding ShellViewModel.ShowPackagingCommand}"
                                       IsVisible="{Binding ShellViewModel.CanPackageGames}" />
+                            <!-- What other players see in chat and game details while this one plays -->
+                            <MenuItem Header="Activity Status"
+                                      IsVisible="{Binding ShellViewModel.Profile.HasPresenceVisibility}">
+                                <MenuItem Header="Share what I'm playing"
+                                          ToggleType="Radio" GroupName="PresenceVisibility"
+                                          IsChecked="{Binding ShellViewModel.Profile.SharesEverything, Mode=TwoWay}" />
+                                <MenuItem Header="Share only the game"
+                                          ToggleType="Radio" GroupName="PresenceVisibility"
+                                          IsChecked="{Binding ShellViewModel.Profile.SharesGameOnly, Mode=TwoWay}" />
+                                <MenuItem Header="Don't share what I'm playing"
+                                          ToggleType="Radio" GroupName="PresenceVisibility"
+                                          IsChecked="{Binding ShellViewModel.Profile.SharesNothing, Mode=TwoWay}" />
+                            </MenuItem>
                             <MenuItem Header="Settings"
                                       Command="{Binding ShellViewModel.ShowSettingsCommand}" />
                             <MenuItem Header="Big Screen Mode"

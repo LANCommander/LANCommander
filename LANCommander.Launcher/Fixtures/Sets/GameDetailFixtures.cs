@@ -109,6 +109,19 @@ public static class GameDetailFixtures
             return context.ShellWindow(detail);
         }),
 
+        new("GameDetail.PlayingNow", "An installed game two other players are in right now", context =>
+        {
+            var detail = Installed(context);
+
+            detail.ActionBar.PlayingNow = new System.Collections.ObjectModel.ObservableCollection<PlayerPresenceViewModel>(
+            [
+                FixturePresence.Playing(FixtureGames.IdFor("user Jordan"), "Jordan", FixtureGames.UnrealTournament2004, 75),
+                FixturePresence.Playing(FixtureGames.IdFor("user Sam"), "Sam", FixtureGames.UnrealTournament2004, 42, FixturePresence.InAMatch),
+            ]);
+
+            return context.ShellWindow(detail);
+        }),
+
         new("GameDetail.Running.Relay", "A LAN game running on the network relay with two other players", context =>
             context.ShellWindow(RunningOnRelay(context))),
 

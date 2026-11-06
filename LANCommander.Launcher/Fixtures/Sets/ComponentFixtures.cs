@@ -35,6 +35,14 @@ public static class ComponentFixtures
             ShowBackButton = true,
         }) { Height = 160 },
 
+        new("Component.PresenceCard", "What another player is doing, as the card over their name shows it", _ =>
+            PresenceCardHost(FixturePresence.Playing(FixtureGames.IdFor("user Sam"), "Sam", FixtureGames.UnrealTournament2004, 42,
+                FixturePresence.InAMatch))) { Width = 380, Height = 140 },
+
+        new("Component.PresenceCard.GameOnly", "A player in a game that reports nothing more, with no icon on the server", _ =>
+            PresenceCardHost(FixturePresence.Playing(FixtureGames.IdFor("user Jordan"), "Jordan", FixtureGames.Quake3, 75,
+                withIcon: false))) { Width = 380, Height = 120 },
+
         new("Component.DownloadQueue", "The compact download queue, expanded", context =>
         {
             var queue = context.Shell.DownloadQueue;
@@ -45,5 +53,17 @@ public static class ComponentFixtures
             return new DownloadQueueView { DataContext = queue };
         }) { Width = 480, Height = 600 },
     ];
+
+    // Drawn the way a tooltip frames it
+    private static Control PresenceCardHost(ViewModels.Components.PlayerPresenceViewModel player) => new Border
+    {
+        Margin = new Avalonia.Thickness(16),
+        Padding = new Avalonia.Thickness(10, 8),
+        CornerRadius = new Avalonia.CornerRadius(6),
+        HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Left,
+        VerticalAlignment = Avalonia.Layout.VerticalAlignment.Top,
+        [!Border.BackgroundProperty] = new Avalonia.Markup.Xaml.MarkupExtensions.DynamicResourceExtension("SurfaceRaisedBrush"),
+        Child = new PresenceCard { DataContext = player },
+    };
 }
 #endif

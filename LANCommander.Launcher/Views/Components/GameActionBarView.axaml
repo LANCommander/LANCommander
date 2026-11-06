@@ -213,6 +213,34 @@
                             <TextBlock Text="{Binding LastPlayed}" Classes="Mono" FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium" />
                         </StackPanel>
 
+                        <!-- The other players in this game right now; each name opens what they are doing -->
+                        <StackPanel Spacing="3" IsVisible="{Binding HasPlayingNow}">
+                            <TextBlock Text="PLAYING NOW" Classes="Kicker" />
+                            <ItemsControl ItemsSource="{Binding PlayingNow}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Orientation="Horizontal" Spacing="10" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:PlayerPresenceViewModel">
+                                        <Button Classes="Text"
+                                                Padding="0"
+                                                controls:Presence.UserId="{Binding UserId}">
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Ellipse Width="8" Height="8"
+                                                         Fill="{DynamicResource SuccessBrush}"
+                                                         VerticalAlignment="Center" />
+                                                <TextBlock Text="{Binding UserName}"
+                                                           FontSize="{DynamicResource FontSizeBody}" FontWeight="Medium"
+                                                           Foreground="{DynamicResource SuccessTextBrush}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+
                         <!-- The running game's place on the network relay; opens who else is there -->
                         <Button x:Name="RelayButton"
                                 Classes="Text"

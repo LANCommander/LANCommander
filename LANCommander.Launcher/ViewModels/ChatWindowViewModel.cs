@@ -399,6 +399,9 @@ public partial class ChatThreadViewModel : ViewModelBase
 
     public string OtherParticipantNames => string.Join(", ", OtherParticipants.Select(p => p.Name));
 
+    /// <summary>The other participants one by one, so each name can show whether they are playing.</summary>
+    public List<ParticipantName> OtherParticipantNameList { get; }
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasUnread))]
     private int _unreadCount;
@@ -411,8 +414,15 @@ public partial class ChatThreadViewModel : ViewModelBase
         OtherParticipants = thread.Participants
             .Where(p => p.Id != currentUserId)
             .ToList();
+
+        OtherParticipantNameList = OtherParticipants
+            .Select((p, i) => new ParticipantName(p.Id, p.Name, i < OtherParticipants.Count - 1 ? ", " : string.Empty))
+            .ToList();
     }
 }
+
+/// <summary>One name in a list of participants, with what follows it.</summary>
+public sealed record ParticipantName(Guid UserId, string Name, string Separator);
 
 // ── UserSelectionViewModel ────────────────────────────────────────────────────
 

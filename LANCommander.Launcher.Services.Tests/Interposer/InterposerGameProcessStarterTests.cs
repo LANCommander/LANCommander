@@ -22,7 +22,8 @@ public class InterposerGameProcessStarterTests : IDisposable
 
     public void Dispose()
     {
-        // A game the test killed may still be letting go of its log
+        // A game the test killed may still be letting go of its log, or of its own image: Windows
+        // refuses to delete a mapped executable with access denied rather than a sharing violation
         for (var attempt = 0; attempt < 10; attempt++)
         {
             try
@@ -30,7 +31,7 @@ public class InterposerGameProcessStarterTests : IDisposable
                 _installDirectory.Delete(recursive: true);
                 return;
             }
-            catch (IOException)
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
                 Thread.Sleep(200);
             }
@@ -245,6 +246,46 @@ public class InterposerGameProcessStarterTests : IDisposable
     }
 
     /// <summary>
+    /// A game with the Interposer installed beside it goes through the service even with nothing to
+    /// apply: that is what gives its DLL the event pipe that carries the game's presence.
+    /// </summary>
+    [Fact]
+    public async Task AGameWithTheInterposerBesideItStartsThroughTheServiceWithNothingToApply()
+    {
+        if (!OperatingSystem.IsWindows() || !Environment.Is64BitOperatingSystem)
+            return;
+
+        // What the redistributable's proxy method installs, for a 32-bit game
+        var bin = Directory.CreateDirectory(Path.Combine(_installDirectory.FullName, "Proxy")).FullName;
+
+        File.Copy(Path.Combine(AppContext.BaseDirectory, "x86", "LANCommander.Interposer.dll"), Path.Combine(bin, "version.dll"));
+        File.Copy(PingExe32().FileName, Path.Combine(bin, "ping.exe"));
+
+        var game = SinglePlayerGame();
+        var sessions = new InterposerSessionService(NullLogger<InterposerSessionService>.Instance);
+
+        var action = new ProcessStartInfo(Path.Combine(bin, "ping.exe"), "-n 30 127.0.0.1")
+        {
+            WorkingDirectory = bin,
+            UseShellExecute = true,
+        };
+
+        using var started = await Starter(new FakeRelayClient(null), sessions: sessions).StartAsync(Context(game, action), CancellationToken.None);
+
+        started.ShouldNotBeNull();
+
+        try
+        {
+            sessions.Get(game.Id).ShouldNotBeNull();
+        }
+        finally
+        {
+            started.Process.Kill();
+            await started.Process.WaitForExitAsync();
+        }
+    }
+
+    /// <summary>
     /// The whole way through: a 32-bit game, started by this 64-bit test through the Interposer's
     /// injector, joins a real relay server in the network the session named.
     /// </summary>
@@ -432,6 +473,7 @@ public class InterposerGameProcessStarterTests : IDisposable
 
         return new InterposerGameProcessStarter(relay, settings.Object, connection.Object, profile,
             sessions ?? new InterposerSessionService(NullLogger<InterposerSessionService>.Instance),
+            new PresenceForwarder(new PresenceClient(NullLogger<PresenceClient>.Instance), NullLogger<PresenceForwarder>.Instance),
             NullLogger<InterposerGameProcessStarter>.Instance);
     }
 

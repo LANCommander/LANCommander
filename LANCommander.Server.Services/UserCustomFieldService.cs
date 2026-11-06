@@ -45,13 +45,17 @@ namespace LANCommander.Server.Services
 
             var existing = await GetAsync(userId, name);
 
-            if (existing.Value == value)
+            if (existing?.Value == value)
                 return;
 
             if (existing == null)
             {
+                if (String.IsNullOrWhiteSpace(value))
+                    return;
+
                 await AddAsync(new UserCustomField
                 {
+                    UserId = userId,
                     Name = name,
                     Value = value
                 });
@@ -72,7 +76,8 @@ namespace LANCommander.Server.Services
         {
             var existing = await GetAsync(userId, name);
 
-            await DeleteAsync(existing);
+            if (existing != null)
+                await DeleteAsync(existing);
         }
     }
 }

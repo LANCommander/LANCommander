@@ -61,9 +61,13 @@ namespace LANCommander.Launcher.Services.Extensions
             // games join the server's network relay through it. The Interposer is Windows only.
             services.AddSingleton<InterposerLaunchService>();
             services.AddSingleton<InterposerSessionService>();
+            services.AddSingleton<PresenceForwarder>();
 
             if (OperatingSystem.IsWindows())
                 services.AddSingleton<IGameProcessStarter, InterposerGameProcessStarter>();
+
+            // Who on the server is playing what, for chat and game details
+            services.AddSingleton<PresenceService>();
 
             services.AddSingleton<IScriptInterceptor, ElevatedScriptInterceptor>();
 

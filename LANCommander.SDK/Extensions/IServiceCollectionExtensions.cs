@@ -29,6 +29,7 @@ public static class IServiceCollectionExtensions
         
         services.AddSingleton<IRpcSubscriber, RpcSubscriber>();
         services.AddSingleton<RpcClient>();
+        services.AddSingleton<PresenceClient>();
         services.AddSingleton<ApiRequestFactory>();
         services.AddSingleton<ProcessExecutionContextFactory>();
         services.AddSingleton<PowerShellScriptFactory>();

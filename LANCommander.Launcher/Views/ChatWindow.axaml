@@ -3,6 +3,7 @@
         xmlns:vm="using:LANCommander.Launcher.ViewModels"
         xmlns:models="using:LANCommander.SDK.Models"
         xmlns:converters="using:LANCommander.Launcher.Converters"
+        xmlns:controls="using:LANCommander.Launcher.Controls"
         x:Class="LANCommander.Launcher.Views.ChatWindow"
         x:DataType="vm:ChatWindowViewModel"
         Title="Chat"
@@ -177,12 +178,28 @@
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
 
-                                                <TextBlock Grid.Column="1"
-                                                           Text="{Binding OtherParticipantNames}"
-                                                           FontSize="{DynamicResource FontSizeLabel}"
-                                                           FontWeight="{Binding HasUnread, Converter={StaticResource BoldIfTrue}}"
-                                                           TextTrimming="CharacterEllipsis"
-                                                           VerticalAlignment="Center" />
+                                                <!-- Names one by one, each lit while that player is in a game -->
+                                                <ItemsControl Grid.Column="1"
+                                                              ItemsSource="{Binding OtherParticipantNameList}"
+                                                              FontSize="{DynamicResource FontSizeLabel}"
+                                                              FontWeight="{Binding HasUnread, Converter={StaticResource BoldIfTrue}}"
+                                                              ClipToBounds="True"
+                                                              VerticalAlignment="Center">
+                                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="vm:ParticipantName">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           controls:Presence.UserId="{Binding UserId}" />
+                                                                <TextBlock Text="{Binding Separator}" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
                                                 <Border Grid.Column="2"
                                                         Background="{DynamicResource AccentFillBrush}"
                                                         CornerRadius="8" Padding="5,1"
@@ -264,6 +281,7 @@
                                                 <CheckBox IsChecked="{Binding IsSelected}"
                                                           Padding="8,6">
                                                     <TextBlock Text="{Binding Name}"
+                                                               controls:Presence.UserId="{Binding User.Id}"
                                                                FontSize="{DynamicResource FontSizeLabel}"
                                                                TextTrimming="CharacterEllipsis" />
                                                 </CheckBox>
@@ -344,12 +362,27 @@
                                 </ItemsControl>
 
                                 <!-- Participant names -->
-                                <TextBlock Text="{Binding SelectedThread.OtherParticipantNames}"
-                                           x:DataType="vm:ChatWindowViewModel"
-                                           FontSize="{DynamicResource FontSizeLabel}"
-                                           FontWeight="SemiBold"
-                                           VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis" />
+                                <ItemsControl ItemsSource="{Binding SelectedThread.OtherParticipantNameList}"
+                                              x:DataType="vm:ChatWindowViewModel"
+                                              FontSize="{DynamicResource FontSizeLabel}"
+                                              FontWeight="SemiBold"
+                                              ClipToBounds="True"
+                                              VerticalAlignment="Center">
+                                    <ItemsControl.ItemsPanel>
+                                                        <ItemsPanelTemplate>
+                                                            <StackPanel Orientation="Horizontal" />
+                                                        </ItemsPanelTemplate>
+                                                    </ItemsControl.ItemsPanel>
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="vm:ParticipantName">
+                                                            <StackPanel Orientation="Horizontal">
+                                                                <TextBlock Text="{Binding Name}"
+                                                                           controls:Presence.UserId="{Binding UserId}" />
+                                                                <TextBlock Text="{Binding Separator}" />
+                                                            </StackPanel>
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
                             </StackPanel>
                         </Border>
 
@@ -383,6 +416,7 @@
                                                             Margin="8,0,0,2"
                                                             VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding UserName}"
+                                                               controls:Presence.UserId="{Binding UserId}"
                                                                FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
                                                     <TextBlock Text="{Binding StartedOn, Converter={StaticResource TimeString}}"
                                                                Classes="Mono"

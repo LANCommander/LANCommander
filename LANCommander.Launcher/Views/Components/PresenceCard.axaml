@@ -1,0 +1,75 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels.Components"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             x:Class="LANCommander.Launcher.Views.Components.PresenceCard"
+             x:DataType="vm:PlayerPresenceViewModel">
+
+    <!-- What a player is doing: the game's icon from the server, its title, and the rich
+         presence the game reports through the Interposer. Shown over the player's name. -->
+    <Grid ColumnDefinitions="Auto,*,Auto" MinWidth="220" MaxWidth="320" Margin="2">
+
+        <Border Grid.Column="0"
+                Width="40" Height="40"
+                CornerRadius="{DynamicResource RadiusMedium}"
+                Background="{DynamicResource SurfaceRaisedBrush}"
+                ClipToBounds="True"
+                VerticalAlignment="Top"
+                Margin="0,0,10,0">
+            <Panel>
+                <Icon Type="Regular" Value="GameController" Width="20" Height="20"
+                      Foreground="{DynamicResource TextTertiaryBrush}"
+                      IsVisible="{Binding !HasIcon}" />
+                <Image controls:AsyncImage.Source="{Binding IconUrl}"
+                       controls:AsyncImage.DecodeWidth="80"
+                       Stretch="UniformToFill"
+                       IsVisible="{Binding HasIcon}" />
+            </Panel>
+        </Border>
+
+        <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+            <TextBlock Text="PLAYING" Classes="Kicker" Foreground="{DynamicResource SuccessTextBrush}" />
+            <TextBlock Text="{Binding GameTitle}"
+                       FontWeight="SemiBold"
+                       FontSize="{DynamicResource FontSizeLabel}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding Details}"
+                       IsVisible="{Binding HasDetails}"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap" />
+            <TextBlock Text="{Binding State}"
+                       IsVisible="{Binding HasState}"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       Foreground="{DynamicResource TextSecondaryBrush}"
+                       TextWrapping="Wrap" />
+            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,2,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasParty}">
+                    <Icon Type="Regular" Value="Users" Width="12" Height="12"
+                          Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding PartyText}" Classes="Mono"
+                               FontSize="{DynamicResource FontSizeKicker}"
+                               Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding ElapsedText}" Classes="Mono"
+                           IsVisible="{Binding HasElapsed}"
+                           FontSize="{DynamicResource FontSizeKicker}"
+                           Foreground="{DynamicResource TextTertiaryBrush}" VerticalAlignment="Center" />
+            </StackPanel>
+        </StackPanel>
+
+        <!-- An image the game set by URL (Discord asset keys never get this far) -->
+        <Border Grid.Column="2"
+                Width="48" Height="48"
+                CornerRadius="{DynamicResource RadiusMedium}"
+                ClipToBounds="True"
+                VerticalAlignment="Top"
+                Margin="10,0,0,0"
+                IsVisible="{Binding HasImage}"
+                ToolTip.Tip="{Binding ImageText}">
+            <Image controls:AsyncImage.Source="{Binding ImageUrl}"
+                   controls:AsyncImage.DecodeWidth="96"
+                   Stretch="UniformToFill" />
+        </Border>
+    </Grid>
+</UserControl>

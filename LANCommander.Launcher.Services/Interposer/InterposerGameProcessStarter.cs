@@ -37,6 +37,7 @@ public sealed class InterposerGameProcessStarter(
     IConnectionClient connectionClient,
     ProfileClient profileClient,
     InterposerSessionService sessions,
+    PresenceForwarder presenceForwarder,
     ILogger<InterposerGameProcessStarter> logger) : IGameProcessStarter
 {
     public async Task<StartedGameProcess?> StartAsync(GameProcessStartContext context, CancellationToken cancellationToken)
@@ -68,8 +69,10 @@ public sealed class InterposerGameProcessStarter(
         if (session == null && options.IsEnabled("NetworkRelay.Enabled") && string.IsNullOrWhiteSpace(options.Get("NetworkRelay.Server")))
             overlay["NetworkRelay.Enabled"] = "false";
 
-        // Nothing to apply: the game starts exactly as it would without the launcher's help
-        if (session == null && !options.ChangesConfig(overlay, bundled))
+        // Nothing to apply: the game starts exactly as it would without the launcher's help. Except a
+        // game with the Interposer beside it: started through the service, its DLL finds the event
+        // pipe and reports the game's presence, which the other players see.
+        if (session == null && !options.ChangesConfig(overlay, bundled) && deployment != InterposerDeployment.Proxy)
             return null;
 
         AddRichPresenceDefaults(overlay, options, context.Manifest);
@@ -127,8 +130,14 @@ public sealed class InterposerGameProcessStarter(
             var registration = sessions.Register(context.GameId, interposer, joinsRelay: session != null,
                 renewRelay: session == null ? null : token => GetRelaySessionAsync(context, options, settingsProvider.CurrentValue, token));
 
+            // The injector starts the game as a process of its own, whose events go to a pipe named for
+            // that process rather than the one this service hosts
+            var presence = deployment == InterposerDeployment.Injector
+                ? null
+                : presenceForwarder.Track(context.GameId, context.Manifest?.Title, interposer);
+
             // The InterposerService holds the overrides and pipes the game reads; it lives as long as the game
-            return new StartedGameProcess(process, new GameLifetime(registration, interposer));
+            return new StartedGameProcess(process, new GameLifetime(registration, presence, interposer));
         }
         catch (Exception ex) when (ex is InjectionException or Win32Exception)
         {
@@ -242,12 +251,16 @@ public sealed class InterposerGameProcessStarter(
         return path;
     }
 
-    /// <summary>What has to last as long as the game: its session's registration first, then the service it reads from.</summary>
-    private sealed class GameLifetime(IDisposable registration, InterposerService interposer) : IDisposable
+    /// <summary>
+    /// What has to last as long as the game: its session's registration and presence first, then the
+    /// service they read from.
+    /// </summary>
+    private sealed class GameLifetime(IDisposable registration, IDisposable? presence, InterposerService interposer) : IDisposable
     {
         public void Dispose()
         {
             registration.Dispose();
+            presence?.Dispose();
             interposer.Dispose();
         }
     }

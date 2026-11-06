@@ -1,4 +1,5 @@
 using LANCommander.Server.Hubs;
+using LANCommander.Server.Services;
 
 namespace LANCommander.Server.Startup;
 
@@ -10,6 +11,8 @@ public static class SignalR
         {
             options.PayloadSerializerOptions.PropertyNamingPolicy = null;
         });
+
+        builder.Services.AddSingleton<IPresenceBroadcaster, RpcPresenceBroadcaster>();
     }
 
     public static WebApplication UseSignalR(this WebApplication app)

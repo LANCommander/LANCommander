@@ -32,6 +32,19 @@ The launcher has the ability to queue up multiple game installs by utilizing a d
 
 ![Launcher Download Queue](./_Assets/Download%20Queue.png)
 
+## Seeing Who's Playing
+While someone on the server is in a game, their name is highlighted in chat, and the game's page lists them under **Playing Now**. Hovering over a highlighted name (or moving to it with a controller) shows a card with the game's icon, its title, and how long they have been playing.
+
+Games run through the LANCommander Interposer can report more: the map, the score, or how full the party is. The card shows these too, whether or not Discord is running.
+
+To choose what others see, open the menu under your name and pick an option under **Activity Status**:
+
+- **Share what I'm playing**: the game and everything it reports. This is the default.
+- **Share only the game**: the game and how long you have been playing, without the details it reports.
+- **Don't share what I'm playing**: nothing. You never show as playing.
+
+The menu offers this only while the launcher is connected to a server that supports it.
+
 ## Refreshing Games
 If a new game is available or a user's list of accessible games has changed, click the import button at the top of the application next to the user's name to sync the list of games from the server.
 

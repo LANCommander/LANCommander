@@ -759,6 +759,10 @@
     <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
   </Style>
   <!-- Kicker text is written uppercase in the source; Avalonia has no text-transform -->
+  <!-- A player's name while they are in a game (controls:Presence.UserId) -->
+  <Style Selector="TextBlock.Playing">
+    <Setter Property="Foreground" Value="{DynamicResource SuccessTextBrush}" />
+  </Style>
   <Style Selector="TextBlock.Kicker">
     <Setter Property="FontSize" Value="{DynamicResource FontSizeKicker}" />
     <Setter Property="FontWeight" Value="SemiBold" />

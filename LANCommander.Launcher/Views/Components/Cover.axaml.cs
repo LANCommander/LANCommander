@@ -185,9 +185,15 @@ public partial class Cover : UserControl, ICarouselLazyItem
         }
         else if (change.Property == TitleProperty)
         {
-            FallbackBackground = FallbackBrushes[FallbackToneIndex(Title)];
+            FallbackBackground = GetFallbackBrush(Title);
         }
     }
+
+    /// <summary>
+    /// The placeholder plate brush for a game with no art. Shared with other art
+    /// surfaces (e.g. <see cref="HeroCard"/>) so a game keeps the same tone everywhere.
+    /// </summary>
+    public static IBrush GetFallbackBrush(string? title) => FallbackBrushes[FallbackToneIndex(title)];
 
     /// <summary>
     /// FNV-1a over the title, so a game keeps its plate across launches

@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
              xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:converters="using:LANCommander.Launcher.Converters"
              xmlns:local="using:LANCommander.Launcher.Views.Components"
              x:Class="LANCommander.Launcher.Views.Components.HeroCard"
              x:DataType="vmComponents:GameItemViewModel"
@@ -36,6 +37,11 @@
             Command="{Binding $parent[local:HeroCard].Command}"
             CommandParameter="{Binding $parent[local:HeroCard].CommandParameter}">
         <Panel>
+            <!-- Placeholder plate under all art: the same title-hashed tone covers use, so a game
+                 with no hero or cover (or whose art fails to load) isn't a black box -->
+            <Border CornerRadius="{DynamicResource RadiusMedium}"
+                    Background="{Binding Title, Converter={x:Static converters:TitleToFallbackBrushConverter.Instance}}" />
+
             <!-- Background: hero image -->
             <Image controls:AsyncImage.Source="{Binding HeroPath}"
                    controls:AsyncImage.DecodeWidth="480"
@@ -51,7 +57,8 @@
                        controls:AsyncImage.DecodeWidth="32"
                        RenderOptions.BitmapInterpolationMode="HighQuality"
                        Stretch="UniformToFill" />
-                <Border Background="#55000000" />
+                <Border Background="#55000000"
+                        IsVisible="{Binding CoverPath, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
             </Panel>
 
             <!-- Fade: clear through the upper art, into black behind the logo -->

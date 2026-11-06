@@ -1,9 +1,10 @@
-@page "/Issues/{id:guid}"
+﻿@page "/Issues/{id:guid}"
 @page "/Issues/Add"
 @using Microsoft.AspNetCore.Components.Authorization
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject GameService GameService
 @inject IssueService IssueService
+@inject IssueAttachmentService IssueAttachmentService
 @inject UserService UserService
 @inject NotificationService Notifications
 @inject NavigationManager NavigationManager
@@ -13,6 +14,8 @@
     <Extra>
         @if (Id != Guid.Empty)
         {
+            <Button Icon="IconType.PushPin" OnClick="TogglePinnedAsync" Loading="_pinning"
+                    title="Pinned issues are listed first on the game's Issues tab in the launcher">@(_issue.IsPinned ? "Unpin" : "Pin")</Button>
             <Button Icon="IconType.CheckCircle" OnClick="ResolveAsync" Disabled="IsResolved" Loading="_resolving">Resolve</Button>
         }
         <Button Primary Icon="IconType.FloppyDisk" OnClick="SaveAsync" Disabled="IsResolved" Loading="_saving">Save</Button>
@@ -39,10 +42,41 @@
                 <Button Primary Href="@($"/Games/{_issue.GameId}")" NewTab Disabled="@(_issue.GameId == Guid.Empty)">Edit</Button>
             </Flex>
         </FormItem>
+        <FormItem Label="Title">
+            <TextInput @bind-Value="_issue.Title" MaxLength="128" AutoFocus />
+        </FormItem>
         <FormItem Label="Description">
-            <TextArea @bind-Value="_issue.Description" AutoFocus Counter Rows="20" />
+            <TextArea @bind-Value="_issue.Description" Counter Rows="20" />
         </FormItem>
     </Form>
+
+    @if (_issue.Attachments?.Any() == true)
+    {
+        <FormItem Label="Attachments">
+            <Flex Vertical Gap="Gap.Small">
+                @foreach (var attachment in _issue.Attachments.OrderBy(a => a.CreatedOn))
+                {
+                    var url = $"/api/Issue/Attachments/{attachment.Id}/Download";
+
+                    <Flex Gap="Gap.Small" Align="Align.Center">
+                        <Icon Type="@(SDK.Helpers.IssueAttachmentRules.IsImage(attachment.FileName) ? IconType.Image : IconType.Paperclip)" />
+                        <a href="@url" target="_blank" rel="noopener">@attachment.FileName</a>
+                        <span style="opacity: 0.6"><ByteSize Value="attachment.Size" /></span>
+                        <Popconfirm OnConfirm="() => DeleteAttachmentAsync(attachment)" Title="Delete this attachment?" OkText="Delete" Danger>
+                            <Button Text Danger Icon="IconType.X" title="Delete attachment" />
+                        </Popconfirm>
+                    </Flex>
+
+                    @if (SDK.Helpers.IssueAttachmentRules.IsImage(attachment.FileName))
+                    {
+                        <a href="@url" target="_blank" rel="noopener">
+                            <img src="@url" alt="@attachment.FileName" style="max-width: 480px; max-height: 270px; border-radius: 4px;" />
+                        </a>
+                    }
+                }
+            </Flex>
+        </FormItem>
+    }
 </PageContent>
 
 @code {
@@ -53,6 +87,7 @@
     bool _loading = true;
     bool _saving;
     bool _resolving;
+    bool _pinning;
 
     bool IsResolved => _issue.ResolvedOn != null;
 
@@ -66,7 +101,7 @@
         {
             if (Id != Guid.Empty)
                 _issue = await IssueService
-                    .Include(i => i.Game, i => i.CreatedBy, i => i.UpdatedBy, i => i.ResolvedBy)
+                    .Include(i => i.Game, i => i.CreatedBy, i => i.UpdatedBy, i => i.ResolvedBy, i => i.Attachments!)
                     .GetAsync(Id);
 
             var games = await GameService.Include(g => g.Media.Where(m => m.Type == SDK.Enums.MediaType.Icon)).GetAsync();
@@ -139,6 +174,48 @@
         finally
         {
             _resolving = false;
+        }
+    }
+
+    // Attachments can hold anything a user's machine logged, so admins can remove them on their own
+    async Task DeleteAttachmentAsync(IssueAttachment attachment)
+    {
+        try
+        {
+            await IssueAttachmentService.DeleteAsync(attachment);
+
+            _issue.Attachments = _issue.Attachments?.Where(a => a.Id != attachment.Id).ToList();
+
+            Notifications.Success("Attachment deleted!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete the attachment!");
+        }
+    }
+
+    // Pinning works on resolved issues too, so it saves just the flag rather than the whole form
+    async Task TogglePinnedAsync()
+    {
+        _pinning = true;
+
+        try
+        {
+            var pinned = !_issue.IsPinned;
+
+            await IssueService.SetPinnedAsync(_issue.Id, pinned);
+
+            _issue.IsPinned = pinned;
+
+            Notifications.Success(pinned ? "Issue pinned!" : "Issue unpinned!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not change the issue's pin!");
+        }
+        finally
+        {
+            _pinning = false;
         }
     }
 

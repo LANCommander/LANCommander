@@ -1,4 +1,4 @@
-@page "/Issues"
+﻿@page "/Issues"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject IssueService IssueService
 @inject NavigationManager NavigationManager
@@ -16,6 +16,19 @@
             <Button Primary Icon="IconType.Plus" Href="/Issues/Add">Add Issue</Button>
         </RightToolbar>
         <Columns>
+            <BoundColumn Property="i => i.IsPinned" Title="Pinned" Width="90px" Sortable>
+                @if (context.IsPinned)
+                {
+                    <Icon Type="IconType.PushPin" title="Pinned" />
+                }
+            </BoundColumn>
+            <BoundColumn Property="i => i.Title" Title="Title" Width="18%" Sortable />
+            <BoundColumn Property="i => i.Attachments!.Count" Title="Files" Include="Attachments" Width="80px" Sortable>
+                @if (context.Attachments?.Count > 0)
+                {
+                    <span title="Attachments"><Icon Type="IconType.Paperclip" /> @context.Attachments.Count</span>
+                }
+            </BoundColumn>
             <BoundColumn Property="i => i.Game.Title" Title="Game" Include="Game" Sortable />
             <BoundColumn Property="i => i.CreatedOn" Title="Opened" Sortable DefaultSort="ColumnSort.Descending">
                 <LocalTime Value="context.CreatedOn" Relative />

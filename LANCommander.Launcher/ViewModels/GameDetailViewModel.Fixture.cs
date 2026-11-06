@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 using System.Collections.Generic;
 using LANCommander.Launcher.ViewModels.Components;
 
@@ -23,6 +23,17 @@ public partial class GameDetailViewModel
 
         OnPropertyChanged(nameof(HasMedia));
         OnPropertyChanged(nameof(HasTools));
+    }
+
+    /// <summary>Fills the Issues tab for a visual fixture, in place of <c>LoadIssuesAsync</c>.</summary>
+    internal void SeedIssuesForFixture(IEnumerable<IssueItemViewModel> issues)
+    {
+        Issues.Clear();
+
+        foreach (var issue in issues)
+            Issues.Add(issue);
+
+        OnPropertyChanged(nameof(HasIssues));
     }
 
     /// <summary>

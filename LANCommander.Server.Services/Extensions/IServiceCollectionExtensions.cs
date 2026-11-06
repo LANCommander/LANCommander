@@ -1,4 +1,4 @@
-using System.Reflection;
+﻿using System.Reflection;
 using LANCommander.SDK;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Interceptors;
@@ -115,6 +115,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<MediaToolService>();
         services.AddScoped<UpdateService>();
         services.AddScoped<IssueService>();
+        services.AddScoped<IssueAttachmentService>();
         services.AddScoped<PageService>();
         services.AddScoped<UserService>();
         services.AddScoped<RoleService>();

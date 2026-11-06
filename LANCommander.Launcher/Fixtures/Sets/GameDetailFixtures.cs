@@ -1,4 +1,4 @@
-#if DEBUG
+﻿#if DEBUG
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -64,6 +64,22 @@ public static class GameDetailFixtures
         {
             Prepare = (_, window) => window.GetVisualDescendants().OfType<GameDetailView>().Single()
                 .FindControl<Button>("MediaTabButton")!
+                .RaiseEvent(new RoutedEventArgs(Button.ClickEvent)),
+        },
+
+        new("GameDetail.IssuesTab", "The issues tab: a pinned issue, an open one and a resolved one", context =>
+        {
+            var detail = Installed(context);
+
+            detail.SeedIssuesForFixture(Issues());
+
+            return context.ShellWindow(detail);
+        })
+        {
+            // Tall enough to show all three issues below the header
+            Height = 1000,
+            Prepare = (_, window) => window.GetVisualDescendants().OfType<GameDetailView>().Single()
+                .FindControl<Button>("IssuesTabButton")!
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent)),
         },
 
@@ -236,6 +252,48 @@ public static class GameDetailFixtures
         actionBar.HasManuals = true;
 
         return detail;
+    }
+
+    private static IEnumerable<IssueItemViewModel> Issues()
+    {
+        var game = FixtureGames.UnrealTournament2004;
+
+        return
+        [
+            new(new SDK.Models.Issue
+            {
+                Id = FixtureGames.IdFor("Issue: Onslaught maps"),
+                GameId = game.Id,
+                Title = "Onslaught maps missing after the 3369 patch",
+                Description = "Install the Mega Pack from the Tools card first. The patch on its own doesn't add the bonus maps.",
+                IsPinned = true,
+                CreatedOn = FixtureContext.Now.AddDays(-12),
+                CreatedBy = "admin",
+            }),
+            new(new SDK.Models.Issue
+            {
+                Id = FixtureGames.IdFor("Issue: Crash on alt-tab"),
+                GameId = game.Id,
+                Title = "Crashes when alt-tabbing in fullscreen",
+                Description = "Happens every time on my machine. Windowed mode works fine.",
+                Attachments =
+                [
+                    new SDK.Models.IssueAttachment { Id = FixtureGames.IdFor("Attachment: crash screenshot"), FileName = "Screenshot 2026-09-18 214502.png", Size = 1_842_311 },
+                    new SDK.Models.IssueAttachment { Id = FixtureGames.IdFor("Attachment: UT2004.log"), FileName = "UT2004.log", Size = 86_204 },
+                ],
+                CreatedOn = FixtureContext.Now.AddDays(-2),
+                CreatedBy = "Ranger",
+            }),
+            new(new SDK.Models.Issue
+            {
+                Id = FixtureGames.IdFor("Issue: No sound"),
+                GameId = game.Id,
+                Title = "No sound in menus",
+                CreatedOn = FixtureContext.Now.AddDays(-30),
+                ResolvedOn = FixtureContext.Now.AddDays(-28),
+                CreatedBy = "Doomguy",
+            }),
+        ];
     }
 
     internal static IEnumerable<GameActionViewModel> Actions(params string[] names) =>

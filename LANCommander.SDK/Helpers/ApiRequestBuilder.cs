@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -163,6 +163,14 @@ public class ApiRequestBuilder(
     public ApiRequestBuilder AddBody(object body)
     {
         _request.Content = new StringContent(JsonSerializer.Serialize(body), Encoding.UTF8, MediaTypeNames.Application.Json);
+
+        return this;
+    }
+
+    /// <summary>Sends the given content as the request body, for bodies that aren't JSON (multipart forms).</summary>
+    public ApiRequestBuilder AddContent(HttpContent content)
+    {
+        _request.Content = content;
 
         return this;
     }

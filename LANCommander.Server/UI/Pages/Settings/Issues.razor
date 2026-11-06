@@ -1,0 +1,144 @@
+﻿@page "/Settings/Issues"
+@using LANCommander.SDK
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
+@using LANCommander.Server.UI.Components
+@inject StorageLocationService StorageLocationService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject IssueAttachmentService IssueAttachmentService
+@inject NotificationService Notifications
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Issues" />
+
+<PageContent Loading="AttachmentStorageLocation == null">
+    @if (AttachmentStorageLocation != null)
+    {
+        <Form Model="AttachmentStorageLocation" OnSubmit="SaveAsync">
+            <FormItem Label="Attachments Storage Path" HelpTemplate="StoragePathHelp">
+                <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="AttachmentStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            </FormItem>
+
+            <FormItem Label="Max Attachments per Issue" Help="How many files a user can attach when reporting an issue. Set to 0 to turn attachments off.">
+                <NumberInput @bind-Value="_issueSettings.MaxAttachments" Min="0" Max="MaxAttachmentsLimit" />
+            </FormItem>
+
+            <FormItem Label="Max Attachment Size (MB)" Help="The largest file a user can attach. Applies to each file separately.">
+                <NumberInput @bind-Value="_issueSettings.MaxAttachmentSize" Min="1" Max="MaxAttachmentSizeLimit" Disabled="_issueSettings.MaxAttachments == 0" />
+            </FormItem>
+
+            <FormItem>
+                <Button Primary Submit Loading="_saving">Save</Button>
+            </FormItem>
+        </Form>
+    }
+</PageContent>
+
+@code {
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+
+    // Upper bounds for the inputs; enough for any screenshot, log or crash dump
+    const int MaxAttachmentsLimit = 20;
+    const int MaxAttachmentSizeLimit = 1024;
+
+    StorageLocation? AttachmentStorageLocation;
+
+    // Edited as a copy so nothing changes on the live settings until Save
+    IssueSettings _issueSettings = new();
+    string? _savedPath;
+    int _attachmentCount;
+    long _attachmentBytes;
+    bool _saving;
+
+    RenderFragment StoragePathHelp => @<span>
+        Screenshots and logs attached to issues are stored here. A relative path is resolved under the server's data directory.
+        @if (_attachmentCount > 0)
+        {
+            <text> @(_attachmentCount == 1 ? "1 attachment is" : $"{_attachmentCount} attachments are") stored here (<ByteSize Value="_attachmentBytes" />). Changing the path doesn't move existing files. Move the folder's contents yourself, or they can't be downloaded.</text>
+        }
+    </span>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var current = SettingsProvider.CurrentValue.Server.Issues;
+
+        _issueSettings = new IssueSettings
+        {
+            MaxAttachments = current.MaxAttachments,
+            MaxAttachmentSize = current.MaxAttachmentSize,
+        };
+
+        try
+        {
+            AttachmentStorageLocation = await StorageLocationService.DefaultAsync(StorageLocationType.IssueAttachment)
+                                        ?? new StorageLocation { Type = StorageLocationType.IssueAttachment, Default = true, Path = "Attachments" };
+
+            _savedPath = AttachmentStorageLocation.Path;
+
+            if (AttachmentStorageLocation.Id != Guid.Empty)
+            {
+                var attachments = await IssueAttachmentService.GetAsync(a => a.StorageLocationId == AttachmentStorageLocation.Id);
+
+                _attachmentCount = attachments.Count;
+                _attachmentBytes = attachments.Sum(a => a.Size);
+            }
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The attachment storage location could not be loaded");
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AttachmentStorageLocation!.Path))
+        {
+            Notifications.Error("Choose a storage path for attachments.");
+            return;
+        }
+
+        _saving = true;
+
+        try
+        {
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Issues.MaxAttachments = Math.Clamp(_issueSettings.MaxAttachments, 0, MaxAttachmentsLimit);
+                s.Server.Issues.MaxAttachmentSize = Math.Clamp(_issueSettings.MaxAttachmentSize, 1, MaxAttachmentSizeLimit);
+            });
+
+            // Fail here rather than on the next upload if the folder can't be created
+            Directory.CreateDirectory(AppPaths.ResolveStorageLocationPath(AttachmentStorageLocation.Path));
+
+            if (AttachmentStorageLocation.Id == Guid.Empty)
+                AttachmentStorageLocation = await StorageLocationService.AddAsync(AttachmentStorageLocation);
+            else
+                await StorageLocationService.UpdateAsync(AttachmentStorageLocation);
+
+            _savedPath = AttachmentStorageLocation.Path;
+
+            Notifications.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The settings could not be saved");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    // Storage paths resolve under the data directory (AppPaths.ResolveStorageLocationPath), so a
+    // folder picked inside it is stored relative to it and keeps working if the server moves
+    void OnPathSelected(string path)
+    {
+        var dataPath = AppPaths.GetConfigDirectory().TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (path != null && path.StartsWith(dataPath, StringComparison.OrdinalIgnoreCase))
+            path = path[dataPath.Length..].TrimEnd(Path.DirectorySeparatorChar);
+
+        AttachmentStorageLocation!.Path = path ?? string.Empty;
+    }
+}

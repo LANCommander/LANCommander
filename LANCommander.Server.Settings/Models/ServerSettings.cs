@@ -1,4 +1,4 @@
-namespace LANCommander.Server.Settings.Models;
+﻿namespace LANCommander.Server.Settings.Models;
 
 public class ServerSettings
 {
@@ -11,6 +11,7 @@ public class ServerSettings
     public HttpSettings Http { get; set; } = new();
     public IGDBSettings IGDB { get; set; } = new();
     public IPXRelaySettings IPXRelay { get; set; } = new();
+    public IssueSettings Issues { get; set; } = new();
     public LauncherSettings Launcher { get; set; } = new();
     public LibrarySettings Library { get; set; } = new();
     public LogSettings Logs { get; set; } = new();

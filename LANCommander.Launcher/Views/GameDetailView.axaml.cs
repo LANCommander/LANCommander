@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Linq;
 using global::Avalonia;
@@ -32,7 +32,15 @@ public partial class GameDetailView : UserControl
 
         _tabs.Add((OverviewTabButton, OverviewContent));
         _tabs.Add((MediaTabButton, MediaContent));
+        _tabs.Add((IssuesTabButton, IssuesContent));
         SelectTab(OverviewTabButton);
+
+        // Opening another game can hide the Issues tab while it is selected; fall back to Overview
+        IssuesTabButton.PropertyChanged += (_, e) =>
+        {
+            if (e.Property == IsVisibleProperty && !IssuesTabButton.IsVisible && IssuesTabButton.Classes.Contains("active"))
+                SelectTab(OverviewTabButton);
+        };
 
         LogoImage.PropertyChanged += (_, e) =>
         {

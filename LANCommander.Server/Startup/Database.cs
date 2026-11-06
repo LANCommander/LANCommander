@@ -1,4 +1,4 @@
-using LANCommander.SDK;
+﻿using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Enums;
@@ -103,6 +103,16 @@ public static class Database
                 
                 if (!Directory.Exists(saveLocation.Value.Path))
                     Directory.CreateDirectory(saveLocation.Value.Path);
+
+                // Relative, so it follows the data directory if the server is moved
+                var issueAttachmentLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.IssueAttachment && l.Default, new StorageLocation
+                {
+                    Path = "Attachments",
+                    Type = StorageLocationType.IssueAttachment,
+                    Default = true,
+                });
+
+                Directory.CreateDirectory(AppPaths.ResolveStorageLocationPath(issueAttachmentLocation.Value.Path));
             }
             else
                 logger.LogDebug("No pending migrations are available. Skipping database migration.");

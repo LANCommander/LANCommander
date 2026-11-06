@@ -1,4 +1,4 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:sys="clr-namespace:System;assembly=System.Runtime"
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
@@ -308,6 +308,9 @@
                             <Button x:Name="MediaTabButton" Classes="DetailTab"
                                     Content="Media" Click="TabButton_Click"
                                     IsVisible="{Binding HasMedia}" />
+                            <Button x:Name="IssuesTabButton" Classes="DetailTab"
+                                    Content="Issues" Click="TabButton_Click"
+                                    IsVisible="{Binding HasIssues}" />
                         </StackPanel>
                     </Border>
 
@@ -400,6 +403,85 @@
                                 <DataTemplate x:DataType="vmComponents:GameMediaItemViewModel">
                                     <ContentControl Content="{Binding}"
                                                     ContentTemplate="{StaticResource MediaTileTemplate}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Issues: pinned first, then unresolved, newest first (the server's order) -->
+                        <ItemsControl x:Name="IssuesContent" ItemsSource="{Binding Issues}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="10" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:IssueItemViewModel">
+                                    <!-- Focusable so a gamepad can scroll through long lists -->
+                                    <Border Classes="Card" Padding="16,13" Focusable="True">
+                                        <StackPanel Spacing="6">
+                                            <Grid ColumnDefinitions="Auto,*,Auto">
+                                                <Icon Type="Fill" Value="PushPin"
+                                                      Width="14" Height="14" Margin="0,0,8,0"
+                                                      VerticalAlignment="Center"
+                                                      Foreground="{DynamicResource Primary4Brush}"
+                                                      IsVisible="{Binding IsPinned}"
+                                                      ToolTip.Tip="Pinned by an administrator" />
+                                                <TextBlock Grid.Column="1"
+                                                           Text="{Binding Title}"
+                                                           FontWeight="SemiBold"
+                                                           TextWrapping="Wrap"
+                                                           VerticalAlignment="Center" />
+                                                <Border Grid.Column="2" Classes="StatusTag Success"
+                                                        Margin="12,0,0,0" VerticalAlignment="Top"
+                                                        IsVisible="{Binding IsResolved}">
+                                                    <TextBlock Text="{Binding StatusText}" />
+                                                </Border>
+                                                <Border Grid.Column="2" Classes="StatusTag Warning"
+                                                        Margin="12,0,0,0" VerticalAlignment="Top"
+                                                        IsVisible="{Binding !IsResolved}">
+                                                    <TextBlock Text="{Binding StatusText}" />
+                                                </Border>
+                                            </Grid>
+                                            <TextBlock Text="{Binding Details}"
+                                                       FontSize="{DynamicResource FontSizeCaption}"
+                                                       Foreground="{DynamicResource TextTertiaryBrush}" />
+                                            <TextBlock Text="{Binding Description}"
+                                                       IsVisible="{Binding HasDescription}"
+                                                       Margin="0,4,0,0"
+                                                       TextWrapping="Wrap"
+                                                       Foreground="{DynamicResource TextSecondaryBrush}" />
+                                            <!-- Attachments: images open in the lightbox, other files in their default app -->
+                                            <ItemsControl ItemsSource="{Binding Attachments}"
+                                                          IsVisible="{Binding HasAttachments}"
+                                                          Margin="0,4,0,0">
+                                                <ItemsControl.ItemsPanel>
+                                                    <ItemsPanelTemplate>
+                                                        <WrapPanel Orientation="Horizontal" />
+                                                    </ItemsPanelTemplate>
+                                                </ItemsControl.ItemsPanel>
+                                                <ItemsControl.ItemTemplate>
+                                                    <DataTemplate x:DataType="vm:IssueAttachmentItemViewModel">
+                                                        <Button Classes="Badge"
+                                                                Margin="0,0,6,6"
+                                                                Command="{Binding OpenCommand}"
+                                                                ToolTip.Tip="{Binding FileName}">
+                                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                                <Icon Type="Regular" Value="{Binding IconName}"
+                                                                      Width="13" Height="13" VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding FileName}"
+                                                                           MaxWidth="240"
+                                                                           TextTrimming="CharacterEllipsis"
+                                                                           VerticalAlignment="Center" />
+                                                                <TextBlock Text="{Binding SizeText}"
+                                                                           Opacity="0.6"
+                                                                           VerticalAlignment="Center" />
+                                                            </StackPanel>
+                                                        </Button>
+                                                    </DataTemplate>
+                                                </ItemsControl.ItemTemplate>
+                                            </ItemsControl>
+                                        </StackPanel>
+                                    </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>

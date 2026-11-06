@@ -864,11 +864,18 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("ResolvedById")
                         .HasColumnType("uuid");
 
                     b.Property<DateTime?>("ResolvedOn")
                         .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");
@@ -887,6 +894,51 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Issues");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.IssueAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("character varying(255)");
+
+                    b.Property<Guid>("IssueId")
+                        .HasColumnType("uuid");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("IssueId");
+
+                    b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("IssueAttachments");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Key", b =>
@@ -2787,6 +2839,39 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.IssueAttachment", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Issue", "Issue")
+                        .WithMany("Attachments")
+                        .HasForeignKey("IssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("IssueAttachments")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Issue");
+
+                    b.Navigation("StorageLocation");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Key", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "ClaimedByUser")
@@ -3515,6 +3600,11 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("Scripts");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Issue", b =>
+                {
+                    b.Navigation("Attachments");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.Navigation("Parent");
@@ -3553,6 +3643,8 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Navigation("Archives");
 
                     b.Navigation("GameSaves");
+
+                    b.Navigation("IssueAttachments");
 
                     b.Navigation("Media");
                 });

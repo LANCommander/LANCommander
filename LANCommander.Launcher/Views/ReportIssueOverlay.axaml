@@ -1,7 +1,8 @@
-<UserControl xmlns="https://github.com/avaloniaui"
+﻿<UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:controls="using:LANCommander.Launcher.Controls"
              xmlns:components="using:LANCommander.Launcher.Views.Components"
+             xmlns:views="using:LANCommander.Launcher.Views"
              x:Class="LANCommander.Launcher.Views.ReportIssueOverlay">
 
     <!-- Full-window dim backdrop -->
@@ -10,7 +11,7 @@
         <!-- Centered card -->
         <Border Classes="Dialog"
                 Width="560"
-                MaxHeight="520"
+                MaxHeight="640"
                 HorizontalAlignment="Center"
                 VerticalAlignment="Center">
 
@@ -43,18 +44,77 @@
 
                 <!-- ── Body ───────────────────────────────────────────────── -->
                 <StackPanel Margin="20,18" Spacing="10">
-                    <TextBlock Text="Describe the problem. Your server administrator will see this report."
+                    <TextBlock Text="Describe the problem. Everyone who can see this game will see your report on its Issues tab."
                                TextWrapping="Wrap"
                                FontSize="{DynamicResource FontSizeLabel}"
                                Opacity="0.85" />
 
+                    <TextBox x:Name="TitleBox"
+                             MaxLength="128"
+                             Watermark="Title, e.g. Crashes when loading a save" />
+
                     <TextBox x:Name="DescriptionBox"
                              AcceptsReturn="True"
                              TextWrapping="Wrap"
-                             Height="180"
+                             Height="160"
                              MaxLength="4000"
                              VerticalContentAlignment="Top"
-                             Watermark="What went wrong?" />
+                             Watermark="Details (optional): what happened, and what you were doing" />
+
+                    <!-- Attachments: screenshots, logs and the like -->
+                    <Grid x:Name="AttachRow" ColumnDefinitions="Auto,*">
+                        <Button x:Name="AttachButton"
+                                Classes="Secondary"
+                                Click="Attach_Click">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <Icon Type="Regular" Value="Paperclip" Width="14" Height="14" VerticalAlignment="Center" />
+                                <TextBlock Text="Attach Files" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                        <TextBlock x:Name="AttachHint"
+                                   Grid.Column="1"
+                                   Margin="12,0,0,0"
+                                   VerticalAlignment="Center"
+                                   TextWrapping="Wrap"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </Grid>
+
+                    <ItemsControl x:Name="AttachmentList">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="4" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="views:ReportIssueAttachment">
+                                <Border Classes="Card" Padding="10,4,4,4">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto">
+                                        <Icon Type="Regular" Value="{Binding IconName}"
+                                              Width="14" Height="14" Margin="0,0,8,0"
+                                              VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="1"
+                                                   Text="{Binding Name}"
+                                                   TextTrimming="CharacterEllipsis"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2"
+                                                   Text="{Binding SizeText}"
+                                                   Margin="12,0"
+                                                   VerticalAlignment="Center"
+                                                   FontSize="{DynamicResource FontSizeCaption}"
+                                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                                        <Button Grid.Column="3"
+                                                Classes="Text"
+                                                Padding="6,4"
+                                                ToolTip.Tip="Remove"
+                                                Click="RemoveAttachment_Click">
+                                            <Icon Type="Regular" Value="X" Width="12" Height="12" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
 
                     <TextBlock x:Name="ErrorText"
                                IsVisible="False"

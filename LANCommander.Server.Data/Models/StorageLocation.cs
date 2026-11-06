@@ -17,5 +17,6 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Archive>? Archives { get; set; }
         public ICollection<GameSave>? GameSaves { get; set; }
         public ICollection<Media>? Media { get; set; }
+        public ICollection<IssueAttachment>? IssueAttachments { get; set; }
     }
 }

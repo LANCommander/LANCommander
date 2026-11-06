@@ -1,7 +1,8 @@
-#if DEBUG
+﻿#if DEBUG
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using Avalonia.Controls;
 using Avalonia.Controls.Primitives;
 using Avalonia.Data;
@@ -85,6 +86,20 @@ public static class OverlayFixtures
             () => new AlertOverlay("Failed to Launch",
                 "The game could not be started because UT2004.exe is missing from C:\\Games\\Unreal Tournament 2004\\System. " +
                 "Verify the game's files or reinstall it.")),
+
+        Over("Overlay.ReportIssue", "Reporting an issue with a game, a title and two files attached",
+            () =>
+            {
+                var overlay = new ReportIssueOverlay(FixtureGames.UnrealTournament2004.Title, (_, _, _) => Task.FromResult<string?>(null));
+
+                overlay.TitleBox.Text = "Crashes when alt-tabbing in fullscreen";
+
+                // Not read from disk; the dialog only shows the name and size until it uploads
+                overlay.AddAttachment(new ReportIssueAttachment(@"C:\Users\Ranger\Pictures\Screenshot 2026-09-18 214502.png", 1_842_311));
+                overlay.AddAttachment(new ReportIssueAttachment(@"C:\Games\Unreal Tournament 2004\System\UT2004.log", 86_204));
+
+                return overlay;
+            }),
 
         Over("Overlay.GameActions", "Choosing between a game's play actions",
             () => new GameActionsOverlay

@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Diagnostics;
@@ -223,6 +223,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     // Events
     public event EventHandler? LibraryChanged;
     public event EventHandler? InstallRequested;
+
+    /// <summary>Raised after the user files an issue against this game.</summary>
+    public event EventHandler? IssueReported;
 
     public GameActionBarViewModel(IServiceProvider serviceProvider)
     {
@@ -1947,31 +1950,51 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         var gameId = GameId;
         var title = Title;
+        var issueClient = _serviceProvider.GetRequiredService<IssueClient>();
 
-        var submitted = await ReportIssueOverlay.ShowAsync(title ?? "", async description =>
+        // The dialog describes and checks the server's limits. If they can't be fetched the defaults
+        // stand in; the server still enforces its own when the report is sent.
+        SDK.Models.IssueAttachmentLimits limits;
+
+        try
+        {
+            limits = await issueClient.GetLimitsAsync();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "Could not get the server's issue attachment limits; using the defaults");
+            limits = SDK.Models.IssueAttachmentLimits.Default;
+        }
+
+        var submitted = await ReportIssueOverlay.ShowAsync(title ?? "", async (issueTitle, description, attachmentPaths) =>
         {
             try
             {
-                var issueClient = _serviceProvider.GetRequiredService<IssueClient>();
+                await issueClient.OpenAsync(issueTitle, description, gameId, attachmentPaths, limits);
 
-                if (await issueClient.Open(description, gameId))
-                {
-                    _logger.LogInformation("Reported an issue for game {GameId} ({Title})", gameId, title);
-                    return null;
-                }
+                _logger.LogInformation("Reported an issue for game {GameId} ({Title}) with {Count} attachment(s)", gameId, title, attachmentPaths.Count);
 
-                _logger.LogWarning("The server did not accept the issue report for game {GameId} ({Title})", gameId, title);
-                return "The server did not accept the report. Please try again later.";
+                return null;
+            }
+            catch (Exception ex) when (ex is ArgumentException or System.Net.Http.HttpRequestException { StatusCode: System.Net.HttpStatusCode.BadRequest })
+            {
+                // The files or the report broke a rule; the message says which
+                _logger.LogWarning(ex, "The issue report for game {GameId} ({Title}) was refused", gameId, title);
+                return ex.Message;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, "Failed to report an issue for game {GameId} ({Title})", gameId, title);
                 return $"Could not send the report: {ex.Message}";
             }
-        });
+        }, limits);
 
-        if (submitted)
-            await AlertOverlay.ShowAsync("Issue Reported", "Thanks. Your report has been sent to the server administrators.");
+        if (!submitted)
+            return;
+
+        IssueReported?.Invoke(this, EventArgs.Empty);
+
+        await AlertOverlay.ShowAsync("Issue Reported", "Thanks. Your report has been sent and is listed on the game's Issues tab.");
     }
 }
 

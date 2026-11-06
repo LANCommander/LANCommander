@@ -93,6 +93,7 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<ServerHttpPath>();
             builder.ConfigureBaseRelationships<Tag>();
             builder.ConfigureBaseRelationships<Issue>();
+            builder.ConfigureBaseRelationships<IssueAttachment>();
             builder.ConfigureBaseRelationships<Page>();
             builder.ConfigureBaseRelationships<Rating>();
             builder.ConfigureBaseRelationships<GameExternalId>();
@@ -524,6 +525,22 @@ namespace LANCommander.Server.Data
                 .WithMany(g => g.Issues)
                 .IsRequired(true)
                 .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<IssueAttachment>()
+                .HasOne(a => a.Issue)
+                .WithMany(i => i.Attachments)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<IssueAttachment>()
+                .HasOne(a => a.StorageLocation)
+                .WithMany(l => l.IssueAttachments)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<IssueAttachment>()
+                .Navigation(a => a.StorageLocation)
+                .AutoInclude();
             #endregion
 
             #region Page Relationships
@@ -615,6 +632,7 @@ namespace LANCommander.Server.Data
 
         public DbSet<Media>? Media { get; set; }
         public DbSet<Issue>? Issues { get; set; }
+        public DbSet<IssueAttachment>? IssueAttachments { get; set; }
         public DbSet<Page>? Pages { get; set; }
         public DbSet<StorageLocation>? StorageLocations { get; set; }
         public DbSet<Role>? Roles { get; set; }

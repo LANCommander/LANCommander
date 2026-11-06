@@ -42,6 +42,7 @@ public class PageVisualTests(VisualServerFixture fixture)
         { "Settings.RoleEdit", $"/Settings/Roles/{FixtureIds.For("role:players")}", ".lc-transfer" },
         { "Settings.Archives", "/Settings/Archives", ".rz-data-row" },
         { "Settings.UserSaves", "/Settings/UserSaves", ".lc-form" },
+        { "Settings.Issues", "/Settings/Issues", ".lc-form" },
         { "Settings.Library", "/Settings/Library", ".lc-form" },
         { "Settings.Launcher", "/Settings/Launcher", ".lc-form" },
         { "Settings.Servers", "/Settings/Servers", ".lc-form" },

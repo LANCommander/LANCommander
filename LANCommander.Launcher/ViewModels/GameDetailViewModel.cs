@@ -1,4 +1,4 @@
-using System;
+﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -143,6 +143,12 @@ public partial class GameDetailViewModel : ViewModelBase
 
     public bool HasTools => Tools.Count > 0;
 
+    // Issues reported against this game, in the server's order (pinned, then open, newest first)
+    public ObservableCollection<IssueItemViewModel> Issues { get; } = new();
+
+    /// <summary>The Issues tab is only shown when there is at least one issue.</summary>
+    public bool HasIssues => Issues.Count > 0;
+
     // ── Multiplayer modes ─────────────────────────────────────────────────────
 
     public ObservableCollection<string> MultiplayerModeDetails { get; } = new();
@@ -213,6 +219,7 @@ public partial class GameDetailViewModel : ViewModelBase
         ActionBar = new GameActionBarViewModel(serviceProvider);
         ActionBar.LibraryChanged += (_, _) => LibraryChanged?.Invoke(this, EventArgs.Empty);
         ActionBar.InstallRequested += (_, _) => InstallRequested?.Invoke(this, EventArgs.Empty);
+        ActionBar.IssueReported += (_, _) => _ = LoadIssuesAsync(Id, _loadVersion);
 
         // Install, uninstall and move all change the folder; re-measure whenever it does.
         ActionBar.PropertyChanged += (_, e) =>
@@ -339,6 +346,11 @@ public partial class GameDetailViewModel : ViewModelBase
             playerLines.Add(FormatPlayerCount(mode.Type, mode.MinPlayers, mode.MaxPlayers));
 
         PlayersText = string.Join("\n", playerLines.Distinct());
+
+        // Issues load alongside everything else; the tab appears once any arrive
+        Issues.Clear();
+        OnPropertyChanged(nameof(HasIssues));
+        _ = LoadIssuesAsync(game.Id, version);
 
         // Tools
         Tools.Clear();
@@ -633,6 +645,90 @@ public partial class GameDetailViewModel : ViewModelBase
         }
     }
 
+    private async Task LoadIssuesAsync(Guid gameId, int version)
+    {
+        if (IsOfflineMode)
+            return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var issueClient = scope.ServiceProvider.GetRequiredService<IssueClient>();
+
+            var issues = (await issueClient.GetForGameAsync(gameId))
+                .Select(i => new IssueItemViewModel(i, OpenIssueAttachmentAsync))
+                .ToList();
+
+            if (version != _loadVersion)
+                return;
+
+            Issues.Clear();
+
+            foreach (var issue in issues)
+                Issues.Add(issue);
+
+            OnPropertyChanged(nameof(HasIssues));
+        }
+        catch (Exception ex)
+        {
+            // Older servers don't have the endpoint; the tab just stays hidden
+            _logger.LogWarning(ex, "Failed to load issues for game {GameId}", gameId);
+        }
+    }
+
+    /// <summary>
+    /// Downloads an issue attachment to the temp folder, then shows images in the lightbox and opens
+    /// anything else with the system's default app.
+    /// </summary>
+    private async Task OpenIssueAttachmentAsync(IssueAttachmentItemViewModel attachment)
+    {
+        // The server only accepts these types, but the name comes back from it, so check again
+        // before handing the file to the shell
+        if (!SDK.Helpers.IssueAttachmentRules.IsAllowed(attachment.FileName))
+        {
+            await Views.AlertOverlay.ShowAsync("Can't Open Attachment", $"{attachment.FileName} isn't a type of file the launcher opens.");
+            return;
+        }
+
+        try
+        {
+            var path = Path.Combine(Path.GetTempPath(), "LANCommander", "IssueAttachments",
+                attachment.Id.ToString("N"), Path.GetFileName(attachment.FileName));
+
+            if (!File.Exists(path))
+            {
+                using var scope = _serviceProvider.CreateScope();
+                var issueClient = scope.ServiceProvider.GetRequiredService<IssueClient>();
+
+                // Download beside the final name so a failed transfer never leaves a partial file there
+                var partial = path + ".part";
+
+                await issueClient.DownloadAttachmentAsync(attachment.Id, partial);
+                File.Move(partial, path, overwrite: true);
+            }
+
+            if (attachment.IsImage)
+            {
+                Views.LightboxOverlay.ShowOverlay(
+                    [new LightboxItem { Type = LightboxItemType.Image, Path = path, Title = attachment.FileName }],
+                    title: Title);
+            }
+            else
+            {
+                System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+                {
+                    FileName = path,
+                    UseShellExecute = true,
+                });
+            }
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to open issue attachment {AttachmentId}", attachment.Id);
+            await Views.AlertOverlay.ShowAsync("Can't Open Attachment", ex.Message);
+        }
+    }
+
     [RelayCommand]
     private void GoBack()
     {
@@ -664,4 +760,84 @@ public partial class ToolItemViewModel : ViewModelBase
         Name = tool.Name ?? "Unknown Tool";
         IsInstalled = isInstalled;
     }
+}
+
+/// <summary>
+/// One issue on the game details Issues tab.
+/// </summary>
+public class IssueItemViewModel
+{
+    public Guid Id { get; }
+    public string Title { get; }
+    public string Description { get; }
+    public bool HasDescription => !string.IsNullOrWhiteSpace(Description);
+    public bool IsPinned { get; }
+    public bool IsResolved { get; }
+    public string StatusText => IsResolved ? "Resolved" : "Unresolved";
+
+    /// <summary>Who reported it and when, plus when it was resolved.</summary>
+    public string Details { get; }
+
+    public IReadOnlyList<IssueAttachmentItemViewModel> Attachments { get; }
+    public bool HasAttachments => Attachments.Count > 0;
+
+    public IssueItemViewModel(SDK.Models.Issue issue, Func<IssueAttachmentItemViewModel, Task>? openAttachment = null)
+    {
+        Attachments = (issue.Attachments ?? [])
+            .Select(a => new IssueAttachmentItemViewModel(a, openAttachment))
+            .ToList();
+
+        Id = issue.Id;
+        Description = issue.Description?.Trim() ?? string.Empty;
+        IsPinned = issue.IsPinned;
+        IsResolved = issue.IsResolved;
+
+        // Issues filed before titles existed fall back to the first line of their description
+        Title = !string.IsNullOrWhiteSpace(issue.Title)
+            ? issue.Title.Trim()
+            : Description.Split('\n', 2)[0].Trim() is { Length: > 0 } firstLine ? firstLine : "Untitled issue";
+
+        if (string.IsNullOrWhiteSpace(issue.Title) && Description.StartsWith(Title))
+            Description = Description[Title.Length..].Trim();
+
+        var reporter = string.IsNullOrWhiteSpace(issue.CreatedBy) ? "Reported" : $"Reported by {issue.CreatedBy}";
+        var details = $"{reporter} on {FormatDate(issue.CreatedOn)}";
+
+        if (issue.ResolvedOn is { } resolvedOn)
+            details += $" · Resolved on {FormatDate(resolvedOn)}";
+
+        Details = details;
+    }
+
+    private static string FormatDate(DateTime value)
+        => (value.Kind == DateTimeKind.Unspecified ? DateTime.SpecifyKind(value, DateTimeKind.Utc) : value)
+            .ToLocalTime()
+            .ToString("d MMM yyyy");
+}
+
+/// <summary>A file attached to an issue, opened from the Issues tab.</summary>
+public partial class IssueAttachmentItemViewModel : ViewModelBase
+{
+    private readonly Func<IssueAttachmentItemViewModel, Task>? _open;
+
+    public Guid Id { get; }
+    public string FileName { get; }
+    public string SizeText { get; }
+    public bool IsImage { get; }
+    public string IconName { get; }
+
+    public IssueAttachmentItemViewModel(SDK.Models.IssueAttachment attachment, Func<IssueAttachmentItemViewModel, Task>? open)
+    {
+        _open = open;
+
+        Id = attachment.Id;
+        FileName = string.IsNullOrWhiteSpace(attachment.FileName) ? "attachment" : attachment.FileName;
+        SizeText = ByteSizeLib.ByteSize.FromBytes(attachment.Size).ToString("0.#");
+        IsImage = SDK.Helpers.IssueAttachmentRules.IsImage(FileName);
+        IconName = Views.IssueAttachmentIcons.For(FileName);
+    }
+
+    // Runs one at a time, so the button is disabled while its file downloads
+    [RelayCommand]
+    private Task OpenAsync() => _open?.Invoke(this) ?? Task.CompletedTask;
 }

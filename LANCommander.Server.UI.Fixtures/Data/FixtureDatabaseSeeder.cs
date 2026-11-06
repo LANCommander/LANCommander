@@ -1,4 +1,4 @@
-using LANCommander.SDK.Enums;
+﻿using LANCommander.SDK.Enums;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
@@ -460,13 +460,25 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
         {
             Id = FixtureIds.For("issue:neon-drift-controller"),
             GameId = Games.Id(Games.NeonDrift),
+            Title = "Second controller not detected",
             Description = "Second controller is not detected in split-screen mode.",
+            IsPinned = true,
         });
+
+        // A log, so the edit page and the list show attachments. Not an image: its thumbnail would be
+        // fetched by the browser, which the visual tests don't wait for.
+        using (var log = new MemoryStream(System.Text.Encoding.UTF8.GetBytes(
+                   "[12:04:31] Input: device 0 connected (XInput)\n[12:04:33] Input: device 1 ignored, split-screen slot unavailable\n")))
+        {
+            await provider.GetRequiredService<IssueAttachmentService>()
+                .AddAsync(FixtureIds.For("issue:neon-drift-controller"), "input.log", log);
+        }
 
         await issueService.AddAsync(new Issue
         {
             Id = FixtureIds.For("issue:arena-blitz-crash"),
             GameId = Games.Id(Games.ArenaBlitz),
+            Title = "Crash loading arena07",
             Description = "Crash when loading arena07 with more than 12 players.",
         });
 

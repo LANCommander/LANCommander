@@ -17,7 +17,8 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        IPluginEventBus pluginEventBus) : BaseDatabaseService<Issue>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        IPluginEventBus pluginEventBus,
+        IssueAttachmentService attachmentService) : BaseDatabaseService<Issue>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Issue> AddAsync(Issue entity)
         {
@@ -39,6 +40,24 @@ namespace LANCommander.Server.Services
                 await context.UpdateRelationshipAsync(i => i.Game);
                 await context.UpdateRelationshipAsync(i => i.ResolvedBy);
             });
+        }
+
+        /// <summary>Deletes the issue's attached files too; the database only removes their rows.</summary>
+        public override async Task DeleteAsync(Issue entity)
+        {
+            foreach (var attachment in await attachmentService.GetAsync(a => a.IssueId == entity.Id))
+                await attachmentService.DeleteAsync(attachment);
+
+            await base.DeleteAsync(entity);
+        }
+
+        public async Task SetPinnedAsync(Guid issueId, bool pinned)
+        {
+            var issue = await GetAsync(issueId);
+
+            issue.IsPinned = pinned;
+
+            await UpdateAsync(issue);
         }
 
         public async Task ResolveAsync(Guid issueId, Guid userId)

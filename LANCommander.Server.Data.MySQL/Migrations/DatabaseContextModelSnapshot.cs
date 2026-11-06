@@ -864,11 +864,18 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("GameId")
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("IsPinned")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<Guid?>("ResolvedById")
                         .HasColumnType("char(36)");
 
                     b.Property<DateTime?>("ResolvedOn")
                         .HasColumnType("datetime(6)");
+
+                    b.Property<string>("Title")
+                        .HasMaxLength(128)
+                        .HasColumnType("varchar(128)");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");
@@ -887,6 +894,51 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.HasIndex("UpdatedById");
 
                     b.ToTable("Issues");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.IssueAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("varchar(255)");
+
+                    b.Property<Guid>("IssueId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("bigint");
+
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("char(36)");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("char(36)");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("datetime(6)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("IssueId");
+
+                    b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("IssueAttachments");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Key", b =>
@@ -2787,6 +2839,39 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("UpdatedBy");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.IssueAttachment", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Issue", "Issue")
+                        .WithMany("Attachments")
+                        .HasForeignKey("IssueId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("IssueAttachments")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Issue");
+
+                    b.Navigation("StorageLocation");
+
+                    b.Navigation("UpdatedBy");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Key", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "ClaimedByUser")
@@ -3515,6 +3600,11 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Scripts");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Issue", b =>
+                {
+                    b.Navigation("Attachments");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.Navigation("Parent");
@@ -3553,6 +3643,8 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Navigation("Archives");
 
                     b.Navigation("GameSaves");
+
+                    b.Navigation("IssueAttachments");
 
                     b.Navigation("Media");
                 });

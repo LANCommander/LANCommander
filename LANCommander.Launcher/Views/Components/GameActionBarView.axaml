@@ -186,14 +186,6 @@
                                 Size="18"
                                 ToolTip.Tip="Open Manual" />
 
-                    <!-- Same consolidated game menu as the split button's caret; flyout assigned in code-behind -->
-                    <IconButton x:Name="MoreButton"
-                                Classes="Glass Dark Square"
-                                IconType="Regular"
-                                IconValue="DotsThree"
-                                Size="18"
-                                ToolTip.Tip="More Actions" />
-
                     <Border Width="1" Height="28" Margin="8,0" VerticalAlignment="Center"
                             Background="{DynamicResource HairlineBorderBrush}" />
 

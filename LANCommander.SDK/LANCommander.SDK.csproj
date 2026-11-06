@@ -40,6 +40,7 @@
     <ItemGroup>
         <InternalsVisibleTo Include="LANCommander.Server.Tests" />
         <InternalsVisibleTo Include="LANCommander.SDK.Tests" />
+        <InternalsVisibleTo Include="LANCommander.Launcher.Services.Tests" />
     </ItemGroup>
 
     <ItemGroup>

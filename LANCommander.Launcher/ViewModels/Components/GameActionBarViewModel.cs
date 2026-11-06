@@ -1937,6 +1937,42 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             StatusMessage = $"Failed to open the script debugger: {ex.Message}";
         }
     }
+
+    /// <summary>
+    /// Asks the user to describe a problem with this game and files it as an issue on the server,
+    /// where administrators can review and resolve it.
+    /// </summary>
+    [RelayCommand]
+    private async Task ReportIssueAsync()
+    {
+        var gameId = GameId;
+        var title = Title;
+
+        var submitted = await ReportIssueOverlay.ShowAsync(title ?? "", async description =>
+        {
+            try
+            {
+                var issueClient = _serviceProvider.GetRequiredService<IssueClient>();
+
+                if (await issueClient.Open(description, gameId))
+                {
+                    _logger.LogInformation("Reported an issue for game {GameId} ({Title})", gameId, title);
+                    return null;
+                }
+
+                _logger.LogWarning("The server did not accept the issue report for game {GameId} ({Title})", gameId, title);
+                return "The server did not accept the report. Please try again later.";
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Failed to report an issue for game {GameId} ({Title})", gameId, title);
+                return $"Could not send the report: {ex.Message}";
+            }
+        });
+
+        if (submitted)
+            await AlertOverlay.ShowAsync("Issue Reported", "Thanks. Your report has been sent to the server administrators.");
+    }
 }
 
 /// <summary>

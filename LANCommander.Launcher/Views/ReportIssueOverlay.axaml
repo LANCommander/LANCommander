@@ -1,0 +1,69 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
+             x:Class="LANCommander.Launcher.Views.ReportIssueOverlay">
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="{DynamicResource ScrimBrush}">
+
+        <!-- Centered card -->
+        <Border Classes="Dialog"
+                Width="560"
+                MaxHeight="520"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+
+            <DockPanel>
+
+                <!-- ── Header ─────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Top" Classes="DialogHeader">
+                    <components:DialogTitleBar x:Name="TitleBar"
+                                               Title="Report Issue"
+                                               CloseRequested="TitleBar_CloseRequested" />
+                </Border>
+
+                <!-- ── Buttons ────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Bottom" Classes="DialogFooterBar">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8"
+                                Classes="DialogFooter">
+                        <Button x:Name="CancelButton"
+                                Classes="Secondary"
+                                Content="Cancel"
+                                Click="Cancel_Click" />
+                        <Button x:Name="SubmitButton"
+                                Classes="Primary"
+                                Content="Submit"
+                                IsEnabled="False"
+                                Click="Submit_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Body ───────────────────────────────────────────────── -->
+                <StackPanel Margin="20,18" Spacing="10">
+                    <TextBlock Text="Describe the problem. Your server administrator will see this report."
+                               TextWrapping="Wrap"
+                               FontSize="{DynamicResource FontSizeLabel}"
+                               Opacity="0.85" />
+
+                    <TextBox x:Name="DescriptionBox"
+                             AcceptsReturn="True"
+                             TextWrapping="Wrap"
+                             Height="180"
+                             MaxLength="4000"
+                             VerticalContentAlignment="Top"
+                             Watermark="What went wrong?" />
+
+                    <TextBlock x:Name="ErrorText"
+                               IsVisible="False"
+                               TextWrapping="Wrap"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               FontSize="{DynamicResource FontSizeLabel}" />
+                </StackPanel>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

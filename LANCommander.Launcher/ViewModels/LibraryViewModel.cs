@@ -71,6 +71,9 @@ public partial class LibraryViewModel : GamesCollectionViewModel
                 {
                     var moduleClient = scope.ServiceProvider.GetRequiredService<ModuleClient>();
                     await moduleClient.SyncAsync();
+
+                    var scriptClient = scope.ServiceProvider.GetRequiredService<ScriptClient>();
+                    await scriptClient.SyncGlobalVariablesAsync();
                 }
 
                 var items = await libraryService.GetItemsAsync();

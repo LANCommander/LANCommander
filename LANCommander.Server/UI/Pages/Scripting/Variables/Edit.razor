@@ -1,0 +1,91 @@
+@page "/Scripting/Variables/Add"
+@page "/Scripting/Variables/Edit/{Name}"
+@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ScriptService ScriptService
+@inject NavigationManager NavigationManager
+@inject NotificationService Notifications
+
+<PageHeader Title="@(IsNew ? "Add Variable" : $"$var:{_originalName}")">
+    <Extra>
+        <Button Icon="IconType.ArrowLeft" Href="/Scripting/Variables">Back</Button>
+        <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent>
+    <Form Model="_variable" @ref="_form" OnSubmit="Save">
+        <FormItem Label="Name" Required>
+            <ChildContent>
+                <TextInput @bind-Value="_variable.Name" Prefix="$var:" Immediate AutoFocus="IsNew" />
+            </ChildContent>
+            <HelpTemplate>
+                @if (_nameError != null)
+                {
+                    <span class="lc-form-item-error" role="alert">@_nameError</span>
+                }
+                else
+                {
+                    <text>Scripts refer to it as <code>$var:@(String.IsNullOrWhiteSpace(_variable.Name) ? "Name" : _variable.Name.Trim())</code>. Letters, digits and underscores.</text>
+                }
+            </HelpTemplate>
+        </FormItem>
+        <FormItem Label="Value" Help="Given to scripts as a string. Clients store a copy so scripts can still use it offline.">
+            <TextArea @bind-Value="_variable.Value" Rows="4" />
+        </FormItem>
+        <FormItem Label="Description" Help="Shown beside the variable in the script editor.">
+            <TextArea @bind-Value="_variable.Description" Rows="2" MaxLength="500" Counter />
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    [Parameter] public string? Name { get; set; }
+
+    Form? _form;
+    GlobalVariable _variable = new();
+    string? _originalName;
+    string? _nameError;
+
+    bool IsNew => string.IsNullOrEmpty(_originalName);
+
+    protected override void OnParametersSet()
+    {
+        if (string.IsNullOrEmpty(Name))
+            return;
+
+        var variable = ScriptService.GetGlobalVariable(Name);
+
+        if (variable != null)
+        {
+            _variable = variable;
+            _originalName = variable.Name;
+        }
+    }
+
+    void Save()
+    {
+        if (_form != null && !_form.Validate())
+            return;
+
+        _nameError = ScriptService.ValidateGlobalVariable(_variable.Name, _originalName);
+
+        if (_nameError != null)
+            return;
+
+        try
+        {
+            ScriptService.SaveGlobalVariable(_variable, _originalName);
+
+            _originalName = _variable.Name.Trim();
+
+            Notifications.Success("Variable saved!");
+
+            NavigationManager.NavigateTo("/Scripting/Variables");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not save variable!");
+        }
+    }
+}

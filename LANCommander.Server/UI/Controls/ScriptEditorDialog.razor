@@ -2,6 +2,7 @@
 @using LANCommander.Server.Models
 @using LANCommander.Server.UI.Components
 @using OptionSchema = LANCommander.SDK.Models.OptionSchema
+@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
 @using OptionChoiceYamlConverter = LANCommander.SDK.Models.OptionChoiceYamlConverter
 @using YamlDotNet.Serialization
 @using YamlDotNet.Serialization.NamingConventions
@@ -68,14 +69,28 @@ else
                 </Dropdown>
             }
 
-            @if (_variables.Any())
+            @if (_variables.Any() || _globalVariables.Any())
             {
                 <Dropdown>
                     <Overlay>
                         <Menu>
-                            @foreach (var variable in _variables)
+                            @if (_variables.Any())
                             {
-                                <MenuItem OnClick="() => InsertTextAsync(variable)">@variable</MenuItem>
+                                <MenuGroup Title="Runs with">
+                                    @foreach (var variable in _variables)
+                                    {
+                                        <MenuItem OnClick="() => InsertTextAsync(variable)">@variable</MenuItem>
+                                    }
+                                </MenuGroup>
+                            }
+                            @if (_globalVariables.Any())
+                            {
+                                <MenuGroup Title="Global">
+                                    @foreach (var variable in _globalVariables)
+                                    {
+                                        <MenuItem OnClick="() => InsertGlobalVariableAsync(variable)" title="@variable.Description">$var:@variable.Name</MenuItem>
+                                    }
+                                </MenuGroup>
                             }
                         </Menu>
                     </Overlay>
@@ -201,6 +216,7 @@ else
                                OnSave="SaveFromEditorAsync"
                                ScriptType="@_script.Type.ToString()"
                                ModuleFunctions="@_moduleFunctions"
+                               GlobalVariables="@_globalVariableCompletions"
                                OnCaretMoved="caret => _caret = caret"
                                OnProblemsChanged="count => _problems = count"
                                OnReady="OnEditorReadyAsync" />
@@ -257,6 +273,27 @@ else
                             @if (!_showAllVariables && _variables.Count > VariablesShown)
                             {
                                 <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_variables.Count - VariablesShown} more variables")" @onclick="() => _showAllVariables = true">+@(_variables.Count - VariablesShown) more</button>
+                            }
+                        </div>
+                    </section>
+                }
+
+                @if (_globalVariables.Any())
+                {
+                    <section class="script-editor-card script-editor-global-variables">
+                        <div class="script-editor-card-header">
+                            <span class="script-editor-kicker">Global variables</span>
+                            <span class="script-editor-count">@_globalVariables.Count</span>
+                        </div>
+                        <p class="script-editor-help">Shared values every script can read from the var: drive, set under Scripting › Variables. Click to insert at the caret.</p>
+                        <div class="script-editor-chips">
+                            @foreach (var variable in _showAllGlobalVariables ? _globalVariables : _globalVariables.Take(VariablesShown))
+                            {
+                                <button type="button" class="script-editor-chip" title="@(String.IsNullOrWhiteSpace(variable.Description) ? $"Insert $var:{variable.Name}" : variable.Description)" @onclick="() => InsertGlobalVariableAsync(variable)">$var:@variable.Name</button>
+                            }
+                            @if (!_showAllGlobalVariables && _globalVariables.Count > VariablesShown)
+                            {
+                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_globalVariables.Count - VariablesShown} more global variables")" @onclick="() => _showAllGlobalVariables = true">+@(_globalVariables.Count - VariablesShown) more</button>
                             }
                         </div>
                     </section>
@@ -319,6 +356,8 @@ else
     IEnumerable<Snippet> _snippets = [];
     List<ModuleFunctionCompletion> _moduleFunctions = new();
     List<string> _variables = new();
+    List<GlobalVariable> _globalVariables = new();
+    List<GlobalVariableCompletion> _globalVariableCompletions = new();
     List<string> _optionKeys = new();
     string _redistributableName = string.Empty;
 
@@ -344,6 +383,7 @@ else
     // Runs with: the first few variables, the rest behind "+N more"
     const int VariablesShown = 8;
     bool _showAllVariables;
+    bool _showAllGlobalVariables;
 
     // Cmdlets: the first few module functions, the rest behind "+N more"
     const int CmdletsShown = 12;
@@ -496,6 +536,8 @@ else
         _variables = VariablesFor(_script.Type);
         _snippets = ScriptService.GetSnippets().ToList();
         _ownerName = await OwnerNameAsync();
+
+        LoadGlobalVariables();
 
         _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
             .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
@@ -789,6 +831,23 @@ else
         if (_codeInput != null)
             await _codeInput.InsertText(text);
     }
+
+    void LoadGlobalVariables()
+    {
+        try
+        {
+            _globalVariables = ScriptService.GetGlobalVariables().ToList();
+            _globalVariableCompletions = _globalVariables
+                .Select(v => new GlobalVariableCompletion(v.Name, String.IsNullOrWhiteSpace(v.Description) ? null : v.Description))
+                .ToList();
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not load the global script variables");
+        }
+    }
+
+    Task InsertGlobalVariableAsync(GlobalVariable variable) => InsertTextAsync($"$var:{variable.Name}");
 
     async Task InsertSnippetAsync(Snippet snippet)
     {

@@ -10,6 +10,7 @@ using System.Runtime.InteropServices;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Plugins;
 using LANCommander.SDK.PowerShell.Extensions;
 using Microsoft.Extensions.DependencyInjection;
@@ -27,6 +28,9 @@ namespace LANCommander.SDK.PowerShell
     {
         private readonly IServiceProvider _serviceProvider;
         private readonly ILogger _logger;
+
+        /// <summary>The global variables file to read; <see cref="GlobalVariableStore.DefaultPath"/> when null.</summary>
+        public string GlobalVariablesPath { get; set; }
 
         public PowerShellRunspaceBuilder(IServiceProvider serviceProvider, ILogger logger)
         {
@@ -47,6 +51,9 @@ namespace LANCommander.SDK.PowerShell
                 initialSessionState.ExecutionPolicy = Microsoft.PowerShell.ExecutionPolicy.Bypass;
 
             initialSessionState.AddCustomCmdlets();
+
+            // The var: drive the global variables are read from, as $var:Name
+            initialSessionState.Providers.Add(new SessionStateProviderEntry(GlobalVariableProvider.ProviderName, typeof(GlobalVariableProvider), null));
 
             RegisterPluginCmdlets(initialSessionState);
 
@@ -137,6 +144,9 @@ namespace LANCommander.SDK.PowerShell
 
             runspace.SessionStateProxy.Path.SetLocation(workingDirectory);
 
+            // The values behind the var: drive ($var:Name)
+            SetGlobalVariables(runspace);
+
             foreach (var variable in variables)
             {
                 _logger.LogInformation("Setting PowerShell variable ${VariableName} = {VariableValue}", variable.Name, variable.Value);
@@ -173,6 +183,37 @@ namespace LANCommander.SDK.PowerShell
             }
 
             // Logger will be created when first cmdlet runs and sets host UI in session state (see AsyncCmdlet)
+        }
+
+        /// <summary>
+        /// Loads the administrator-defined global variables (see <see cref="GlobalVariableStore"/>) for the
+        /// <c>var:</c> drive, where scripts read them as <c>$var:Name</c>. Their values are not logged:
+        /// they are often keys shared across scripts.
+        /// </summary>
+        public void SetGlobalVariables(Runspace runspace)
+        {
+            List<SDK.Models.GlobalVariable> globals;
+
+            var path = GlobalVariablesPath ?? GlobalVariableStore.DefaultPath;
+
+            try
+            {
+                globals = GlobalVariableStore.Load(path);
+            }
+            catch (Exception ex)
+            {
+                _logger?.LogWarning(ex, "Could not read the global script variables from {Path}", path);
+                return;
+            }
+
+            var valid = globals.Where(v => GlobalVariableStore.IsValidName(v.Name)).ToList();
+
+            foreach (var skipped in globals.Except(valid))
+                _logger?.LogWarning("Skipping global script variable {VariableName}: the name is not valid", skipped.Name);
+
+            _logger?.LogInformation("Exposing {Count} global script variables on the {Drive}: drive", valid.Count, GlobalVariableProvider.DriveName);
+
+            runspace.SessionStateProxy.SetVariable(GlobalVariableProvider.SessionVariable, GlobalVariableProvider.ToSessionValue(valid));
         }
 
         private void RegisterPluginCmdlets(InitialSessionState initialSessionState)

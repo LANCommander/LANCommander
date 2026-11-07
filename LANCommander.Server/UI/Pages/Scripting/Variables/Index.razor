@@ -1,0 +1,82 @@
+@page "/Scripting/Variables"
+@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ScriptService ScriptService
+@inject NavigationManager NavigationManager
+@inject NotificationService Notifications
+
+<PageHeader Title="Variables">
+    <Extra>
+        <Button Primary Icon="IconType.Plus" Href="/Scripting/Variables/Add">Add Variable</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent>
+    <p class="lc-form-item-help">
+        Global variables can be read by every script (games, redistributables, servers and tools) from the
+        <code>var:</code> drive, the way environment variables are read from <code>env:</code>: <code>$var:Name</code>.
+        Clients pick up changes the next time they load their library.
+    </p>
+
+    <Table TItem="GlobalVariable" Items="_variables" Small NoPaging EmptyText="No variables yet"
+           OnRowDoubleClick="@(variable => NavigationManager.NavigateTo(EditUrl(variable)))">
+        <Columns>
+            <TemplateColumn TItem="GlobalVariable" Title="Name" Width="25%">
+                <code>$var:@context.Name</code>
+            </TemplateColumn>
+            <TemplateColumn TItem="GlobalVariable" Title="Value" Width="35%">
+                <code>@Truncate(context.Value)</code>
+            </TemplateColumn>
+            <BoundColumn Property="v => v.Description" Title="Description" />
+            <ActionsColumn TItem="GlobalVariable">
+                <Button Text Icon="IconType.PencilSimple" Href="@EditUrl(context)" title="Edit" />
+                <Popconfirm OnConfirm="() => Delete(context)" Title="Are you sure you want to delete this variable? Scripts that use it will read $null." OkText="Delete" Danger>
+                    <Button Text Danger Icon="IconType.X" title="Delete" />
+                </Popconfirm>
+            </ActionsColumn>
+        </Columns>
+    </Table>
+</PageContent>
+
+@code {
+    List<GlobalVariable> _variables = [];
+
+    static string EditUrl(GlobalVariable variable) => $"/Scripting/Variables/Edit/{Uri.EscapeDataString(variable.Name)}";
+
+    static string Truncate(string? value)
+    {
+        value = (value ?? String.Empty).ReplaceLineEndings(" ");
+
+        return value.Length > 80 ? value[..80] + "…" : value;
+    }
+
+    protected override void OnInitialized() => Load();
+
+    void Load()
+    {
+        try
+        {
+            _variables = ScriptService.GetGlobalVariables().ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load variables!");
+        }
+    }
+
+    void Delete(GlobalVariable variable)
+    {
+        try
+        {
+            ScriptService.DeleteGlobalVariable(variable.Name);
+
+            Load();
+
+            Notifications.Success("Variable deleted!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete variable!");
+        }
+    }
+}

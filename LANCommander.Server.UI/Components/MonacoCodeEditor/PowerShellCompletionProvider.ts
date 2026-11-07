@@ -62,6 +62,27 @@ let registered = false;
 let currentScriptType: string | null = null;
 let moduleFunctions: ModuleFunctionDefinition[] = [];
 
+interface GlobalVariableDefinition {
+    name: string;
+    description: string | null;
+}
+
+// The server's global script variables, which every script type reads from the var: drive ($var:Name)
+let globalVariables: GlobalVariableDefinition[] = [];
+
+const globalVariablePrefix = "$var:";
+
+function describeGlobalVariable(v: GlobalVariableDefinition): string {
+    return v.description
+        ? `Global variable. ${v.description}`
+        : "Global variable, set under Scripting › Variables";
+}
+
+function findGlobalVariable(name: string): GlobalVariableDefinition | undefined {
+    const lower = name.toLowerCase();
+    return globalVariables.find((v) => v.name.toLowerCase() === lower);
+}
+
 export function registerPowerShellCompletions(): void {
     if (registered || typeof monaco === "undefined") return;
     registered = true;
@@ -78,6 +99,10 @@ export function setModuleFunctions(functions: ModuleFunctionDefinition[]): void 
     moduleFunctions = functions ?? [];
 }
 
+export function setGlobalVariables(definitions: GlobalVariableDefinition[]): void {
+    globalVariables = definitions ?? [];
+}
+
 function getFilteredVariables(): VariableDefinition[] {
     if (!currentScriptType) return variables;
 
@@ -90,7 +115,7 @@ function getFilteredVariables(): VariableDefinition[] {
 
 function registerCompletionProvider(): void {
     monaco.languages.registerCompletionItemProvider("powershell", {
-        triggerCharacters: ["-", "$", "."],
+        triggerCharacters: ["-", "$", ".", ":"],
         provideCompletionItems(model: any, position: any) {
             const word = model.getWordUntilPosition(position);
             const range = {
@@ -105,6 +130,29 @@ function registerCompletionProvider(): void {
 
             const suggestions: any[] = [];
             const filtered = getFilteredVariables();
+
+            // Global variable completions: $var:<name>, like $env:<name>
+            const globalMatch = textBefore.match(/\$var:(\w*)$/i);
+            if (globalMatch) {
+                const nameRange = {
+                    ...range,
+                    startColumn: position.column - globalMatch[1].length,
+                };
+
+                for (const v of globalVariables) {
+                    suggestions.push({
+                        label: globalVariablePrefix + v.name,
+                        kind: monaco.languages.CompletionItemKind.Variable,
+                        insertText: v.name,
+                        filterText: v.name,
+                        detail: "[string] global",
+                        documentation: describeGlobalVariable(v),
+                        range: nameRange,
+                    });
+                }
+
+                return { suggestions };
+            }
 
             // Member access completions: triggered by . after a variable
             const memberMatch = textBefore.match(/\$(\w+)\.(\w*)$/);
@@ -143,6 +191,18 @@ function registerCompletionProvider(): void {
                         insertText: v.name.substring(1),
                         detail: `[${v.type}]`,
                         documentation: v.description,
+                        range: varRange,
+                    });
+                }
+
+                for (const v of globalVariables) {
+                    suggestions.push({
+                        label: globalVariablePrefix + v.name,
+                        kind: monaco.languages.CompletionItemKind.Variable,
+                        insertText: "var:" + v.name,
+                        filterText: "var:" + v.name,
+                        detail: "[string] global",
+                        documentation: describeGlobalVariable(v),
                         range: varRange,
                     });
                 }
@@ -269,6 +329,27 @@ function registerHoverProvider(): void {
                             ],
                         };
                     }
+                }
+            }
+
+            // Check for global variable hover ($var:Name)
+            const globalPattern = /\$var:(\w+)/gi;
+            while ((match = globalPattern.exec(lineContent)) !== null) {
+                const start = match.index + 1;
+                const end = start + match[0].length;
+                if (position.column >= start && position.column <= end) {
+                    const v = findGlobalVariable(match[1]);
+                    return {
+                        range: {
+                            startLineNumber: position.lineNumber,
+                            endLineNumber: position.lineNumber,
+                            startColumn: start,
+                            endColumn: end,
+                        },
+                        contents: v
+                            ? [{ value: `**${globalVariablePrefix}${v.name}** [string]` }, { value: describeGlobalVariable(v) }]
+                            : [{ value: `**${globalVariablePrefix}${match[1]}**` }, { value: "No global variable has this name; it reads as $null." }],
+                    };
                 }
             }
 
@@ -560,6 +641,31 @@ function validateModel(model: any): void {
                 startColumn: 1,
                 endLineNumber: 1,
                 endColumn: 1,
+                source: "LANCommander",
+            });
+        }
+    }
+
+    // Check for global variables that aren't defined: $var:Name reads as $null then
+    const globalPattern = /\$var:(\w+)/gi;
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i];
+
+        if (line.trimStart().startsWith("#")) continue;
+
+        globalPattern.lastIndex = 0;
+        let match;
+        while ((match = globalPattern.exec(line)) !== null) {
+            if (findGlobalVariable(match[1])) continue;
+
+            const col = match.index + 1;
+            markers.push({
+                severity: monaco.MarkerSeverity.Warning,
+                message: `No global variable named ${match[1]} is defined under Scripting › Variables; $var:${match[1]} reads as $null.`,
+                startLineNumber: i + 1,
+                startColumn: col,
+                endLineNumber: i + 1,
+                endColumn: col + match[0].length,
                 source: "LANCommander",
             });
         }

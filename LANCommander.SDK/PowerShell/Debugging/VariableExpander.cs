@@ -55,6 +55,7 @@ public sealed class VariableExpander
         ScriptServicesProvider.ProfileClientKey, ScriptServicesProvider.ApiRequestFactoryKey,
         ScriptServicesProvider.SettingsProviderKey, ScriptServicesProvider.LocalLibraryProviderKey,
         DebugSession.CompiledScriptVariable, DebugSession.OutputCaptureVariable,
+        GlobalVariableProvider.SessionVariable,
 
         // Punctuation automatics ($?, $^, $$) and the debugger's own plumbing. PSDebugContext in
         // particular only exists because we are stopped, so showing it is pure noise.

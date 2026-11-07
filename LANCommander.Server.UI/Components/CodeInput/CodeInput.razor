@@ -23,6 +23,9 @@
     [Parameter] public string? ScriptType { get; set; }
     [Parameter] public IEnumerable<ModuleFunctionCompletion>? ModuleFunctions { get; set; }
 
+    /// <summary>The server's global script variables, completed after <c>$</c> in every script type.</summary>
+    [Parameter] public IEnumerable<GlobalVariableCompletion>? GlobalVariables { get; set; }
+
     /// <summary>The caret moved: its line and column, both from 1.</summary>
     [Parameter] public EventCallback<(int Line, int Column)> OnCaretMoved { get; set; }
 
@@ -35,6 +38,7 @@
     string? _previousValue;
     string? _previousScriptType;
     IEnumerable<ModuleFunctionCompletion>? _previousModuleFunctions;
+    IEnumerable<GlobalVariableCompletion>? _previousGlobalVariables;
     IJSObjectReference? _module;
 
     StandaloneCodeEditor _editor;
@@ -88,6 +92,11 @@
             await PushModuleFunctionsAsync();
         }
 
+        if (_isEditorInitialized && _module != null && Language.Id == "powershell" && !ReferenceEquals(GlobalVariables, _previousGlobalVariables))
+        {
+            await PushGlobalVariablesAsync();
+        }
+
         await base.OnParametersSetAsync();
     }
 
@@ -138,7 +147,10 @@
             await _module.InvokeVoidAsync("SetupFileDropHandler");
 
         if (Language.Id == "powershell")
+        {
             await PushModuleFunctionsAsync();
+            await PushGlobalVariablesAsync();
+        }
 
         if (OnReady.HasDelegate)
             await OnReady.InvokeAsync();
@@ -161,6 +173,25 @@
             // circuit. Module function completions are a nicety, so degrade instead of crashing.
             Logger.LogWarning(ex,
                 "Unable to push PowerShell module functions to the editor. The loaded UI bundle may be out of date.");
+        }
+    }
+
+    async Task PushGlobalVariablesAsync()
+    {
+        if (_module == null)
+            return;
+
+        _previousGlobalVariables = GlobalVariables;
+
+        try
+        {
+            await _module.InvokeVoidAsync("setGlobalVariables", GlobalVariables ?? []);
+        }
+        catch (JSException ex) when (ex.Message.Contains("setGlobalVariables", StringComparison.Ordinal))
+        {
+            // As with module functions: a stale bundle shouldn't tear down the circuit over completions
+            Logger.LogWarning(ex,
+                "Unable to push global script variables to the editor. The loaded UI bundle may be out of date.");
         }
     }
 

@@ -13,7 +13,17 @@ public static class ScriptEndpoints
 
         group.MapPost("/{id:guid}/Contents", UpdateContentsAsync)
             .RequireAuthorization(RoleService.AdministratorRoleName);
+
+        group.MapGet("/Variables", GetVariables)
+            .RequireAuthorization();
     }
+
+    /// <summary>
+    /// The global script variables, for clients to run their scripts with (as <c>$var:Name</c>). Any
+    /// signed-in user may read them, as every client runs scripts.
+    /// </summary>
+    internal static IResult GetVariables([FromServices] ScriptService scriptService) =>
+        TypedResults.Ok(scriptService.GetGlobalVariables());
 
     /// <summary>
     /// Replace a script's contents. Used by the launcher's script debugger to publish edits made while

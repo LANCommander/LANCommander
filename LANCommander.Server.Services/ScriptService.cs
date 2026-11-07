@@ -8,6 +8,8 @@ using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using ZiggyCreatures.Caching.Fusion;
+using GlobalVariable = LANCommander.SDK.Models.GlobalVariable;
+using GlobalVariableStore = LANCommander.SDK.Helpers.GlobalVariableStore;
 
 namespace LANCommander.Server.Services
 {
@@ -241,6 +243,75 @@ namespace LANCommander.Server.Services
 
             if (File.Exists(path))
                 File.Delete(path);
+        }
+
+        /// <summary>
+        /// The global variables file: the server's own runspaces read it directly, and clients sync their
+        /// copy from <c>/api/Scripts/Variables</c>. Scripts read the values as <c>$var:Name</c>.
+        /// </summary>
+        public string GlobalVariablesPath { get; set; } = GlobalVariableStore.DefaultPath;
+
+        public IReadOnlyList<GlobalVariable> GetGlobalVariables() => GlobalVariableStore.Load(GlobalVariablesPath);
+
+        public GlobalVariable? GetGlobalVariable(string name) =>
+            GetGlobalVariables().FirstOrDefault(v => String.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
+
+        /// <summary>
+        /// Why <paramref name="name"/> can't be saved (over the variable called
+        /// <paramref name="originalName"/>, when renaming one), or null when it can.
+        /// </summary>
+        public string? ValidateGlobalVariable(string? name, string? originalName = null)
+        {
+            name = name?.Trim();
+
+            if (String.IsNullOrWhiteSpace(name))
+                return "A name is required.";
+
+            if (!GlobalVariableStore.IsValidName(name))
+                return "Use letters, digits and underscores only, not starting with a digit.";
+
+            var renamingToItself = String.Equals(name, originalName, StringComparison.OrdinalIgnoreCase);
+
+            if (!renamingToItself && GetGlobalVariable(name) != null)
+                return $"$var:{name} already exists.";
+
+            return null;
+        }
+
+        /// <summary>
+        /// Adds <paramref name="variable"/>, or replaces the one called <paramref name="originalName"/>
+        /// (which may be a different name, to rename it).
+        /// </summary>
+        public void SaveGlobalVariable(GlobalVariable variable, string? originalName = null)
+        {
+            ArgumentNullException.ThrowIfNull(variable);
+
+            var error = ValidateGlobalVariable(variable.Name, originalName);
+
+            if (error != null)
+                throw new ArgumentException(error, nameof(variable));
+
+            var name = variable.Name.Trim();
+
+            var variables = GetGlobalVariables()
+                .Where(v => originalName == null || !String.Equals(v.Name, originalName, StringComparison.OrdinalIgnoreCase))
+                .Where(v => !String.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase))
+                .Append(new GlobalVariable
+                {
+                    Name = name,
+                    Value = variable.Value ?? String.Empty,
+                    Description = variable.Description,
+                });
+
+            GlobalVariableStore.Save(variables, GlobalVariablesPath);
+        }
+
+        public void DeleteGlobalVariable(string name)
+        {
+            var variables = GetGlobalVariables()
+                .Where(v => !String.Equals(v.Name, name, StringComparison.OrdinalIgnoreCase));
+
+            GlobalVariableStore.Save(variables, GlobalVariablesPath);
         }
     }
 }

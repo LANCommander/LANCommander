@@ -1,5 +1,6 @@
 @using LANCommander.Server.UI.Components
 @inject ScriptService ScriptService
+@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
 @inject ModuleService ModuleService
 
 <Flex Gap="Gap.Small" Wrap Align="Align.Center" Style="margin-bottom: 16px">
@@ -23,16 +24,32 @@
         </Dropdown>
     }
 
-    @if (Variables != null && Variables.Any())
+    @if (Variables?.Any() == true || _globalVariables.Any())
     {
         <Dropdown>
             <Overlay>
                 <Menu>
-                    @foreach (var variable in Variables)
+                    @if (Variables?.Any() == true)
                     {
-                        <MenuItem OnClick="() => InsertText(variable)">
-                            @variable
-                        </MenuItem>
+                        <MenuGroup Title="Runs with">
+                            @foreach (var variable in Variables)
+                            {
+                                <MenuItem OnClick="() => InsertText(variable)">
+                                    @variable
+                                </MenuItem>
+                            }
+                        </MenuGroup>
+                    }
+                    @if (_globalVariables.Any())
+                    {
+                        <MenuGroup Title="Global">
+                            @foreach (var variable in _globalVariables)
+                            {
+                                <MenuItem OnClick="@(() => InsertText($"$var:{variable.Name}"))" title="@variable.Description">
+                                    $var:@variable.Name
+                                </MenuItem>
+                            }
+                        </MenuGroup>
                     }
                 </Menu>
             </Overlay>
@@ -50,6 +67,7 @@
            Language="Languages.PowerShell"
            OnSave="OnSave"
            ModuleFunctions="@_moduleFunctions"
+           GlobalVariables="@_globalVariableCompletions"
            Height="@Height" />
 
 @code {
@@ -62,6 +80,8 @@
     CodeInput? _codeInput;
     IEnumerable<Snippet> Snippets { get; set; } = [];
     List<ModuleFunctionCompletion> _moduleFunctions = new();
+    List<GlobalVariable> _globalVariables = new();
+    List<GlobalVariableCompletion> _globalVariableCompletions = new();
 
     protected override void OnInitialized()
     {
@@ -69,6 +89,11 @@
 
         _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
             .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
+            .ToList();
+
+        _globalVariables = ScriptService.GetGlobalVariables().ToList();
+        _globalVariableCompletions = _globalVariables
+            .Select(v => new GlobalVariableCompletion(v.Name, string.IsNullOrWhiteSpace(v.Description) ? null : v.Description))
             .ToList();
     }
 

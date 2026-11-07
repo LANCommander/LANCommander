@@ -738,7 +738,7 @@
         await RefreshMedia();
     }
 
-    async Task RefreshMedia()
+    public async Task RefreshMedia()
     {
         _media = (await MediaService.Include(m => m.StorageLocation).GetAsync(m => m.GameId == GameId)).ToList();
         await InvokeAsync(StateHasChanged);

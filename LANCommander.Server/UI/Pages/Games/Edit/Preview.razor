@@ -1,5 +1,8 @@
 @page "/Games/{id:guid}/Preview"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using LANCommander.Server.Services.MediaGrabbers
+@inject MediaAutoDownloadService MediaAutoDownloadService
+@inject NotificationService Notifications
 
 <GameEditView Id="Id" Title="Preview" Subtitle="exactly what the launcher shows" ContentClass="game-edit-content-bleed">
     <TitleExtraTemplate>
@@ -7,13 +10,43 @@
             <Icon Type="IconType.CheckCircle" />
             Media saves as you drop it
         </span>
+        <Button Icon="IconType.DownloadSimple" Loading="_downloadingArt" OnClick="DownloadArtAsync" title="Download the first match for each kind of art this game is missing">Download Art</Button>
         <Button Icon="IconType.PencilSimple" Href="@($"/Games/{Id}/General")">Edit details</Button>
     </TitleExtraTemplate>
     <ChildContent>
-        <GameDetailPreview />
+        <GameDetailPreview @ref="_preview" />
     </ChildContent>
 </GameEditView>
 
 @code {
     [Parameter] public Guid Id { get; set; }
+
+    GameDetailPreview? _preview;
+    bool _downloadingArt;
+
+    async Task DownloadArtAsync()
+    {
+        _downloadingArt = true;
+
+        try
+        {
+            var added = await MediaAutoDownloadService.DownloadMissingArtAsync(Id);
+
+            if (_preview != null)
+                await _preview.RefreshMedia();
+
+            if (added.Any())
+                Notifications.Success($"Downloaded {string.Join(", ", added)}");
+            else
+                Notifications.Info("No missing art was found");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Art could not be downloaded");
+        }
+        finally
+        {
+            _downloadingArt = false;
+        }
+    }
 }

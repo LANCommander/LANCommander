@@ -1,12 +1,9 @@
-@using LANCommander.Server.Services.Abstractions
+@using LANCommander.Server.Services.MediaGrabbers
 @using LANCommander.Server.Settings
 @inherits Dialog<bool>
-@inject IMediaGrabberService MediaGrabberService
-@inject MediaService MediaService
-@inject GameService GameService
+@inject MediaAutoDownloadService MediaAutoDownloadService
 @inject SettingsProvider<Settings> SettingsProvider
 @inject NavigationManager NavigationManager
-@inject ILogger<AddGameDialog> Logger
 
 @*
     Adds a game by looking it up with a metadata provider, optionally fetching its art too, or
@@ -38,15 +35,6 @@
         NavigationManager.NavigateTo("/Games/Add");
     }
 
-    static readonly MediaType[] AutoDownloadTypes =
-    [
-        MediaType.Icon,
-        MediaType.Cover,
-        MediaType.Background,
-        MediaType.Logo,
-        MediaType.Grid,
-    ];
-
     protected override void OnInitialized()
     {
         _autoDownloadMedia = SettingsProvider.CurrentValue.Server.Media.AutoDownloadMedia;
@@ -71,42 +59,10 @@
 
     async Task DownloadMediaAsync(Guid gameId)
     {
-        var game = await GameService.GetAsync(gameId);
-
-        if (game == null)
-            return;
-
-        foreach (var mediaType in AutoDownloadTypes)
+        await MediaAutoDownloadService.DownloadMissingArtAsync(gameId, async mediaType =>
         {
-            try
-            {
-                if (_panel != null)
-                    await _panel.UpdateStatusAsync($"Downloading {mediaType}...");
-
-                var result = (await MediaGrabberService.SearchAsync(mediaType, game.Title)).FirstOrDefault();
-
-                if (result == null)
-                    continue;
-
-                using var download = await MediaGrabberService.DownloadAsync(result);
-
-                var media = new Media
-                {
-                    GameId = gameId,
-                    Type = mediaType,
-                    SourceUrl = result.SourceUrl,
-                    MimeType = download.MimeType,
-                    StorageLocation = await MediaService.GetDefaultStorageLocationAsync(),
-                    Crc32 = string.Empty,
-                };
-
-                await MediaService.WriteToFileAsync(media, download.Stream);
-            }
-            catch (Exception ex)
-            {
-                // Missing art isn't worth failing the whole add over
-                Logger.LogError(ex, "Failed to auto-download {MediaType} for game {GameId}", mediaType, gameId);
-            }
-        }
+            if (_panel != null)
+                await _panel.UpdateStatusAsync($"Downloading {mediaType}...");
+        });
     }
 }

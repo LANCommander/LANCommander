@@ -204,9 +204,6 @@ namespace LANCommander.Migrations
                     b.Property<int>("Platforms")
                         .HasColumnType("INTEGER");
 
-                    b.Property<bool>("PrimaryAction")
-                        .HasColumnType("INTEGER");
-
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("TEXT");
 
@@ -215,6 +212,9 @@ namespace LANCommander.Migrations
 
                     b.Property<Guid?>("ToolId")
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("TEXT");

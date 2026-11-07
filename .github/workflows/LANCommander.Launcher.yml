@@ -333,6 +333,17 @@ jobs:
           <string>11.0</string>
           <key>NSHighResolutionCapable</key>
           <true/>
+          <key>CFBundleURLTypes</key>
+          <array>
+            <dict>
+              <key>CFBundleURLName</key>
+              <string>${BUNDLE_ID}</string>
+              <key>CFBundleURLSchemes</key>
+              <array>
+                <string>lancommander</string>
+              </array>
+            </dict>
+          </array>
         </dict>
         </plist>
         PLIST
@@ -383,10 +394,11 @@ jobs:
         Type=Application
         Name=LANCommander Launcher
         Comment=LANCommander Launcher
-        Exec=LANCommander.Launcher
+        Exec=LANCommander.Launcher %u
         Icon=lancommander
         Categories=Game;
         Terminal=false
+        MimeType=x-scheme-handler/lancommander;
         EOF
         cp "$APPDIR/usr/share/applications/lancommander.desktop" "$APPDIR/lancommander.desktop"
 

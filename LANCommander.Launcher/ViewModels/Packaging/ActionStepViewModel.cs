@@ -395,7 +395,7 @@ public partial class ActionStepViewModel : PackagingStepViewModel
                 Path = a.Path!.Trim().Replace('\\', '/'),
                 Arguments = a.Arguments,
                 WorkingDirectory = a.WorkingDirectory,
-                IsPrimaryAction = a.IsPrimary,
+                Type = a.IsPrimary ? SDK.Enums.ActionType.Primary : SDK.Enums.ActionType.Secondary,
                 SortOrder = index,
 
                 // Platforms is deliberately left unset. RuntimePlatform.None is what the

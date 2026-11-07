@@ -89,6 +89,7 @@ Result<std::vector<Action>> GameClient::get_actions(const std::string& game_id)
         a.path              = std::move(ma.path);
         a.arguments         = std::move(ma.arguments);
         a.working_directory = std::move(ma.working_directory);
+        a.type              = ma.type;
         a.is_primary        = ma.is_primary;
         a.sort_order        = ma.sort_order;
         a.variables         = std::move(ma.variables);

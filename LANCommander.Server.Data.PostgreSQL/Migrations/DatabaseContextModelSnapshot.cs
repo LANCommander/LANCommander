@@ -209,9 +209,6 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<int>("Platforms")
                         .HasColumnType("integer");
 
-                    b.Property<bool>("PrimaryAction")
-                        .HasColumnType("boolean");
-
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("uuid");
 
@@ -220,6 +217,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
 
                     b.Property<Guid?>("ToolId")
                         .HasColumnType("uuid");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("uuid");

@@ -75,7 +75,7 @@ internal class GameManifest : IKeyedModel
             {
                 Name = a.Name,
                 Arguments = a.Arguments,
-                IsPrimaryAction = a.IsPrimaryAction,
+                Type = a.IsPrimaryAction ? SDK.Enums.ActionType.Primary : SDK.Enums.ActionType.Secondary,
                 Path = a.Path,
                 SortOrder = a.SortOrder,
                 WorkingDirectory = a.WorkingDirectory,

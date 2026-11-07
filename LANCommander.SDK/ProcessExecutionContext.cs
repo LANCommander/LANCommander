@@ -185,11 +185,13 @@ namespace LANCommander.SDK
             {
                 var shims = CompatibilityResolver.GetShims(manifest);
 
-                // Prefer a natively runnable primary, then any action that can run on this runtime (native or bridged).
+                // Prefer a natively runnable primary, then any play action that can run on this runtime
+                // (native or bridged). Config and Join actions don't play the game as it is.
                 action = manifest.Actions?
+                    .Where(a => a.Type is ActionType.Primary or ActionType.Secondary)
                     .Where(a => CompatibilityResolver.CanRunOnCurrentRuntime(a.Platforms, shims))
                     .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
-                    .ThenByDescending(a => a.IsPrimaryAction)
+                    .ThenBy(a => ActionTypes.Rank(a.Type))
                     .ThenBy(a => a.SortOrder)
                     .FirstOrDefault();
             }

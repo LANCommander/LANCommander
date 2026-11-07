@@ -328,7 +328,7 @@ public static class GameEndpoints
                         mappedAction.Variables["ServerPort"] = server.Port.ToString();
 
                     // Lets the launcher offer this action as the server's Connect button
-                    mappedAction.Variables["ServerId"] = server.Id.ToString();
+                    mappedAction.Variables[ActionTypes.ServerIdVariable] = server.Id.ToString();
 
                     mappedActions.Add(mappedAction);
                 }

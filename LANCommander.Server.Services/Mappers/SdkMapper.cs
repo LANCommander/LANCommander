@@ -48,11 +48,11 @@ namespace LANCommander.Server.Services.Mappers
         [MapperIgnoreTarget(nameof(LANCommander.SDK.Models.Server.Game))]
         public partial LANCommander.SDK.Models.Server ToSdk(LANCommander.Server.Data.Models.Server source);
 
-        // ---- Action (PrimaryAction <-> IsPrimaryAction) ----------------------------------------
-        [MapProperty(nameof(LANCommander.Server.Data.Models.Action.PrimaryAction), nameof(LANCommander.SDK.Models.Action.IsPrimaryAction))]
+        // ---- Action (IsPrimaryAction is only read from old servers) ----------------------------
+        [MapperIgnoreTarget(nameof(LANCommander.SDK.Models.Action.IsPrimaryAction))]
         public partial LANCommander.SDK.Models.Action ToSdk(LANCommander.Server.Data.Models.Action source);
 
-        [MapProperty(nameof(LANCommander.SDK.Models.Action.IsPrimaryAction), nameof(LANCommander.Server.Data.Models.Action.PrimaryAction))]
+        [MapperIgnoreSource(nameof(LANCommander.SDK.Models.Action.IsPrimaryAction))]
         public partial LANCommander.Server.Data.Models.Action ToData(LANCommander.SDK.Models.Action source);
 
         // ---- Redistributable (computed Version + filtered Scripts) -----------------------------

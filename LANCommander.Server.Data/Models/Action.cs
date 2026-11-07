@@ -11,7 +11,7 @@ namespace LANCommander.Server.Data.Models
         public string? Arguments { get; set; }
         public string? Path { get; set; }
         public string? WorkingDirectory { get; set; }
-        public bool PrimaryAction { get; set; }
+        public ActionType Type { get; set; }
         public int SortOrder { get; set; }
         public string? OptionOverrides { get; set; }
         public RuntimePlatform Platforms { get; set; }

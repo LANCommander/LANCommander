@@ -12,7 +12,7 @@ namespace LANCommander.Server.Services.Mappers
     /// Reverse (ToData) parameters are nullable so Mapperly reuses these user mappings for nested
     /// collection elements — the SDK manifest types are nullable-oblivious, so their collection
     /// element type is inferred as nullable; a non-nullable parameter would force Mapperly to emit a
-    /// separate inline mapper that silently drops [MapProperty] customizations (e.g. IsPrimaryAction).
+    /// separate inline mapper that silently drops [MapProperty] / [MapperIgnore*] customizations (e.g. the action's Id).
     /// </summary>
     [Mapper(AllowNullPropertyAssignment = true)]
     public partial class ManifestMapper
@@ -76,11 +76,13 @@ namespace LANCommander.Server.Services.Mappers
         public partial LANCommander.SDK.Models.Manifest.Save ToManifest(LANCommander.Server.Data.Models.GameSave source);
         public partial LANCommander.Server.Data.Models.GameSave ToData(LANCommander.SDK.Models.Manifest.Save? source);
 
-        // ---- Action <-> Manifest.Action (PrimaryAction <-> IsPrimaryAction) --------------------
-        [MapProperty(nameof(LANCommander.Server.Data.Models.Action.PrimaryAction), nameof(LANCommander.SDK.Models.Manifest.Action.IsPrimaryAction))]
+        // ---- Action <-> Manifest.Action (IsPrimaryAction is only read from old manifests) ------
+        [MapperIgnoreTarget(nameof(LANCommander.SDK.Models.Manifest.Action.IsPrimaryAction))]
         public partial LANCommander.SDK.Models.Manifest.Action ToManifest(LANCommander.Server.Data.Models.Action source);
 
-        [MapProperty(nameof(LANCommander.SDK.Models.Manifest.Action.IsPrimaryAction), nameof(LANCommander.Server.Data.Models.Action.PrimaryAction))]
+        // A manifest's action id names the action on the server that exported it; an import makes its own
+        [MapperIgnoreSource(nameof(LANCommander.SDK.Models.Manifest.Action.IsPrimaryAction))]
+        [MapperIgnoreSource(nameof(LANCommander.SDK.Models.Manifest.Action.Id))]
         public partial LANCommander.Server.Data.Models.Action ToData(LANCommander.SDK.Models.Manifest.Action? source);
 
         // ---- Server <-> Manifest.Server (Game flattened to Title) ------------------------------

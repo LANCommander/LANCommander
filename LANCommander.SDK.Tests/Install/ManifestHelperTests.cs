@@ -143,7 +143,7 @@ public class ManifestHelperTests : IDisposable
         {
             Name = "Play",
             Path = "game.exe",
-            IsPrimaryAction = true,
+            Type = ActionType.Primary,
             SortOrder = 0
         });
         ManifestHelper.Write(manifest, _tempDir);
@@ -153,7 +153,78 @@ public class ManifestHelperTests : IDisposable
         Assert.Single(loaded.Actions);
         Assert.Equal("Play", loaded.Actions.First().Name);
         Assert.Equal("game.exe", loaded.Actions.First().Path);
-        Assert.True(loaded.Actions.First().IsPrimaryAction);
+        Assert.Equal(ActionType.Primary, loaded.Actions.First().Type);
+    }
+
+    [Theory]
+    [InlineData(ActionType.Primary)]
+    [InlineData(ActionType.Secondary)]
+    [InlineData(ActionType.Config)]
+    [InlineData(ActionType.Join)]
+    public void WriteAndRead_RoundTripsActionType(ActionType type)
+    {
+        var manifest = MakeManifest();
+        manifest.Actions.Add(new ManifestAction { Name = "Action", Path = "game.exe", Type = type });
+        ManifestHelper.Write(manifest, _tempDir);
+
+        var loaded = ManifestHelper.Read<ManifestGame>(_tempDir, manifest.Id);
+
+        Assert.Equal(type, loaded.Actions.Single().Type);
+    }
+
+    [Fact]
+    public void Write_SavesTheTypeAndNotThePrimaryFlag()
+    {
+        var manifest = MakeManifest();
+        manifest.Actions.Add(new ManifestAction { Name = "Play", Path = "game.exe", Type = ActionType.Primary });
+        manifest.Actions.Add(new ManifestAction { Name = "Setup", Path = "setup.exe", Type = ActionType.Config });
+        ManifestHelper.Write(manifest, _tempDir);
+
+        var yaml = File.ReadAllText(ManifestHelper.GetPath(_tempDir, manifest.Id));
+
+        Assert.Contains("Type: Primary", yaml);
+        Assert.Contains("Type: Config", yaml);
+        Assert.DoesNotContain("IsPrimaryAction", yaml);
+    }
+
+    [Fact]
+    public void Read_TakesTheTypeOfAnActionWrittenBeforeActionTypesFromItsPrimaryFlag()
+    {
+        var gameId = Guid.NewGuid();
+        var path = ManifestHelper.GetPath(_tempDir, gameId);
+        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
+        File.WriteAllText(path, $"""
+            Id: {gameId}
+            Title: Old Game
+            Actions:
+            - Name: Play
+              Path: game.exe
+              IsPrimaryAction: true
+            - Name: Editor
+              Path: editor.exe
+              IsPrimaryAction: false
+            """);
+
+        var loaded = ManifestHelper.Read<ManifestGame>(_tempDir, gameId);
+
+        Assert.Equal([ActionType.Primary, ActionType.Secondary], loaded.Actions.Select(a => a.Type));
+    }
+
+    [Theory]
+    [InlineData(ActionType.Config)]
+    [InlineData(ActionType.Join)]
+    public void TheOldPrimaryFlagNeverUndoesAConfigOrJoinType(ActionType type)
+    {
+        // Whichever order a serializer reads the two in
+        var typeFirst = new ManifestAction { Type = type };
+        typeFirst.IsPrimaryAction = false;
+
+        var flagFirst = new ManifestAction { IsPrimaryAction = false };
+        flagFirst.Type = type;
+
+        Assert.Equal(type, typeFirst.Type);
+        Assert.Equal(type, flagFirst.Type);
     }
 
     [Fact]

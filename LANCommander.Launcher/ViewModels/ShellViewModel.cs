@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using System;
 using System.ComponentModel;
 using System.Linq;
@@ -684,7 +685,10 @@ public partial class ShellViewModel : ViewModelBase
 
             var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
             var actions = await gameClient.GetActionsAsync(localGame.InstallDirectory, gameId);
-            var action = actions?.FirstOrDefault(a => a.IsPrimaryAction) ?? actions?.FirstOrDefault();
+            var (action, cancelled) = await Views.GameActionsOverlay.ChoosePlayActionAsync(localGame.Title, actions);
+
+            if (cancelled)
+                return;
 
             if (action == null)
             {

@@ -190,12 +190,12 @@ public class ActionStepTests
 
         Assert.Equal("Multiplayer", actions[0].Name);
         Assert.Equal(0, actions[0].SortOrder);
-        Assert.True(actions[0].IsPrimaryAction);
+        Assert.Equal(ActionType.Primary, actions[0].Type);
         Assert.Equal("+connect", actions[0].Arguments);
 
         Assert.Equal("Play", actions[1].Name);
         Assert.Equal(1, actions[1].SortOrder);
-        Assert.False(actions[1].IsPrimaryAction);
+        Assert.Equal(ActionType.Secondary, actions[1].Type);
     }
 
     [Fact]

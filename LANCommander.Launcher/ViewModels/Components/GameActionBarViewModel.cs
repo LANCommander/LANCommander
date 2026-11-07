@@ -141,6 +141,18 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [ObservableProperty]
     private bool _hasSecondaryActions;
 
+    // Config actions (setup tools, settings programs), a group of their own in the dropdown
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _configActions = new();
+
+    [ObservableProperty]
+    private bool _hasConfigActions;
+
+    // Join actions aren't listed: each is a template a context fills in, such as a server's Connect
+    // button or a lancommander://game/{id}/join link
+    [ObservableProperty]
+    private ObservableCollection<GameActionViewModel> _joinActions = new();
+
     // Manuals
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(OpenFirstManualCommand))]
@@ -424,8 +436,11 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
         Actions.Clear();
         SecondaryActions.Clear();
+        ConfigActions.Clear();
+        JoinActions.Clear();
         HasMultipleActions = false;
         HasSecondaryActions = false;
+        HasConfigActions = false;
 
         if (!IsInstalled || string.IsNullOrEmpty(InstallDirectory))
             return;
@@ -461,20 +476,26 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                     return bridge == null ? null : $"{action.Name} (via {bridge.Label})";
                 }
 
-                IEnumerable<SDK.Models.Manifest.Action> Ordered(bool primary) =>
+                IEnumerable<SDK.Models.Manifest.Action> Ordered(ActionType type) =>
                     actions
-                        .Where(a => a.IsPrimaryAction == primary)
+                        .Where(a => a.Type == type)
                         .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
                         .ThenBy(a => a.SortOrder);
 
-                foreach (var action in Ordered(primary: true))
-                    Actions.Add(new GameActionViewModel(action, RunActionAsync, DisplayNameFor(action)));
+                void Fill(ObservableCollection<GameActionViewModel> list, ActionType type)
+                {
+                    foreach (var action in Ordered(type))
+                        list.Add(new GameActionViewModel(action, RunActionAsync, DisplayNameFor(action)));
+                }
 
-                foreach (var action in Ordered(primary: false))
-                    SecondaryActions.Add(new GameActionViewModel(action, RunActionAsync, DisplayNameFor(action)));
+                Fill(Actions, ActionType.Primary);
+                Fill(SecondaryActions, ActionType.Secondary);
+                Fill(ConfigActions, ActionType.Config);
+                Fill(JoinActions, ActionType.Join);
 
                 HasMultipleActions = Actions.Count > 1;
                 HasSecondaryActions = SecondaryActions.Count > 0;
+                HasConfigActions = ConfigActions.Count > 0;
             }
         }
         catch (Exception ex)
@@ -863,52 +884,11 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         if (!IsInstalled || IsStarting || IsRunning) return;
 
-        // If we have actions loaded, either pick directly or show a chooser
+        // With actions loaded, play the primary one, or ask which when there are several
         if (Actions.Any())
         {
-            SDK.Models.Manifest.Action? chosen;
-
-            if (HasMultipleActions)
-            {
-                var tcs = new System.Threading.Tasks.TaskCompletionSource<SDK.Models.Manifest.Action?>();
-
-                await Dispatcher.UIThread.InvokeAsync(() =>
-                {
-                    var overlayVm = new GameActionsOverlayViewModel(Title, Actions);
-                    var overlay = new Views.GameActionsOverlay
-                    {
-                        DataContext = overlayVm,
-                        HorizontalAlignment = global::Avalonia.Layout.HorizontalAlignment.Stretch,
-                        VerticalAlignment = global::Avalonia.Layout.VerticalAlignment.Stretch,
-                    };
-
-                    overlay.ActionSelected += (_, action) => tcs.TrySetResult(action);
-
-                    var mainWindow = (Application.Current?.ApplicationLifetime
-                        as IClassicDesktopStyleApplicationLifetime)?.MainWindow;
-                    var layer = OverlayLayer.GetOverlayLayer(mainWindow);
-
-                    if (layer is not null)
-                    {
-                        overlay.Bind(global::Avalonia.Layout.Layoutable.WidthProperty,
-                            new Binding("Bounds.Width") { Source = layer });
-                        overlay.Bind(global::Avalonia.Layout.Layoutable.HeightProperty,
-                            new Binding("Bounds.Height") { Source = layer });
-                        layer.Children.Add(overlay);
-                    }
-                    else
-                    {
-                        // No overlay layer available — fall back to first action
-                        tcs.TrySetResult(Actions.First().Action);
-                    }
-                });
-
-                chosen = await tcs.Task;
-            }
-            else
-            {
-                chosen = Actions.First().Action;
-            }
+            var (chosen, _) = await Views.GameActionsOverlay.ChoosePlayActionAsync(
+                Title, Actions.Select(a => a.Action), Actions);
 
             if (chosen != null)
                 await RunActionAsync(chosen);
@@ -944,8 +924,18 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                         "Attach a compatibility runtime (e.g. umu/Proton) to run it.");
                 }
 
-                // Find primary action or first action
-                var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction) ?? actions.First();
+                // The primary action (the player's pick of several), else the first secondary one;
+                // never a Config or Join action
+                var (primaryAction, cancelled) = await Views.GameActionsOverlay.ChoosePlayActionAsync(Title, actions);
+
+                if (cancelled)
+                {
+                    StatusMessage = null;
+                    return;
+                }
+
+                if (primaryAction == null)
+                    throw new InvalidOperationException("This game has no action that plays it.");
 
                 _logger.LogInformation("Running action {ActionName} for game {GameId}", primaryAction.Name, GameId);
 

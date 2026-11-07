@@ -173,7 +173,7 @@ public static class SampleEntities
             Arguments = "--arg" + seed,
             Path = "/path/" + seed,
             WorkingDirectory = "/awd/" + seed,
-            PrimaryAction = primary,
+            Type = primary ? ActionType.Primary : ActionType.Secondary,
             SortOrder = seed,
             OptionOverrides = "opt" + seed,
             GameId = G(seed + 500),

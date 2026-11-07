@@ -1,27 +1,25 @@
 using System;
 using System.IO;
 using System.IO.Pipes;
-using System.Runtime.InteropServices;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Extensions.Logging;
-using Microsoft.Win32;
 
 namespace LANCommander.Launcher.Services;
 
 /// <summary>
 /// Ensures only one launcher instance runs at a time and lets a second instance
-/// (spawned when the user clicks a notification) pass a navigation request to
-/// the already-running process via a named pipe.
+/// (started to open a <c>lancommander://</c> link, or relaunched by a user who forgot the
+/// launcher was in the tray) hand its request to the already-running process via a named pipe.
 ///
-/// Protocol:  "navigate-game:{guid}"
+/// Messages:  "restore", "open-url:{url}"
 /// </summary>
 public class SingleInstanceService : IDisposable
 {
-    private const string PipeName       = "lancommander-launcher";
-    private const string ProtocolScheme = "lancommander";
-    private const string MutexName      = "lancommander-launcher-singleton";
+    private const string PipeName  = "lancommander-launcher";
+    private const string MutexName = "lancommander-launcher-singleton";
+    private const string OpenUrlPrefix = "open-url:";
 
     // Held for the lifetime of the process to mark this as the owning instance.
     private static Mutex? _instanceMutex;
@@ -29,7 +27,8 @@ public class SingleInstanceService : IDisposable
     private readonly ILogger<SingleInstanceService> _logger;
     private CancellationTokenSource? _cts;
 
-    public event EventHandler<Guid>? NavigateToGameRequested;
+    /// <summary>Raised with the link a secondary instance was started to open.</summary>
+    public event EventHandler<string>? OpenUrlRequested;
 
     /// <summary>Raised when a secondary instance asks the running one to surface.</summary>
     public event EventHandler? RestoreRequested;
@@ -96,14 +95,12 @@ public class SingleInstanceService : IDisposable
             return;
         }
 
-        if (message.StartsWith("navigate-game:", StringComparison.OrdinalIgnoreCase))
+        if (message.StartsWith(OpenUrlPrefix, StringComparison.OrdinalIgnoreCase))
         {
-            var idStr = message["navigate-game:".Length..].Trim();
-            if (Guid.TryParse(idStr, out var gameId))
-            {
-                _logger.LogInformation("Navigation request received for game {GameId}", gameId);
-                NavigateToGameRequested?.Invoke(this, gameId);
-            }
+            var url = message[OpenUrlPrefix.Length..].Trim();
+
+            if (url.Length > 0)
+                OpenUrlRequested?.Invoke(this, url);
         }
     }
 
@@ -130,49 +127,8 @@ public class SingleInstanceService : IDisposable
         }
     }
 
-    /// <summary>
-    /// Parse a protocol URL of the form <c>lancommander://game/{guid}</c>.
-    /// Returns the game GUID if parsed successfully.
-    /// </summary>
-    public static Guid? ParseProtocolArg(string arg)
-    {
-        var prefix = $"{ProtocolScheme}://game/";
-        if (!arg.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            return null;
-        var idStr = arg[prefix.Length..].TrimEnd('/');
-        return Guid.TryParse(idStr, out var id) ? id : null;
-    }
-
-    // ── Windows protocol registration ────────────────────────────────────────
-
-    /// <summary>
-    /// Registers <c>lancommander://</c> in HKCU (no elevation required) so
-    /// Windows routes toast-notification click-actions to this executable.
-    /// No-op on non-Windows.
-    /// </summary>
-    public void RegisterProtocolHandler()
-    {
-        if (!RuntimeInformation.IsOSPlatform(OSPlatform.Windows)) return;
-
-        try
-        {
-            var exePath = Environment.ProcessPath ?? AppContext.BaseDirectory;
-
-            using var key = Registry.CurrentUser.CreateSubKey(
-                $@"Software\Classes\{ProtocolScheme}");
-            key.SetValue("", "URL:LANCommander Launcher");
-            key.SetValue("URL Protocol", "");
-
-            using var cmd = key.CreateSubKey(@"shell\open\command");
-            cmd.SetValue("", $"\"{exePath}\" \"%1\"");
-
-            _logger.LogInformation("Registered {Scheme}:// protocol handler", ProtocolScheme);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "Failed to register protocol handler");
-        }
-    }
+    /// <summary>The message that asks the running instance to open <paramref name="url"/>.</summary>
+    public static string OpenUrlMessage(string url) => OpenUrlPrefix + url;
 
     public void Dispose() => _cts?.Cancel();
 }

@@ -18,6 +18,7 @@ using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services.Platform;
 using LANCommander.Launcher.Services.Plugins;
+using LANCommander.Launcher.Services.Protocol;
 using LANCommander.SDK;
 using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Providers;
@@ -127,18 +128,31 @@ public partial class App : Application
                 var trayIcon = mainWindow.CreateTrayIcon(mainViewModel);
                 TrayIcon.SetIcons(this, new TrayIcons { trayIcon });
 
-                // Single-instance pipe server: forward notification-click navigations
-                var singleInstance = Services.GetRequiredService<SingleInstanceService>();
-                singleInstance.RegisterProtocolHandler();
-                singleInstance.StartServer();
-                singleInstance.NavigateToGameRequested += async (_, gameId) =>
+                // lancommander:// links: register the scheme with the OS, then take links from a second
+                // launcher process (the pipe), from this one's command line, and from macOS, which sends
+                // them to the running app as open-URL events rather than starting another process
+                var protocolLogger = Services.GetRequiredService<ILogger<ProtocolRequestHandler>>();
+                _ = Task.Run(() => ProtocolHandlerRegistration.Register(protocolLogger));
+
+                var protocolHandler = Services.GetRequiredService<ProtocolRequestHandler>();
+                protocolHandler.Attach(mainViewModel, mainWindow.RestoreFromTray);
+
+                if (Program.PendingProtocolUrl is { } pendingUrl)
+                    protocolHandler.Enqueue(pendingUrl);
+
+                if (TryGetFeature(typeof(IActivatableLifetime)) is IActivatableLifetime activatable)
                 {
-                    // The window may be hidden in the tray; surface it on the UI thread
-                    // before navigating (this fires from the named-pipe listener thread).
-                    Avalonia.Threading.Dispatcher.UIThread.Post(mainWindow.RestoreFromTray);
-                    var shell = Services.GetRequiredService<MainWindowViewModel>().ShellViewModel;
-                    await shell.NavigateToGameByIdAsync(gameId).ConfigureAwait(false);
-                };
+                    activatable.Activated += (_, e) =>
+                    {
+                        if (e is ProtocolActivatedEventArgs { Kind: ActivationKind.OpenUri } protocol)
+                            protocolHandler.Enqueue(protocol.Uri.OriginalString);
+                    };
+                }
+
+                // Single-instance pipe server
+                var singleInstance = Services.GetRequiredService<SingleInstanceService>();
+                singleInstance.StartServer();
+                singleInstance.OpenUrlRequested += (_, url) => protocolHandler.Enqueue(url);
                 // A second launch (e.g. the user forgot it was hiding in the tray) asks the
                 // running instance to restore its window instead of opening a duplicate.
                 singleInstance.RestoreRequested += (_, _) =>
@@ -386,6 +400,7 @@ public partial class App : Application
         services.AddSingleton<NotificationService>();
         services.AddSingleton<TaskbarProgressService>();
         services.AddSingleton<SingleInstanceService>();
+        services.AddSingleton<ProtocolRequestHandler>();
         services.AddSingleton<INavigationService, NavigationService>();
 
         // View registry: seed the built-in view model -> view mappings that were previously declared

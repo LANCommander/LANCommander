@@ -14,8 +14,16 @@ public sealed record ActionInfo
     public string? Arguments { get; init; }
     public string? WorkingDirectory { get; init; }
 
+    /// <summary>What the action is for, which decides where a launcher offers it.</summary>
+    public ActionType Type { get; init; }
+
     /// <summary>Whether this is the action a launcher runs when asked to play.</summary>
-    public bool IsPrimary { get; init; }
+    [Obsolete("Use Type. Setting this only moves the action into or out of ActionType.Primary.")]
+    public bool IsPrimary
+    {
+        get => Type == ActionType.Primary;
+        init => Type = ActionTypes.FromPrimaryFlag(value, Type);
+    }
 
     public int SortOrder { get; init; }
 

@@ -387,7 +387,7 @@ public class ExportContextTests
             ToolId = tool.Id,
             Name = "Run",
             Path = "tool.exe",
-            PrimaryAction = true,
+            Type = ActionType.Primary,
         });
 
         var exportContext = scope.ServiceProvider.GetRequiredService<ExportContextFactory>().Create();

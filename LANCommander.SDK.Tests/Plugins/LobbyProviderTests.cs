@@ -39,7 +39,7 @@ public class LobbyProviderTests : IDisposable
 
         Assert.Equal("-windowed +connect_lobby 1", join.Arguments);
         Assert.Equal("game.exe", join.Path);
-        Assert.True(join.IsPrimaryAction);
+        Assert.Equal(ActionType.Primary, join.Type);
     }
 
     [Fact]
@@ -93,7 +93,7 @@ public class LobbyProviderTests : IDisposable
                 Id = _gameId,
                 Title = "Lobby Game",
                 Type = GameType.MainGame,
-                Actions = [new ManifestAction { Name = "Play", Path = "game.exe", Arguments = "-windowed", IsPrimaryAction = true }],
+                Actions = [new ManifestAction { Name = "Play", Path = "game.exe", Arguments = "-windowed", Type = ActionType.Primary }],
                 MultiplayerModes = [new MultiplayerMode { Type = MultiplayerType.Online, NetworkProtocol = protocol }],
             },
             _installDirectory);

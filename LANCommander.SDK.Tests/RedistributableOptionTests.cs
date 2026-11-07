@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -75,7 +76,7 @@ public class RedistributableOptionTests : IDisposable
             Name = "Play",
             Path = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
             Arguments = $"/c set > \"{marker}\"",
-            IsPrimaryAction = true,
+            Type = ActionType.Primary,
             OptionOverrides = action
                 ? JsonSerializer.Serialize(new Dictionary<Guid, Dictionary<string, string>> { [ShimId] = new() { ["Shim.Layer"] = "action" } })
                 : null,
@@ -129,7 +130,7 @@ public class RedistributableOptionTests : IDisposable
             Name = "Play",
             Path = Path.Combine(Environment.SystemDirectory, "cmd.exe"),
             Arguments = $"/c set > \"{marker}\"",
-            IsPrimaryAction = true,
+            Type = ActionType.Primary,
         });
 
         var environment = File.ReadAllText(marker);

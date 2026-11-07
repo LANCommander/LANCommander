@@ -209,9 +209,6 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<int>("Platforms")
                         .HasColumnType("int");
 
-                    b.Property<bool>("PrimaryAction")
-                        .HasColumnType("tinyint(1)");
-
                     b.Property<Guid?>("ServerId")
                         .HasColumnType("char(36)");
 
@@ -220,6 +217,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
 
                     b.Property<Guid?>("ToolId")
                         .HasColumnType("char(36)");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("int");
 
                     b.Property<Guid?>("UpdatedById")
                         .HasColumnType("char(36)");

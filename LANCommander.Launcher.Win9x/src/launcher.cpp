@@ -85,9 +85,11 @@ const ManifestAction* PickPrimaryAction(const GameManifest& manifest)
     }
     if (best) return best;
 
+    // Else the first secondary action; Config (2) and Join (3) actions don't play the game as it is
     for (size_t i = 0; i < manifest.actions.size(); ++i)
     {
         const ManifestAction& a = manifest.actions[i];
+        if (a.type != 0) continue;
         if (!best || a.sortOrder < best->sortOrder) best = &a;
     }
     return best;

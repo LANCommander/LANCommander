@@ -204,7 +204,7 @@ namespace LANCommander.Launcher.Services
                 var action = manifest.Actions.FirstOrDefault(a => a.Id == options.ActionId);
 
                 if (action == null)
-                    action = manifest.Actions.OrderBy(a => a.SortOrder).FirstOrDefault(a => a.IsPrimaryAction);
+                    action = manifest.Actions.OrderBy(a => a.SortOrder).FirstOrDefault(a => a.Type == SDK.Enums.ActionType.Primary);
 
                 await gameService.Run(game, action);*/
             }

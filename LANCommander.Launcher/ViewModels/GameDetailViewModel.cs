@@ -235,15 +235,15 @@ public partial class GameDetailViewModel : ViewModelBase
             if (e.PropertyName is nameof(GameActionBarViewModel.InstallDirectory) or nameof(GameActionBarViewModel.IsInstalled))
                 _ = MeasureInstallSizeAsync();
 
-            if (e.PropertyName is nameof(GameActionBarViewModel.Actions) or nameof(GameActionBarViewModel.SecondaryActions))
+            if (e.PropertyName is nameof(GameActionBarViewModel.Actions) or nameof(GameActionBarViewModel.SecondaryActions)
+                or nameof(GameActionBarViewModel.ConfigActions) or nameof(GameActionBarViewModel.JoinActions))
                 WatchActionLists();
         };
 
         WatchActionLists();
     }
 
-    private ObservableCollection<GameActionViewModel>? _watchedActions;
-    private ObservableCollection<GameActionViewModel>? _watchedSecondaryActions;
+    private readonly List<ObservableCollection<GameActionViewModel>> _watchedActionLists = new();
 
     /// <summary>
     /// Each server's Connect button runs one of the game's actions, which the action bar reloads
@@ -251,17 +251,14 @@ public partial class GameDetailViewModel : ViewModelBase
     /// </summary>
     private void WatchActionLists()
     {
-        if (_watchedActions != null)
-            _watchedActions.CollectionChanged -= OnActionListChanged;
+        foreach (var list in _watchedActionLists)
+            list.CollectionChanged -= OnActionListChanged;
 
-        if (_watchedSecondaryActions != null)
-            _watchedSecondaryActions.CollectionChanged -= OnActionListChanged;
+        _watchedActionLists.Clear();
+        _watchedActionLists.AddRange([ActionBar.Actions, ActionBar.SecondaryActions, ActionBar.ConfigActions, ActionBar.JoinActions]);
 
-        _watchedActions = ActionBar.Actions;
-        _watchedSecondaryActions = ActionBar.SecondaryActions;
-
-        _watchedActions.CollectionChanged += OnActionListChanged;
-        _watchedSecondaryActions.CollectionChanged += OnActionListChanged;
+        foreach (var list in _watchedActionLists)
+            list.CollectionChanged += OnActionListChanged;
 
         UpdateServerConnectActions();
     }
@@ -760,24 +757,21 @@ public partial class GameDetailViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Gives each server the installed game's action that connects to it, if there is one. The
-    /// server stamps its id on the actions it owns.
+    /// Gives each server what its Connect button runs: the server's own primary action, else the
+    /// installed game's Join action pointed at the server. The server stamps its id on the actions
+    /// it owns.
     /// </summary>
     private void UpdateServerConnectActions()
     {
         var actions = ActionBar.Actions
             .Concat(ActionBar.SecondaryActions)
+            .Concat(ActionBar.ConfigActions)
+            .Concat(ActionBar.JoinActions)
             .Select(a => a.Action)
             .ToList();
 
         foreach (var server in Servers)
-        {
-            server.ConnectAction = actions.FirstOrDefault(a =>
-                a.Variables != null
-                && a.Variables.TryGetValue("ServerId", out var serverId)
-                && Guid.TryParse(serverId, out var parsed)
-                && parsed == server.Id);
-        }
+            server.ConnectAction = ServerConnectActions.Resolve(server.Id, server.Host, server.Port, actions);
     }
 
     private Task ConnectToServerAsync(SDK.Models.Manifest.Action action) => ActionBar.RunActionAsync(action);
@@ -912,6 +906,8 @@ public partial class GameServerItemViewModel : ViewModelBase
 
     public Guid Id { get; }
     public string Name { get; }
+    public string Host { get; }
+    public int Port { get; }
 
     /// <summary>"host:port", just the host, or empty when the server doesn't say where it is.</summary>
     public string Address { get; }
@@ -934,6 +930,8 @@ public partial class GameServerItemViewModel : ViewModelBase
 
         Id = server.Id;
         Name = string.IsNullOrWhiteSpace(server.Name) ? "Server" : server.Name;
+        Host = server.Host ?? string.Empty;
+        Port = server.Port;
 
         Address = string.IsNullOrWhiteSpace(server.Host)
             ? string.Empty

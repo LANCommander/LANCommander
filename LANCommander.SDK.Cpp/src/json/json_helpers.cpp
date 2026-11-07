@@ -1,5 +1,6 @@
 #include "json_helpers.h"
 
+#include <cctype>
 #include <cstring>
 
 namespace lancommander {
@@ -225,6 +226,26 @@ Game parse_game(cJSON* obj)
     return g;
 }
 
+// An action's type: "type" as a number or a name, else the isPrimaryAction flag older servers send
+static int parse_action_type(cJSON* obj)
+{
+    cJSON* n = cJSON_GetObjectItem(obj, "type");
+    if (!n) n = cJSON_GetObjectItem(obj, "Type");
+
+    if (n && n->type == cJSON_Number) return n->valueint;
+
+    if (n && n->type == cJSON_String && n->valuestring) {
+        std::string name = n->valuestring;
+        for (auto& c : name) c = static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+        if (name == "primary") return 1;
+        if (name == "config")  return 2;
+        if (name == "join")    return 3;
+        return 0;
+    }
+
+    return get_bool(obj, "isPrimaryAction", "IsPrimaryAction", false) ? 1 : 0;
+}
+
 ManifestAction parse_manifest_action(cJSON* obj)
 {
     ManifestAction a;
@@ -232,7 +253,8 @@ ManifestAction parse_manifest_action(cJSON* obj)
     a.path              = get_string(obj, "path", "Path");
     a.arguments         = get_string(obj, "arguments", "Arguments");
     a.working_directory = get_string(obj, "workingDirectory", "WorkingDirectory");
-    a.is_primary        = get_bool(obj, "isPrimaryAction", "IsPrimaryAction", false);
+    a.type              = parse_action_type(obj);
+    a.is_primary        = a.type == 1;
     a.sort_order        = get_int(obj, "sortOrder", "SortOrder", 0);
 
     cJSON* vars = get_child(obj, "variables", "Variables");

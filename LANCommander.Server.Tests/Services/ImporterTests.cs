@@ -42,7 +42,7 @@ public class ImporterTests(ApplicationFixture fixture) : BaseTest(fixture)
                     Arguments = "-fullscreen",
                     Path = "game.exe",
                     WorkingDirectory = "",
-                    IsPrimaryAction = true,
+                    Type = ActionType.Primary,
                     SortOrder = 0
                 },
                 new Action
@@ -51,7 +51,7 @@ public class ImporterTests(ApplicationFixture fixture) : BaseTest(fixture)
                     Arguments = "-editor",
                     Path = "editor.exe",
                     WorkingDirectory = "",
-                    IsPrimaryAction = false,
+                    Type = ActionType.Secondary,
                     SortOrder = 1
                 }
             },

@@ -107,7 +107,7 @@ internal sealed class ActionProvider(ActionService actions, RecordOwners owners)
         entity.Path = record.Path;
         entity.Arguments = record.Arguments;
         entity.WorkingDirectory = record.WorkingDirectory;
-        entity.PrimaryAction = record.IsPrimary;
+        entity.Type = record.Type;
         entity.SortOrder = record.SortOrder;
         entity.Platforms = record.Platforms;
         entity.OptionOverrides = record.OptionOverrides;
@@ -120,7 +120,7 @@ internal sealed class ActionProvider(ActionService actions, RecordOwners owners)
         Path = action.Path,
         Arguments = action.Arguments,
         WorkingDirectory = action.WorkingDirectory,
-        IsPrimary = action.PrimaryAction,
+        Type = action.Type,
         SortOrder = action.SortOrder,
         Platforms = action.Platforms,
         OptionOverrides = action.OptionOverrides,

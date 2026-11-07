@@ -29,6 +29,8 @@ struct Action {
     std::string path;
     std::string arguments;
     std::string working_directory;
+    // ActionType: 0 Secondary, 1 Primary, 2 Config, 3 Join
+    int type = 0;
     bool is_primary = false;
     int sort_order = 0;
     std::map<std::string, std::string> variables;
@@ -69,6 +71,8 @@ struct ManifestAction {
     std::string path;
     std::string arguments;
     std::string working_directory;
+    // ActionType: 0 Secondary, 1 Primary, 2 Config, 3 Join
+    int type = 0;
     bool is_primary = false;
     int sort_order = 0;
     std::map<std::string, std::string> variables;

@@ -52,7 +52,7 @@ public class GameClientTests(ApplicationFixture fixture) : BaseTest(fixture)
                     action.Arguments.ShouldBe("-xres 1920 -yres 1080");
                     action.Path.ShouldBe("lotrbfme2ep1.exe");
                     action.WorkingDirectory.ShouldBe("{InstallDir}");
-                    action.PrimaryAction.ShouldBeTrue();
+                    action.Type.ShouldBe(ActionType.Primary);
                 }
                 else
                 {
@@ -61,7 +61,7 @@ public class GameClientTests(ApplicationFixture fixture) : BaseTest(fixture)
                     action.Arguments.ShouldBeNullOrEmpty();
                     action.Path.ShouldBe("Worldbuilder.exe");
                     action.WorkingDirectory.ShouldBe("{InstallDir}");
-                    action.PrimaryAction.ShouldBeFalse();
+                    action.Type.ShouldBe(ActionType.Secondary);
                 }
             }
 

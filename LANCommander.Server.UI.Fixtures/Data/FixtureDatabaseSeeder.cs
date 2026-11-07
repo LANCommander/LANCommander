@@ -276,7 +276,7 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
                     Name = "Play",
                     Path = executable,
                     WorkingDirectory = "{InstallDir}",
-                    PrimaryAction = true,
+                    Type = ActionType.Primary,
                     SortOrder = 0,
                 });
 

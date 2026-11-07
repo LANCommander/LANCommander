@@ -446,7 +446,7 @@ public class InterposerGameProcessStarterTests : IDisposable
     };
 
     private GameProcessStartContext Context(Game game, ProcessStartInfo startInfo) =>
-        new(startInfo, game.Id, _installDirectory.FullName, game, new SDK.Models.Manifest.Action { Name = "Play", IsPrimaryAction = true });
+        new(startInfo, game.Id, _installDirectory.FullName, game, new SDK.Models.Manifest.Action { Name = "Play", Type = SDK.Enums.ActionType.Primary });
 
     // Long enough to be joined; killed when the test is done
     private static ProcessStartInfo PingExe32() =>

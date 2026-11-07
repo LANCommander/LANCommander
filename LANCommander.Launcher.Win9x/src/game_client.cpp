@@ -33,6 +33,39 @@ namespace
         return 0;
     }
 
+    bool EqualsIgnoreCase(const char* a, const char* b)
+    {
+        for (; *a && *b; ++a, ++b)
+        {
+            char ca = *a, cb = *b;
+            if (ca >= 'A' && ca <= 'Z') ca = (char)(ca - 'A' + 'a');
+            if (cb >= 'A' && cb <= 'Z') cb = (char)(cb - 'A' + 'a');
+            if (ca != cb) return false;
+        }
+        return *a == *b;
+    }
+
+    bool GetBoolEither(cJSON* obj, const char* a, const char* b);
+
+    // An action's type: "type" as a number or a name, else the isPrimaryAction flag older servers send
+    int GetActionType(cJSON* obj)
+    {
+        cJSON* n = cJSON_GetObjectItem(obj, "type");
+        if (!n) n = cJSON_GetObjectItem(obj, "Type");
+
+        if (n && n->type == cJSON_Number) return n->valueint;
+
+        if (n && n->type == cJSON_String && n->valuestring)
+        {
+            if (EqualsIgnoreCase(n->valuestring, "Primary")) return 1;
+            if (EqualsIgnoreCase(n->valuestring, "Config"))  return 2;
+            if (EqualsIgnoreCase(n->valuestring, "Join"))    return 3;
+            return 0;
+        }
+
+        return GetBoolEither(obj, "isPrimaryAction", "IsPrimaryAction") ? 1 : 0;
+    }
+
     bool GetBoolEither(cJSON* obj, const char* a, const char* b)
     {
         cJSON* n = cJSON_GetObjectItem(obj, a);
@@ -235,7 +268,8 @@ bool ParseManifestJson(const std::string& json, GameManifest* out,
             ma.path             = GetEither(a, "path", "Path");
             ma.arguments        = GetEither(a, "arguments", "Arguments");
             ma.workingDirectory = GetEither(a, "workingDirectory", "WorkingDirectory");
-            ma.isPrimary        = GetBoolEither(a, "isPrimaryAction", "IsPrimaryAction");
+            ma.type             = GetActionType(a);
+            ma.isPrimary        = ma.type == 1;
             ma.sortOrder        = GetIntEither(a, "sortOrder", "SortOrder");
 
             cJSON* vars = cJSON_GetObjectItem(a, "variables");

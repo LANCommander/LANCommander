@@ -634,7 +634,7 @@ namespace LANCommander.Server.Services
             Arguments = source.Arguments,
             Path = source.Path,
             WorkingDirectory = source.WorkingDirectory,
-            PrimaryAction = source.PrimaryAction,
+            Type = source.Type,
             SortOrder = source.SortOrder,
             OptionOverrides = source.OptionOverrides,
             CreatedOn = DateTime.UtcNow,

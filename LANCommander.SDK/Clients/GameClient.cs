@@ -231,11 +231,12 @@ namespace LANCommander.SDK.Services
                         .Where(a => installedIds.Contains(a.GameId))
                         .Select(a => new Models.Manifest.Action
                         {
+                            Id = a.Id,
                             Name = a.Name,
                             Arguments = a.Arguments,
                             Path = a.Path,
                             WorkingDirectory = a.WorkingDirectory,
-                            IsPrimaryAction = a.IsPrimaryAction,
+                            Type = a.Type,
                             SortOrder = a.SortOrder,
                             OptionOverrides = a.OptionOverrides,
                             Variables = a.Variables,
@@ -253,7 +254,7 @@ namespace LANCommander.SDK.Services
                 actions = manifests
                     .Where(m => m != null && m.Actions != null)
                     .SelectMany(m => m.Actions)
-                    .OrderByDescending(a => a.IsPrimaryAction)
+                    .OrderBy(a => ActionTypes.Rank(a.Type))
                     .ThenBy(a => a.SortOrder)
                     .ToList();
             }
@@ -298,7 +299,7 @@ namespace LANCommander.SDK.Services
             actions = actions
                 .Where(a => CompatibilityResolver.CanRunOnCurrentRuntime(a.Platforms, shims))
                 .OrderByDescending(a => CompatibilityResolver.GetBridge(a.Platforms, shims) == null)
-                .ThenByDescending(a => a.IsPrimaryAction)
+                .ThenBy(a => ActionTypes.Rank(a.Type))
                 .ThenBy(a => a.SortOrder)
                 .ToList();
 
@@ -318,7 +319,7 @@ namespace LANCommander.SDK.Services
             ICollection<Models.Manifest.Game> manifests,
             List<Models.Manifest.Action> actions)
         {
-            var primaryAction = actions.FirstOrDefault(a => a.IsPrimaryAction);
+            var primaryAction = actions.FirstOrDefault(a => a.Type == ActionType.Primary);
 
             if (primaryAction == null || lobbyProviders == null)
                 return [];
@@ -331,7 +332,9 @@ namespace LANCommander.SDK.Services
                 .Select((lobby, index) => new Models.Manifest.Action
                 {
                     Arguments = $"{primaryAction.Arguments} {lobby.JoinArguments}".Trim(),
-                    IsPrimaryAction = true,
+                    // Already joined to its lobby, so it is offered beside Play rather than kept back
+                    // as a template the way the game's own Join actions are
+                    Type = ActionType.Primary,
                     Name = $"Join {lobby.HostName}'s lobby",
                     SortOrder = actions.Count + index,
                     Path = primaryAction.Path,
@@ -3040,7 +3043,7 @@ namespace LANCommander.SDK.Services
                     bool runWrapperHandled = false;
 
                     var gameManifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(installDirectory, gameId);
-                    var resolvedAction = action ?? gameManifest?.Actions?.FirstOrDefault(a => a.IsPrimaryAction);
+                    var resolvedAction = action ?? ActionTypes.SelectDefault(gameManifest?.Actions);
 
                     if (resolvedAction != null && gameManifest.Redistributables != null)
                     {

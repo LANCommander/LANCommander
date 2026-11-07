@@ -31,11 +31,13 @@ struct ManifestAction
     std::string path;
     std::string arguments;
     std::string workingDirectory;
+    // LANCommander's ActionType: 0 Secondary, 1 Primary, 2 Config, 3 Join
+    int         type;
     bool        isPrimary;
     int         sortOrder;
     std::map<std::string, std::string> variables;
 
-    ManifestAction() : isPrimary(false), sortOrder(0) {}
+    ManifestAction() : type(0), isPrimary(false), sortOrder(0) {}
 };
 
 struct ManifestSavePath

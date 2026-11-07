@@ -196,6 +196,16 @@ public static class GameContextMenu
         foreach (var action in vm.SecondaryActions)
             items.Add(new MenuItem { Header = action.Name, Command = action.RunCommand });
 
+        // Config actions, kept apart from the ways to play
+        if (vm.ConfigActions.Count > 0)
+        {
+            items.Add(new Separator());
+            items.Add(GroupHeading("Configure"));
+
+            foreach (var action in vm.ConfigActions)
+                items.Add(new MenuItem { Header = action.Name, Command = action.RunCommand });
+        }
+
         items.Add(Separator(vm, "IsInstalled"));
         items.Add(Item("Browse Files", vm, "BrowseFilesCommand", visiblePath: "IsInstalled"));
         items.Add(Item("View Manual", vm, "OpenFirstManualCommand", visiblePath: "HasManuals"));
@@ -295,6 +305,15 @@ public static class GameContextMenu
         return item;
     }
 
+    /// <summary>A label over a group of rows. Not a command, so it takes neither clicks nor focus.</summary>
+    private static MenuItem GroupHeading(string text) => new()
+    {
+        Header = text,
+        IsEnabled = false,
+        Focusable = false,
+        IsHitTestVisible = false,
+    };
+
     /// <summary>Marks a row that removes something; the theme gives these the error colour.</summary>
     private static MenuItem Destructive(MenuItem item)
     {
@@ -325,12 +344,16 @@ public static class GameContextMenu
             _flyout = flyout;
             _vm = vm;
             _vm.SecondaryActions.CollectionChanged += OnChanged;
+            _vm.ConfigActions.CollectionChanged += OnChanged;
         }
 
         private void OnChanged(object? sender, NotifyCollectionChangedEventArgs e)
             => Dispatcher.UIThread.Post(() => Populate(_flyout, _vm));
 
         public void Detach()
-            => _vm.SecondaryActions.CollectionChanged -= OnChanged;
+        {
+            _vm.SecondaryActions.CollectionChanged -= OnChanged;
+            _vm.ConfigActions.CollectionChanged -= OnChanged;
+        }
     }
 }

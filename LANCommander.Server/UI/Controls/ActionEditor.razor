@@ -1,4 +1,5 @@
 @using LANCommander.Server.Models
+@using LANCommander.SDK.Enums
 @using Action = LANCommander.Server.Data.Models.Action
 @inject ActionService ActionService
 @inject ArchiveService ArchiveService
@@ -32,8 +33,8 @@
                 <TemplateColumn TItem="Action" Title="Platforms" Width="160px">
                     <RuntimePlatformSelect @bind-Value="context.Platforms" Style="width: 100%" />
                 </TemplateColumn>
-                <TemplateColumn TItem="Action" Title="Primary" Width="80px">
-                    <Checkbox @bind-Value="context.PrimaryAction" aria-label="Primary action" />
+                <TemplateColumn TItem="Action" Title="Type" Width="130px">
+                    <Select TValue="ActionType" Items="TypeChoices" @bind-Value="context.Type" aria-label="Action type" Style="width: 100%" />
                 </TemplateColumn>
                 <ActionsColumn TItem="Action" Width="130px">
                     <Button Text Icon="IconType.ArrowUp" title="Move up" Disabled="_actions.IndexOf(context) == 0" OnClick="() => Move(context, -1)" />
@@ -58,6 +59,14 @@
     [CascadingParameter(Name = "ToolId")] public Guid? ToolId { get; set; }
 
     Archive? _archive;
+
+    static readonly SelectItem<ActionType>[] TypeChoices =
+    [
+        new(ActionType.Primary, "Primary"),
+        new(ActionType.Secondary, "Secondary"),
+        new(ActionType.Config, "Config"),
+        new(ActionType.Join, "Join"),
+    ];
 
     // For games, actions belong to a version rather than the game itself: the one picked in the game
     // editor, else the latest
@@ -108,7 +117,7 @@
     {
         var action = new Action
         {
-            PrimaryAction = _actions.Count == 0,
+            Type = DefaultTypeForNewAction(),
             GameId = GameId,
             GameVersionId = _gameVersionId,
             ServerId = ServerId,
@@ -117,6 +126,11 @@
 
         SetOrder([.. _actions, action]);
     }
+
+    // A server's primary action is what the launcher's Connect button runs; a game's or tool's first
+    // action is what Play runs
+    ActionType DefaultTypeForNewAction() =>
+        ServerId.HasValue || _actions.Count == 0 ? ActionType.Primary : ActionType.Secondary;
 
     async Task RemoveAsync(Action action)
     {

@@ -1,3 +1,4 @@
+using LANCommander.SDK.Enums;
 using System;
 using System.Diagnostics;
 using System.IO;
@@ -29,7 +30,7 @@ public class GameProcessStarterTests : IDisposable
     {
         marker = Path.Combine(_installDirectory, "ran-directly.txt");
 
-        return new ManifestAction { Name = "Play", Path = Cmd, Arguments = $"/c echo ran> \"{marker}\"", IsPrimaryAction = true };
+        return new ManifestAction { Name = "Play", Path = Cmd, Arguments = $"/c echo ran> \"{marker}\"", Type = ActionType.Primary };
     }
 
     [Fact]

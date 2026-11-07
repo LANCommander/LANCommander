@@ -15,6 +15,7 @@ using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services.Packaging;
 using LANCommander.Launcher.Services.Plugins;
+using LANCommander.Launcher.Services.Protocol;
 using LANCommander.Interposer;
 using LANCommander.Packaging.Worker;
 using LANCommander.SDK;
@@ -34,6 +35,9 @@ namespace LANCommander.Launcher;
 class Program
 {
     internal static bool BigScreenMode;
+
+    /// <summary>The lancommander:// link this process was started to open, if it is the first instance.</summary>
+    internal static string? PendingProtocolUrl;
 
     private static readonly string[] CliVerbs =
     [
@@ -64,18 +68,9 @@ class Program
             return;
         }
 
-        // If a protocol arg like "lancommander://game/{guid}" is present, this
-        // is a secondary instance spawned by a notification click.  Forward the
-        // navigation request to the already-running instance, then exit.
-        foreach (var arg in args)
-        {
-            var gameId = SingleInstanceService.ParseProtocolArg(arg);
-            if (gameId.HasValue)
-            {
-                SingleInstanceService.TrySendToServer($"navigate-game:{gameId}");
-                return;
-            }
-        }
+        // The system starts the launcher with the link as an argument when a lancommander:// link is
+        // opened (macOS instead sends the running app an open-URL event; see App)
+        var protocolUrl = args.FirstOrDefault(ProtocolRequest.IsProtocolUrl);
 
 #if DEBUG
         // A fixture preview touches none of the launcher's data, so it can run beside a normal instance.
@@ -91,12 +86,18 @@ class Program
 
         // Only one GUI instance should run at a time. The launcher hides to the tray on
         // close, so a user may relaunch it without realizing it's still running. If another
-        // instance already holds the lock, ask it to surface its window, then exit.
+        // instance already holds the lock, ask it to surface its window (or open the link this
+        // process was started for), then exit.
         if (!SingleInstanceService.TryAcquireInstanceLock())
         {
-            SingleInstanceService.TrySendToServer("restore");
+            SingleInstanceService.TrySendToServer(protocolUrl != null
+                ? SingleInstanceService.OpenUrlMessage(protocolUrl)
+                : "restore");
             return;
         }
+
+        // This is the only instance: it opens the link itself once the library is showing
+        PendingProtocolUrl = protocolUrl;
 
         BigScreenMode = args.Any(a => a.Equals("--big-screen", StringComparison.OrdinalIgnoreCase));
 

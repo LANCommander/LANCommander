@@ -405,7 +405,7 @@ public partial class GameDetailViewModel : ViewModelBase
             return;
 
         // Reset media items and tag state while we re-load
-        MediaItems.Clear();
+        ClearMediaItems();
         TagsExpanded = false;
 
         // Determine carousel media entries and populate skeletons immediately.
@@ -588,8 +588,12 @@ public partial class GameDetailViewModel : ViewModelBase
     /// </summary>
     private void ReplaceMediaItem(int version, int index, GameMediaItemViewModel item)
     {
+        // A newer load (or a release) superseded this one; its screenshot was decoded for nothing
         if (version != _loadVersion)
+        {
+            DisposeImage(item);
             return;
+        }
 
         if (index < MediaItems.Count && MediaItems[index].IsSkeleton)
             MediaItems[index] = item;
@@ -829,6 +833,40 @@ public partial class GameDetailViewModel : ViewModelBase
             _logger.LogError(ex, "Failed to open issue attachment {AttachmentId}", attachment.Id);
             await Views.AlertOverlay.ShowAsync("Can't Open Attachment", ex.Message);
         }
+    }
+
+    /// <summary>
+    /// Lets go of the page's screenshots once it's off screen and nothing can navigate back to it.
+    /// Loads still in flight are abandoned; the page is loaded again before it's next shown.
+    /// </summary>
+    public void ReleaseMedia()
+    {
+        _loadVersion++;
+        ClearMediaItems();
+    }
+
+    /// <summary>
+    /// Empties the media strip, disposing the screenshots decoded for it. They're native (Skia)
+    /// memory the GC barely sees, so waiting for finalizers lets them pile up as games are browsed.
+    /// </summary>
+    private void ClearMediaItems()
+    {
+        var items = MediaItems.ToList();
+
+        MediaItems.Clear();
+        OnPropertyChanged(nameof(HasMedia));
+
+        foreach (var item in items)
+            DisposeImage(item);
+    }
+
+    private static void DisposeImage(GameMediaItemViewModel item)
+    {
+        var image = item.ImageSource;
+
+        // Unbind first so nothing still showing the item draws a disposed bitmap
+        item.ImageSource = null;
+        image?.Dispose();
     }
 
     [RelayCommand]

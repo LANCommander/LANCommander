@@ -45,6 +45,9 @@ public class InlineVideoPlayer : Control, IDisposable, ICarouselPlaybackItem
     /// </summary>
     private bool _isActive;
 
+    /// <summary>Whether a LibVLC player (and its frame buffers) currently exists for this control.</summary>
+    internal bool HasRenderer => _renderer != null;
+
     /// <summary>Current playback position in milliseconds.</summary>
     public long CurrentTimeMs => _renderer?.Player?.Time ?? 0;
 

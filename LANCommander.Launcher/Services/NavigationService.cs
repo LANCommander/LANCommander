@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
@@ -77,6 +78,9 @@ public partial class NavigationService : ObservableObject, INavigationService
             IsNavigating = false;
         }
     }
+
+    public bool IsInHistory(ViewModelBase viewModel) =>
+        _history.Any(entry => ReferenceEquals(entry.ViewModel, viewModel));
 
     public void GoBack()
     {

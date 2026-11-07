@@ -21,6 +21,9 @@ public interface INavigationService : INotifyPropertyChanged
     /// </summary>
     void NavigateTo(ViewModelBase viewModel, bool clearHistory = false, Func<Task>? initializeAsync = null, bool replaceCurrent = false);
 
+    /// <summary>Whether Back can still return to <paramref name="viewModel"/>.</summary>
+    bool IsInHistory(ViewModelBase viewModel);
+
     /// <summary>Pop the history stack and return to the previous view. No-op if the stack is empty.</summary>
     void GoBack();
 

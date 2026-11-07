@@ -107,6 +107,11 @@ public partial class ShellViewModel : ViewModelBase
             // Leaving a game's page any way other than its Back button (the rail, Escape) must still
             // stop it polling for the running game
             oldDetail.ActionBar.StopRunningCheck();
+
+            // A page nothing can go back to is loaded afresh before it's shown again, so its
+            // screenshots can go now. One still in the history (left for Settings, say) keeps them.
+            if (!ReferenceEquals(newValue, oldDetail) && !_navigationService.IsInHistory(oldDetail))
+                oldDetail.ReleaseMedia();
         }
         if (newValue is GameDetailViewModel newDetail)
             newDetail.PropertyChanged += OnGameDetailPropertyChanged;

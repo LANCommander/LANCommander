@@ -23,6 +23,12 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
     private volatile bool _disposed;
     private volatile WriteableBitmap? _bitmap;
 
+    // The frame bitmap the decode loop writes into. Freed once the renderer is disposed and the
+    // loop has stopped writing to it, whichever happens last.
+    private readonly object _outputLock = new();
+    private WriteableBitmap? _output;
+    private bool _loopFinished;
+
     public Bitmap? Frame => _bitmap;
     public Action? FrameReady { get; set; }
 
@@ -69,6 +75,9 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
             var scaledInfo = new SKImageInfo(width, height, SKColorType.Bgra8888, SKAlphaType.Premul);
             using var scaled = new SKBitmap(scaledInfo);
             var output = new WriteableBitmap(new PixelSize(width, height), new Vector(96, 96), PixelFormat.Bgra8888, AlphaFormat.Premul);
+
+            lock (_outputLock)
+                _output = output;
             var index = 0;
 
             while (!ct.IsCancellationRequested)
@@ -101,6 +110,35 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
         {
             // Unreadable or malformed: the cover keeps its still image.
         }
+        finally
+        {
+            lock (_outputLock)
+                _loopFinished = true;
+
+            ReleaseOutput();
+        }
+    }
+
+    /// <summary>
+    /// Disposes the frame bitmap once nothing can use it: the host dropped this renderer and the
+    /// loop stopped. It's native (Skia) memory the GC barely sees, so finalizers would leave it
+    /// piling up. Disposed on the UI thread, where the host draws it.
+    /// </summary>
+    private void ReleaseOutput()
+    {
+        WriteableBitmap? output;
+
+        lock (_outputLock)
+        {
+            if (!_disposed || !_loopFinished || _output == null)
+                return;
+
+            output = _output;
+            _output = null;
+        }
+
+        _bitmap = null;
+        Dispatcher.UIThread.Post(output.Dispose);
     }
 
     private static unsafe void CopyInto(SKBitmap source, WriteableBitmap target)
@@ -132,5 +170,8 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
         FrameReady = null;
         _cts.Cancel();
         _bitmap = null;
+
+        // A paused loop wakes on the cancellation too (WhilePausedAsync waits with the token)
+        ReleaseOutput();
     }
 }

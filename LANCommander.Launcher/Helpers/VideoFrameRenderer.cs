@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
 using System.Reflection;
@@ -96,6 +97,13 @@ internal sealed class VideoFrameRenderer : IFrameAnimation
 
     private MediaPlayer? _player;
     private WriteableBitmap? _bitmap;
+
+    /// <summary>
+    /// Frame bitmaps LibVLC has finished with (it re-negotiates the format on some streams). Kept
+    /// until <see cref="Dispose"/> rather than freed at once: a host may still hold the old one
+    /// (the lightbox's canvas does until <see cref="BitmapReady"/> hands it the new one).
+    /// </summary>
+    private readonly List<WriteableBitmap> _retiredBitmaps = new();
     private IntPtr _buffer;
     private uint _width;
     private uint _height;
@@ -207,9 +215,20 @@ internal sealed class VideoFrameRenderer : IFrameAnimation
             _buffer = IntPtr.Zero;
         }
 
-        _bitmap = null;
+        RetireBitmap();
         _width = 0;
         _height = 0;
+    }
+
+    private void RetireBitmap()
+    {
+        if (_bitmap == null)
+            return;
+
+        lock (_retiredBitmaps)
+            _retiredBitmaps.Add(_bitmap);
+
+        _bitmap = null;
     }
 
     // ── Frame callbacks ──────────────────────────────────────────────────
@@ -268,6 +287,23 @@ internal sealed class VideoFrameRenderer : IFrameAnimation
             _buffer = IntPtr.Zero;
         }
 
-        _bitmap = null;
+        // The frame bitmaps are native (Skia) memory the GC barely sees; left to finalizers they
+        // pile up as videos come and go. Disposed on the UI thread, which is where hosts draw
+        // them, so it lands after whatever dropped this renderer (some dispose it off-thread).
+        RetireBitmap();
+
+        List<WriteableBitmap> bitmaps;
+        lock (_retiredBitmaps)
+        {
+            bitmaps = new List<WriteableBitmap>(_retiredBitmaps);
+            _retiredBitmaps.Clear();
+        }
+
+        if (bitmaps.Count > 0)
+            Dispatcher.UIThread.Post(() =>
+            {
+                foreach (var bitmap in bitmaps)
+                    bitmap.Dispose();
+            });
     }
 }

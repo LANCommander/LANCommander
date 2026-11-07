@@ -52,8 +52,8 @@ public class HqMediaGrabberTests
     [InlineData("https://hq.lancommander.app/Games/x/media/4")]
     public void AnUnresolvableMediaIdIsEmpty(string? url)
     {
-        // Empty is meaningful: DownloadAsync uses it to fall back to the by-type route rather
-        // than sending HQ a request it cannot answer.
+        // Empty is meaningful: DownloadAsync then fetches the media's source directly, or failing
+        // that the by-type route, rather than sending HQ a by-id request it cannot answer.
         HqMediaGrabber.ResolveMediaId(new HqModels.MediaDto { Url = url }).ShouldBe(Guid.Empty);
     }
 
@@ -162,5 +162,44 @@ public class HqMediaGrabberTests
 
         HqMediaGrabber.ResolveThumbnailUrl(MediaType.Video, new HqModels.MediaDto(), null)
             .ShouldBe(string.Empty);
+    }
+
+    [Fact]
+    public void StoredMediaIsKeyedByItsHqId()
+    {
+        var media = new HqModels.MediaDto { Id = Guid.Parse(MediaId), SourceUrl = "https://images.example/a.jpg" };
+
+        HqMediaGrabber.ResultId(Guid.Parse(GameId), HqModels.MediaType.Screenshot, media)
+            .ShouldBe($"{GameId}:{(int)HqModels.MediaType.Screenshot}:{MediaId}");
+    }
+
+    [Fact]
+    public void UnstoredMediaOfOneTypeGetsDistinctIds()
+    {
+        // HQ's enrichers append all of another provider's screenshots, none of them stored, so none
+        // has an id; keyed on the empty GUID they collapsed into one tile in the picker.
+        var first = new HqModels.MediaDto { SourceUrl = "https://steamcdn.example/ss_1.jpg" };
+        var second = new HqModels.MediaDto { SourceUrl = "https://steamcdn.example/ss_2.jpg" };
+
+        var firstId = HqMediaGrabber.ResultId(Guid.Parse(GameId), HqModels.MediaType.Screenshot, first);
+        var secondId = HqMediaGrabber.ResultId(Guid.Parse(GameId), HqModels.MediaType.Screenshot, second);
+
+        firstId.ShouldNotBe(secondId);
+        firstId.ShouldBe(HqMediaGrabber.ResultId(Guid.Parse(GameId), HqModels.MediaType.Screenshot, first));
+
+        // Not a GUID, so the download goes to the source rather than asking HQ for a record it lacks
+        Guid.TryParse(firstId.Split(':', 3)[2], out _).ShouldBeFalse();
+    }
+
+    [Theory]
+    [InlineData("https://steamcdn.example/ss_1.jpg", true)]
+    [InlineData("http://images.example/a.png", true)]
+    [InlineData("ftp://files.example/a.png", false)]
+    [InlineData("/static/pdf.png", false)]
+    [InlineData("", false)]
+    [InlineData(null, false)]
+    public void OnlyAnAbsoluteWebUrlIsDownloadedDirectly(string? sourceUrl, bool direct)
+    {
+        (HqMediaGrabber.DirectUrl(sourceUrl) != null).ShouldBe(direct);
     }
 }

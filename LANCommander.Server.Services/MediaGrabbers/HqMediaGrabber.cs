@@ -105,7 +105,7 @@ public class HqMediaGrabber(
                 {
                     results.Add(new MediaGrabberResult
                     {
-                        Id = $"{gameDto.Id}:{(int)hqMediaType}:{ResolveMediaId(media)}",
+                        Id = ResultId(gameDto.Id, hqMediaType, media),
                         Type = type,
                         SourceUrl = media.SourceUrl ?? media.Url ?? string.Empty,
                         ThumbnailUrl = ResolveThumbnailUrl(type, media, result.CoverUrl),
@@ -122,6 +122,23 @@ public class HqMediaGrabber(
             logger.LogError(ex, "Error searching HQ for media of type {MediaType} with keywords '{Keywords}'", type, keywords);
             return [];
         }
+    }
+
+    /// <summary>
+    /// "{game}:{type}:{media}", which <see cref="DownloadAsync(MediaGrabberResult, IProgress{MediaDownloadProgress}?)"/>
+    /// takes apart again. Media HQ never stored has no id, and a game can carry several such of one
+    /// type (all of a provider's screenshots), so those are told apart by a hash of their source;
+    /// not being a GUID, it sends the download to that source.
+    /// </summary>
+    internal static string ResultId(Guid gameId, HqModels.MediaType type, HqModels.MediaDto media)
+    {
+        var mediaId = ResolveMediaId(media);
+
+        var mediaKey = mediaId != Guid.Empty || string.IsNullOrWhiteSpace(media.SourceUrl)
+            ? mediaId.ToString()
+            : "src-" + Convert.ToHexStringLower(System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(media.SourceUrl)))[..16];
+
+        return $"{gameId}:{(int)type}:{mediaKey}";
     }
 
     internal static Guid ResolveMediaId(HqModels.MediaDto media)
@@ -206,30 +223,68 @@ public class HqMediaGrabber(
             ? parsedMediaId
             : Guid.Empty;
 
+        var directUrl = DirectUrl(result.SourceUrl);
+
         try
         {
+            // Media HQ added from another provider while answering (its enrichers) was never stored,
+            // so it has no id, and the by-type route serves only stored media: it would 404, or hand
+            // back a different record of the same type. Its source is a public URL, so fetch that.
+            if (mediaId == Guid.Empty && directUrl != null)
+                return await DownloadDirectAsync(directUrl, progress);
+
             using var response = await hqConnection.TrackAsync(() => mediaId == Guid.Empty
                 ? hqClient.Games.GetMediaAsync(gameId, hqMediaType)
                 : hqClient.Games.GetMediaByIdAsync(gameId, mediaId));
+
+            // A record HQ no longer has (its cached answer outlived it) can still come from its source
+            if (!response.IsSuccessStatusCode && directUrl != null)
+            {
+                logger.LogWarning("HQ answered {StatusCode} for media {MediaId} of game {GameId}; downloading from its source instead",
+                    (int)response.StatusCode, mediaId, gameId);
+
+                return await DownloadDirectAsync(directUrl, progress);
+            }
+
             response.EnsureSuccessStatusCode();
 
-            var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
-            var stream = await response.Content.ReadAsStreamAsync();
-
-            long? totalBytes = response.Content.Headers.ContentLength;
-
-            var tempStream = await ProgressStream.CopyToTempFileAsync(stream, totalBytes, progress);
-
-            return new MediaGrabberDownload
-            {
-                Stream = tempStream,
-                MimeType = contentType,
-            };
+            return await ToDownloadAsync(response, progress);
         }
         catch (Exception ex)
         {
             logger.LogError(ex, "Error downloading media from HQ for game {GameId}, media type {MediaType}, media {MediaId}", gameId, hqMediaType, mediaId);
             throw;
         }
+    }
+
+    /// <summary>The media's source when it is somewhere to download from: an absolute http(s) URL.</summary>
+    internal static Uri? DirectUrl(string? sourceUrl) =>
+        Uri.TryCreate(sourceUrl, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttp || uri.Scheme == Uri.UriSchemeHttps)
+            ? uri
+            : null;
+
+    private static async Task<MediaGrabberDownload> DownloadDirectAsync(Uri url, IProgress<MediaDownloadProgress>? progress)
+    {
+        // Not the HQ client: the source is another host, and HQ's credentials don't belong there
+        using var http = new HttpClient { Timeout = TimeSpan.FromMinutes(30) };
+        using var response = await http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead);
+
+        response.EnsureSuccessStatusCode();
+
+        return await ToDownloadAsync(response, progress);
+    }
+
+    private static async Task<MediaGrabberDownload> ToDownloadAsync(HttpResponseMessage response, IProgress<MediaDownloadProgress>? progress)
+    {
+        var contentType = response.Content.Headers.ContentType?.MediaType ?? "application/octet-stream";
+        var stream = await response.Content.ReadAsStreamAsync();
+
+        var tempStream = await ProgressStream.CopyToTempFileAsync(stream, response.Content.Headers.ContentLength, progress);
+
+        return new MediaGrabberDownload
+        {
+            Stream = tempStream,
+            MimeType = contentType,
+        };
     }
 }

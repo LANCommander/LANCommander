@@ -69,5 +69,12 @@ module.exports = {
         }),
     ],
     mode: 'production', // Use 'production' for minified output
-    devtool: 'source-map'
+    devtool: 'source-map',
+    // Persists module builds to node_modules/.cache/webpack between runs
+    cache: {
+        type: 'filesystem',
+        buildDependencies: {
+            config: [__filename],
+        },
+    },
 };

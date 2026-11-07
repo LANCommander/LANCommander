@@ -9,6 +9,14 @@
         new("rpg", "Role-Playing", Disabled: true),
     ];
 
+    static readonly SelectItem<string>[] MediaProviders =
+    [
+        new("steamgriddb", "SteamGridDB", Group: "Providers"),
+        new("youtube", "YouTube", Group: "Providers"),
+        new("hq-igdb", "IGDB", Group: "LANCommander HQ"),
+        new("hq-steam", "Steam", Group: "LANCommander HQ"),
+    ];
+
     static readonly SelectItem<string>[] AddModes =
     [
         new("lookup", "Look up metadata"),
@@ -105,6 +113,17 @@
             FullPage = true,
             Click = "#select-target",
             WaitFor = ".rz-dropdown-panel li",
+            Covers = [typeof(Select<>)],
+        },
+        new("Select.Grouped", "An open multiselect with its choices under group headings",
+            @<div style="height: 300px">
+                <div><Select TValue="string" Multiple Items="MediaProviders" Values="@(new[] { "steamgriddb", "hq-igdb" })" MaxSelectedLabels="1" SelectedItemsText="providers" id="select-grouped-target" /></div>
+            </div>)
+        {
+            Width = 320,
+            FullPage = true,
+            Click = "#select-grouped-target",
+            WaitFor = ".rz-multiselect-panel li",
             Covers = [typeof(Select<>)],
         },
         new("InputGroup.Sizes", "Joined inputs: a byte size with its unit, and a width by height",

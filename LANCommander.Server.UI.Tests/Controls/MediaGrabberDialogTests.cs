@@ -149,11 +149,53 @@ public class MediaGrabberDialogTests : ControlsTestContext
         });
     }
 
+    [Fact]
+    public void AGrabbersSources_AreListedUnderItsOwnGroup()
+    {
+        _grabbers.SubProviders["Beta"] = [("igdb", "IGDB"), ("steam", "Steam")];
+
+        Open();
+
+        _host.WaitForAssertion(() =>
+        {
+            var headers = _host.FindAll("li[data-lc-group-header]").Select(h => h.TextContent.Trim());
+
+            Assert.Equal(["Providers", "Beta"], headers);
+            Assert.Equal(["IGDB", "Steam"], _host.FindAll("li[data-lc-group='Beta']").Select(i => i.TextContent.Trim()));
+            Assert.Equal(["Alpha"], _host.FindAll("li[data-lc-group='Providers']").Select(i => i.TextContent.Trim()));
+        });
+    }
+
+    [Fact]
+    public void AGrabberWithSources_SearchesItsFirstSource_AndSaysWhichInItsHeader()
+    {
+        _grabbers.SubProviders["Beta"] = [("igdb", "IGDB"), ("steam", "Steam")];
+
+        Open();
+
+        _host.WaitForAssertion(() =>
+            Assert.Equal(["Searching Alpha", "Searching Beta · IGDB"], _host.FindAll(".media-grabber-searching").Select(s => s.TextContent.Trim())));
+
+        lock (_grabbers.Searches)
+            Assert.Equal([("Alpha", null), ("Beta", "igdb")], _grabbers.Searches.OrderBy(s => s.Grabber));
+
+        _grabbers.Answer("Beta", Result("b1"));
+
+        _host.WaitForAssertion(() =>
+            Assert.Contains(_host.FindAll(".media-grabber-group-source"), s => s.TextContent == "via Beta · IGDB"));
+    }
+
     /// <summary>Grabbers whose answers the test hands out one at a time.</summary>
     private sealed class FakeGrabbers(params string[] names) : IMediaGrabberService
     {
-        private readonly Channel<MediaGrabberBatch> _batches = Channel.CreateUnbounded<MediaGrabberBatch>();
-        private int _answered;
+        private readonly Dictionary<string, Channel<MediaGrabberBatch>> _batches =
+            names.ToDictionary(n => n, _ => Channel.CreateUnbounded<MediaGrabberBatch>());
+
+        /// <summary>Sources inside a grabber, as LANCommander HQ has its providers.</summary>
+        public Dictionary<string, (string Slug, string Name)[]> SubProviders { get; } = new();
+
+        /// <summary>Each search asked, as grabber and source.</summary>
+        public List<(string? Grabber, string? SubProvider)> Searches { get; } = new();
 
         public string Name => "All";
 
@@ -162,6 +204,9 @@ public class MediaGrabberDialogTests : ControlsTestContext
         public IEnumerable<string> GetGrabberNames() => names;
 
         public IEnumerable<string> GetGrabberNames(MediaType type) => names;
+
+        public Task<IEnumerable<(string Slug, string Name)>?> GetSubProvidersAsync(string grabberName) =>
+            Task.FromResult<IEnumerable<(string Slug, string Name)>?>(SubProviders.GetValueOrDefault(grabberName));
 
         public void Answer(string grabber, params MediaGrabberResult[] results)
         {
@@ -175,17 +220,20 @@ public class MediaGrabberDialogTests : ControlsTestContext
 
         private void Write(MediaGrabberBatch batch)
         {
-            _batches.Writer.TryWrite(batch);
+            var channel = _batches[batch.GrabberName];
 
-            if (Interlocked.Increment(ref _answered) == names.Length)
-                _batches.Writer.TryComplete();
+            channel.Writer.TryWrite(batch);
+            channel.Writer.TryComplete();
         }
 
         public async IAsyncEnumerable<MediaGrabberBatch> SearchBatchesAsync(
             MediaType type, string keywords, string? grabberName, string? subProvider, int page,
             [EnumeratorCancellation] CancellationToken cancellationToken = default)
         {
-            await foreach (var batch in _batches.Reader.ReadAllAsync(cancellationToken))
+            lock (Searches)
+                Searches.Add((grabberName, subProvider));
+
+            await foreach (var batch in _batches[grabberName!].Reader.ReadAllAsync(cancellationToken))
                 yield return batch;
         }
 

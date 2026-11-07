@@ -10,7 +10,9 @@
 @*
     Searches the media grabbers for art or videos of a game, grouped by where they came from, and
     downloads the one (or, with MultiSelect, several) the user picks. Double-clicking picks at once.
-    Every grabber searched answers once, so each shows as searching until its batch lands.
+    One multiselect picks what to search: grabbers under Providers, and a grabber with sources of
+    its own (LANCommander HQ's providers) as a group of those sources. Every pick searched answers
+    once, so each shows as searching until its batch lands.
     Open it with DialogSettings.Picker; the chips in the title come from the options.
 *@
 <div class="media-grabber">
@@ -21,16 +23,9 @@
         </span>
 
         <span class="media-grabber-select media-grabber-select-icon">
-            <Icon Type="@(_selectedProvider == AllProviders ? IconType.ListBullets : IconType.Cube)" Class="media-grabber-select-glyph" />
-            <Select TValue="string" Items="_providerItems" Value="_selectedProvider" ValueChanged="OnProviderChangedAsync" aria-label="Provider" />
+            <Icon Type="@(_selectedTargets.Count() == 1 ? IconType.Cube : IconType.ListBullets)" Class="media-grabber-select-glyph" />
+            <Select TValue="string" Multiple Items="_providerItems" Values="_selectedTargets" ValuesChanged="OnProvidersChangedAsync" MaxSelectedLabels="1" SelectedItemsText="providers" Placeholder="Providers" aria-label="Providers" />
         </span>
-
-        @if (_subProviderItems.Any())
-        {
-            <span class="media-grabber-select media-grabber-select-sub">
-                <Select TValue="string" Items="_subProviderItems" Value="_selectedSubProvider" ValueChanged="OnSubProviderChangedAsync" aria-label="Source" />
-            </span>
-        }
 
         <span class="media-grabber-toolbar-spacer"></span>
 
@@ -71,14 +66,14 @@
             var groupId = GroupId(group);
             var selectedCount = group.Results.Count(IsSelected);
 
-            <section class="media-grabber-group" aria-label="@($"{group.Group} via {group.GrabberName}")">
+            <section class="media-grabber-group" aria-label="@($"{group.Group} via {group.Target.Label}")">
                 <div class="media-grabber-group-header">
                     <h2>@group.Group</h2>
-                    <span class="media-grabber-group-source">via @Via(group.GrabberName)</span>
+                    <span class="media-grabber-group-source">via @group.Target.Label</span>
                     <span class="media-grabber-group-spacer"></span>
                     @if (_loadingGroupId == groupId)
                     {
-                        <span class="media-grabber-searching"><Spinner />Searching @group.GrabberName</span>
+                        <span class="media-grabber-searching"><Spinner />Searching @group.Target.Label</span>
                     }
                     else
                     {
@@ -148,29 +143,35 @@
         }
 
         @* Grabbers still searching get their own header, so a slow one is never mistaken for an empty one *@
-        @foreach (var provider in PendingProviders)
+        @foreach (var target in PendingTargets)
         {
             <section class="media-grabber-group media-grabber-group-pending" aria-busy="true">
                 <div class="media-grabber-group-header">
                     <h2>@_searchedFor</h2>
-                    <span class="media-grabber-group-source">via @Via(provider)</span>
+                    <span class="media-grabber-group-source">via @target.Label</span>
                     <span class="media-grabber-group-spacer"></span>
-                    <span class="media-grabber-searching" role="status"><Spinner />Searching @provider</span>
+                    <span class="media-grabber-searching" role="status"><Spinner />Searching @target.Label</span>
                 </div>
             </section>
         }
 
-        @if (!_groupedResults.Any() && !PendingProviders.Any() && !_loading)
+        @if (!_groupedResults.Any() && !PendingTargets.Any() && !_loading)
         {
-            <Empty Title="No results" Description="@(String.IsNullOrWhiteSpace(_search) ? "Type a title to search for." : $"None of the providers found anything for \"{_search}\".")" Icon="IconType.MagnifyingGlass" />
+            <Empty Title="No results" Description="@EmptyDescription()" Icon="IconType.MagnifyingGlass" />
         }
     </div>
 </div>
 
 @code {
+    /// <summary>
+    /// One thing the provider dropdown can pick: a grabber, or one source inside a grabber that
+    /// searches several (each of LANCommander HQ's providers). Each is searched and tracked on its own.
+    /// </summary>
+    sealed record SearchTarget(string Key, string Grabber, string? SubProvider, string Label);
+
     sealed class GroupedResults
     {
-        public required string GrabberName { get; init; }
+        public required SearchTarget Target { get; init; }
         public required string Group { get; init; }
         public required List<MediaGrabberResult> Results { get; init; }
     }
@@ -192,11 +193,22 @@
     long? _totalBytes;
     string _downloadStatus = "Downloading";
 
-    // The grabbers the current search asked, and which of them have answered
-    List<string> _providers = [];
+    // The targets the current search asked, and the keys of those that have answered
+    List<SearchTarget> _providers = [];
     readonly HashSet<string> _answered = new();
 
-    IEnumerable<string> PendingProviders => _providers.Where(p => !_answered.Contains(p));
+    IEnumerable<SearchTarget> PendingTargets => _providers.Where(p => !_answered.Contains(p.Key));
+
+    string EmptyDescription()
+    {
+        if (!_selectedTargets.Any())
+            return "Choose at least one provider to search.";
+
+        if (String.IsNullOrWhiteSpace(_search))
+            return "Type a title to search for.";
+
+        return $"None of the providers found anything for \"{_search}\".";
+    }
 
     /// <summary>The type of media and, when several can be picked, that too.</summary>
     protected override RenderFragment TitleContent => @<text>
@@ -222,7 +234,7 @@
           </div>
         : @<div class="media-grabber-footer">
               <span class="media-grabber-footer-selected">@SelectedCount selected</span>
-              <span class="media-grabber-footer-summary">@_allResults.Count @(_allResults.Count == 1 ? "result" : "results") · @_answered.Count(_providers.Contains) of @_providers.Count @(_providers.Count == 1 ? "provider" : "providers") answered</span>
+              <span class="media-grabber-footer-summary">@_allResults.Count @(_allResults.Count == 1 ? "result" : "results") · @_providers.Count(p => _answered.Contains(p.Key)) of @_providers.Count @(_providers.Count == 1 ? "provider" : "providers") answered</span>
               <span class="media-grabber-footer-hint">Double-click a thumbnail to pick it straight away</span>
           </div>;
 
@@ -270,12 +282,13 @@
     readonly HashSet<string> _exhaustedGroups = new();
     string? _loadingGroupId;
 
-    const string AllProviders = "All";
-    string _selectedProvider = AllProviders;
+    // Every target the dropdown offers, in the order it lists them
+    List<SearchTarget> _targets = [];
     IEnumerable<SelectItem<string>> _providerItems = [];
+    IEnumerable<string> _selectedTargets = [];
 
-    string? _selectedSubProvider;
-    IEnumerable<SelectItem<string>> _subProviderItems = [];
+    // The target each result was found through, by its unique key
+    readonly Dictionary<string, SearchTarget> _resultTargets = new();
 
     protected override bool CanConfirm => _multiSelect ? _selectedKeys.Any() : _selected != null;
 
@@ -286,11 +299,8 @@
         _multiSelect = Options.MultiSelect;
         _size = _type == MediaType.Video ? 240 : 160;
 
-        var providers = MediaGrabberService.GetGrabberNames(_type).ToList();
-
-        _providerItems = new[] { new SelectItem<string>(AllProviders, "All providers") }
-            .Concat(providers.Select(p => new SelectItem<string>(p, p)))
-            .ToList();
+        // Until the sources inside grabbers are known, each grabber is one target
+        SetTargets(MediaGrabberService.GetGrabberNames(_type).Select(g => (g, (IReadOnlyList<(string Slug, string Name)>?)null)).ToList());
 
         _pagingProviders = MediaGrabberService.GetPagingGrabberNames().ToHashSet();
     }
@@ -300,9 +310,70 @@
         // Results stream in, so search once the dialog is showing
         if (firstRender)
         {
-            await UpdateSubProvidersAsync();
+            await LoadTargetsAsync();
             await GetResultsAsync();
         }
+    }
+
+    /// <summary>
+    /// Asks each grabber for the sources it searches through. A grabber with sources gets a group
+    /// of its own in the dropdown, one choice per source; the rest share the Providers group.
+    /// </summary>
+    async Task LoadTargetsAsync()
+    {
+        var grabbers = MediaGrabberService.GetGrabberNames(_type).ToList();
+
+        var subProviders = await Task.WhenAll(grabbers.Select(async grabber =>
+        {
+            try
+            {
+                var sources = await MediaGrabberService.GetSubProvidersAsync(grabber);
+
+                return (grabber, (IReadOnlyList<(string Slug, string Name)>?)sources?.ToList());
+            }
+            catch
+            {
+                return (grabber, null);
+            }
+        }));
+
+        SetTargets(subProviders);
+    }
+
+    void SetTargets(IReadOnlyList<(string Grabber, IReadOnlyList<(string Slug, string Name)>? SubProviders)> grabbers)
+    {
+        var targets = new List<SearchTarget>();
+        var items = new List<SelectItem<string>>();
+        var selected = new List<string>();
+
+        foreach (var (grabber, subProviders) in grabbers)
+        {
+            if (subProviders is { Count: > 0 })
+            {
+                foreach (var (slug, name) in subProviders)
+                {
+                    var target = new SearchTarget($"{grabber}\u001f{slug}", grabber, slug, $"{grabber} · {name}");
+
+                    targets.Add(target);
+                    items.Add(new SelectItem<string>(target.Key, name, Group: grabber));
+                }
+
+                // A grabber's first source is the one searched until others are picked
+                selected.Add(targets.First(t => t.Grabber == grabber).Key);
+            }
+            else
+            {
+                var target = new SearchTarget(grabber, grabber, null, grabber);
+
+                targets.Add(target);
+                items.Add(new SelectItem<string>(target.Key, grabber, Group: "Providers"));
+                selected.Add(target.Key);
+            }
+        }
+
+        _targets = targets;
+        _providerItems = items;
+        _selectedTargets = selected;
     }
 
     MediaGrabberResult? Find(string key) => _allResults.FirstOrDefault(r => r.UniqueKey == key);
@@ -312,37 +383,11 @@
 
     string InputId(MediaGrabberResult result) => $"media-grabber-result-{_allResults.IndexOf(result)}";
 
-    /// <summary>Where a group came from, with the source inside the provider when one is chosen.</summary>
-    string Via(string grabberName)
+    async Task OnProvidersChangedAsync(IEnumerable<string> targets)
     {
-        var sub = grabberName == _selectedProvider && _selectedSubProvider != null
-            ? _subProviderItems.FirstOrDefault(i => i.Value == _selectedSubProvider)?.Label
-            : null;
-
-        return sub == null ? grabberName : $"{grabberName} · {sub}";
-    }
-
-    async Task OnProviderChangedAsync(string? provider)
-    {
-        _selectedProvider = provider ?? AllProviders;
-
-        await UpdateSubProvidersAsync();
-        await GetResultsAsync();
-    }
-
-    async Task OnSubProviderChangedAsync(string? subProvider)
-    {
-        _selectedSubProvider = subProvider;
+        _selectedTargets = targets.ToList();
 
         await GetResultsAsync();
-    }
-
-    async Task UpdateSubProvidersAsync()
-    {
-        var subProviders = await MediaGrabberService.GetSubProvidersAsync(_selectedProvider);
-
-        _subProviderItems = subProviders?.Select(sp => new SelectItem<string>(sp.Slug, sp.Name)).ToList() ?? [];
-        _selectedSubProvider = subProviders?.FirstOrDefault().Slug;
     }
 
     async Task GetResultsAsync()
@@ -358,6 +403,7 @@
         _allResults.Clear();
         _groupedResults.Clear();
         _seenKeys.Clear();
+        _resultTargets.Clear();
         _selectedKeys.Clear();
         _groupPages.Clear();
         _exhaustedGroups.Clear();
@@ -367,16 +413,14 @@
 
         _providers = String.IsNullOrWhiteSpace(_search)
             ? []
-            : MediaGrabberService.GetGrabberNames(_type)
-                .Where(p => _selectedProvider == AllProviders || p == _selectedProvider)
-                .ToList();
+            : _targets.Where(t => _selectedTargets.Contains(t.Key)).ToList();
 
         StateHasChanged();
 
         try
         {
             if (!String.IsNullOrWhiteSpace(_search))
-                await StreamResultsAsync(_search, _selectedProvider == AllProviders ? null : _selectedProvider, 0, null, token);
+                await Task.WhenAll(_providers.Select(target => StreamResultsAsync(target, _search, 0, null, token)));
         }
         catch (OperationCanceledException)
         {
@@ -389,18 +433,18 @@
 
         // Whatever never answered has nothing to show
         if (!token.IsCancellationRequested)
-            _answered.UnionWith(_providers);
+            _answered.UnionWith(_providers.Select(p => p.Key));
 
         _loading = false;
         StateHasChanged();
     }
 
-    static string GroupId(GroupedResults group) => $"{group.GrabberName}|{group.Group}";
+    static string GroupId(GroupedResults group) => $"{group.Target.Key}|{group.Group}";
 
     bool CanLoadMore(GroupedResults group) =>
         !_loading
         && group.Results.Any()
-        && _pagingProviders.Contains(group.GrabberName)
+        && _pagingProviders.Contains(group.Target.Grabber)
         && !_exhaustedGroups.Contains(GroupId(group));
 
     async Task LoadMoreAsync(GroupedResults group)
@@ -418,8 +462,8 @@
             var nextPage = _groupPages.GetValueOrDefault(groupId) + 1;
             _groupPages[groupId] = nextPage;
 
-            // Only query the provider this group came from, and keep only this game's results
-            if (await StreamResultsAsync(_search, group.GrabberName, nextPage, group.Group, _searchCts.Token) == 0)
+            // Only query the target this group came from, and keep only this game's results
+            if (await StreamResultsAsync(group.Target, _search, nextPage, group.Group, _searchCts.Token) == 0)
                 _exhaustedGroups.Add(groupId);
         }
         catch (OperationCanceledException)
@@ -435,37 +479,42 @@
         }
     }
 
-    async Task<int> StreamResultsAsync(string search, string? grabberName, int page, string? onlyGroup, CancellationToken token)
+    async Task<int> StreamResultsAsync(SearchTarget target, string search, int page, string? onlyGroup, CancellationToken token)
     {
         var added = 0;
 
-        await foreach (var batch in MediaGrabberService.SearchBatchesAsync(_type, search, grabberName, _selectedSubProvider, page, token))
+        await foreach (var batch in MediaGrabberService.SearchBatchesAsync(_type, search, target.Grabber, target.SubProvider, page, token))
         {
             if (token.IsCancellationRequested)
                 break;
 
-            _answered.Add(batch.GrabberName);
+            if (batch.GrabberName != target.Grabber)
+                continue;
+
+            _answered.Add(target.Key);
 
             foreach (var result in batch.Results)
             {
                 if (onlyGroup != null && result.Group != onlyGroup)
                     continue;
 
-                result.UniqueKey = $"{result.GrabberName}:{result.Id}";
+                // The same game can turn up through several of a grabber's sources
+                result.UniqueKey = $"{target.Key}:{result.Id}";
 
                 if (!_seenKeys.Add(result.UniqueKey))
                     continue;
 
                 _allResults.Add(result);
+                _resultTargets[result.UniqueKey] = target;
                 added++;
             }
 
-            // Groups keep the order their grabbers answered in
+            // Groups keep the order their targets answered in
             _groupedResults = _allResults
-                .GroupBy(r => new { r.GrabberName, r.Group })
+                .GroupBy(r => (Target: _resultTargets[r.UniqueKey], r.Group))
                 .Select(g => new GroupedResults
                 {
-                    GrabberName = g.Key.GrabberName,
+                    Target = g.Key.Target,
                     Group = g.Key.Group,
                     Results = g.DistinctBy(r => r.Id).ToList(),
                 })

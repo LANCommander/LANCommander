@@ -23,6 +23,9 @@
                     ValueChanged="@((IEnumerable<TValue> values) => SetValuesAsync(values))"
                     Multiple="true"
                     Chips="true"
+                    MaxSelectedLabels="MaxSelectedLabels"
+                    SelectedItemsText="@SelectedItemsText"
+                    ItemRender="@((DropDownItemRenderEventArgs<IEnumerable<TValue>> args) => RenderItem(args.Item, args))"
                     AllowFiltering="Searchable"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     AllowClear="Clearable"
@@ -42,6 +45,7 @@ else
                     DisabledProperty="@nameof(SelectItem<TValue>.Disabled)"
                     Value="@Value"
                     ValueChanged="@((TValue value) => SetValueAsync(value))"
+                    ItemRender="@((DropDownItemRenderEventArgs<TValue> args) => RenderItem(args.Item, args))"
                     AllowFiltering="Searchable"
                     FilterCaseSensitivity="FilterCaseSensitivity.CaseInsensitive"
                     AllowClear="Clearable"
@@ -78,8 +82,17 @@ else
     /// <summary>A compact 24px select sized to its choice, e.g. beside a page title.</summary>
     [Parameter] public bool Small { get; set; }
 
+    /// <summary>With <see cref="Multiple"/>, how many chips show before they collapse into <see cref="SelectedItemsText"/>.</summary>
+    [Parameter] public int MaxSelectedLabels { get; set; } = 4;
+
+    /// <summary>With <see cref="Multiple"/>, follows the count once the chips collapse: "3 items selected".</summary>
+    [Parameter] public string SelectedItemsText { get; set; } = "items selected";
+
     readonly List<SelectItem<TValue>> _childOptions = [];
     List<SelectItem<TValue>> _options = [];
+
+    // Group headings are rows of their own that can't be picked, told apart by reference
+    readonly HashSet<SelectItem<TValue>> _headers = new(ReferenceEqualityComparer.Instance);
     FieldIdentifier? _valuesField;
     string? _style;
 
@@ -114,8 +127,45 @@ else
 
     void RebuildOptions()
     {
-        _options = [.. Items ?? [], .. _childOptions];
+        List<SelectItem<TValue>> options = [.. Items ?? [], .. _childOptions];
+
+        _headers.Clear();
+
+        if (options.Any(o => o.Group != null))
+        {
+            // Ungrouped choices first, then each group under its heading, in the order groups first appear
+            var grouped = new List<SelectItem<TValue>>(options.Where(o => o.Group == null));
+
+            foreach (var group in options.Where(o => o.Group != null).GroupBy(o => o.Group!))
+            {
+                var header = new SelectItem<TValue>(default!, group.Key, Disabled: true);
+
+                _headers.Add(header);
+                grouped.Add(header);
+                grouped.AddRange(group);
+            }
+
+            options = grouped;
+        }
+
+        _options = options;
         _hasImages = _options.Any(o => o.Image != null);
+    }
+
+    void RenderItem<T>(object? item, DropDownBaseItemRenderEventArgs<T> args)
+    {
+        if (item is not SelectItem<TValue> option)
+            return;
+
+        if (_headers.Contains(option))
+        {
+            args.Disabled = true;
+            args.Attributes["data-lc-group-header"] = "";
+            args.Attributes["role"] = "presentation";
+            args.Attributes["aria-disabled"] = "true";
+        }
+        else if (option.Group != null)
+            args.Attributes["data-lc-group"] = option.Group;
     }
 
     bool _hasImages;
@@ -133,6 +183,14 @@ else
 
     async Task SetValuesAsync(IEnumerable<TValue>? values)
     {
+        // Select all can sweep up group headings; only real choices count
+        if (values != null && _headers.Count > 0)
+        {
+            var choices = _options.Where(o => !_headers.Contains(o)).Select(o => o.Value).ToHashSet();
+
+            values = values.Where(choices.Contains).ToList();
+        }
+
         Values = values;
 
         await ValuesChanged.InvokeAsync(values ?? []);

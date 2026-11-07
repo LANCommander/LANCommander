@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Net.Http;
@@ -85,13 +86,21 @@ public partial class Cover : UserControl, ICarouselLazyItem
     private Thickness _fallbackPadding = new(12);
     private IBrush _fallbackBackground = FallbackBrushes[0];
     private CancellationTokenSource? _loadCts;
-    private VideoFrameRenderer? _videoRenderer;
+    private IFrameAnimation? _animation;
     private bool _isAnimatedCover;
+    // Video plays through LibVLC from the placeholder; an animated image (GIF/APNG/WebP) through
+    // AnimatedImageRenderer, over its own still first frame.
+    private bool _animatedIsVideo;
     private bool _receivedFirstFrame;
     private string? _lastLoadedSource;
     // Source for an animated cover whose stream is deferred until it should actually
     // play (hover/focus), so the depot doesn't stream every video cover up front.
     private string? _animatedSource;
+
+    // The window hosting the cover. Animated covers hold their current frame while it isn't the
+    // active window, so a launcher left behind other apps doesn't keep decoding and redrawing video.
+    private WindowBase? _window;
+    private bool IsWindowActive => _window?.IsActive ?? true;
 
     // Loads wait until the cover is attached. Inside a carousel they wait further, until the carousel
     // reports the cover within a page of the viewport, so a long carousel doesn't fetch every cover.
@@ -237,6 +246,14 @@ public partial class Cover : UserControl, ICarouselLazyItem
     {
         base.OnAttachedToVisualTree(e);
 
+        _window = TopLevel.GetTopLevel(this) as WindowBase;
+
+        if (_window != null)
+        {
+            _window.Activated += OnWindowActivationChanged;
+            _window.Deactivated += OnWindowActivationChanged;
+        }
+
         _carousel = this.FindAncestorOfType<CarouselControl>();
 
         if (_carousel != null)
@@ -251,8 +268,18 @@ public partial class Cover : UserControl, ICarouselLazyItem
         _carousel = null;
         _nearViewport = false;
         StopVideo();
+
+        if (_window != null)
+        {
+            _window.Activated -= OnWindowActivationChanged;
+            _window.Deactivated -= OnWindowActivationChanged;
+            _window = null;
+        }
+
         base.OnDetachedFromVisualTree(e);
     }
+
+    private void OnWindowActivationChanged(object? sender, EventArgs e) => UpdateAnimationState();
 
     /// <inheritdoc />
     public void SetCarouselNearViewport(bool near)
@@ -295,13 +322,12 @@ public partial class Cover : UserControl, ICarouselLazyItem
         FallbackPadding = new Thickness(Math.Clamp(minDimension * 0.08, 6, 20));
     }
 
-    private static bool IsAnimatedMimeType(string? mimeType)
-    {
-        if (string.IsNullOrEmpty(mimeType)) return false;
-        return mimeType.StartsWith("video/", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(mimeType, "image/apng", StringComparison.OrdinalIgnoreCase)
-            || string.Equals(mimeType, "image/gif", StringComparison.OrdinalIgnoreCase);
-    }
+    private static bool IsVideoMimeType(string? mimeType) =>
+        mimeType?.StartsWith("video/", StringComparison.OrdinalIgnoreCase) == true;
+
+    // Whether a cached cover file is animated, keyed by path and write time. Not taken from the
+    // media's MIME type: an APNG uploads as image/png, so only the file itself can tell.
+    private static readonly ConcurrentDictionary<string, bool> _animatedImageProbes = new();
 
     /// <summary>
     /// Returns the pixel width to decode covers at, accounting for DPI scaling
@@ -337,7 +363,8 @@ public partial class Cover : UserControl, ICarouselLazyItem
         _loadCts = null;
         StopVideo();
 
-        _isAnimatedCover = IsAnimatedMimeType(mimeType);
+        _isAnimatedCover = IsVideoMimeType(mimeType);
+        _animatedIsVideo = _isAnimatedCover;
         _lastLoadedSource = source;
         _animatedSource = _isAnimatedCover ? source : null;
 
@@ -347,9 +374,10 @@ public partial class Cover : UserControl, ICarouselLazyItem
             return;
         }
 
-        // Route all animated covers (video, APNG, GIF) through LibVLC — but only start
-        // streaming when we should actually be animating. Otherwise defer until hover
-        // (UpdateAnimationState) and show the title placeholder in the meantime.
+        // Video covers go through LibVLC — but only start streaming when we should actually be
+        // animating. Otherwise defer until hover (UpdateAnimationState) and show the title
+        // placeholder in the meantime. Images load as stills; DetectAnimatedImageAsync then
+        // marks a local GIF/APNG/WebP as animated.
         if (_isAnimatedCover)
         {
             if (AlwaysAnimate || IsPlayingAnimation)
@@ -392,6 +420,7 @@ public partial class Cover : UserControl, ICarouselLazyItem
                     _cacheOrder.AddLast(node);
                 }
                 SetBitmap(cached);
+                _ = DetectAnimatedImageAsync(path, ct);
                 return;
             }
         }
@@ -425,6 +454,9 @@ public partial class Cover : UserControl, ICarouselLazyItem
             // Use Background priority so multiple covers completing together
             // coalesce into fewer layout passes instead of each forcing one.
             await Dispatcher.UIThread.InvokeAsync(() => SetBitmap(bitmap), DispatcherPriority.Background);
+
+            if (bitmap != null)
+                _ = DetectAnimatedImageAsync(path, ct);
         }
         catch
         {
@@ -434,6 +466,40 @@ public partial class Cover : UserControl, ICarouselLazyItem
         finally
         {
             PendingLoads.End();
+        }
+    }
+
+    /// <summary>
+    /// Checks whether a local cover file is an animated image and, if so, makes the cover
+    /// animated: its still stays up, and playback starts whenever it should animate.
+    /// Remote covers are resized server thumbnails, so are never animated.
+    /// </summary>
+    private async Task DetectAnimatedImageAsync(string path, CancellationToken ct)
+    {
+        try
+        {
+            var animated = await Task.Run(() =>
+            {
+                var key = $"{path}|{File.GetLastWriteTimeUtc(path).Ticks}";
+                return _animatedImageProbes.GetOrAdd(key, _ => AnimatedImageFrames.IsAnimated(path));
+            }, ct);
+
+            if (!animated || ct.IsCancellationRequested)
+                return;
+
+            await Dispatcher.UIThread.InvokeAsync(() =>
+            {
+                if (ct.IsCancellationRequested || _lastLoadedSource != path || _isAnimatedCover)
+                    return;
+
+                _isAnimatedCover = true;
+                _animatedIsVideo = false;
+                _animatedSource = path;
+                UpdateAnimationState();
+            });
+        }
+        catch (OperationCanceledException)
+        {
         }
     }
 
@@ -540,7 +606,7 @@ public partial class Cover : UserControl, ICarouselLazyItem
     private static long BitmapBytes(Bitmap bitmap) =>
         (long)bitmap.PixelSize.Width * bitmap.PixelSize.Height * 4;
 
-    // ── Animated cover support (video, APNG, GIF via LibVLC) ────────────
+    // ── Animated cover support (video via LibVLC; GIF/APNG/WebP decoded) ──
 
     private void LoadAnimatedCover(string source)
     {
@@ -549,21 +615,33 @@ public partial class Cover : UserControl, ICarouselLazyItem
             _receivedFirstFrame = false;
             var decodeWidth = (uint)GetDecodePixelWidth();
             var maxHeight = (uint)(decodeWidth * 1.5);
-            _videoRenderer = new VideoFrameRenderer(maxWidth: decodeWidth, maxHeight: maxHeight);
-            _videoRenderer.FrameReady += OnVideoFrameReady;
-            _videoRenderer.Play(source, muted: true, loop: true);
+
+            if (_animatedIsVideo)
+            {
+                var video = new VideoFrameRenderer(maxWidth: decodeWidth, maxHeight: maxHeight);
+                video.FrameReady += OnAnimationFrameReady;
+                _animation = video;
+                video.Play(source, muted: true, loop: true);
+            }
+            else
+            {
+                _animation = new AnimatedImageRenderer(source, maxWidth: decodeWidth, maxHeight: maxHeight);
+                _animation.FrameReady += OnAnimationFrameReady;
+            }
 
             HasCover = true;
         }
         catch
         {
-            SetBitmap(null);
+            // A video has nothing else to show; an image keeps its still.
+            if (_animatedIsVideo)
+                SetBitmap(null);
         }
     }
 
-    private void OnVideoFrameReady()
+    private void OnAnimationFrameReady()
     {
-        if (_videoRenderer == null) return;
+        if (_animation == null) return;
 
         if (!_receivedFirstFrame)
         {
@@ -573,14 +651,15 @@ public partial class Cover : UserControl, ICarouselLazyItem
             CoverImage.IsVisible = false;
             HasCover = true;
 
-            // Pause immediately if we shouldn't be animating yet
-            if (!AlwaysAnimate && !IsPlayingAnimation)
+            // Pause on the first frame if we shouldn't be animating yet, or the window is in
+            // the background — the frame stands in as a still until playback resumes.
+            if ((!AlwaysAnimate && !IsPlayingAnimation) || !IsWindowActive)
             {
-                _videoRenderer.Player?.SetPause(true);
+                _animation.SetPaused(true);
             }
         }
 
-        // Redraw with the latest video frame
+        // Redraw with the latest frame
         InvalidateVisual();
     }
 
@@ -592,40 +671,49 @@ public partial class Cover : UserControl, ICarouselLazyItem
 
         if (shouldAnimate)
         {
-            // Start streaming on first hover/focus if we deferred it in LoadCover.
-            if (_videoRenderer == null)
+            // Start playback on first hover/focus if we deferred it in LoadCover.
+            if (_animation == null)
             {
                 if (!string.IsNullOrEmpty(_animatedSource))
                     LoadAnimatedCover(_animatedSource);
             }
             else
             {
-                _videoRenderer.Player?.SetPause(false);
+                // Hold the current frame rather than tearing down while the window is inactive,
+                // so refocusing resumes in place instead of flashing the placeholder.
+                _animation.SetPaused(!IsWindowActive);
             }
         }
-        else if (_videoRenderer != null)
+        else if (_animation != null)
         {
-            // Tear the stream down entirely on un-hover instead of pausing, so idle
-            // covers hold no LibVLC/network resources. _isAnimatedCover stays set so a
+            // Tear playback down entirely on un-hover instead of pausing, so idle covers
+            // hold no LibVLC/network/decoder resources. _isAnimatedCover stays set so a
             // re-hover restarts playback.
             DisposeRenderer();
-            SetBitmap(null);
+
+            // A video falls back to the placeholder; an image to its still, which the
+            // Image control still holds.
+            if (_animatedIsVideo)
+                SetBitmap(null);
+            else if (CoverImage != null)
+                CoverImage.IsVisible = CoverImage.Source != null;
+
             InvalidateVisual();
         }
     }
 
     /// <summary>
-    /// Tears down the video renderer without clearing <see cref="_isAnimatedCover"/>,
+    /// Tears down the renderer without clearing <see cref="_isAnimatedCover"/>,
     /// so the cover can restart on a later hover. Contrast with <see cref="StopVideo"/>,
     /// which fully resets animated state when the source itself changes.
     /// </summary>
     private void DisposeRenderer()
     {
-        if (_videoRenderer != null)
+        if (_animation != null)
         {
-            _videoRenderer.FrameReady -= OnVideoFrameReady;
-            _videoRenderer.Dispose();
-            _videoRenderer = null;
+            _animation.FrameReady -= OnAnimationFrameReady;
+            _animation.Dispose();
+            _animation = null;
         }
         _receivedFirstFrame = false;
     }
@@ -642,8 +730,8 @@ public partial class Cover : UserControl, ICarouselLazyItem
     {
         base.Render(context);
 
-        // For animated covers, render the current video frame
-        if (_isAnimatedCover && _videoRenderer?.Bitmap is { } bmp)
+        // For animated covers, render the current frame
+        if (_isAnimatedCover && _animation?.Frame is { } bmp)
         {
             var srcW = (double)bmp.PixelSize.Width;
             var srcH = (double)bmp.PixelSize.Height;

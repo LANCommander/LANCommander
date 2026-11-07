@@ -16,7 +16,7 @@ namespace LANCommander.Launcher.Helpers;
 /// Uses <c>SetVideoFormatCallbacks</c> so the bitmap dimensions match the
 /// source video's native aspect ratio (optionally constrained to a max size).
 /// </summary>
-internal sealed class VideoFrameRenderer : IDisposable
+internal sealed class VideoFrameRenderer : IFrameAnimation
 {
     private static LibVLC? s_libVLC;
     private static bool s_initAttempted;
@@ -104,8 +104,12 @@ internal sealed class VideoFrameRenderer : IDisposable
     public WriteableBitmap? Bitmap => _bitmap;
     public MediaPlayer? Player => _player;
 
+    Bitmap? IFrameAnimation.Frame => _bitmap;
+
+    public void SetPaused(bool paused) => _player?.SetPause(paused);
+
     /// <summary>Raised on the UI thread after a new frame has been written to <see cref="Bitmap"/>.</summary>
-    public Action? FrameReady;
+    public Action? FrameReady { get; set; }
 
     /// <summary>
     /// Raised on the UI thread once the video format is known and

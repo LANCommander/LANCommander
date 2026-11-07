@@ -256,6 +256,90 @@ public class MediaServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
         File.Exists(variant).ShouldBeFalse();
     }
 
+    // Browsers upload an APNG as image/png; the launcher and the APNG-to-video conversion both key
+    // off image/apng, so the stored type has to come from the file.
+    [Fact]
+    public async Task AnimatedPngUploadedAsPngIsStoredAsApng()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var gameService = GetService<GameService>();
+        var mediaService = GetService<MediaService>();
+        var game = await gameService.AddAsync(new Game { Title = "Animated Cover" });
+
+        using var apng = CreatePng(120, 180, frames: 3);
+
+        var media = await mediaService.WriteToFileAsync(new Media
+        {
+            GameId = game.Id,
+            Type = MediaType.Cover,
+            MimeType = "image/png",
+            Crc32 = string.Empty,
+            StorageLocation = await mediaService.GetDefaultStorageLocationAsync(),
+        }, apng);
+
+        // With FFmpeg on the machine, the default settings go on to convert the APNG to MP4.
+        media.MimeType.ShouldBeOneOf(MediaService.ApngMimeType, "video/mp4");
+    }
+
+    [Fact]
+    public void AnimatedPngIsDetectedFromTheFile()
+    {
+        using var file = new TempFile(CreatePng(16, 16, frames: 2));
+
+        MediaService.IsAnimatedPng(file.Path).ShouldBeTrue();
+    }
+
+    [Fact]
+    public void StillPngIsNotAnimated()
+    {
+        using var file = new TempFile(CreatePng(16, 16, frames: 1));
+
+        MediaService.IsAnimatedPng(file.Path).ShouldBeFalse();
+    }
+
+    [Fact]
+    public void NonPngIsNotAnimated()
+    {
+        using var file = new TempFile(CreateJpeg(16, 16));
+
+        MediaService.IsAnimatedPng(file.Path).ShouldBeFalse();
+    }
+
+    private sealed class TempFile : IDisposable
+    {
+        public string Path { get; } = System.IO.Path.GetTempFileName();
+
+        public TempFile(Stream contents)
+        {
+            using (var fs = File.Create(Path))
+                contents.CopyTo(fs);
+
+            contents.Dispose();
+        }
+
+        public void Dispose() => File.Delete(Path);
+    }
+
+    /// <summary>A PNG; ImageSharp writes an APNG (acTL/fcTL/fdAT) when the image has more than one frame.</summary>
+    private static MemoryStream CreatePng(int width, int height, int frames)
+    {
+        using var image = new Image<Rgba32>(width, height, new Rgba32(40, 90, 160));
+
+        for (var i = 1; i < frames; i++)
+        {
+            using var frame = new Image<Rgba32>(width, height, new Rgba32((byte)(40 + i * 60), 90, 160));
+            image.Frames.AddFrame(frame.Frames.RootFrame);
+        }
+
+        var stream = new MemoryStream();
+
+        image.SaveAsPng(stream);
+        stream.Position = 0;
+
+        return stream;
+    }
+
     private async Task<Media> AddCoverMediaAsync(string gameTitle, int width, int height)
     {
         var gameService = GetService<GameService>();

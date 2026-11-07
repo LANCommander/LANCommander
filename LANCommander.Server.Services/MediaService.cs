@@ -200,6 +200,9 @@ namespace LANCommander.Server.Services
                 await stream.CopyToAsync(fs);
             }
 
+            if (IsAnimatedPng(path))
+                media.MimeType = ApngMimeType;
+
             await ConvertAnimatedImageAsync(media, path);
 
             media.Crc32 = await SDK.Services.MediaClient.CalculateChecksumAsync(path);
@@ -485,9 +488,53 @@ namespace LANCommander.Server.Services
             }
         }
 
+        public const string ApngMimeType = "image/apng";
+
+        private static ReadOnlySpan<byte> PngSignature => [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A];
+
+        /// <summary>
+        /// Whether the file is an animated PNG. Browsers and most HTTP servers report an APNG as
+        /// image/png, so the declared type can't be trusted; the file declares its animation with an
+        /// acTL chunk ahead of the first IDAT, so only the chunk headers up to there are read.
+        /// </summary>
+        public static bool IsAnimatedPng(string path)
+        {
+            try
+            {
+                using var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read);
+                Span<byte> buffer = stackalloc byte[8];
+
+                if (stream.ReadAtLeast(buffer, 8, throwOnEndOfStream: false) < 8 || !buffer.SequenceEqual(PngSignature))
+                    return false;
+
+                while (stream.ReadAtLeast(buffer, 8, throwOnEndOfStream: false) == 8)
+                {
+                    var length = System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(buffer);
+                    var type = buffer[4..8];
+
+                    if (type.SequenceEqual("acTL"u8))
+                    {
+                        // num_frames: a single-frame APNG is just a PNG.
+                        return stream.ReadAtLeast(buffer[..4], 4, throwOnEndOfStream: false) == 4
+                            && System.Buffers.Binary.BinaryPrimitives.ReadUInt32BigEndian(buffer) > 1;
+                    }
+
+                    if (type.SequenceEqual("IDAT"u8) || type.SequenceEqual("IEND"u8))
+                        return false;
+
+                    stream.Seek(length + 4L, SeekOrigin.Current); // data + CRC
+                }
+            }
+            catch (IOException)
+            {
+            }
+
+            return false;
+        }
+
         private async Task ConvertAnimatedImageAsync(Media media, string path)
         {
-            if (!string.Equals(media.MimeType, "image/apng", StringComparison.OrdinalIgnoreCase))
+            if (!string.Equals(media.MimeType, ApngMimeType, StringComparison.OrdinalIgnoreCase))
                 return;
 
             var config = _settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(media.Type);

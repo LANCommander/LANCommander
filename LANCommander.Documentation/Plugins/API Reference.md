@@ -1145,6 +1145,8 @@ Something a launcher can run for a game, tool or server, such as starting it.
   - The executable, usually relative to `{InstallDir}`.
 - `string Arguments { get; init; }`
 - `string WorkingDirectory { get; init; }`
+- `ActionType Type { get; init; }`
+  - What the action is for, which decides where a launcher offers it.
 - `bool IsPrimary { get; init; }`
   - Whether this is the action a launcher runs when asked to play.
 - `int SortOrder { get; init; }`

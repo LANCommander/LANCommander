@@ -29,7 +29,7 @@
                 IsVisible="{Binding IsNavigating}"
                 IsHitTestVisible="False"
                 ZIndex="10">
-            <ProgressBar IsIndeterminate="True"
+            <ProgressBar IsIndeterminate="{Binding IsNavigating}"
                          Width="200"
                          HorizontalAlignment="Center"
                          VerticalAlignment="Center" />

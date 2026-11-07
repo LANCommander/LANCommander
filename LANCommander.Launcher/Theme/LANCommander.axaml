@@ -713,7 +713,9 @@
       </ControlTemplate>
     </Setter>
   </Style>
-  <Style Selector="ProgressBar.Ring /template/ Arc.RingSpinner">
+  <!-- Gated on :indeterminate: Avalonia keeps running an infinite animation on a hidden
+       control, which holds the render loop at full frame rate while the launcher sits idle. -->
+  <Style Selector="ProgressBar.Ring:indeterminate /template/ Arc.RingSpinner">
     <Style.Animations>
       <Animation Duration="0:0:1" IterationCount="Infinite">
         <KeyFrame Cue="0%">

@@ -63,7 +63,7 @@
                 <StackPanel Orientation="Horizontal" Spacing="10"
                             HorizontalAlignment="Center"
                             IsVisible="{Binding IsLoading}">
-                    <ProgressBar IsIndeterminate="True" Width="120" Height="3" />
+                    <ProgressBar IsIndeterminate="{Binding IsLoading}" Width="120" Height="3" />
                     <TextBlock Text="Loading..." VerticalAlignment="Center" Opacity="0.6" FontSize="{DynamicResource FontSizeLabel}" />
                 </StackPanel>
 

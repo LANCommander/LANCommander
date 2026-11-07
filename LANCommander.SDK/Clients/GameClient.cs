@@ -391,6 +391,19 @@ namespace LANCommander.SDK.Services
                 .GetAsync<IEnumerable<Tool>>();
         }
 
+        /// <summary>
+        /// The game's servers that are running, or that start when someone plays it.
+        /// </summary>
+        public async Task<IEnumerable<GameServer>> GetServersAsync(Guid id)
+        {
+            return await apiRequestFactory
+                .Create()
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseRoute($"/api/Games/{id}/Servers")
+                .GetAsync<IEnumerable<GameServer>>();
+        }
+
         public async Task<IEnumerable<Script>> GetScriptsAsync(Guid id)
         {
             return await apiRequestFactory

@@ -30,6 +30,7 @@ public static class GameEndpoints
         group.MapGet("/{id:guid}/Actions", GetActionsByIdAsync);
         group.MapGet("/{id:guid}/Addons", GetAddonsByIdAsync);
         group.MapGet("/{id:guid}/Tools", GetToolsByIdAsync);
+        group.MapGet("/{id:guid}/Servers", GetServersByIdAsync);
         group.MapGet("/{id:guid}/Scripts", GetScriptsByIdAsync);
         group.MapGet("/{id:guid}/Started", StartedAsync);
         group.MapGet("/{id:guid}/Stopped", StoppedAsync);
@@ -326,6 +327,9 @@ public static class GameEndpoints
                     if (server.Port > 0)
                         mappedAction.Variables["ServerPort"] = server.Port.ToString();
 
+                    // Lets the launcher offer this action as the server's Connect button
+                    mappedAction.Variables["ServerId"] = server.Id.ToString();
+
                     mappedActions.Add(mappedAction);
                 }
             }
@@ -374,6 +378,62 @@ public static class GameEndpoints
         }, tags: ["Tools", "Games", $"Games/{id}"]);
 
         return TypedResults.Ok(tools);
+    }
+
+    /// <summary>
+    /// The game's servers that a player could join: those running now, and those that start when
+    /// someone plays. Not cached, since the status is live.
+    /// </summary>
+    internal static async Task<IResult> GetServersByIdAsync(
+        [FromServices] ServerService serverService,
+        [FromServices] ServerManager serverManager,
+        Guid id)
+    {
+        var servers = await serverService
+            .AsNoTracking()
+            .GetAsync(s => s.GameId == id);
+
+        var results = new List<SDK.Models.GameServer>();
+
+        foreach (var server in servers.OrderBy(s => s.Name))
+        {
+            var startsOnPlayerActivity = server.Autostart && server.AutostartMethod == ServerAutostartMethod.OnPlayerActivity;
+
+            SDK.Models.GameServerStatus status;
+
+            try
+            {
+                status = (await serverManager.GetStatusAsync(server.Id)) switch
+                {
+                    Services.Enums.ServerProcessStatus.Running => SDK.Models.GameServerStatus.Running,
+                    Services.Enums.ServerProcessStatus.Starting => SDK.Models.GameServerStatus.Starting,
+                    Services.Enums.ServerProcessStatus.Stopping => SDK.Models.GameServerStatus.Stopping,
+                    Services.Enums.ServerProcessStatus.Error => SDK.Models.GameServerStatus.Error,
+                    _ => SDK.Models.GameServerStatus.Stopped,
+                };
+            }
+            catch
+            {
+                status = SDK.Models.GameServerStatus.Stopped;
+            }
+
+            var isUp = status is SDK.Models.GameServerStatus.Running or SDK.Models.GameServerStatus.Starting;
+
+            if (!isUp && !startsOnPlayerActivity)
+                continue;
+
+            results.Add(new SDK.Models.GameServer
+            {
+                Id = server.Id,
+                Name = server.Name,
+                Host = server.Host,
+                Port = server.Port,
+                Status = status,
+                StartsOnPlayerActivity = startsOnPlayerActivity,
+            });
+        }
+
+        return TypedResults.Ok(results);
     }
 
     internal static async Task<IResult> GetScriptsByIdAsync(

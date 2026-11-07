@@ -149,6 +149,14 @@ public partial class GameDetailViewModel : ViewModelBase
     /// <summary>The Issues tab is only shown when there is at least one issue.</summary>
     public bool HasIssues => Issues.Count > 0;
 
+    // ── Servers ───────────────────────────────────────────────────────────────
+
+    /// <summary>The game's servers that are running, or that start when someone plays.</summary>
+    public ObservableCollection<GameServerItemViewModel> Servers { get; } = new();
+
+    /// <summary>The Servers tab is only shown when there is at least one server.</summary>
+    public bool HasServers => Servers.Count > 0;
+
     // ── Multiplayer modes ─────────────────────────────────────────────────────
 
     public ObservableCollection<string> MultiplayerModeDetails { get; } = new();
@@ -226,8 +234,40 @@ public partial class GameDetailViewModel : ViewModelBase
         {
             if (e.PropertyName is nameof(GameActionBarViewModel.InstallDirectory) or nameof(GameActionBarViewModel.IsInstalled))
                 _ = MeasureInstallSizeAsync();
+
+            if (e.PropertyName is nameof(GameActionBarViewModel.Actions) or nameof(GameActionBarViewModel.SecondaryActions))
+                WatchActionLists();
         };
+
+        WatchActionLists();
     }
+
+    private ObservableCollection<GameActionViewModel>? _watchedActions;
+    private ObservableCollection<GameActionViewModel>? _watchedSecondaryActions;
+
+    /// <summary>
+    /// Each server's Connect button runs one of the game's actions, which the action bar reloads
+    /// whenever the install changes. Follows the lists themselves too, in case they're replaced.
+    /// </summary>
+    private void WatchActionLists()
+    {
+        if (_watchedActions != null)
+            _watchedActions.CollectionChanged -= OnActionListChanged;
+
+        if (_watchedSecondaryActions != null)
+            _watchedSecondaryActions.CollectionChanged -= OnActionListChanged;
+
+        _watchedActions = ActionBar.Actions;
+        _watchedSecondaryActions = ActionBar.SecondaryActions;
+
+        _watchedActions.CollectionChanged += OnActionListChanged;
+        _watchedSecondaryActions.CollectionChanged += OnActionListChanged;
+
+        UpdateServerConnectActions();
+    }
+
+    private void OnActionListChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        => UpdateServerConnectActions();
 
     /// <summary>
     /// Sums the install folder off the UI thread. Large installs can take a moment, so the row
@@ -351,6 +391,10 @@ public partial class GameDetailViewModel : ViewModelBase
         Issues.Clear();
         OnPropertyChanged(nameof(HasIssues));
         _ = LoadIssuesAsync(game.Id, version);
+
+        Servers.Clear();
+        OnPropertyChanged(nameof(HasServers));
+        _ = LoadServersAsync(game.Id, version);
 
         // Tools
         Tools.Clear();
@@ -676,6 +720,64 @@ public partial class GameDetailViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Reloads the server list, since a server's status changes while the page is open.</summary>
+    public Task RefreshServersAsync() => Id == Guid.Empty ? Task.CompletedTask : LoadServersAsync(Id, _loadVersion);
+
+    private async Task LoadServersAsync(Guid gameId, int version)
+    {
+        if (IsOfflineMode)
+            return;
+
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+            var gameClient = scope.ServiceProvider.GetRequiredService<GameClient>();
+
+            var servers = (await gameClient.GetServersAsync(gameId) ?? [])
+                .Select(s => new GameServerItemViewModel(s, ConnectToServerAsync))
+                .ToList();
+
+            if (version != _loadVersion)
+                return;
+
+            Servers.Clear();
+
+            foreach (var server in servers)
+                Servers.Add(server);
+
+            UpdateServerConnectActions();
+            OnPropertyChanged(nameof(HasServers));
+        }
+        catch (Exception ex)
+        {
+            // Older servers don't have the endpoint; the tab just stays hidden
+            _logger.LogWarning(ex, "Failed to load servers for game {GameId}", gameId);
+        }
+    }
+
+    /// <summary>
+    /// Gives each server the installed game's action that connects to it, if there is one. The
+    /// server stamps its id on the actions it owns.
+    /// </summary>
+    private void UpdateServerConnectActions()
+    {
+        var actions = ActionBar.Actions
+            .Concat(ActionBar.SecondaryActions)
+            .Select(a => a.Action)
+            .ToList();
+
+        foreach (var server in Servers)
+        {
+            server.ConnectAction = actions.FirstOrDefault(a =>
+                a.Variables != null
+                && a.Variables.TryGetValue("ServerId", out var serverId)
+                && Guid.TryParse(serverId, out var parsed)
+                && parsed == server.Id);
+        }
+    }
+
+    private Task ConnectToServerAsync(SDK.Models.Manifest.Action action) => ActionBar.RunActionAsync(action);
+
     /// <summary>
     /// Downloads an issue attachment to the temp folder, then shows images in the lightbox and opens
     /// anything else with the system's default app.
@@ -760,6 +862,59 @@ public partial class ToolItemViewModel : ViewModelBase
         Name = tool.Name ?? "Unknown Tool";
         IsInstalled = isInstalled;
     }
+}
+
+/// <summary>
+/// One server on the game details Servers tab, with a Connect button when the installed game has
+/// an action for it.
+/// </summary>
+public partial class GameServerItemViewModel : ViewModelBase
+{
+    private readonly Func<SDK.Models.Manifest.Action, Task>? _connect;
+
+    public Guid Id { get; }
+    public string Name { get; }
+
+    /// <summary>"host:port", just the host, or empty when the server doesn't say where it is.</summary>
+    public string Address { get; }
+    public bool HasAddress => !string.IsNullOrEmpty(Address);
+
+    public bool IsRunning { get; }
+    public string StatusText { get; }
+
+    /// <summary>The installed game's action that joins this server, if any.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanConnect))]
+    [NotifyCanExecuteChangedFor(nameof(ConnectCommand))]
+    private SDK.Models.Manifest.Action? _connectAction;
+
+    public bool CanConnect => ConnectAction != null;
+
+    public GameServerItemViewModel(SDK.Models.GameServer server, Func<SDK.Models.Manifest.Action, Task>? connect)
+    {
+        _connect = connect;
+
+        Id = server.Id;
+        Name = string.IsNullOrWhiteSpace(server.Name) ? "Server" : server.Name;
+
+        Address = string.IsNullOrWhiteSpace(server.Host)
+            ? string.Empty
+            : server.Port > 0 ? $"{server.Host}:{server.Port}" : server.Host;
+
+        IsRunning = server.Status == SDK.Models.GameServerStatus.Running;
+
+        StatusText = server.Status switch
+        {
+            SDK.Models.GameServerStatus.Running  => "Running",
+            SDK.Models.GameServerStatus.Starting => "Starting",
+            _ when server.StartsOnPlayerActivity => "Starts when someone plays",
+            _                                    => "Stopped",
+        };
+    }
+
+    [RelayCommand(CanExecute = nameof(CanConnect))]
+    private Task ConnectAsync() =>
+        ConnectAction != null && _connect != null ? _connect(ConnectAction) : Task.CompletedTask;
 }
 
 /// <summary>

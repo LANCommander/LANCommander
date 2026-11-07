@@ -33,14 +33,18 @@ public partial class GameDetailView : UserControl
         _tabs.Add((OverviewTabButton, OverviewContent));
         _tabs.Add((MediaTabButton, MediaContent));
         _tabs.Add((IssuesTabButton, IssuesContent));
+        _tabs.Add((ServersTabButton, ServersContent));
         SelectTab(OverviewTabButton);
 
-        // Opening another game can hide the Issues tab while it is selected; fall back to Overview
-        IssuesTabButton.PropertyChanged += (_, e) =>
+        // Opening another game can hide the Issues or Servers tab while it is selected; fall back to Overview
+        foreach (var conditionalTab in new[] { IssuesTabButton, ServersTabButton })
         {
-            if (e.Property == IsVisibleProperty && !IssuesTabButton.IsVisible && IssuesTabButton.Classes.Contains("active"))
-                SelectTab(OverviewTabButton);
-        };
+            conditionalTab.PropertyChanged += (_, e) =>
+            {
+                if (e.Property == IsVisibleProperty && !conditionalTab.IsVisible && conditionalTab.Classes.Contains("active"))
+                    SelectTab(OverviewTabButton);
+            };
+        }
 
         LogoImage.PropertyChanged += (_, e) =>
         {
@@ -92,8 +96,27 @@ public partial class GameDetailView : UserControl
 
     private void TabButton_Click(object? sender, RoutedEventArgs e)
     {
-        if (sender is Button header)
-            SelectTab(header);
+        if (sender is not Button header)
+            return;
+
+        SelectTab(header);
+
+        // Server status changes while the page is open, so re-check it whenever the tab is opened
+        if (header == ServersTabButton && DataContext is GameDetailViewModel detailVm)
+            _ = detailVm.RefreshServersAsync();
+    }
+
+    /// <summary>A/Enter on a server row connects, as the row's Connect button isn't focusable.</summary>
+    private void ServerRow_KeyDown(object? sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Enter or Key.Space))
+            return;
+
+        if ((sender as Control)?.DataContext is GameServerItemViewModel server && server.ConnectCommand.CanExecute(null))
+        {
+            server.ConnectCommand.Execute(null);
+            e.Handled = true;
+        }
     }
 
     /// <summary>

@@ -139,7 +139,7 @@
         <Style Selector="Ellipse.StateDot">
             <Setter Property="Fill" Value="{DynamicResource TextDisabledBrush}" />
         </Style>
-        <Style Selector="Ellipse.StateDot.Installed">
+        <Style Selector="Ellipse.StateDot.Installed, Ellipse.StateDot.Online">
             <Setter Property="Fill">
                 <SolidColorBrush Color="{DynamicResource Success6}" />
             </Setter>
@@ -149,6 +149,18 @@
         </Style>
         <Style Selector="TextBlock.StateDetail.Warning">
             <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+        </Style>
+
+        <!-- Server rows: Connect only appears on the hovered or focused row. It stays in the layout
+             so rows don't change height, and isn't focusable; A/Enter on the row connects instead -->
+        <Style Selector="Border.ServerRow Button.ServerConnect">
+            <Setter Property="Opacity" Value="0" />
+            <Setter Property="IsHitTestVisible" Value="False" />
+        </Style>
+        <Style Selector="Border.ServerRow:pointerover Button.ServerConnect,
+                         Border.ServerRow:focus-within Button.ServerConnect">
+            <Setter Property="Opacity" Value="1" />
+            <Setter Property="IsHitTestVisible" Value="True" />
         </Style>
     </UserControl.Styles>
 
@@ -311,6 +323,9 @@
                             <Button x:Name="IssuesTabButton" Classes="DetailTab"
                                     Content="Issues" Click="TabButton_Click"
                                     IsVisible="{Binding HasIssues}" />
+                            <Button x:Name="ServersTabButton" Classes="DetailTab"
+                                    Content="Servers" Click="TabButton_Click"
+                                    IsVisible="{Binding HasServers}" />
                         </StackPanel>
                     </Border>
 
@@ -481,6 +496,54 @@
                                                 </ItemsControl.ItemTemplate>
                                             </ItemsControl>
                                         </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+
+                        <!-- Servers: running now, or started when someone plays -->
+                        <ItemsControl x:Name="ServersContent" ItemsSource="{Binding Servers}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="10" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:GameServerItemViewModel">
+                                    <Border Classes="Card ServerRow" Padding="16,13" Focusable="True"
+                                            KeyDown="ServerRow_KeyDown">
+                                        <Grid ColumnDefinitions="Auto,*,Auto">
+                                            <Ellipse Width="7" Height="7" Margin="0,0,12,0"
+                                                     VerticalAlignment="Center"
+                                                     Classes="StateDot"
+                                                     Classes.Online="{Binding IsRunning}" />
+                                            <StackPanel Grid.Column="1" Spacing="3" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}"
+                                                           FontWeight="SemiBold"
+                                                           TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                                    <TextBlock Text="{Binding StatusText}"
+                                                               FontSize="{DynamicResource FontSizeCaption}"
+                                                               Foreground="{DynamicResource TextTertiaryBrush}" />
+                                                    <TextBlock Text="·"
+                                                               FontSize="{DynamicResource FontSizeCaption}"
+                                                               Foreground="{DynamicResource TextTertiaryBrush}"
+                                                               IsVisible="{Binding HasAddress}" />
+                                                    <TextBlock Text="{Binding Address}"
+                                                               FontSize="{DynamicResource FontSizeCaption}"
+                                                               Foreground="{DynamicResource TextTertiaryBrush}"
+                                                               IsVisible="{Binding HasAddress}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <Button Grid.Column="2"
+                                                    Classes="Primary ServerConnect"
+                                                    Content="Connect"
+                                                    Margin="12,0,0,0"
+                                                    VerticalAlignment="Center"
+                                                    Focusable="False"
+                                                    IsVisible="{Binding CanConnect}"
+                                                    Command="{Binding ConnectCommand}" />
+                                        </Grid>
                                     </Border>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>

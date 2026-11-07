@@ -83,7 +83,59 @@ public static class GameDetailFixtures
                 .RaiseEvent(new RoutedEventArgs(Button.ClickEvent)),
         },
 
-        new("GameDetail.UpdateAvailable", "An installed game with an update waiting", context =>
+        new("GameDetail.ServersTab", "The servers tab: a running server with a focused Connect button, and one that starts on play", context =>
+        {
+            var detail = Installed(context);
+            var onslaughtId = FixtureGames.IdFor("Server: Onslaught");
+
+            detail.ActionBar.SecondaryActions = new(detail.ActionBar.SecondaryActions.Append(new GameActionViewModel(
+                new SDK.Models.Manifest.Action
+                {
+                    Name = "Join Onslaught",
+                    Path = "System/UT2004.exe",
+                    Arguments = "{ServerHost}:{ServerPort}",
+                    Variables = new() { ["ServerId"] = onslaughtId.ToString() },
+                },
+                _ => Task.CompletedTask)));
+
+            detail.SeedServersForFixture(
+            [
+                new(new SDK.Models.GameServer
+                {
+                    Id = onslaughtId,
+                    Name = "Onslaught 24/7",
+                    Host = "10.0.0.20",
+                    Port = 7777,
+                    Status = SDK.Models.GameServerStatus.Running,
+                }, null),
+                new(new SDK.Models.GameServer
+                {
+                    Id = FixtureGames.IdFor("Server: Instagib CTF"),
+                    Name = "Instagib CTF",
+                    Host = "10.0.0.20",
+                    Port = 7787,
+                    Status = SDK.Models.GameServerStatus.Stopped,
+                    StartsOnPlayerActivity = true,
+                }, null),
+            ]);
+
+            return context.ShellWindow(detail);
+        })
+        {
+            Height = 1000,
+            Prepare = (_, window) =>
+            {
+                var view = window.GetVisualDescendants().OfType<GameDetailView>().Single();
+
+                view.FindControl<Button>("ServersTabButton")!.RaiseEvent(new RoutedEventArgs(Button.ClickEvent));
+                view.FindControl<ItemsControl>("ServersContent")!.UpdateLayout();
+                view.FindControl<ItemsControl>("ServersContent")!
+                    .GetVisualDescendants().OfType<Border>().First(b => b.Classes.Contains("ServerRow"))
+                    .Focus(Avalonia.Input.NavigationMethod.Directional);
+            },
+        },
+
+        new("GameDetail.UpdateAvailable","An installed game with an update waiting", context =>
         {
             var detail = Fill(context.Shell.GameDetailViewModel, FixtureGames.AgeOfEmpires2);
             detail.ActionBar.IsUpdateAvailable = true;

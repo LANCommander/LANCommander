@@ -1,6 +1,7 @@
 using LANCommander.PluginManagement;
 using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Plugins;
+using LANCommander.Server.Services.HQ.Registry;
 using LANCommander.Server.Settings.Models;
 using NuGet.Frameworks;
 
@@ -16,13 +17,15 @@ public sealed class PluginPackageService : PluginPackageManager
     public const string NuGetOrgUrl = PluginFeed.NuGetOrgUrl;
 
     private readonly SettingsProvider<Settings.Settings> _settingsProvider;
+    private readonly HqRegistry? _hqRegistry;
 
     public PluginPackageService(
         SettingsProvider<Settings.Settings> settingsProvider,
         PluginLoaderService loader,
         PluginStaging staging,
+        HqRegistry hqRegistry,
         ILogger<PluginPackageService> logger)
-        : this(settingsProvider, loader, staging, logger, VersionHelper.GetCurrentVersion().ToString(), PluginPackageReader.HostFramework)
+        : this(settingsProvider, loader, staging, logger, VersionHelper.GetCurrentVersion().ToString(), PluginPackageReader.HostFramework, hqRegistry)
     {
     }
 
@@ -32,11 +35,12 @@ public sealed class PluginPackageService : PluginPackageManager
         PluginStaging staging,
         ILogger<PluginPackageService> logger,
         string hostVersion,
-        NuGetFramework hostFramework)
+        NuGetFramework hostFramework,
+        HqRegistry? hqRegistry = null)
         : base(
             PluginHost.Server,
             new PluginFeedClient(
-                () => GetEnabledSources(settingsProvider).Select(s => new PluginFeed(s.Name, s.Url, s.Username, s.Password)).ToList(),
+                () => GetEnabledSources(settingsProvider, hqRegistry).Select(s => ToFeed(s, hqRegistry)).ToList(),
                 () => settingsProvider.CurrentValue.Server.Plugins.IncludePrerelease || IsPrereleaseVersion(hostVersion),
                 logger),
             loader,
@@ -46,6 +50,7 @@ public sealed class PluginPackageService : PluginPackageManager
             hostFramework)
     {
         _settingsProvider = settingsProvider;
+        _hqRegistry = hqRegistry;
     }
 
     /// <summary>Whether this server is a prerelease, in which case prerelease plugins are always offered.</summary>
@@ -57,13 +62,22 @@ public sealed class PluginPackageService : PluginPackageManager
     /// </summary>
     public bool IncludePrerelease => Feeds.IncludePrerelease;
 
-    /// <summary>The sources searched: nuget.org when it is turned on, then the administrator's own.</summary>
-    public IReadOnlyList<PluginPackageSource> GetEnabledSources() => GetEnabledSources(_settingsProvider);
+    /// <summary>Whether the server is connected to LANCommander HQ, without which its registry can't be read.</summary>
+    public bool HqAvailable => _hqRegistry?.IsAvailable == true;
 
-    private static IReadOnlyList<PluginPackageSource> GetEnabledSources(SettingsProvider<Settings.Settings> settingsProvider)
+    /// <summary>
+    /// The sources searched: LANCommander HQ and nuget.org when they are turned on (HQ only while the
+    /// server is connected to it), then the administrator's own.
+    /// </summary>
+    public IReadOnlyList<PluginPackageSource> GetEnabledSources() => GetEnabledSources(_settingsProvider, _hqRegistry);
+
+    private static IReadOnlyList<PluginPackageSource> GetEnabledSources(SettingsProvider<Settings.Settings> settingsProvider, HqRegistry? hqRegistry)
     {
         var settings = settingsProvider.CurrentValue.Server.Plugins;
         var sources = new List<PluginPackageSource>();
+
+        if (settings.UseHQ && hqRegistry?.IsAvailable == true)
+            sources.Add(new PluginPackageSource { Name = HqRegistry.SourceName, Url = hqRegistry.FeedUrl });
 
         if (settings.UseNuGetOrg)
             sources.Add(new PluginPackageSource { Name = NuGetOrgName, Url = NuGetOrgUrl });
@@ -73,7 +87,21 @@ public sealed class PluginPackageService : PluginPackageManager
         return sources;
     }
 
+    /// <summary>
+    /// The feed a source is read through. HQ's registry signs in with the server's HQ session, which
+    /// NuGet's own credentials can't send, and only carries plugins LANCommander published.
+    /// </summary>
+    private static PluginFeed ToFeed(PluginPackageSource source, HqRegistry? hqRegistry)
+    {
+        var feed = new PluginFeed(source.Name, source.Url, source.Username, source.Password);
+
+        if (hqRegistry != null && source.Url.Equals(hqRegistry.FeedUrl, StringComparison.OrdinalIgnoreCase))
+            feed = feed with { CreateHandler = hqRegistry.CreateHandler, IsOfficialRegistry = true };
+
+        return feed;
+    }
+
     /// <summary>Reaches a source as it would be searched, and throws with the reason when it can't.</summary>
     public Task TestSourceAsync(PluginPackageSource source, CancellationToken cancellationToken = default) =>
-        Feeds.TestAsync(new PluginFeed(source.Name, source.Url, source.Username, source.Password), cancellationToken);
+        Feeds.TestAsync(ToFeed(source, _hqRegistry), cancellationToken);
 }

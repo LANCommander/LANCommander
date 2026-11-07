@@ -1,5 +1,6 @@
 @page "/Redistributables"
 @using LANCommander.Server.Models
+@using LANCommander.Server.UI.Pages.Redistributables.Components
 @using ManifestType = LANCommander.SDK.Enums.ManifestType
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject RedistributableService RedistributableService
@@ -18,6 +19,7 @@
                SearchProperty="t => t.Name"
                OnRowDoubleClick="@(redistributable => NavigationManager.NavigateTo($"/Redistributables/{redistributable.Id}"))">
         <RightToolbar>
+            <Button Icon="IconType.CloudArrowDown" OnClick="OpenHqDialogAsync">Browse HQ</Button>
             <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
             <Button Primary Icon="IconType.Plus" Href="/Redistributables/Add">Add Redistributable</Button>
         </RightToolbar>
@@ -70,6 +72,14 @@
             Hint = "Only LCX files are supported for importing redistributables",
             ManifestType = ManifestType.Redistributable,
         }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
+
+        await Table.ReloadAsync();
+    }
+
+    async Task OpenHqDialogAsync()
+    {
+        await Dialogs.OpenAsync<HqRedistributablesDialog, NoOptions, bool>("Redistributables on LANCommander HQ", NoOptions.Instance,
+            new DialogSettings { NoFooter = true, Size = DialogSize.Large });
 
         await Table.ReloadAsync();
     }

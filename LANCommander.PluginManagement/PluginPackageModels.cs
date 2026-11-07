@@ -75,4 +75,17 @@ public sealed record PluginFeed(string Name, string Url, string? Username = null
     public const string NuGetOrgUrl = "https://api.nuget.org/v3/index.json";
 
     public static PluginFeed NuGetOrg { get; } = new(NuGetOrgName, NuGetOrgUrl);
+
+    /// <summary>
+    /// Builds the handler every request to the feed passes through, for feeds that sign in some way
+    /// NuGet's own credentials can't, e.g. with a bearer token that renews itself. Each call returns a
+    /// new handler with no inner handler set; the feed client supplies that.
+    /// </summary>
+    public Func<DelegatingHandler>? CreateHandler { get; init; }
+
+    /// <summary>
+    /// Whether every package on the feed is an official plugin, because only LANCommander publishes to
+    /// it. Not true of any feed an administrator adds: only the host decides this.
+    /// </summary>
+    public bool IsOfficialRegistry { get; init; }
 }

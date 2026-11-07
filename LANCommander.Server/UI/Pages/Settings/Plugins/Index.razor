@@ -148,7 +148,7 @@
                 <Flex Vertical Gap="Gap.Medium">
                     @if (!PluginPackages.GetEnabledSources().Any())
                     {
-                        <Empty Title="No package sources" Description="Turn on nuget.org or add a package source to find plugins.">
+                        <Empty Title="No package sources" Description="Connect to LANCommander HQ, turn on nuget.org or add a package source to find plugins.">
                             <Button Primary OnClick="() => _tab = SourcesTab">Package Sources</Button>
                         </Empty>
                     }
@@ -270,7 +270,7 @@
 
                     @if (!PluginPackages.GetEnabledSources().Any())
                     {
-                        <Empty Title="No package sources" Description="Turn on nuget.org or add a package source to find launcher plugins.">
+                        <Empty Title="No package sources" Description="Connect to LANCommander HQ, turn on nuget.org or add a package source to find launcher plugins.">
                             <Button Primary OnClick="() => _tab = SourcesTab">Package Sources</Button>
                         </Empty>
                     }
@@ -334,6 +334,17 @@
 
             <Tab Title="Sources" Icon="IconType.Database">
                 <Form Model="_sources" OnSubmit="SaveSources" Class="edit-form">
+                    <Switch @bind-Value="_useHQ" Class="edit-form-switch">
+                        <span class="edit-form-switch-title">Search LANCommander HQ</span>
+                        <span class="edit-form-switch-help">
+                            The LANCommander HQ package registry, where official plugins are published. It signs in with this server's HQ connection.
+                            @if (!PluginPackages.HqAvailable)
+                            {
+                                <text> This server isn't connected to HQ, so it isn't searched. <a href="/Settings/Integrations/HQ">Connect to HQ</a></text>
+                            }
+                        </span>
+                    </Switch>
+
                     <Switch @bind-Value="_useNuGetOrg" Class="edit-form-switch">
                         <span class="edit-form-switch-title">Search nuget.org</span>
                         <span class="edit-form-switch-help">The official NuGet registry, where plugin developers publish their plugins.</span>
@@ -431,6 +442,7 @@
     IReadOnlyList<PluginPackageListing> _launcherResults = [];
     IReadOnlyList<string> _launcherSearchErrors = [];
 
+    bool _useHQ;
     bool _useNuGetOrg;
     bool _includePrerelease;
     List<PluginPackageSource> _sources = [];
@@ -440,6 +452,7 @@
     {
         var settings = Settings.Value.Server.Plugins;
 
+        _useHQ = settings.UseHQ;
         _useNuGetOrg = settings.UseNuGetOrg;
         _includePrerelease = settings.IncludePrerelease;
 
@@ -784,6 +797,7 @@
 
             SettingsProvider.Update(s =>
             {
+                s.Server.Plugins.UseHQ = _useHQ;
                 s.Server.Plugins.UseNuGetOrg = _useNuGetOrg;
                 s.Server.Plugins.IncludePrerelease = _includePrerelease;
                 s.Server.Plugins.Sources = sources;

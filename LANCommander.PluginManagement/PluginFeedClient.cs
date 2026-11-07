@@ -94,7 +94,7 @@ public sealed class PluginFeedClient
             result.DownloadCount,
             feed.Name,
             feed.Url,
-            OfficialPlugins.IsOfficial(feed.Url, result.Identity.Id, result.OwnersList)))
+            feed.IsOfficialRegistry || OfficialPlugins.IsOfficial(feed.Url, result.Identity.Id, result.OwnersList)))
             .OrderByDescending(listing => listing.IsOfficial)
             .ToList();
     }
@@ -229,6 +229,9 @@ public sealed class PluginFeedClient
     /// </summary>
     public async Task<bool> IsOfficialAsync(PluginFeed feed, string id, CancellationToken cancellationToken = default)
     {
+        if (feed.IsOfficialRegistry)
+            return true;
+
         if (!OfficialPlugins.IsCandidate(feed.Url, id))
             return false;
 
@@ -269,6 +272,31 @@ public sealed class PluginFeedClient
         if (!string.IsNullOrEmpty(feed.Username) || !string.IsNullOrEmpty(feed.Password))
             packageSource.Credentials = new PackageSourceCredential(name, feed.Username, feed.Password, isPasswordClearText: true, validAuthenticationTypesText: null);
 
-        return Repository.Factory.GetCoreV3(packageSource);
+        if (feed.CreateHandler == null)
+            return Repository.Factory.GetCoreV3(packageSource);
+
+        // Ahead of NuGet's own HTTP handler provider, which would otherwise build the handler
+        var providers = Repository.Provider.GetCoreV3()
+            .Prepend(new Lazy<INuGetResourceProvider>(() => new FeedHandlerResourceProvider(feed.CreateHandler)));
+
+        return Repository.CreateSource(providers, packageSource);
+    }
+
+    /// <summary>Sends a feed's requests through the handler it brings, in place of NuGet's credential handling.</summary>
+    private sealed class FeedHandlerResourceProvider(Func<DelegatingHandler> createHandler)
+        : ResourceProvider(typeof(HttpHandlerResource), nameof(FeedHandlerResourceProvider), NuGetResourceProviderPositions.First)
+    {
+        public override Task<Tuple<bool, INuGetResource?>> TryCreate(SourceRepository source, CancellationToken token)
+        {
+            var clientHandler = new HttpClientHandler
+            {
+                AutomaticDecompression = System.Net.DecompressionMethods.GZip | System.Net.DecompressionMethods.Deflate,
+            };
+
+            var handler = createHandler();
+            handler.InnerHandler = clientHandler;
+
+            return Task.FromResult(Tuple.Create(true, (INuGetResource?)new HttpHandlerResourceV3(clientHandler, handler)));
+        }
     }
 }

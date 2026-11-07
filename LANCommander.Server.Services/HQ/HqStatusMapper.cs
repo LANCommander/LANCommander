@@ -32,6 +32,9 @@ internal static class HqStatusMapper
         // credential is not implicated.
         HQApiException => HqConnectionStatus.Unreachable,
 
+        // Raw HTTP calls made outside the SDK with its token, e.g. to the package registry
+        HttpRequestException { StatusCode: HttpStatusCode.Unauthorized } => HqConnectionStatus.Unauthorized,
+
         HttpRequestException or SocketException or TimeoutException or TaskCanceledException
             => HqConnectionStatus.Unreachable,
 

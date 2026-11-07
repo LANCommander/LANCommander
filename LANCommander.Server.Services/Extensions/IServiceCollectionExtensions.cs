@@ -14,6 +14,7 @@ using LANCommander.HQ.SDK;
 using LANCommander.HQ.SDK.Authentication;
 using LANCommander.Server.Services.Providers;
 using LANCommander.Server.Services.HQ;
+using LANCommander.Server.Services.HQ.Registry;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
 using Microsoft.Extensions.DependencyInjection;
@@ -107,6 +108,7 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<HqConnectionService>();
         services.AddSingleton<IHqConnectionState>(sp => sp.GetRequiredService<HqConnectionService>());
         services.AddSingleton<HqAuthorizationStateStore>();
+        services.AddSingleton<HqRegistry>();
         services.AddHostedService<HqConnectionMonitor>();
         services.AddScoped<HqMediaGrabber>();
         services.AddScoped<SteamGridDBMediaGrabber>();

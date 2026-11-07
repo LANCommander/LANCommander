@@ -1,0 +1,245 @@
+@using LANCommander.Server.ImportExport.Services
+@using LANCommander.Server.Services.HQ.Registry
+@using NuGet.Versioning
+@using ManifestType = LANCommander.SDK.Enums.ManifestType
+@using StorageLocationType = LANCommander.SDK.Enums.StorageLocationType
+@inherits Dialog<NoOptions, bool>
+@implements IDisposable
+@inject HqRegistry Registry
+@inject ImportRunner ImportRunner
+@inject RedistributableService RedistributableService
+@inject NotificationService Notifications
+@inject ILogger<HqRedistributablesDialog> Logger
+
+@*
+    Lists the redistributables published to the LANCommander HQ package registry and imports one by
+    downloading its LCX and running the same import an upload does. A redistributable already in the
+    library is matched by the record ID in its manifest, or failing that by name, so a newer version
+    on HQ shows as an update.
+*@
+@if (!Registry.IsAvailable)
+{
+    <Empty Title="Not connected to LANCommander HQ" Description="Redistributables are published to the LANCommander HQ package registry, which only signed-in servers can read.">
+        <Button Primary Href="/Settings/Integrations/HQ">Connect to HQ</Button>
+    </Empty>
+}
+else
+{
+    <Flex Vertical Gap="Gap.Medium">
+        <Flex Gap="Gap.Small">
+            <TextInput @bind-Value="_term" Immediate Icon="IconType.MagnifyingGlass" Placeholder="Search redistributables" OnEnter="SearchAsync" Style="flex: 1" />
+            <Button Primary OnClick="SearchAsync" Loading="_searching">Search</Button>
+        </Flex>
+
+        @if (_error != null)
+        {
+            <Alert Warning Title="LANCommander HQ could not be searched">@_error</Alert>
+        }
+
+        <Table TItem="HqRegistryPackage" Items="_results" Key="p => p.Id" Small NoPaging EmptyText="@(_searched ? "No redistributables found" : "Searching...")">
+            <Columns>
+                <TemplateColumn Title="Redistributable">
+                    <Flex Gap="Gap.Medium" Align="Align.Center">
+                        <Avatar Src="@context.IconUrl" Name="@context.Title" Icon="IconType.Package" Square />
+                        <Flex Vertical>
+                            <span>
+                                <Typography Strong>@context.Title</Typography>
+                                @if (!String.IsNullOrWhiteSpace(context.Authors))
+                                {
+                                    <Typography Secondary Small> by @context.Authors</Typography>
+                                }
+                            </span>
+                            <Typography Secondary Small Ellipsis title="@context.Description">@(context.Description ?? context.Id)</Typography>
+                        </Flex>
+                    </Flex>
+                </TemplateColumn>
+                <BoundColumn Property="p => p.Version" Title="Latest" Width="140px" />
+                <TemplateColumn Title="Downloads" Width="110px">
+                    @context.Downloads.ToString("N0")
+                </TemplateColumn>
+                <ActionsColumn TItem="HqRegistryPackage" Width="170px">
+                    @if (_importing == context.Id)
+                    {
+                        <Button Small Loading>
+                            @if (_downloaded is { } bytes)
+                            {
+                                <text>Downloading <ByteSize Value="bytes" /></text>
+                            }
+                            else
+                            {
+                                <text>Importing</text>
+                            }
+                        </Button>
+                    }
+                    else
+                    {
+                        var existing = Find(context);
+
+                        if (existing == null)
+                        {
+                            <Button Small Icon="IconType.DownloadSimple" Disabled="_importing != null" OnClick="() => ImportAsync(context)">Import</Button>
+                        }
+                        else if (IsNewer(context.Version, existing.Version))
+                        {
+                            <Tooltip Title="@($"{existing.Version} is in the library")">
+                                <Button Small Icon="IconType.ArrowCircleUp" Disabled="_importing != null" OnClick="() => ImportAsync(context)">Update</Button>
+                            </Tooltip>
+                        }
+                        else
+                        {
+                            <Tag Success>In library</Tag>
+                        }
+                    }
+                </ActionsColumn>
+            </Columns>
+        </Table>
+
+        <StorageLocationSelector @bind-Value="_storageLocation" Type="StorageLocationType.Archive" />
+    </Flex>
+}
+
+<Flex Justify="Justify.End" Style="margin-top: 16px">
+    <Button OnClick="() => CloseAsync(true)">Close</Button>
+</Flex>
+
+@code {
+    sealed record LibraryEntry(Guid Id, string Name, string? Version);
+
+    string? _term;
+    bool _searching;
+    bool _searched;
+    string? _error;
+    IReadOnlyList<HqRegistryPackage> _results = [];
+
+    IReadOnlyList<LibraryEntry> _library = [];
+    StorageLocation? _storageLocation;
+
+    string? _importing;
+    long? _downloaded;
+
+    readonly CancellationTokenSource _cancellation = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (!Registry.IsAvailable)
+            return;
+
+        await LoadLibraryAsync();
+        await SearchAsync();
+    }
+
+    async Task SearchAsync()
+    {
+        _searching = true;
+        _error = null;
+
+        try
+        {
+            _results = await Registry.SearchAsync(_term, HqRegistry.RedistributablePackageType, cancellationToken: _cancellation.Token);
+        }
+        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not search the LANCommander HQ registry for redistributables");
+
+            _results = [];
+            _error = ex.Message;
+        }
+        finally
+        {
+            _searching = false;
+            _searched = true;
+        }
+    }
+
+    async Task LoadLibraryAsync()
+    {
+        var redistributables = await RedistributableService.AsNoTracking().Include(r => r.Archives).GetAsync();
+
+        _library = redistributables
+            .Select(r => new LibraryEntry(
+                r.Id,
+                r.Name,
+                r.Archives?.OrderByDescending(a => a.CreatedOn).FirstOrDefault()?.Version))
+            .ToList();
+    }
+
+    /// <summary>The redistributable in the library a package imports into.</summary>
+    LibraryEntry? Find(HqRegistryPackage package) =>
+        _library.FirstOrDefault(r => package.ManifestId is { } id && r.Id == id)
+        ?? _library.FirstOrDefault(r => r.Name.Equals(package.Title, StringComparison.OrdinalIgnoreCase));
+
+    static bool IsNewer(string candidate, string? installed) =>
+        installed != null && NuGetVersion.TryParse(candidate, out var a) && NuGetVersion.TryParse(installed, out var b) && a > b;
+
+    async Task ImportAsync(HqRegistryPackage package)
+    {
+        _importing = package.Id;
+        _downloaded = 0;
+
+        var path = Path.Combine(Path.GetTempPath(), $"lancommander-hq-{Guid.NewGuid():N}.lcx");
+
+        try
+        {
+            await using (var file = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None, 81920, FileOptions.Asynchronous))
+            {
+                var lastRender = DateTime.MinValue;
+
+                var progress = new Progress<long>(bytes =>
+                {
+                    _downloaded = bytes;
+
+                    // Progress<T> posts to the circuit, so rendering is safe; just not on every buffer
+                    if (DateTime.UtcNow - lastRender > TimeSpan.FromMilliseconds(250))
+                    {
+                        lastRender = DateTime.UtcNow;
+                        StateHasChanged();
+                    }
+                });
+
+                await Registry.DownloadLcxAsync(package.Id, package.Version, file, progress, _cancellation.Token);
+            }
+
+            _downloaded = null;
+            StateHasChanged();
+
+            // Not cancelled by closing the dialog: an import stopped part way leaves a partial record
+            await ImportRunner.RunFileAsync(path, _storageLocation?.Id, ManifestType.Redistributable);
+
+            Notifications.Success($"Imported {package.Title} {package.Version}");
+
+            await LoadLibraryAsync();
+        }
+        catch (OperationCanceledException) when (_cancellation.IsCancellationRequested)
+        {
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not import {PackageId} {Version} from LANCommander HQ", package.Id, package.Version);
+
+            Notifications.Error(ex, $"{package.Title} could not be imported");
+        }
+        finally
+        {
+            _importing = null;
+            _downloaded = null;
+
+            try
+            {
+                File.Delete(path);
+            }
+            catch (Exception ex)
+            {
+                Logger.LogWarning(ex, "Could not delete the downloaded package {Path}", path);
+            }
+        }
+    }
+
+    public void Dispose()
+    {
+        _cancellation.Cancel();
+        _cancellation.Dispose();
+    }
+}

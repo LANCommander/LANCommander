@@ -24,16 +24,15 @@ public partial class NavigationService : ObservableObject, INavigationService
 
     public bool CanGoBack => _history.Count > 0;
 
-    public async void NavigateTo(ViewModelBase viewModel, bool clearHistory = false, Func<Task>? initializeAsync = null)
+    public async void NavigateTo(ViewModelBase viewModel, bool clearHistory = false, Func<Task>? initializeAsync = null, bool replaceCurrent = false)
     {
         if (clearHistory)
         {
             _history.Clear();
         }
-        // Navigating to the view already shown reloads it in place, such as opening another game from
-        // the rail beside a game's page. Pushing it would make Back return to the same instance,
-        // which by then shows the new game.
-        else if (CurrentView != null && !ReferenceEquals(CurrentView, viewModel))
+        // Navigating to the view already shown reloads it in place. Pushing it would make Back
+        // return to the same instance, which by then shows the new content.
+        else if (!replaceCurrent && CurrentView != null && !ReferenceEquals(CurrentView, viewModel))
         {
             _history.Push(new NavigationEntry(CurrentView));
 

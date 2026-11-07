@@ -18,6 +18,7 @@ public partial class ShellViewModel
         GamesListViewModel       = new GamesListViewModel(_serviceProvider);
         LibraryViewModel         = new LibraryViewModel(_serviceProvider);
         GameDetailViewModel      = new GameDetailViewModel(_serviceProvider);
+        _otherGameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
         PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);

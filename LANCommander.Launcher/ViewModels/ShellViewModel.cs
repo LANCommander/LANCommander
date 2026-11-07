@@ -179,6 +179,15 @@ public partial class ShellViewModel : ViewModelBase
     public GamesListViewModel       GamesListViewModel       { get; private set; } = null!;
     public LibraryViewModel         LibraryViewModel         { get; private set; } = null!;
     public GameDetailViewModel      GameDetailViewModel      { get; private set; } = null!;
+
+    /// <summary>
+    /// The library's other game page. Library game pages alternate between this and
+    /// <see cref="GameDetailViewModel"/> (the one most recently opened), so switching games from the
+    /// rail can load the next game off screen and fade it in.
+    /// </summary>
+    private GameDetailViewModel _otherGameDetailViewModel = null!;
+
+    private GameDetailViewModel[] LibraryGameDetails => [GameDetailViewModel, _otherGameDetailViewModel];
     public DownloadQueueViewModel   DownloadQueue            { get; private set; } = null!;
     public SettingsViewModel        SettingsViewModel        { get; private set; } = null!;
     public ProfileViewModel         Profile                  { get; private set; } = null!;
@@ -246,6 +255,7 @@ public partial class ShellViewModel : ViewModelBase
         GamesListViewModel       = new GamesListViewModel(_serviceProvider);
         LibraryViewModel         = new LibraryViewModel(_serviceProvider);
         GameDetailViewModel      = new GameDetailViewModel(_serviceProvider);
+        _otherGameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
         PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
@@ -273,7 +283,8 @@ public partial class ShellViewModel : ViewModelBase
         DepotGameDetailViewModel.IsOfflineMode = IsOfflineMode;
         GamesListViewModel.IsOfflineMode       = IsOfflineMode;
         LibraryViewModel.IsOfflineMode         = IsOfflineMode;
-        GameDetailViewModel.IsOfflineMode      = IsOfflineMode;
+        foreach (var detail in LibraryGameDetails)
+            detail.IsOfflineMode = IsOfflineMode;
 
         DepotViewModel.GameSelected                += OnDepotGameSelected;
         DepotViewModel.SearchRequested             += OnSearchRequested;
@@ -292,9 +303,12 @@ public partial class ShellViewModel : ViewModelBase
         DepotGameDetailViewModel.InstallRequested += OnInstallRequested;
         DepotGameDetailViewModel.SearchRequested  += OnSearchRequested;
 
-        GameDetailViewModel.LibraryChanged   += OnLibraryChanged;
-        GameDetailViewModel.InstallRequested += OnInstallRequested;
-        GameDetailViewModel.SearchRequested  += OnSearchRequested;
+        foreach (var detail in LibraryGameDetails)
+        {
+            detail.LibraryChanged   += OnLibraryChanged;
+            detail.InstallRequested += OnInstallRequested;
+            detail.SearchRequested  += OnSearchRequested;
+        }
 
         DownloadQueue.InstallCompleted += OnInstallCompleted;
         DownloadQueue.ToolInstallCompleted += OnToolInstallCompleted;
@@ -514,7 +528,8 @@ public partial class ShellViewModel : ViewModelBase
                     DepotGameDetailViewModel.IsOfflineMode = false;
                     GamesListViewModel.IsOfflineMode       = false;
                     LibraryViewModel.IsOfflineMode         = false;
-                    GameDetailViewModel.IsOfflineMode      = false;
+                    foreach (var detail in LibraryGameDetails)
+                        detail.IsOfflineMode = false;
 
                     await ImportAndLoadAsync();
                     return;
@@ -545,7 +560,8 @@ public partial class ShellViewModel : ViewModelBase
         DepotGameDetailViewModel.IsOfflineMode = true;
         GamesListViewModel.IsOfflineMode       = true;
         LibraryViewModel.IsOfflineMode         = true;
-        GameDetailViewModel.IsOfflineMode      = true;
+        foreach (var detail in LibraryGameDetails)
+            detail.IsOfflineMode = true;
     }
 
     [RelayCommand]
@@ -585,19 +601,42 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     /// <summary>Game selected from the library context.</summary>
-    private void OnGameSelected(object? sender, SDK.Models.Game game)
+    internal void OnGameSelected(object? sender, SDK.Models.Game game)
     {
+        // The game page on screen, if one is (the depot's derives from the same type, hence the
+        // explicit pair)
+        var shown = ContentView == GameDetailViewModel || ContentView == _otherGameDetailViewModel
+            ? (GameDetailViewModel)ContentView
+            : null;
+
         // Choosing the open game again in the rail has nothing to change
-        if (ContentView == GameDetailViewModel && GameDetailViewModel.Id == game.Id)
+        if (shown?.Id == game.Id)
             return;
 
-        GameDetailViewModel.FromLibrary = !IsDepotActive;
+        // Going from one game's page to another's (the rail), the new game loads into the page
+        // that isn't showing and then takes the shown one's place. The content changes identity, so
+        // it fades in like any other navigation instead of the shown page's art and text being
+        // replaced in front of the user.
+        var target = shown == null
+            ? GameDetailViewModel
+            : ReferenceEquals(shown, GameDetailViewModel) ? _otherGameDetailViewModel : GameDetailViewModel;
+
+        if (!ReferenceEquals(target, GameDetailViewModel))
+        {
+            _otherGameDetailViewModel = GameDetailViewModel;
+            GameDetailViewModel = target;
+        }
+
+        target.FromLibrary = !IsDepotActive;
 
         if (!IsDepotActive)
             SelectInLibraryRail(game.Id);
 
-        _navigationService.NavigateTo(GameDetailViewModel,
-            initializeAsync: () => GameDetailViewModel.LoadGameAsync(game));
+        // Replacing rather than stacking: Back from either page returns to where the first was
+        // opened from, and the page being replaced is about to be reused
+        _navigationService.NavigateTo(target,
+            initializeAsync: () => target.LoadGameAsync(game),
+            replaceCurrent: shown != null);
     }
 
     public async Task NavigateToGameByIdAsync(Guid gameId)
@@ -763,8 +802,9 @@ public partial class ShellViewModel : ViewModelBase
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();
 
-        if (GameDetailViewModel.Id == gameId)
-            await GameDetailViewModel.RefreshInstallStatusAsync();
+        foreach (var detail in LibraryGameDetails)
+            if (detail.Id == gameId)
+                await detail.RefreshInstallStatusAsync();
     }
     
     private async void OnToolInstallCompleted(object? sender, Guid gameId)
@@ -772,8 +812,9 @@ public partial class ShellViewModel : ViewModelBase
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();
 
-        if (GameDetailViewModel.Id == gameId)
-            await GameDetailViewModel.RefreshInstallStatusAsync();
+        foreach (var detail in LibraryGameDetails)
+            if (detail.Id == gameId)
+                await detail.RefreshInstallStatusAsync();
     }
 
     [RelayCommand]

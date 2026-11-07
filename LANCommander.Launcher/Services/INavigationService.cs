@@ -15,9 +15,11 @@ public interface INavigationService : INotifyPropertyChanged
     /// Navigate to a view model. If <paramref name="clearHistory"/> is true the history
     /// stack is emptied first (use for root navigations like Library/Depot toggle).
     /// An optional <paramref name="initializeAsync"/> callback runs while
-    /// <see cref="IsNavigating"/> is true, driving the loading indicator.
+    /// <see cref="IsNavigating"/> is true, driving the loading indicator. With
+    /// <paramref name="replaceCurrent"/> the view takes the current one's place instead of going on
+    /// top of it, so Back skips the view being replaced.
     /// </summary>
-    void NavigateTo(ViewModelBase viewModel, bool clearHistory = false, Func<Task>? initializeAsync = null);
+    void NavigateTo(ViewModelBase viewModel, bool clearHistory = false, Func<Task>? initializeAsync = null, bool replaceCurrent = false);
 
     /// <summary>Pop the history stack and return to the previous view. No-op if the stack is empty.</summary>
     void GoBack();

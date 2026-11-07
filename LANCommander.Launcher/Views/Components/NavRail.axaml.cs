@@ -4,9 +4,9 @@ using Avalonia.Controls;
 namespace LANCommander.Launcher.Views.Components;
 
 /// <summary>
-/// Left rail shared by the Library and Depot pages. <see cref="ActivePage"/> ("Library" or "Depot")
-/// lights the matching nav entry; <see cref="RailContent"/> is the page's own section, shown between
-/// the nav and the status bar.
+/// Left rail of the Library and Depot pages, hosted by the shell so it stays beside the game pages
+/// opened from them. <see cref="ActivePage"/> ("Library" or "Depot") lights the matching nav entry;
+/// <see cref="RailContent"/> is the page's own section, shown below the nav.
 /// </summary>
 public partial class NavRail : UserControl
 {

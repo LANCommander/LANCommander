@@ -1,0 +1,98 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:vmComponents="using:LANCommander.Launcher.ViewModels.Components"
+             xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:converters="using:LANCommander.Launcher.Converters"
+             x:Class="LANCommander.Launcher.Views.Components.LibraryRail"
+             x:DataType="vm:LibraryViewModel">
+
+    <UserControl.Styles>
+        <Style Selector="ListBox.CompactGamesList">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Padding" Value="0" />
+        </Style>
+        <Style Selector="ListBox.CompactGamesList ListBoxItem">
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Margin" Value="8,0,8,1" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
+            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+            <Setter Property="controls:GameContextMenu.IsEnabled" Value="True" />
+            <Setter Property="Template">
+                <ControlTemplate>
+                    <ContentPresenter Name="PART_ContentPresenter"
+                                      Content="{TemplateBinding Content}"
+                                      ContentTemplate="{TemplateBinding ContentTemplate}"
+                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
+                                      Padding="{TemplateBinding Padding}" />
+                </ControlTemplate>
+            </Setter>
+        </Style>
+        <Style Selector="ListBox.CompactGamesList Border.CompactListRow">
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
+            <Setter Property="MinHeight" Value="36" />
+            <Setter Property="Padding" Value="10,0" />
+        </Style>
+        <Style Selector="ListBox.CompactGamesList ListBoxItem:pointerover Border.CompactListRow">
+            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        </Style>
+        <!-- Selected: 2px accent rail as a left border, with the padding trimmed by the same 2px so the
+             content doesn't shift -->
+        <Style Selector="ListBox.CompactGamesList ListBoxItem:selected Border.CompactListRow">
+            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
+            <Setter Property="BorderThickness" Value="2,0,0,0" />
+            <Setter Property="Padding" Value="8,0,10,0" />
+        </Style>
+    </UserControl.Styles>
+
+    <!-- The library rail's section: every title in the library. Bind the DataContext to the
+         LibraryViewModel; choosing a title opens its page beside the rail. -->
+    <DockPanel>
+        <TextBlock DockPanel.Dock="Top" Classes="Kicker" Text="ALL TITLES" Margin="16,0,16,8" />
+
+        <ListBox x:Name="GameListBox"
+                 Classes="CompactGamesList"
+                 ItemsSource="{Binding Games}"
+                 SelectedItem="{Binding SelectedGame}"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                 ScrollViewer.VerticalScrollBarVisibility="Auto"
+                 Tapped="GameList_Tapped"
+                 KeyDown="GameList_KeyDown">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <VirtualizingStackPanel />
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate DataType="vmComponents:GameItemViewModel">
+                    <Border Classes="CompactListRow">
+                        <DockPanel>
+                            <Image controls:AsyncImage.Source="{Binding IconPath}"
+                                   controls:AsyncImage.DecodeWidth="22"
+                                   Width="22" Height="22"
+                                   Stretch="Uniform"
+                                   Margin="0,0,10,0"
+                                   VerticalAlignment="Center" />
+                            <StackPanel VerticalAlignment="Center" MinWidth="0">
+                                <TextBlock Text="{Binding Title}"
+                                           FontSize="{DynamicResource FontSizeBody}"
+                                           TextTrimming="CharacterEllipsis"
+                                           Opacity="{Binding IsInstalled, Converter={x:Static converters:BoolToDoubleConverter.Instance}}" />
+                                <TextBlock Text="Update Available"
+                                           FontSize="{DynamicResource FontSizeKicker}"
+                                           Foreground="{DynamicResource AccentTextBrush}"
+                                           IsVisible="{Binding IsUpdateAvailable}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </DockPanel>
+</UserControl>

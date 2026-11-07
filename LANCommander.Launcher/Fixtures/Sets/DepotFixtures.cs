@@ -168,7 +168,7 @@ public static class DepotFixtures
     }
 
     /// <summary>The rail counts, which the browse page shows too.</summary>
-    private static void SetCounts(DepotViewModel depot)
+    internal static void SetCounts(DepotViewModel depot)
     {
         depot.TotalTitles = MainGames.Count();
         depot.MultiplayerTitles = MainGames.Count(IsMultiplayer);

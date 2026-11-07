@@ -9,211 +9,115 @@
              x:Class="LANCommander.Launcher.Views.LibraryRowView"
              x:DataType="vm:LibraryViewModel">
 
-    <UserControl.Styles>
-        <Style Selector="ListBox.CompactGamesList">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Padding" Value="0" />
-        </Style>
-        <Style Selector="ListBox.CompactGamesList ListBoxItem">
-            <Setter Property="Padding" Value="0" />
-            <Setter Property="Margin" Value="8,0,8,1" />
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="Cursor" Value="Hand" />
-            <Setter Property="HorizontalAlignment" Value="Stretch" />
-            <Setter Property="HorizontalContentAlignment" Value="Stretch" />
-            <Setter Property="controls:GameContextMenu.IsEnabled" Value="True" />
-            <Setter Property="Template">
-                <ControlTemplate>
-                    <ContentPresenter Name="PART_ContentPresenter"
-                                      Content="{TemplateBinding Content}"
-                                      ContentTemplate="{TemplateBinding ContentTemplate}"
-                                      HorizontalContentAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                      VerticalContentAlignment="{TemplateBinding VerticalContentAlignment}"
-                                      Padding="{TemplateBinding Padding}" />
-                </ControlTemplate>
-            </Setter>
-        </Style>
-        <Style Selector="ListBox.CompactGamesList Border.CompactListRow">
-            <Setter Property="Background" Value="Transparent" />
-            <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
-            <Setter Property="MinHeight" Value="36" />
-            <Setter Property="Padding" Value="10,0" />
-        </Style>
-        <Style Selector="ListBox.CompactGamesList ListBoxItem:pointerover Border.CompactListRow">
-            <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
-        </Style>
-        <!-- Selected: 2px accent rail as a left border, with the padding trimmed by the same 2px so the
-             content doesn't shift -->
-        <Style Selector="ListBox.CompactGamesList ListBoxItem:selected Border.CompactListRow">
-            <Setter Property="Background" Value="{DynamicResource SurfaceRaisedBrush}" />
-            <Setter Property="BorderBrush" Value="{DynamicResource AccentTextBrush}" />
-            <Setter Property="BorderThickness" Value="2,0,0,0" />
-            <Setter Property="Padding" Value="8,0,10,0" />
-        </Style>
-    </UserControl.Styles>
+    <!-- The library's list layout: carousels over the cover grid. Its title list is the shell's
+         LibraryRail, which stays beside this and the library's game pages. -->
+    <ScrollViewer x:Name="RightPanelScrollViewer"
+                  Classes="TitlebarOffset"
+                  HorizontalScrollBarVisibility="Disabled"
+                  VerticalScrollBarVisibility="Auto">
+        <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
 
-    <Grid ColumnDefinitions="250,*">
+            <!-- ══ RECENTLY PLAYED ═══════════════════════════════════════════════ -->
+            <CarouselControl x:Name="RecentlyPlayedCarousel"
+                             Title="Recently Played"
+                             Kicker="PICK UP WHERE YOU LEFT OFF"
+                             ItemsSource="{Binding RecentlyPlayedGames}"
+                             ItemWidth="160"
+                             VisibleItems="5"
+                             Gap="16"
+                             ItemOverflow="14">
+                <CarouselControl.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="HasRecentlyPlayed" />
+                        <Binding Path="!IsCollectionFiltered" />
+                    </MultiBinding>
+                </CarouselControl.IsVisible>
+                <CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GameItemViewModel">
+                        <components:CoverButton Width="160" Height="240"
+                            controls:GameContextMenu.IsEnabled="True"
+                            Command="{Binding $parent[local:LibraryRowView].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
+                            CommandParameter="{Binding}" />
+                    </DataTemplate>
+                </CarouselControl.ItemTemplate>
+            </CarouselControl>
 
-        <!-- ═══ LEFT PANEL: shared rail with this page's title list ═══ -->
-        <components:NavRail Grid.Column="0" ActivePage="Library">
-            <components:NavRail.RailContent>
-                <DockPanel>
-                    <TextBlock DockPanel.Dock="Top" Classes="Kicker" Text="ALL TITLES" Margin="16,0,16,8" />
+            <!-- ══ COLLECTIONS ═══════════════════════════════════════════════════ -->
+            <CarouselControl x:Name="CollectionsCarousel"
+                             Title="Collections"
+                             WrapItems="True"
+                             ItemsSource="{Binding LibraryCollections}"
+                             ItemWidth="200"
+                             VisibleItems="4">
+                <CarouselControl.IsVisible>
+                    <MultiBinding Converter="{x:Static BoolConverters.And}">
+                        <Binding Path="HasCollections" />
+                        <Binding Path="!IsCollectionFiltered" />
+                    </MultiBinding>
+                </CarouselControl.IsVisible>
+                <CarouselControl.ItemTemplate>
+                    <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
+                        <components:GenreCarouselButton Width="200" Height="150"
+                            Command="{Binding $parent[local:LibraryRowView].((vm:LibraryViewModel)DataContext).FilterByCollectionCommand}"
+                            CommandParameter="{Binding Name}" />
+                    </DataTemplate>
+                </CarouselControl.ItemTemplate>
+            </CarouselControl>
 
-                    <ListBox x:Name="GameListBox"
-                             Classes="CompactGamesList"
-                             ItemsSource="{Binding Games}"
-                             SelectedItem="{Binding SelectedGame}"
-                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                             ScrollViewer.VerticalScrollBarVisibility="Auto"
-                             Tapped="GameList_Tapped"
-                             KeyDown="GameList_KeyDown">
-                        <ListBox.ItemsPanel>
-                            <ItemsPanelTemplate>
-                                <VirtualizingStackPanel />
-                            </ItemsPanelTemplate>
-                        </ListBox.ItemsPanel>
-                        <ListBox.ItemTemplate>
+            <!-- ══ ALL GAMES GRID ═════════════════════════════════════════════════
+                 In the carousels' shared columns, so the grid spans exactly their item area. -->
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
+                </Grid.ColumnDefinitions>
+                <StackPanel x:Name="AllGamesPanel" Grid.Column="1" Spacing="12"
+                            SizeChanged="AllGamesPanel_SizeChanged">
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right"
+                                Command="{Binding ClearCollectionFilterCommand}"
+                                Classes="Text Error"
+                                Padding="8,4"
+                                Margin="0,-4"
+                                Focusable="False"
+                                IsVisible="{Binding IsCollectionFiltered}">
+                            <Icon Type="Regular" Value="X" Width="14" Height="14" />
+                        </Button>
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <TextBlock Text="All Games" Classes="Section" VerticalAlignment="Center"
+                                       IsVisible="{Binding !IsCollectionFiltered}" />
+                            <TextBlock Text="{Binding FilteredCollectionName}" Classes="Section" VerticalAlignment="Center"
+                                       IsVisible="{Binding IsCollectionFiltered}" />
+                            <Border Classes="CountPill Neutral">
+                                <TextBlock Text="{Binding Games.Count}" />
+                            </Border>
+                        </StackPanel>
+                    </DockPanel>
+                    <ItemsRepeater x:Name="LibraryGridItemsRepeater"
+                                   ItemsSource="{Binding Games}"
+                                   ClipToBounds="False"
+                                   controls:DirectionalNavigation.IsEnabled="True">
+                        <ItemsRepeater.Layout>
+                            <UniformGridLayout MinItemWidth="105" MinItemHeight="158"
+                                               MinColumnSpacing="12" MinRowSpacing="12"
+                                               ItemsStretch="None"
+                                               ItemsJustification="Start" />
+                        </ItemsRepeater.Layout>
+                        <ItemsRepeater.ItemTemplate>
                             <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                <Border Classes="CompactListRow">
-                                    <DockPanel>
-                                        <Image controls:AsyncImage.Source="{Binding IconPath}"
-                                               controls:AsyncImage.DecodeWidth="22"
-                                               Width="22" Height="22"
-                                               Stretch="Uniform"
-                                               Margin="0,0,10,0"
-                                               VerticalAlignment="Center" />
-                                        <StackPanel VerticalAlignment="Center" MinWidth="0">
-                                            <TextBlock Text="{Binding Title}"
-                                                       FontSize="{DynamicResource FontSizeBody}"
-                                                       TextTrimming="CharacterEllipsis"
-                                                       Opacity="{Binding IsInstalled, Converter={x:Static converters:BoolToDoubleConverter.Instance}}" />
-                                            <TextBlock Text="Update Available"
-                                                       FontSize="{DynamicResource FontSizeKicker}"
-                                                       Foreground="{DynamicResource AccentTextBrush}"
-                                                       IsVisible="{Binding IsUpdateAvailable}" />
-                                        </StackPanel>
-                                    </DockPanel>
-                                </Border>
+                                <components:CoverButton
+                                    Width="{Binding $parent[local:LibraryRowView].SmallCoverWidth}"
+                                    Height="{Binding $parent[local:LibraryRowView].SmallCoverHeight}"
+                                    controls:GameContextMenu.IsEnabled="True"
+                                    Command="{Binding $parent[ItemsRepeater].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
+                                    CommandParameter="{Binding}" />
                             </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
-            </components:NavRail.RailContent>
-        </components:NavRail>
+                        </ItemsRepeater.ItemTemplate>
+                    </ItemsRepeater>
+                </StackPanel>
+            </Grid>
 
-        <!-- ═══ RIGHT PANEL: Carousels + Grid ═══ -->
-        <ScrollViewer x:Name="RightPanelScrollViewer"
-                      Classes="TitlebarOffset"
-                      Grid.Column="1"
-                      HorizontalScrollBarVisibility="Disabled"
-                      VerticalScrollBarVisibility="Auto">
-            <StackPanel Margin="10,48,10,24" Spacing="32" Grid.IsSharedSizeScope="True">
-
-                <!-- ══ RECENTLY PLAYED ═══════════════════════════════════════════════ -->
-                <CarouselControl x:Name="RecentlyPlayedCarousel"
-                                 Title="Recently Played"
-                                 Kicker="PICK UP WHERE YOU LEFT OFF"
-                                 ItemsSource="{Binding RecentlyPlayedGames}"
-                                 ItemWidth="160"
-                                 VisibleItems="5"
-                                 Gap="16"
-                                 ItemOverflow="14">
-                    <CarouselControl.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="HasRecentlyPlayed" />
-                            <Binding Path="!IsCollectionFiltered" />
-                        </MultiBinding>
-                    </CarouselControl.IsVisible>
-                    <CarouselControl.ItemTemplate>
-                        <DataTemplate x:DataType="vmComponents:GameItemViewModel">
-                            <components:CoverButton Width="160" Height="240"
-                                controls:GameContextMenu.IsEnabled="True"
-                                Command="{Binding $parent[local:LibraryRowView].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
-                                CommandParameter="{Binding}" />
-                        </DataTemplate>
-                    </CarouselControl.ItemTemplate>
-                </CarouselControl>
-
-                <!-- ══ COLLECTIONS ═══════════════════════════════════════════════════ -->
-                <CarouselControl x:Name="CollectionsCarousel"
-                                 Title="Collections"
-                                 WrapItems="True"
-                                 ItemsSource="{Binding LibraryCollections}"
-                                 ItemWidth="200"
-                                 VisibleItems="4">
-                    <CarouselControl.IsVisible>
-                        <MultiBinding Converter="{x:Static BoolConverters.And}">
-                            <Binding Path="HasCollections" />
-                            <Binding Path="!IsCollectionFiltered" />
-                        </MultiBinding>
-                    </CarouselControl.IsVisible>
-                    <CarouselControl.ItemTemplate>
-                        <DataTemplate x:DataType="vmComponents:GenreCarouselButtomViewModel">
-                            <components:GenreCarouselButton Width="200" Height="150"
-                                Command="{Binding $parent[local:LibraryRowView].((vm:LibraryViewModel)DataContext).FilterByCollectionCommand}"
-                                CommandParameter="{Binding Name}" />
-                        </DataTemplate>
-                    </CarouselControl.ItemTemplate>
-                </CarouselControl>
-
-                <!-- ══ ALL GAMES GRID ═════════════════════════════════════════════════
-                     In the carousels' shared columns, so the grid spans exactly their item area. -->
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
-                        <ColumnDefinition Width="*" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="CarouselNav" />
-                    </Grid.ColumnDefinitions>
-                    <StackPanel x:Name="AllGamesPanel" Grid.Column="1" Spacing="12"
-                                SizeChanged="AllGamesPanel_SizeChanged">
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right"
-                                    Command="{Binding ClearCollectionFilterCommand}"
-                                    Classes="Text Error"
-                                    Padding="8,4"
-                                    Margin="0,-4"
-                                    Focusable="False"
-                                    IsVisible="{Binding IsCollectionFiltered}">
-                                <Icon Type="Regular" Value="X" Width="14" Height="14" />
-                            </Button>
-                            <StackPanel Orientation="Horizontal" Spacing="10">
-                                <TextBlock Text="All Games" Classes="Section" VerticalAlignment="Center"
-                                           IsVisible="{Binding !IsCollectionFiltered}" />
-                                <TextBlock Text="{Binding FilteredCollectionName}" Classes="Section" VerticalAlignment="Center"
-                                           IsVisible="{Binding IsCollectionFiltered}" />
-                                <Border Classes="CountPill Neutral">
-                                    <TextBlock Text="{Binding Games.Count}" />
-                                </Border>
-                            </StackPanel>
-                        </DockPanel>
-                        <ItemsRepeater x:Name="LibraryGridItemsRepeater"
-                                       ItemsSource="{Binding Games}"
-                                       ClipToBounds="False"
-                                       controls:DirectionalNavigation.IsEnabled="True">
-                            <ItemsRepeater.Layout>
-                                <UniformGridLayout MinItemWidth="105" MinItemHeight="158"
-                                                   MinColumnSpacing="12" MinRowSpacing="12"
-                                                   ItemsStretch="None"
-                                                   ItemsJustification="Start" />
-                            </ItemsRepeater.Layout>
-                            <ItemsRepeater.ItemTemplate>
-                                <DataTemplate DataType="vmComponents:GameItemViewModel">
-                                    <components:CoverButton
-                                        Width="{Binding $parent[local:LibraryRowView].SmallCoverWidth}"
-                                        Height="{Binding $parent[local:LibraryRowView].SmallCoverHeight}"
-                                        controls:GameContextMenu.IsEnabled="True"
-                                        Command="{Binding $parent[ItemsRepeater].((vm:LibraryViewModel)DataContext).ViewGameDetailsCommand}"
-                                        CommandParameter="{Binding}" />
-                                </DataTemplate>
-                            </ItemsRepeater.ItemTemplate>
-                        </ItemsRepeater>
-                    </StackPanel>
-                </Grid>
-
-            </StackPanel>
-        </ScrollViewer>
-
-    </Grid>
+        </StackPanel>
+    </ScrollViewer>
 </UserControl>

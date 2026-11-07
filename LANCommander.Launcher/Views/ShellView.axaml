@@ -3,6 +3,7 @@
              xmlns:vm="using:LANCommander.Launcher.ViewModels"
              xmlns:views="using:LANCommander.Launcher.Views"
              xmlns:controls="using:LANCommander.Launcher.Controls"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
              xmlns:converters="using:LANCommander.Launcher.Converters"
              x:Class="LANCommander.Launcher.Views.ShellView"
              x:DataType="vm:ShellViewModel">
@@ -11,20 +12,47 @@
         <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
     </UserControl.Resources>
 
-    <Grid RowDefinitions="*,Auto">
+    <Grid RowDefinitions="*,Auto" ColumnDefinitions="Auto,*">
+
+        <!-- ── Left rail ─────────────────────────────────────────────────
+             Lives here rather than in each page so it stays put while the content beside it
+             changes: a game's page opens next to the rail it was chosen from. Each rail is kept
+             alive (only hidden) so its scroll position and selection survive navigation. -->
+        <Panel x:Name="RailHost"
+               Grid.Row="0" Grid.Column="0"
+               Width="250"
+               IsVisible="{Binding IsRailVisible}">
+            <components:NavRail ActivePage="Library" IsVisible="{Binding IsLibraryRail}">
+                <components:NavRail.RailContent>
+                    <components:LibraryRail x:Name="LibraryRail" DataContext="{Binding LibraryViewModel}" />
+                </components:NavRail.RailContent>
+            </components:NavRail>
+
+            <components:NavRail ActivePage="Depot" IsVisible="{Binding IsDepotRail}">
+                <components:NavRail.RailContent>
+                    <components:DepotBrowseLinks DataContext="{Binding DepotViewModel}" />
+                </components:NavRail.RailContent>
+            </components:NavRail>
+
+            <components:NavRail ActivePage="Depot" IsVisible="{Binding IsDepotBrowseRail}">
+                <components:NavRail.RailContent>
+                    <components:DepotBrowseRail DataContext="{Binding DepotBrowseViewModel}" />
+                </components:NavRail.RailContent>
+            </components:NavRail>
+        </Panel>
 
         <!-- ── Main Content ──────────────────────────────────────────────
              Data templates are supplied in code-behind from the IViewRegistry so plugins can
              add navigable views. Most-derived-first matching preserves the
              DepotGameDetailViewModel-before-GameDetailViewModel resolution rule. -->
-        <TransitioningContentControl x:Name="ContentHost" Grid.Row="0" Content="{Binding ContentView}">
+        <TransitioningContentControl x:Name="ContentHost" Grid.Row="0" Grid.Column="1" Content="{Binding ContentView}">
             <TransitioningContentControl.PageTransition>
                 <controls:FadeInPageTransition Duration="0:0:0.2" />
             </TransitioningContentControl.PageTransition>
         </TransitioningContentControl>
 
-        <!-- ── Loading overlay (shown during async navigation) ───── -->
-        <Border Grid.Row="0"
+        <!-- ── Loading overlay (shown during async navigation), over the content only ───── -->
+        <Border Grid.Row="0" Grid.Column="1"
                 Background="#80000000"
                 IsVisible="{Binding IsNavigating}"
                 IsHitTestVisible="False"
@@ -36,7 +64,7 @@
         </Border>
 
         <!-- ── Footer ────────────────────────────────────────────────── -->
-        <Border Grid.Row="1"
+        <Border Grid.Row="1" Grid.ColumnSpan="2"
                 Background="Black"
                 BorderBrush="{DynamicResource HairlineBorderBrush}"
                 BorderThickness="0,1,0,0"

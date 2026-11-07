@@ -42,6 +42,22 @@ public static class GameDetailFixtures
             var detail = Fill(context.Shell.DepotGameDetailViewModel, FixtureGames.NaturalSelection2);
             detail.ActionBar.DownloadSizeText = "9.8 GB";
 
+            return Show(context, detail);
+        }),
+
+        new("GameDetail.FromDepotBrowse", "A depot game opened from a browse, beside the browse page's rail", context =>
+        {
+            var shell = context.Shell;
+
+            DepotFixtures.SetCounts(shell.DepotViewModel);
+            shell.DepotBrowseViewModel.Initialize(FixtureGames.All.Select(g => g.ToItem()), preFilterGenre: "Strategy");
+
+            // The page it was opened from, whose rail the game page keeps
+            shell.ContentView = shell.DepotBrowseViewModel;
+
+            var detail = Fill(shell.DepotGameDetailViewModel, FixtureGames.NaturalSelection2);
+            detail.ActionBar.DownloadSizeText = "9.8 GB";
+
             return context.ShellWindow(detail);
         }),
 
@@ -50,17 +66,17 @@ public static class GameDetailFixtures
             var detail = Fill(context.Shell.GameDetailViewModel, FixtureGames.Diablo2);
             detail.ActionBar.DownloadSizeText = "2.1 GB";
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.Installed", "An installed game with media, tools, notes and manuals", context =>
-            context.ShellWindow(Installed(context))),
+            Show(context, Installed(context))),
 
         new("GameDetail.Installed.Full", "The whole page of an installed game", context =>
-            context.ShellWindow(Installed(context))) { Height = 1300 },
+            Show(context, Installed(context))) { Height = 1300 },
 
         new("GameDetail.MediaTab", "The media tab of an installed game", context =>
-            context.ShellWindow(Installed(context)))
+            Show(context, Installed(context)))
         {
             Prepare = (_, window) => window.GetVisualDescendants().OfType<GameDetailView>().Single()
                 .FindControl<Button>("MediaTabButton")!
@@ -73,7 +89,7 @@ public static class GameDetailFixtures
 
             detail.SeedIssuesForFixture(Issues());
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         })
         {
             // Tall enough to show all three issues below the header
@@ -119,7 +135,7 @@ public static class GameDetailFixtures
                 }, null),
             ]);
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         })
         {
             Height = 1000,
@@ -140,7 +156,7 @@ public static class GameDetailFixtures
             var detail = Fill(context.Shell.GameDetailViewModel, FixtureGames.AgeOfEmpires2);
             detail.ActionBar.IsUpdateAvailable = true;
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.Installing", "A game partway through installing", context =>
@@ -149,7 +165,7 @@ public static class GameDetailFixtures
             detail.ActionBar.IsInstalling = true;
             detail.ActionBar.DownloadSizeText = "1.2 GB";
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.Running", "An installed game that is running", context =>
@@ -158,7 +174,7 @@ public static class GameDetailFixtures
             detail.ActionBar.IsRunning = true;
             detail.ActionBar.LastPlayed = Localize("LastPlayedJustNow");
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.PlayingNow", "An installed game two other players are in right now", context =>
@@ -171,14 +187,14 @@ public static class GameDetailFixtures
                 FixturePresence.Playing(FixtureGames.IdFor("user Sam"), "Sam", FixtureGames.UnrealTournament2004, 42, FixturePresence.InAMatch),
             ]);
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.Running.Relay", "A LAN game running on the network relay with two other players", context =>
-            context.ShellWindow(RunningOnRelay(context))),
+            Show(context, RunningOnRelay(context))),
 
         new("GameDetail.Running.Relay.Players", "Who else is on the relay, opened from a running game's page", context =>
-            context.ShellWindow(RunningOnRelay(context)))
+            Show(context, RunningOnRelay(context)))
         {
             Prepare = (_, window) =>
             {
@@ -196,7 +212,7 @@ public static class GameDetailFixtures
             shell.SetOfflineMode(true);
             detail.IsOfflineMode = true;
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.NoArt", "A game the server has no media or metadata for", context =>
@@ -211,7 +227,7 @@ public static class GameDetailFixtures
             detail.ActionBar.PlayTime = Localize("PlayStatNone");
             detail.ActionBar.LastPlayed = Localize("LastPlayedNever");
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
 
         new("GameDetail.AllTags", "A game with a long tag list, expanded", context =>
@@ -222,7 +238,7 @@ public static class GameDetailFixtures
                 ["Sandbox", "Physics", "Historical", "Modding", "Dedicated Servers", "Classic Mods", "Squads", "Conquest", "Capture the Flag"]));
             detail.TagsExpanded = true;
 
-            return context.ShellWindow(detail);
+            return Show(context, detail);
         }),
     ];
 
@@ -237,6 +253,26 @@ public static class GameDetailFixtures
         - Admin password is on the whiteboard
         - Report crashes to `#lan-help`
         """;
+
+    /// <summary>
+    /// The shell around a game page, with the rail it was opened from filled in: the library's title
+    /// list with the game selected, or the depot's browse rows.
+    /// </summary>
+    private static Views.MainWindow Show(FixtureContext context, GameDetailViewModel detail)
+    {
+        if (detail.FromLibrary)
+        {
+            var library = context.Shell.LibraryViewModel;
+            library.SeedFixture(FixtureGames.Library.Select(g => g.ToItem(libraryBadge: false)));
+            library.SelectedGame = library.Games.FirstOrDefault(g => g.Id == detail.Id);
+        }
+        else
+        {
+            DepotFixtures.SetCounts(context.Shell.DepotViewModel);
+        }
+
+        return context.ShellWindow(detail);
+    }
 
     /// <summary>
     /// Fills a game page the way loading it would, with the action bar in the state the game's

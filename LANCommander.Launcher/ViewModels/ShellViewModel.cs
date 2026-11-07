@@ -55,10 +55,59 @@ public partial class ShellViewModel : ViewModelBase
 
     public bool IsTitlebarTinted => true;
 
+    /// <summary>
+    /// Which left rail sits beside the content. The rail lives in the shell rather than in each page,
+    /// so it stays put while the content beside it changes, such as when a game's details open.
+    /// </summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsRailVisible))]
+    [NotifyPropertyChangedFor(nameof(IsLibraryRail))]
+    [NotifyPropertyChangedFor(nameof(IsDepotRail))]
+    [NotifyPropertyChangedFor(nameof(IsDepotBrowseRail))]
+    private ShellRail _rail;
+
+    public bool IsRailVisible     => Rail != ShellRail.None;
+    public bool IsLibraryRail     => Rail == ShellRail.Library;
+    public bool IsDepotRail       => Rail == ShellRail.Depot;
+    public bool IsDepotBrowseRail => Rail == ShellRail.DepotBrowse;
+
+    /// <summary>
+    /// The rail for <paramref name="view"/>. Game details keep the rail of the page they were opened
+    /// from, so only the content beside it changes.
+    /// </summary>
+    private ShellRail ResolveRail(ViewModelBase? view) => view switch
+    {
+        // (Discards, since this class has properties named after these types)
+        LibraryViewModel _           => ShellRail.Library,
+        DepotViewModel _             => ShellRail.Depot,
+        DepotBrowseViewModel _       => ShellRail.DepotBrowse,
+        DepotGameDetailViewModel _   => Rail is ShellRail.Depot or ShellRail.DepotBrowse ? Rail : ShellRail.Depot,
+        GameDetailViewModel { FromLibrary: true } => ShellRail.Library,
+        GameDetailViewModel _       => Rail is ShellRail.Depot or ShellRail.DepotBrowse ? Rail : ShellRail.None,
+        _                            => ShellRail.None,
+    };
+
+    /// <summary>Highlights the open game in the library rail's title list.</summary>
+    private void SelectInLibraryRail(Guid gameId)
+    {
+        var item = LibraryViewModel?.Games.FirstOrDefault(g => g.Id == gameId);
+
+        if (item != null)
+            LibraryViewModel!.SelectedGame = item;
+    }
+
     partial void OnContentViewChanged(ViewModelBase? oldValue, ViewModelBase? newValue)
     {
+        Rail = ResolveRail(newValue);
+
         if (oldValue is GameDetailViewModel oldDetail)
+        {
             oldDetail.PropertyChanged -= OnGameDetailPropertyChanged;
+
+            // Leaving a game's page any way other than its Back button (the rail, Escape) must still
+            // stop it polling for the running game
+            oldDetail.ActionBar.StopRunningCheck();
+        }
         if (newValue is GameDetailViewModel newDetail)
             newDetail.PropertyChanged += OnGameDetailPropertyChanged;
 
@@ -78,6 +127,8 @@ public partial class ShellViewModel : ViewModelBase
     {
         if (e.PropertyName == nameof(GameDetailViewModel.Title))
             OnPropertyChanged(nameof(ContentViewTitle));
+        else if (e.PropertyName == nameof(GameDetailViewModel.FromLibrary))
+            Rail = ResolveRail(ContentView);
     }
 
     private void OnDepotBrowsePropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -536,7 +587,15 @@ public partial class ShellViewModel : ViewModelBase
     /// <summary>Game selected from the library context.</summary>
     private void OnGameSelected(object? sender, SDK.Models.Game game)
     {
+        // Choosing the open game again in the rail has nothing to change
+        if (ContentView == GameDetailViewModel && GameDetailViewModel.Id == game.Id)
+            return;
+
         GameDetailViewModel.FromLibrary = !IsDepotActive;
+
+        if (!IsDepotActive)
+            SelectInLibraryRail(game.Id);
+
         _navigationService.NavigateTo(GameDetailViewModel,
             initializeAsync: () => GameDetailViewModel.LoadGameAsync(game));
     }
@@ -752,4 +811,19 @@ public partial class ShellViewModel : ViewModelBase
     }
 
     public event EventHandler? OpenChatRequested;
+}
+
+/// <summary>The left rail shown beside the shell's content.</summary>
+public enum ShellRail
+{
+    None,
+
+    /// <summary>Page navigation over the library's title list.</summary>
+    Library,
+
+    /// <summary>Page navigation over the depot's browse links.</summary>
+    Depot,
+
+    /// <summary>Page navigation over the depot's browse links and the browse page's filters.</summary>
+    DepotBrowse,
 }

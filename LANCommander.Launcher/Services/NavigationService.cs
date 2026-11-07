@@ -30,7 +30,10 @@ public partial class NavigationService : ObservableObject, INavigationService
         {
             _history.Clear();
         }
-        else if (CurrentView != null)
+        // Navigating to the view already shown reloads it in place, such as opening another game from
+        // the rail beside a game's page. Pushing it would make Back return to the same instance,
+        // which by then shows the new game.
+        else if (CurrentView != null && !ReferenceEquals(CurrentView, viewModel))
         {
             _history.Push(new NavigationEntry(CurrentView));
 

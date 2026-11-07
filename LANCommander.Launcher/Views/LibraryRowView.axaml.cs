@@ -35,7 +35,7 @@ public partial class LibraryRowView : UserControl
     public LibraryRowView()
     {
         InitializeComponent();
-        AddHandler(KeyDownEvent, OnViewKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
+        AddHandler(KeyDownEvent, OnViewKeyDown, RoutingStrategies.Bubble);
     }
 
     // ── Section navigation helpers ──────────────────────────────────────
@@ -92,104 +92,48 @@ public partial class LibraryRowView : UserControl
 
     // ── Key handling ────────────────────────────────────────────────────
 
-    private void OnViewKeyDown(object? sender, KeyEventArgs e)
+    /// <summary>Focuses the first item of the topmost visible section, from the shell's rail.</summary>
+    public void FocusFirstSection()
     {
-        var focusedElement = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
-        if (focusedElement == null) return;
+        var sections = GetVisibleSections();
 
-        var focusInList = GameListBox == focusedElement || GameListBox.IsVisualAncestorOf(focusedElement);
-
-        // Right from sidebar: must intercept even when the ListBox's internal
-        // directional navigation has already marked the event as handled.
-        if (e.Key == Key.Right && focusInList)
-        {
-            var sections = GetVisibleSections();
-            if (sections.Count > 0)
-            {
-                FocusSectionFirstItem(sections[0]);
-                e.Handled = true;
-            }
-            return;
-        }
-
-        if (e.Handled) return;
-
-        switch (e.Key)
-        {
-            case Key.Left:
-                // If focus is in the right panel and Left was not consumed by a
-                // child (carousel at index 0, or grid leftmost column), move
-                // focus back to the sidebar list.
-                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
-                {
-                    FocusListSelectedItem();
-                    e.Handled = true;
-                }
-                break;
-
-            case Key.Down:
-                // Navigate from current section to the next section below.
-                // For the grid, DirectionalNavigation handles internal Down;
-                // this only fires when the event bubbles (bottom row or carousel).
-                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
-                {
-                    var sections = GetVisibleSections();
-                    var current = GetFocusedSection(focusedElement);
-                    if (current != null)
-                    {
-                        var idx = sections.IndexOf(current);
-                        if (idx >= 0 && idx < sections.Count - 1)
-                        {
-                            FocusSectionFirstItem(sections[idx + 1]);
-                            e.Handled = true;
-                        }
-                    }
-                }
-                break;
-
-            case Key.Up:
-                // Navigate from current section to the previous section above.
-                // For the grid, DirectionalNavigation handles internal Up;
-                // this only fires when the event bubbles (top row or carousel).
-                if (RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
-                {
-                    var sections = GetVisibleSections();
-                    var current = GetFocusedSection(focusedElement);
-                    if (current != null)
-                    {
-                        var idx = sections.IndexOf(current);
-                        if (idx > 0)
-                        {
-                            FocusSectionFirstItem(sections[idx - 1]);
-                            e.Handled = true;
-                        }
-                    }
-                }
-                break;
-        }
+        if (sections.Count > 0)
+            FocusSectionFirstItem(sections[0]);
     }
 
-    private void FocusListSelectedItem()
+    // Left out of the leftmost item is left unhandled so it bubbles to the shell, which moves focus to
+    // its rail.
+    private void OnViewKeyDown(object? sender, KeyEventArgs e)
     {
-        // Ensure there's a valid selection
-        if (GameListBox.SelectedIndex < 0 && GameListBox.ItemCount > 0)
-            GameListBox.SelectedIndex = 0;
+        if (e.Handled) return;
 
-        if (GameListBox.SelectedIndex >= 0)
+        var focusedElement = TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() as Visual;
+        if (focusedElement == null || !RightPanelScrollViewer.IsVisualAncestorOf(focusedElement))
+            return;
+
+        // Up/Down between sections. For the grid, DirectionalNavigation handles internal moves; this
+        // only fires when the event bubbles (bottom or top row, or a carousel).
+        var step = e.Key switch
         {
-            // Scroll the selected item into view so its container is realized
-            GameListBox.ScrollIntoView(GameListBox.SelectedIndex);
+            Key.Down => 1,
+            Key.Up   => -1,
+            _        => 0,
+        };
 
-            var container = GameListBox.ContainerFromIndex(GameListBox.SelectedIndex);
-            if (container is InputElement input)
-            {
-                input.Focus(NavigationMethod.Directional);
-                return;
-            }
+        if (step == 0)
+            return;
+
+        var sections = GetVisibleSections();
+        var current = GetFocusedSection(focusedElement);
+        if (current == null)
+            return;
+
+        var idx = sections.IndexOf(current) + step;
+        if (idx >= 0 && idx < sections.Count)
+        {
+            FocusSectionFirstItem(sections[idx]);
+            e.Handled = true;
         }
-
-        // Fallback: focus the ListBox itself
-        GameListBox.Focus(NavigationMethod.Directional);
     }
 
     // ── Layout ──────────────────────────────────────────────────────────
@@ -224,29 +168,5 @@ public partial class LibraryRowView : UserControl
 
         layout.MinItemWidth  = coverW;
         layout.MinItemHeight = coverH;
-    }
-
-    // ── List interactions ───────────────────────────────────────────────
-
-    private void GameList_Tapped(object? sender, TappedEventArgs e)
-    {
-        if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
-        {
-            vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
-        }
-    }
-
-    private void GameList_KeyDown(object? sender, KeyEventArgs e)
-    {
-        if (e.Handled) return;
-
-        if (e.Key == Key.Return)
-        {
-            if (DataContext is LibraryViewModel vm && vm.SelectedGame != null)
-            {
-                vm.ViewGameDetailsCommand.Execute(vm.SelectedGame);
-                e.Handled = true;
-            }
-        }
     }
 }

@@ -1,8 +1,11 @@
 using System;
 using System.Linq;
+using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
+using Avalonia.Interactivity;
 using Avalonia.Threading;
+using Avalonia.VisualTree;
 using LANCommander.Launcher.Plugins.Extensions;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.ViewModels;
@@ -30,6 +33,9 @@ public partial class ShellView : UserControl
         AppendFooterExtensions();
 
         KeyDown += OnKeyDown;
+
+        // The title list consumes arrow keys itself, so Right out of it needs handled events too
+        AddHandler(KeyDownEvent, OnRailKeyDown, RoutingStrategies.Bubble, handledEventsToo: true);
 
         DataContextChanged += (_, _) =>
         {
@@ -83,6 +89,61 @@ public partial class ShellView : UserControl
                 e.Handled = true;
             }
         }
+    }
+
+    /// <summary>
+    /// Moves focus between the library rail's title list and the content beside it: Right out of the
+    /// list, and Left out of the content when nothing in it took the key.
+    /// </summary>
+    private void OnRailKeyDown(object? sender, KeyEventArgs e)
+    {
+        if (DataContext is not ShellViewModel { IsLibraryRail: true })
+            return;
+
+        if (TopLevel.GetTopLevel(this)?.FocusManager?.GetFocusedElement() is not Visual focused)
+            return;
+
+        if (e.Key == Key.Right && LibraryRail.ContainsInList(focused))
+        {
+            if (FocusContent())
+                e.Handled = true;
+        }
+        else if (e.Key == Key.Left && !e.Handled
+                 && ContentHost.IsVisualAncestorOf(focused)
+                 && focused is not TextBox)
+        {
+            LibraryRail.FocusSelectedTitle();
+            e.Handled = true;
+        }
+    }
+
+    private bool FocusContent()
+    {
+        // The library's list layout knows its sections; anything else gets its top-left focusable
+        // control. Not the first in tree order: a page can declare a bottom bar first, as the
+        // library's filter bar is.
+        var libraryRow = ContentHost.GetVisualDescendants()
+            .OfType<LibraryRowView>()
+            .FirstOrDefault(v => v.IsEffectivelyVisible);
+
+        if (libraryRow != null)
+        {
+            libraryRow.FocusFirstSection();
+            return true;
+        }
+
+        var target = ContentHost.GetVisualDescendants()
+            .OfType<InputElement>()
+            .Where(el => el.Focusable && el.IsEffectivelyVisible && el.IsEffectivelyEnabled
+                && el is not ItemsControl && el is not ScrollViewer && el is not TextBox)
+            .Select(el => (Element: el, Position: el.TranslatePoint(default, ContentHost)))
+            .Where(c => c.Position is { } p && p.Y >= 0 && p.Y < ContentHost.Bounds.Height)
+            .OrderBy(c => Math.Round(c.Position!.Value.Y))
+            .ThenBy(c => c.Position!.Value.X)
+            .Select(c => c.Element)
+            .FirstOrDefault();
+
+        return target?.Focus(NavigationMethod.Directional) == true;
     }
 
     private void OnOpenChatRequested(object? sender, System.EventArgs e)

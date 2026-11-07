@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Net.Http;
 using System.Threading;
@@ -10,6 +11,7 @@ using Avalonia.Controls;
 using Avalonia.Media;
 using Avalonia.Media.Imaging;
 using Avalonia.Media.Immutable;
+using Avalonia.Platform;
 using Avalonia.Threading;
 using Avalonia.VisualTree;
 using LANCommander.Launcher.Controls;
@@ -268,6 +270,7 @@ public partial class Cover : UserControl, ICarouselLazyItem
         _carousel = null;
         _nearViewport = false;
         StopVideo();
+        ReleaseSnapshot();
 
         if (_window != null)
         {
@@ -381,7 +384,7 @@ public partial class Cover : UserControl, ICarouselLazyItem
         if (_isAnimatedCover)
         {
             if (AlwaysAnimate || IsPlayingAnimation)
-                LoadAnimatedCover(source);
+                UpdateAnimationState();
             else
                 SetBitmap(null);
 
@@ -608,11 +611,41 @@ public partial class Cover : UserControl, ICarouselLazyItem
 
     // ── Animated cover support (video via LibVLC; GIF/APNG/WebP decoded) ──
 
+    // Playback eases between still and full speed rather than cutting: the rate runs 0..1 over
+    // FadeDuration (scaled by how far it has to go, so a reversal mid-fade is quick), and at 0
+    // the renderer pauses on whatever frame it reached.
+    private static readonly TimeSpan FadeDuration = TimeSpan.FromMilliseconds(450);
+
+    // Slowest rate handed to a renderer; below it the fade just pauses.
+    private const double MinRate = 1.0 / 32;
+
+    // A paused renderer still holds a decoder (and for video a LibVLC player), so only the most
+    // recently paused few are kept. Older ones are swapped for a still copy of their frame.
+    private const int MaxHeldRenderers = 8;
+    private static readonly LinkedList<Cover> _heldCovers = new();
+    private LinkedListNode<Cover>? _heldNode;
+
+    private DispatcherTimer? _fadeTimer;
+    private long _fadeStarted;
+    private double _fadeFrom;
+    private TimeSpan _fadeLength;
+    private double _rate;          // current playback rate, 0 = paused
+    private double _targetRate;
+    private double _appliedRate;   // last rate pushed to the renderer
+    private bool _paused;          // whether the renderer is actually paused
+
+    // A copy of a released renderer's last frame, shown by CoverImage. Owned by this cover.
+    private Bitmap? _snapshot;
+
     private void LoadAnimatedCover(string source)
     {
         try
         {
             _receivedFirstFrame = false;
+            _paused = false;
+            _rate = 0;
+            _appliedRate = MinRate;
+
             var decodeWidth = (uint)GetDecodePixelWidth();
             var maxHeight = (uint)(decodeWidth * 1.5);
 
@@ -621,11 +654,13 @@ public partial class Cover : UserControl, ICarouselLazyItem
                 var video = new VideoFrameRenderer(maxWidth: decodeWidth, maxHeight: maxHeight);
                 video.FrameReady += OnAnimationFrameReady;
                 _animation = video;
+                video.SetRate(MinRate);
                 video.Play(source, muted: true, loop: true);
             }
             else
             {
                 _animation = new AnimatedImageRenderer(source, maxWidth: decodeWidth, maxHeight: maxHeight);
+                _animation.SetRate(MinRate);
                 _animation.FrameReady += OnAnimationFrameReady;
             }
 
@@ -651,12 +686,9 @@ public partial class Cover : UserControl, ICarouselLazyItem
             CoverImage.IsVisible = false;
             HasCover = true;
 
-            // Pause on the first frame if we shouldn't be animating yet, or the window is in
-            // the background — the frame stands in as a still until playback resumes.
-            if ((!AlwaysAnimate && !IsPlayingAnimation) || !IsWindowActive)
-            {
-                _animation.SetPaused(true);
-            }
+            // A renderer can't be paused before it has produced a frame (LibVLC ignores it), so a
+            // fade that reached zero first is applied now: this frame stands in as the still.
+            ApplyRate();
         }
 
         // Redraw with the latest frame
@@ -669,36 +701,151 @@ public partial class Cover : UserControl, ICarouselLazyItem
 
         var shouldAnimate = AlwaysAnimate || IsPlayingAnimation;
 
-        if (shouldAnimate)
+        // Start playback on first hover/focus if it was deferred in LoadCover, or the renderer
+        // was released while paused (see ReleaseHeldRenderer).
+        if (shouldAnimate && _animation == null && !string.IsNullOrEmpty(_animatedSource))
+            LoadAnimatedCover(_animatedSource);
+
+        // Un-hovering (or the window going to the background) eases playback to a stop and holds
+        // the frame it lands on; hovering again eases back in from that frame.
+        FadeTo(shouldAnimate && IsWindowActive ? 1 : 0);
+    }
+
+    private void FadeTo(double target)
+    {
+        if (_animation == null)
         {
-            // Start playback on first hover/focus if we deferred it in LoadCover.
-            if (_animation == null)
-            {
-                if (!string.IsNullOrEmpty(_animatedSource))
-                    LoadAnimatedCover(_animatedSource);
-            }
-            else
-            {
-                // Hold the current frame rather than tearing down while the window is inactive,
-                // so refocusing resumes in place instead of flashing the placeholder.
-                _animation.SetPaused(!IsWindowActive);
-            }
+            StopFade();
+            return;
         }
-        else if (_animation != null)
+
+        if (target == _targetRate && (_fadeTimer?.IsEnabled == true || _rate == target))
+            return;
+
+        _targetRate = target;
+        _fadeFrom = _rate;
+        _fadeStarted = Stopwatch.GetTimestamp();
+        _fadeLength = FadeDuration * Math.Abs(target - _rate);
+
+        _fadeTimer ??= new DispatcherTimer(TimeSpan.FromMilliseconds(16), DispatcherPriority.Render, (_, _) => FadeStep());
+        _fadeTimer.Start();
+        FadeStep();
+    }
+
+    private void FadeStep()
+    {
+        if (_animation == null)
         {
-            // Tear playback down entirely on un-hover instead of pausing, so idle covers
-            // hold no LibVLC/network/decoder resources. _isAnimatedCover stays set so a
-            // re-hover restarts playback.
-            DisposeRenderer();
+            StopFade();
+            return;
+        }
 
-            // A video falls back to the placeholder; an image to its still, which the
-            // Image control still holds.
-            if (_animatedIsVideo)
-                SetBitmap(null);
-            else if (CoverImage != null)
-                CoverImage.IsVisible = CoverImage.Source != null;
+        var elapsed = Stopwatch.GetElapsedTime(_fadeStarted);
+        var t = _fadeLength <= TimeSpan.Zero ? 1 : Math.Clamp(elapsed / _fadeLength, 0, 1);
 
-            InvalidateVisual();
+        // Smoothstep, so the speed change has no visible kink at either end
+        var eased = t * t * (3 - 2 * t);
+        _rate = t >= 1 ? _targetRate : _fadeFrom + (_targetRate - _fadeFrom) * eased;
+
+        ApplyRate();
+
+        if (t >= 1)
+            StopFade();
+    }
+
+    private void StopFade() => _fadeTimer?.Stop();
+
+    private void ApplyRate()
+    {
+        if (_animation == null)
+            return;
+
+        if (_rate < MinRate)
+        {
+            // Only pause on the way down; the first instants of a fade-in also sit below MinRate.
+            if (!_paused && _receivedFirstFrame && _targetRate == 0)
+            {
+                _animation.SetPaused(true);
+                _paused = true;
+                Hold();
+            }
+
+            return;
+        }
+
+        if (_paused)
+        {
+            _animation.SetPaused(false);
+            _paused = false;
+            Unhold();
+        }
+
+        // Don't push a rate change to LibVLC every tick; steps this small aren't visible.
+        if (Math.Abs(_rate - _appliedRate) >= 0.03 || (_rate == _targetRate && _rate != _appliedRate))
+        {
+            _animation.SetRate(_rate);
+            _appliedRate = _rate;
+        }
+    }
+
+    private void Hold()
+    {
+        Unhold();
+        _heldNode = _heldCovers.AddLast(this);
+
+        while (_heldCovers.Count > MaxHeldRenderers)
+            _heldCovers.First!.Value.ReleaseHeldRenderer();
+    }
+
+    private void Unhold()
+    {
+        if (_heldNode == null)
+            return;
+
+        _heldCovers.Remove(_heldNode);
+        _heldNode = null;
+    }
+
+    /// <summary>
+    /// Swaps a paused renderer for a still copy of the frame it's paused on, freeing its decoder.
+    /// <see cref="_isAnimatedCover"/> stays set, so hovering again restarts playback (from the start).
+    /// </summary>
+    private void ReleaseHeldRenderer()
+    {
+        var snapshot = CopyFrame(_animation?.Frame);
+
+        DisposeRenderer();
+
+        if (snapshot != null)
+        {
+            SetBitmap(snapshot);
+            _snapshot = snapshot;
+        }
+        else if (_animatedIsVideo)
+            SetBitmap(null);
+        else if (CoverImage != null)
+            CoverImage.IsVisible = CoverImage.Source != null;
+
+        InvalidateVisual();
+    }
+
+    private static WriteableBitmap? CopyFrame(Bitmap? frame)
+    {
+        if (frame == null)
+            return null;
+
+        try
+        {
+            var copy = new WriteableBitmap(frame.PixelSize, frame.Dpi, PixelFormat.Bgra8888, AlphaFormat.Premul);
+
+            using (var buffer = copy.Lock())
+                frame.CopyPixels(new PixelRect(frame.PixelSize), buffer.Address, buffer.RowBytes * buffer.Size.Height, buffer.RowBytes);
+
+            return copy;
+        }
+        catch
+        {
+            return null;
         }
     }
 
@@ -709,13 +856,20 @@ public partial class Cover : UserControl, ICarouselLazyItem
     /// </summary>
     private void DisposeRenderer()
     {
+        StopFade();
+        Unhold();
+
         if (_animation != null)
         {
             _animation.FrameReady -= OnAnimationFrameReady;
             _animation.Dispose();
             _animation = null;
         }
+
         _receivedFirstFrame = false;
+        _paused = false;
+        _rate = 0;
+        _targetRate = 0;
     }
 
     private void StopVideo()
@@ -764,5 +918,21 @@ public partial class Cover : UserControl, ICarouselLazyItem
             CoverImage.IsVisible = bitmap != null;
             CoverImage.Source = bitmap;
         }
+
+        ReleaseSnapshot(except: bitmap);
+    }
+
+    private void ReleaseSnapshot(Bitmap? except = null)
+    {
+        if (_snapshot == null || _snapshot == except)
+            return;
+
+        var snapshot = _snapshot;
+        _snapshot = null;
+
+        if (CoverImage != null && CoverImage.Source == snapshot)
+            CoverImage.Source = null;
+
+        snapshot.Dispose();
     }
 }

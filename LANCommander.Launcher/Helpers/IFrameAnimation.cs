@@ -14,4 +14,10 @@ internal interface IFrameAnimation : IDisposable
 
     /// <summary>Holds the current frame (true) or resumes playback (false).</summary>
     void SetPaused(bool paused);
+
+    /// <summary>
+    /// Playback speed relative to the source's own timing: 1 is normal, 0.5 half speed. Must be
+    /// above zero; to stop, pause. Used to ease playback in and out rather than cutting it.
+    /// </summary>
+    void SetRate(double rate);
 }

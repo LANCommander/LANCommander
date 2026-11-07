@@ -116,6 +116,9 @@ internal sealed class VideoFrameRenderer : IFrameAnimation
 
     public void SetPaused(bool paused) => _player?.SetPause(paused);
 
+    // LibVLC clamps rates to 1/32..32 itself; clamped here too so a fade's tail is predictable.
+    public void SetRate(double rate) => _player?.SetRate((float)Math.Clamp(rate, 1.0 / 32, 32));
+
     /// <summary>Raised on the UI thread after a new frame has been written to <see cref="Bitmap"/>.</summary>
     public Action? FrameReady { get; set; }
 

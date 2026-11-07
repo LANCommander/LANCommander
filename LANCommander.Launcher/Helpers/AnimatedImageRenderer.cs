@@ -20,6 +20,7 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
     private readonly CancellationTokenSource _cts = new();
     private readonly object _pauseLock = new();
     private TaskCompletionSource? _resume; // set while paused
+    private double _rate = 1;
     private volatile bool _disposed;
     private volatile WriteableBitmap? _bitmap;
 
@@ -62,6 +63,36 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
             return _resume?.Task.WaitAsync(ct) ?? Task.CompletedTask;
     }
 
+    public void SetRate(double rate) => Volatile.Write(ref _rate, Math.Clamp(rate, 1.0 / 32, 32));
+
+    // Longest single sleep while playing slower than normal, so a rate change (a fade back in)
+    // takes hold within a frame or two instead of after a long stretched delay.
+    private static readonly TimeSpan RateSliceLength = TimeSpan.FromMilliseconds(33);
+
+    /// <summary>
+    /// Waits out a frame's display time at the current rate. Progress is counted in source time
+    /// (wall time × rate) so the rate can change mid-frame; time spent paused doesn't count.
+    /// </summary>
+    private async Task WaitFrameAsync(TimeSpan frameDelay, TimeSpan renderTime, CancellationToken ct)
+    {
+        var progress = renderTime * Volatile.Read(ref _rate);
+
+        while (progress < frameDelay)
+        {
+            await WhilePausedAsync(ct);
+
+            var rate = Volatile.Read(ref _rate);
+            var wait = (frameDelay - progress) / rate;
+
+            if (rate < 1 && wait > RateSliceLength)
+                wait = RateSliceLength;
+
+            var started = Stopwatch.GetTimestamp();
+            await Task.Delay(wait, ct);
+            progress += Stopwatch.GetElapsedTime(started) * rate;
+        }
+    }
+
     private async Task RunAsync(string path, uint maxWidth, uint maxHeight, CancellationToken ct)
     {
         try
@@ -98,9 +129,7 @@ internal sealed class AnimatedImageRenderer : IFrameAnimation
 
                 index = (index + 1) % frames.FrameCount;
 
-                var remaining = delay - Stopwatch.GetElapsedTime(started);
-                if (remaining > TimeSpan.Zero)
-                    await Task.Delay(remaining, ct);
+                await WaitFrameAsync(delay, Stopwatch.GetElapsedTime(started), ct);
             }
         }
         catch (OperationCanceledException)

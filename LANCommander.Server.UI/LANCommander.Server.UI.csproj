@@ -18,15 +18,39 @@
     <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
-  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources">
+  <!-- Inputs/Outputs let MSBuild skip these targets when nothing they depend on has changed -->
+  <ItemGroup>
+    <PowerShellCompletionsOutput Include="Components\MonacoCodeEditor\PowerShellCompletions.g.ts" />
+    <!-- The generator reflects over the whole SDK assembly, so any SDK source change can alter its output -->
+    <PowerShellCompletionsInput Include="..\LANCommander.CompletionGenerator\**\*.cs;..\LANCommander.CompletionGenerator\*.csproj" Exclude="..\LANCommander.CompletionGenerator\bin\**;..\LANCommander.CompletionGenerator\obj\**" />
+    <PowerShellCompletionsInput Include="..\LANCommander.SDK\**\*.cs;..\LANCommander.SDK\**\*.csproj" Exclude="..\LANCommander.SDK\bin\**;..\LANCommander.SDK\obj\**" />
+    <PowerShellCompletionsInput Include="..\Directory.Build.props" Condition="Exists('..\Directory.Build.props')" />
+    <PowerShellCompletionsInput Include="..\Directory.Packages.props" Condition="Exists('..\Directory.Packages.props')" />
+
+    <FrontendInput Include="**\*.ts;**\*.tsx;**\*.scss;**\*.css" Exclude="node_modules\**;wwwroot\**;bin\**;obj\**" />
+    <FrontendInput Include="package.json;package-lock.json;tsconfig.json;webpack.config.js" />
+    <!-- Rewritten by every npm install/ci, so dependency updates trigger a rebuild -->
+    <FrontendInput Include="node_modules\.package-lock.json" Condition="Exists('node_modules\.package-lock.json')" />
+    <FrontendOutput Include="wwwroot\bundle.js;wwwroot\ui.css;wwwroot\bootstrap-icons.svg" />
+  </ItemGroup>
+
+  <Target Name="GeneratePowerShellCompletions" BeforeTargets="CompileFrontendResources"
+          Inputs="@(PowerShellCompletionsInput)"
+          Outputs="@(PowerShellCompletionsOutput)">
     <Message Text="Generating PowerShell completion data" Importance="high" />
     <Exec Command="dotnet run --project &quot;$(MSBuildProjectDirectory)\..\LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj&quot; -- &quot;$(MSBuildProjectDirectory)\Components\MonacoCodeEditor\PowerShellCompletions.g.ts&quot;" />
   </Target>
 
-  <Target Name="CompileFrontendResources" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
+  <!-- PowerShellCompletions.g.ts is listed separately: it's generated after FrontendInput is evaluated, so the glob misses it on a clean checkout -->
+  <Target Name="CompileFrontendResources" BeforeTargets="Compile;ResolveProjectStaticWebAssets"
+          Inputs="@(FrontendInput);@(PowerShellCompletionsOutput)"
+          Outputs="@(FrontendOutput)">
     <Message Text="Compiling frontend" Importance="high" />
     <Exec Command="npm run package" />
+    <!-- webpack skips writing outputs whose content is unchanged; touch them so the target isn't considered stale forever -->
+    <Touch Files="@(FrontendOutput)" />
     <!-- The wwwroot glob is evaluated before this runs, so on a clean checkout the bundle would be left out of the static web assets -->
+    <!-- MSBuild still evaluates this ItemGroup when the target is skipped as up to date -->
     <ItemGroup>
       <Content Include="wwwroot\**" Exclude="@(Content)" />
     </ItemGroup>

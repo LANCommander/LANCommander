@@ -45,10 +45,23 @@
     <!-- <BeautyGitTree>master</BeautyGitTree> -->
   </PropertyGroup>
 
-	<Target Name="CompileGlobalSass" BeforeTargets="Compile;ResolveProjectStaticWebAssets">
+	<!-- Inputs/Outputs let MSBuild skip the npm build when nothing it depends on has changed -->
+	<ItemGroup>
+		<GlobalSassInput Include="Styles\**\*.scss;package.json;package-lock.json;webpack.config.js" />
+		<!-- Rewritten by every npm install/ci, so dependency updates trigger a rebuild -->
+		<GlobalSassInput Include="node_modules\.package-lock.json" Condition="Exists('node_modules\.package-lock.json')" />
+		<GlobalSassOutput Include="wwwroot\css\app.css" />
+	</ItemGroup>
+
+	<Target Name="CompileGlobalSass" BeforeTargets="Compile;ResolveProjectStaticWebAssets"
+	        Inputs="@(GlobalSassInput)"
+	        Outputs="@(GlobalSassOutput)">
 		<Message Text="Compiling global SCSS files" Importance="high" />
 		<Exec Command="npm run package" />
+		<!-- webpack skips writing outputs whose content is unchanged; touch them so the target isn't considered stale forever -->
+		<Touch Files="@(GlobalSassOutput)" />
 		<!-- The wwwroot glob is evaluated before this runs, so on a clean checkout app.css would be left out of the static web assets -->
+		<!-- MSBuild still evaluates this ItemGroup when the target is skipped as up to date -->
 		<ItemGroup>
 			<Content Include="wwwroot\css\**" Exclude="@(Content)" />
 		</ItemGroup>

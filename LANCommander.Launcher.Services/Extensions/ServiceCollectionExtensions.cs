@@ -62,6 +62,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<InterposerLaunchService>();
             services.AddSingleton<InterposerSessionService>();
             services.AddSingleton<PresenceForwarder>();
+            services.AddSingleton<ServerConnectionWatcher>();
 
             if (OperatingSystem.IsWindows())
                 services.AddSingleton<IGameProcessStarter, InterposerGameProcessStarter>();

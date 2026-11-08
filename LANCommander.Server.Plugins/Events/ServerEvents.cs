@@ -56,6 +56,39 @@ public sealed record IssueCreatedEvent(Guid IssueId, Guid GameId, Guid? Reported
 /// <summary>Raised after an issue is marked resolved.</summary>
 public sealed record IssueResolvedEvent(Guid IssueId, Guid GameId, Guid ResolvedByUserId);
 
+/// <summary>Raised after a multiplayer match is first recorded, by a reporter or through <see cref="IMatchStatisticsSink"/>.</summary>
+public sealed record MatchCreatedEvent(Guid MatchId, Guid GameId, Guid? ServerId, string? Map, string? Mode);
+
+/// <summary>
+/// Raised after a match is ended with its results, or abandoned. Raised again if a reporter sends the
+/// results again, so handlers should replace rather than add.
+/// </summary>
+/// <param name="Results">The final standings, best first. Empty for an abandoned match.</param>
+public sealed record MatchEndedEvent(
+    Guid MatchId,
+    Guid GameId,
+    Guid? ServerId,
+    LANCommander.SDK.Enums.MatchStatus Status,
+    string? Reason,
+    IReadOnlyList<LANCommander.SDK.Models.MatchResultInformation> Results);
+
+/// <summary>
+/// Raised after a batch of a match's events is written. Batches are raised in order for each match,
+/// off the request that reported them; a slow handler delays later notifications but not writing.
+/// </summary>
+public sealed record MatchEventsRecordedEvent(
+    Guid MatchId,
+    Guid GameId,
+    IReadOnlyList<LANCommander.SDK.Models.MatchEventInformation> Events);
+
+/// <summary>Raised when a match participant is linked to a LANCommander user.</summary>
+public sealed record MatchParticipantLinkedEvent(
+    Guid MatchId,
+    Guid ParticipantId,
+    string PlayerKey,
+    Guid UserId,
+    LANCommander.SDK.Enums.MatchParticipantLinkSource LinkSource);
+
 /// <summary>
 /// Raised when a game server's status changes, whichever engine runs it, including one a plugin adds.
 /// </summary>

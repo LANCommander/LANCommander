@@ -101,6 +101,12 @@ namespace LANCommander.Server.Data
             builder.ConfigureBaseRelationships<User>();
             builder.ConfigureBaseRelationships<UserCustomField>();
             builder.ConfigureBaseRelationships<PersonalAccessToken>();
+            builder.ConfigureBaseRelationships<Match>();
+            builder.ConfigureBaseRelationships<MatchReporter>();
+            builder.ConfigureBaseRelationships<MatchParticipant>();
+            builder.ConfigureBaseRelationships<MatchResult>();
+            builder.ConfigureBaseRelationships<MatchAttachment>();
+            builder.ConfigureBaseRelationships<PlayerIdentity>();
 
             builder.Entity<Genre>()
                 .HasMany(g => g.Games)
@@ -577,7 +583,121 @@ namespace LANCommander.Server.Data
                     pg => pg.HasOne<Page>().WithMany().HasForeignKey("PageId").OnDelete(DeleteBehavior.Cascade)
                 );
             #endregion
-            
+
+            #region Match Relationships
+            builder.Entity<PlaySession>()
+                .HasOne(ps => ps.Server)
+                .WithMany(s => s.PlaySessions)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<Match>()
+                .HasOne(m => m.Game)
+                .WithMany(g => g.Matches)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<Match>()
+                .HasOne(m => m.Server)
+                .WithMany(s => s.Matches)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<MatchReporter>()
+                .HasOne(r => r.Match)
+                .WithMany(m => m.Reporters)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchReporter>()
+                .HasOne(r => r.User)
+                .WithMany()
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<MatchParticipant>()
+                .HasOne(p => p.Match)
+                .WithMany(m => m.Participants)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchParticipant>()
+                .HasOne(p => p.User)
+                .WithMany(u => u.MatchParticipants)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<MatchEvent>()
+                .HasOne(e => e.Match)
+                .WithMany(m => m.Events)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchEvent>()
+                .HasOne(e => e.Reporter)
+                .WithMany(r => r.Events)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchResult>()
+                .HasOne(r => r.Match)
+                .WithMany(m => m.Results)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchResult>()
+                .HasOne(r => r.Participant)
+                .WithMany(p => p.Results)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchStatistic>()
+                .HasOne(s => s.Match)
+                .WithMany(m => m.Statistics)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchStatistic>()
+                .HasOne(s => s.Participant)
+                .WithMany(p => p.Statistics)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchAttachment>()
+                .HasOne(a => a.Match)
+                .WithMany(m => m.Attachments)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchAttachment>()
+                .HasOne(a => a.Reporter)
+                .WithMany(r => r.Attachments)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.SetNull);
+
+            builder.Entity<MatchAttachment>()
+                .HasOne(a => a.StorageLocation)
+                .WithMany(l => l.MatchAttachments)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<MatchAttachment>()
+                .Navigation(a => a.StorageLocation)
+                .AutoInclude();
+
+            builder.Entity<PlayerIdentity>()
+                .HasOne(i => i.User)
+                .WithMany(u => u.PlayerIdentities)
+                .IsRequired(true)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            builder.Entity<PlayerIdentity>()
+                .HasOne(i => i.Game)
+                .WithMany(g => g.PlayerIdentities)
+                .IsRequired(false)
+                .OnDelete(DeleteBehavior.Cascade);
+            #endregion
+
             #region Chat Relationships
 
             builder.Entity<ChatThreadReadStatus>()
@@ -641,5 +761,13 @@ namespace LANCommander.Server.Data
         public DbSet<ChatThread>? ChatThreads { get; set; }
         public DbSet<ChatMessage>? ChatMessages { get; set; }
         public DbSet<ChatThreadReadStatus>? ChatThreadReadStatuses { get; set; }
+        public DbSet<Match>? Matches { get; set; }
+        public DbSet<MatchReporter>? MatchReporters { get; set; }
+        public DbSet<MatchParticipant>? MatchParticipants { get; set; }
+        public DbSet<MatchEvent>? MatchEvents { get; set; }
+        public DbSet<MatchResult>? MatchResults { get; set; }
+        public DbSet<MatchStatistic>? MatchStatistics { get; set; }
+        public DbSet<MatchAttachment>? MatchAttachments { get; set; }
+        public DbSet<PlayerIdentity>? PlayerIdentities { get; set; }
     }
 }

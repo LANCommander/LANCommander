@@ -53,6 +53,8 @@ public static class Services
         builder.Services.AddScoped<IMultiplayerModeProvider, MultiplayerModeProvider>();
         builder.Services.AddScoped<IKeyProvider, KeyProvider>();
         builder.Services.AddScoped<IMediaProvider, MediaProvider>();
+        builder.Services.AddScoped<IMatchStatisticsSink, MatchStatisticsSink>();
+        builder.Services.AddScoped<IMatchStatisticsProvider, MatchStatisticsProvider>();
         builder.Services.AddScoped<RecordOwners>();
 
         // And what plugins offer the server: their media sources join the media search

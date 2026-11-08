@@ -1,6 +1,7 @@
 ﻿using LANCommander.SDK.Enums;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using System.Text.Json.Serialization;
 
 namespace LANCommander.Server.Data.Models
 {
@@ -84,6 +85,10 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Library> Libraries { get; set; }
         public ICollection<Rating>? Ratings { get; set; }
         public ICollection<GameCustomField>? CustomFields { get; set; }
+        [JsonIgnore]
+        public ICollection<Match>? Matches { get; set; }
+        [JsonIgnore]
+        public ICollection<PlayerIdentity>? PlayerIdentities { get; set; }
         
         [NotMapped]
         public bool IsAddon => Type != GameType.MainGame;

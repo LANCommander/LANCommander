@@ -17,7 +17,9 @@ namespace LANCommander.Launcher.Services
             return await Query(ps => ps.GameId == gameId && ps.UserId == userId).OrderByDescending(ps => ps.End).FirstOrDefaultAsync();
         }
 
-        public async Task StartSession(Guid gameId, Guid userId)
+        /// <param name="serverId">The game server the player is joining, when known.</param>
+        /// <param name="alias">The name the player plays under.</param>
+        public async Task StartSession(Guid gameId, Guid userId, Guid? serverId = null, string alias = null)
         {
             using (var op = Logger.BeginOperation("Starting game session"))
             {
@@ -40,7 +42,7 @@ namespace LANCommander.Launcher.Services
 
                     await AddAsync(session);
                 
-                    await gameClient.StartedAsync(gameId);
+                    await gameClient.StartedAsync(gameId, serverId, alias);
                 }
                 catch (Exception ex)
                 {

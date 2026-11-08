@@ -70,6 +70,12 @@ namespace LANCommander.Server.Data.Models
         public ICollection<PersonalAccessToken>? PersonalAccessTokens { get; set; }
 
         [JsonIgnore]
+        public ICollection<MatchParticipant>? MatchParticipants { get; set; }
+
+        [JsonIgnore]
+        public ICollection<PlayerIdentity>? PlayerIdentities { get; set; }
+
+        [JsonIgnore]
         public bool Approved { get; set; }
 
         [JsonIgnore]

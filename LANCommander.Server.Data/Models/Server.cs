@@ -47,5 +47,9 @@ namespace LANCommander.Server.Data.Models
         public ICollection<Script>? Scripts { get; set; }
         public ICollection<Action>? Actions { get; set; }
         public ICollection<Page>? Pages { get; set; }
+        [JsonIgnore]
+        public ICollection<Match>? Matches { get; set; }
+        [JsonIgnore]
+        public ICollection<PlaySession>? PlaySessions { get; set; }
     }
 }

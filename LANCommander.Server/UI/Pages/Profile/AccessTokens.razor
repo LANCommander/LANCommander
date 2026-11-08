@@ -45,6 +45,15 @@
                     }
                     else
                     {
+                        @if (scopes.CanReportMatches)
+                        {
+                            <Tag>Report matches</Tag>
+                        }
+                        else if (scopes.CanReadMatches)
+                        {
+                            <Tag>Read matches</Tag>
+                        }
+
                         @foreach (var plugin in scopes.Plugins)
                         {
                             <Tag>@plugin</Tag>

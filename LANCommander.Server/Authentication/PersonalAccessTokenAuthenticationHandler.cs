@@ -58,7 +58,7 @@ public sealed class PersonalAccessTokenAuthenticationHandler(
 
         // Checked here rather than left to the endpoint, so no route is reachable with a token
         // that wasn't issued for it, whatever authorization the route itself declares
-        if (!scopes.Allows(Request.Path))
+        if (!scopes.Allows(Request.Path, Request.Method))
             return AuthenticateResult.Fail(new PersonalAccessTokenScopeException());
 
         var claims = new List<Claim>

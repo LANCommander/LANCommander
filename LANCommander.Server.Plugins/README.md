@@ -36,7 +36,9 @@ Use the version of the server the plugin targets.
 | `IMediaProvider`, `IArchiveProvider` | Manage a game's media files; list and delete archives. Provided by the server |
 | `ITaxonomyProvider` | Manage categories, collections, companies, engines, genres, platforms and tags. Provided by the server |
 | `IRedistributableProvider`, `IToolProvider`, `IServerProvider` | Manage redistributables, tools, and game servers with their consoles and HTTP paths; list, read and write server files through their selected engine. Provided by the server |
-| `GameCreatedEvent`, `ArchiveUploadedEvent`, `UserCreatedEvent`, `PlaySessionStartedEvent`, `IssueCreatedEvent`, `ServerStatusChangedEvent`, ... | Server events, raised through the SDK's `IPluginEventBus` |
+| `IMatchStatisticsSink` | Records multiplayer matches, their events, results, statistics and attachments as a trusted reporter, and links in-game ids to users. Provided by the server |
+| `IMatchStatisticsProvider` | Reads recorded matches, their events and attachments, and aggregates a statistic across matches (leaderboards). Provided by the server |
+| `GameCreatedEvent`, `ArchiveUploadedEvent`, `UserCreatedEvent`, `PlaySessionStartedEvent`, `IssueCreatedEvent`, `ServerStatusChangedEvent`, `MatchEndedEvent`, `MatchEventsRecordedEvent`, ... | Server events, raised through the SDK's `IPluginEventBus` |
 
 A plugin with a context needs `DataId` and `MigrationAssemblies` in its `[LANCommanderPlugin]`
 attribute. Plugin settings, `IPluginSettings<T>`, are in `LANCommander.SDK`.

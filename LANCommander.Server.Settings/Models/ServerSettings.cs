@@ -15,6 +15,7 @@ public class ServerSettings
     public LauncherSettings Launcher { get; set; } = new();
     public LibrarySettings Library { get; set; } = new();
     public LogSettings Logs { get; set; } = new();
+    public MatchStatisticsSettings MatchStatistics { get; set; } = new();
     public MediaSettings Media { get; set; } = new();
     public PcGamingWikiSettings PcGamingWiki { get; set; } = new();
     public PluginSettings Plugins { get; set; } = new();

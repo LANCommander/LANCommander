@@ -38,7 +38,9 @@ namespace LANCommander.Server.Services
             });
         }
 
-        public async Task StartSessionAsync(Guid gameId, Guid userId)
+        /// <param name="serverId">The game server the player is joining, when the launcher knows it.</param>
+        /// <param name="alias">The name the player plays under, used to link them to match participants.</param>
+        public async Task StartSessionAsync(Guid gameId, Guid userId, Guid? serverId = null, string? alias = null)
         {
             var existingSession = await FirstOrDefaultAsync(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null);
 
@@ -49,6 +51,8 @@ namespace LANCommander.Server.Services
             {
                 GameId = gameId,
                 UserId = userId,
+                ServerId = await ExistingServerIdAsync(serverId),
+                Alias = string.IsNullOrWhiteSpace(alias) ? null : alias.Trim()[..Math.Min(255, alias.Trim().Length)],
                 Start = DateTime.UtcNow
             };
 
@@ -57,6 +61,37 @@ namespace LANCommander.Server.Services
             await keepAliveTracker.TouchAsync(gameId, userId);
 
             await pluginEventBus.PublishAsync(new PlaySessionStartedEvent(session.Id, gameId, userId, session.Start ?? session.CreatedOn));
+        }
+
+        /// <summary>
+        /// Records which game server the player's open session for the game is on, once the launcher
+        /// sees the game connect to it. Returns false when there's no open session or no such server.
+        /// </summary>
+        public async Task<bool> SetSessionServerAsync(Guid gameId, Guid userId, Guid serverId)
+        {
+            var session = await FirstOrDefaultAsync(ps => ps.GameId == gameId && ps.UserId == userId && ps.End == null);
+
+            if (session == null || await ExistingServerIdAsync(serverId) == null)
+                return false;
+
+            if (session.ServerId == serverId)
+                return true;
+
+            session.ServerId = serverId;
+
+            await UpdateAsync(session);
+
+            return true;
+        }
+
+        private async Task<Guid?> ExistingServerIdAsync(Guid? serverId)
+        {
+            if (serverId is not { } id || id == Guid.Empty)
+                return null;
+
+            await using var context = await contextFactory.CreateDbContextAsync();
+
+            return await context.Servers!.AnyAsync(s => s.Id == id) ? id : null;
         }
 
         public async Task EndSessionAsync(Guid gameId, Guid userId)

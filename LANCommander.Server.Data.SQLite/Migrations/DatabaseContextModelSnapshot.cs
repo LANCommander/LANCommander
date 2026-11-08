@@ -1029,6 +1029,433 @@ namespace LANCommander.Migrations
                     b.ToTable("Libraries");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Match", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("EndReason")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("EndedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ExternalId")
+                        .HasMaxLength(191)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("GameVersion")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("LastEventOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Map")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Metadata")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Mode")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServerAddress")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ServerId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ServerName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Settings")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("StartedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("ServerId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("GameId", "ExternalId")
+                        .IsUnique();
+
+                    b.HasIndex("GameId", "StartedOn");
+
+                    b.HasIndex("Status", "LastEventOn");
+
+                    b.ToTable("Matches");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchAttachment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ContentType")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("EndMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime?>("ExpiresOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileName")
+                        .IsRequired()
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ReporterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Size")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("StartMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("StorageLocationId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("UploadedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("MatchId");
+
+                    b.HasIndex("ReporterId");
+
+                    b.HasIndex("StorageLocationId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("MatchAttachments");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchEvent", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("ActorKey")
+                        .HasMaxLength(191)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("ClientTime")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("GameTimeMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ReceivedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("ReporterId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("Sequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("SubjectKey")
+                        .HasMaxLength(191)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("Tick")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Type")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MatchId", "GameTimeMilliseconds");
+
+                    b.HasIndex("MatchId", "Type");
+
+                    b.HasIndex("ReporterId", "Sequence")
+                        .IsUnique();
+
+                    b.ToTable("MatchEvents");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchParticipant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DisplayName")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("JoinedAtMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long?>("LeftAtMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LinkSource")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PlayerKey")
+                        .IsRequired()
+                        .HasMaxLength(191)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Team")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("MatchId", "PlayerKey")
+                        .IsUnique();
+
+                    b.ToTable("MatchParticipants");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchReporter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<long>("GapCount")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<long>("LastSequence")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PluginId")
+                        .HasMaxLength(191)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Trust")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("MatchId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("MatchReporters");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchResult", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParticipantId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Payload")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Rank")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<double?>("Score")
+                        .HasColumnType("REAL");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Team")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<long?>("TimeMilliseconds")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("MatchId");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.ToTable("MatchResults");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchStatistic", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Key")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MatchId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ParticipantId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Team")
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.Property<double>("Value")
+                        .HasColumnType("REAL");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ParticipantId");
+
+                    b.HasIndex("Key", "MatchId");
+
+                    b.HasIndex("MatchId", "Key");
+
+                    b.ToTable("MatchStatistics");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1310,6 +1737,10 @@ namespace LANCommander.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Alias")
+                        .HasMaxLength(255)
+                        .HasColumnType("TEXT");
+
                     b.Property<Guid?>("CreatedById")
                         .HasColumnType("TEXT");
 
@@ -1320,6 +1751,9 @@ namespace LANCommander.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("ServerId")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime?>("Start")
@@ -1340,11 +1774,66 @@ namespace LANCommander.Migrations
 
                     b.HasIndex("GameId");
 
+                    b.HasIndex("ServerId");
+
                     b.HasIndex("UpdatedById");
 
                     b.HasIndex("UserId");
 
                     b.ToTable("PlaySessions");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PlayerIdentity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CreatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("GameId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Source")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<Guid?>("UpdatedById")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasMaxLength(158)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("UpdatedById");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("Kind", "Value");
+
+                    b.HasIndex("GameId", "Kind", "Value")
+                        .IsUnique();
+
+                    b.ToTable("PlayerIdentities");
                 });
 
             modelBuilder.Entity("LANCommander.Server.Data.Models.Rating", b =>
@@ -2919,6 +3408,211 @@ namespace LANCommander.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Match", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("Matches")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
+                        .WithMany("Matches")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("Server");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchAttachment", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Attachments")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.MatchReporter", "Reporter")
+                        .WithMany("Attachments")
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.StorageLocation", "StorageLocation")
+                        .WithMany("MatchAttachments")
+                        .HasForeignKey("StorageLocationId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Reporter");
+
+                    b.Navigation("StorageLocation");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchEvent", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Events")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.MatchReporter", "Reporter")
+                        .WithMany("Events")
+                        .HasForeignKey("ReporterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Reporter");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchParticipant", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Participants")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("MatchParticipants")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchReporter", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Reporters")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchResult", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Results")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.MatchParticipant", "Participant")
+                        .WithMany("Results")
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Participant");
+
+                    b.Navigation("UpdatedBy");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchStatistic", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.Match", "Match")
+                        .WithMany("Statistics")
+                        .HasForeignKey("MatchId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("LANCommander.Server.Data.Models.MatchParticipant", "Participant")
+                        .WithMany("Statistics")
+                        .HasForeignKey("ParticipantId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("Match");
+
+                    b.Navigation("Participant");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
@@ -3072,6 +3766,11 @@ namespace LANCommander.Migrations
                         .HasForeignKey("GameId")
                         .OnDelete(DeleteBehavior.Cascade);
 
+                    b.HasOne("LANCommander.Server.Data.Models.Server", "Server")
+                        .WithMany("PlaySessions")
+                        .HasForeignKey("ServerId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
                     b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
                         .WithMany()
                         .HasForeignKey("UpdatedById")
@@ -3079,6 +3778,40 @@ namespace LANCommander.Migrations
 
                     b.HasOne("LANCommander.Server.Data.Models.User", "User")
                         .WithMany("PlaySessions")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("CreatedBy");
+
+                    b.Navigation("Game");
+
+                    b.Navigation("Server");
+
+                    b.Navigation("UpdatedBy");
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.PlayerIdentity", b =>
+                {
+                    b.HasOne("LANCommander.Server.Data.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.Game", "Game")
+                        .WithMany("PlayerIdentities")
+                        .HasForeignKey("GameId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "UpdatedBy")
+                        .WithMany()
+                        .HasForeignKey("UpdatedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("LANCommander.Server.Data.Models.User", "User")
+                        .WithMany("PlayerIdentities")
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
@@ -3561,11 +4294,15 @@ namespace LANCommander.Migrations
 
                     b.Navigation("Keys");
 
+                    b.Navigation("Matches");
+
                     b.Navigation("Media");
 
                     b.Navigation("MultiplayerModes");
 
                     b.Navigation("PlaySessions");
+
+                    b.Navigation("PlayerIdentities");
 
                     b.Navigation("Ratings");
 
@@ -3596,6 +4333,35 @@ namespace LANCommander.Migrations
                     b.Navigation("Attachments");
                 });
 
+            modelBuilder.Entity("LANCommander.Server.Data.Models.Match", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Events");
+
+                    b.Navigation("Participants");
+
+                    b.Navigation("Reporters");
+
+                    b.Navigation("Results");
+
+                    b.Navigation("Statistics");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchParticipant", b =>
+                {
+                    b.Navigation("Results");
+
+                    b.Navigation("Statistics");
+                });
+
+            modelBuilder.Entity("LANCommander.Server.Data.Models.MatchReporter", b =>
+                {
+                    b.Navigation("Attachments");
+
+                    b.Navigation("Events");
+                });
+
             modelBuilder.Entity("LANCommander.Server.Data.Models.Media", b =>
                 {
                     b.Navigation("Parent");
@@ -3624,6 +4390,10 @@ namespace LANCommander.Migrations
 
                     b.Navigation("HttpPaths");
 
+                    b.Navigation("Matches");
+
+                    b.Navigation("PlaySessions");
+
                     b.Navigation("Scripts");
 
                     b.Navigation("ServerConsoles");
@@ -3636,6 +4406,8 @@ namespace LANCommander.Migrations
                     b.Navigation("GameSaves");
 
                     b.Navigation("IssueAttachments");
+
+                    b.Navigation("MatchAttachments");
 
                     b.Navigation("Media");
                 });
@@ -3660,11 +4432,15 @@ namespace LANCommander.Migrations
                     b.Navigation("Library")
                         .IsRequired();
 
+                    b.Navigation("MatchParticipants");
+
                     b.Navigation("Media");
 
                     b.Navigation("PersonalAccessTokens");
 
                     b.Navigation("PlaySessions");
+
+                    b.Navigation("PlayerIdentities");
 
                     b.Navigation("UserRoles");
                 });

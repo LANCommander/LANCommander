@@ -27,6 +27,7 @@ public static class Endpoints
             endpoints.MapUploadEndpoints();
             endpoints.MapProfileEndpoints();
             endpoints.MapPlaySessionsEndpoints();
+            endpoints.MapMatchEndpoints();
             endpoints.MapMediaEndpoints();
             endpoints.MapKeysEndpoints();
             endpoints.MapLauncherEndpoints();

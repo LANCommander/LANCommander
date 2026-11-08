@@ -862,14 +862,25 @@ namespace LANCommander.SDK.Services
                 .StreamAsync();
         }
 
-        public async Task StartedAsync(Guid id)
+        /// <summary>Tells the server the player started the game.</summary>
+        /// <param name="serverId">The game server the player is joining, when the action names one.</param>
+        /// <param name="alias">The name the player plays under, so match statistics can link them.</param>
+        public async Task StartedAsync(Guid id, Guid? serverId = null, string alias = null)
         {
             if (!connectionClient.IsConnected())
                 return;
-            
+
             logger?.LogTrace("Signaling to the server that we started the game...");
 
             using var timeout = new CancellationTokenSource(ServerNotificationTimeout);
+
+            var query = new List<string>();
+
+            if (serverId is { } server && server != Guid.Empty)
+                query.Add($"serverId={server}");
+
+            if (!String.IsNullOrWhiteSpace(alias))
+                query.Add($"alias={Uri.EscapeDataString(alias)}");
 
             try
             {
@@ -877,13 +888,32 @@ namespace LANCommander.SDK.Services
                     .Create()
                     .UseAuthenticationToken()
                     .UseVersioning()
-                    .UseRoute($"/api/Games/{id}/Started")
+                    .UseRoute($"/api/Games/{id}/Started" + (query.Count > 0 ? "?" + String.Join("&", query) : ""))
                     .UseCancellationToken(timeout.Token)
                     .GetAsync<object>();
             }
             catch (Exception ex)
             {
                 logger?.LogError(ex, "Failed sending start request to server");
+            }
+        }
+
+        /// <summary>
+        /// Tells the server the running game connected to one of its game servers, as seen in the game's
+        /// network traffic. Ignored by servers too old to know the call.
+        /// </summary>
+        public async Task ServerConnectedAsync(Guid gameId, Guid serverId)
+        {
+            if (!connectionClient.IsConnected() || RpcClient.Hub == null)
+                return;
+
+            try
+            {
+                await RpcClient.Hub.GameServerConnectedAsync(gameId, serverId);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogDebug(ex, "Couldn't tell the server game {GameId} joined server {ServerId}", gameId, serverId);
             }
         }
 

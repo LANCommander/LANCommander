@@ -113,6 +113,15 @@ public static class Database
                 });
 
                 Directory.CreateDirectory(AppPaths.ResolveStorageLocationPath(issueAttachmentLocation.Value.Path));
+
+                var matchAttachmentLocation = await storageLocationService.AddMissingAsync(l => l.Type == StorageLocationType.MatchAttachment && l.Default, new StorageLocation
+                {
+                    Path = "MatchAttachments",
+                    Type = StorageLocationType.MatchAttachment,
+                    Default = true,
+                });
+
+                Directory.CreateDirectory(AppPaths.ResolveStorageLocationPath(matchAttachmentLocation.Value.Path));
             }
             else
                 logger.LogDebug("No pending migrations are available. Skipping database migration.");

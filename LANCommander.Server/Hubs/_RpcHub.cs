@@ -16,7 +16,9 @@ public partial class RpcHub(
     ScriptDebugger scriptDebugger,
     ScriptClient scriptClient,
     PlaySessionKeepAliveTracker keepAliveTracker,
-    PresenceService presenceService) : Hub<IRpcSubscriber>, IRpcHub
+    PresenceService presenceService,
+    IServiceScopeFactory scopeFactory,
+    LANCommander.Server.Services.MatchStatistics.MatchNotificationDispatcher matchNotificationDispatcher) : Hub<IRpcSubscriber>, IRpcHub
 {
     private string GetConnectionsCacheKey(string userIdentifier) => $"RPC/Connections/{userIdentifier}";
     

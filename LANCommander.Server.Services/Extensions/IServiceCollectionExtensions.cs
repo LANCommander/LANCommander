@@ -157,6 +157,21 @@ public static class IServiceCollectionExtensions
         services.AddSingleton<PresenceService>();
         services.AddHostedService(sp => sp.GetRequiredService<PresenceService>());
 
+        // Match statistics: requests validate and queue events, one writer drains the queue, and
+        // follow-up work runs on the dispatcher so plugins never hold up writing
+        services.AddSingleton(sp => new MatchStatistics.ChannelMatchEventQueue(() =>
+            sp.GetRequiredService<SettingsProvider<Settings.Settings>>().CurrentValue.Server.MatchStatistics.QueueCapacity));
+        services.AddSingleton<MatchStatistics.IMatchEventQueue>(sp => sp.GetRequiredService<MatchStatistics.ChannelMatchEventQueue>());
+        services.AddSingleton<MatchStatistics.IMatchEventSource>(sp => sp.GetRequiredService<MatchStatistics.ChannelMatchEventQueue>());
+        services.AddSingleton<MatchStatistics.MatchNotificationDispatcher>();
+        services.AddHostedService(sp => sp.GetRequiredService<MatchStatistics.MatchNotificationDispatcher>());
+        services.AddSingleton<MatchStatistics.MatchEventWriter>();
+        services.AddHostedService(sp => sp.GetRequiredService<MatchStatistics.MatchEventWriter>());
+        services.AddScoped<MatchStatistics.MatchService>();
+        services.AddScoped<MatchStatistics.MatchQueryService>();
+        services.AddScoped<MatchStatistics.MatchAttachmentService>();
+        services.AddScoped<MatchStatistics.PlayerIdentityService>();
+
         services.AddSingleton<ScriptDebugger>();
         services.AddSingleton<IScriptDebugger>(sp =>
             sp.GetRequiredService<ScriptDebugger>());

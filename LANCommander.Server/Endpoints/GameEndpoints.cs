@@ -461,8 +461,11 @@ public static class GameEndpoints
         [FromServices] PlaySessionService playSessionService,
         [FromServices] ServerManager serverManager,
         [FromServices] IServiceScopeFactory scopeFactory,
+        [FromServices] LANCommander.Server.Services.MatchStatistics.MatchNotificationDispatcher matchNotificationDispatcher,
         ClaimsPrincipal userPrincipal,
-        Guid id)
+        Guid id,
+        [FromQuery] Guid? serverId = null,
+        [FromQuery] string? alias = null)
     {
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
         var game = await gameService.GetAsync(id);
@@ -471,6 +474,8 @@ public static class GameEndpoints
             return TypedResults.BadRequest();
 
         #region Start recording play session
+        // Older launchers send neither; newer ones send the server a connect action pointed at and
+        // the name the player plays under, which link the player to match statistics
         var activeSessions = await playSessionService
             .Include(ps => ps.Game)
             .GetAsync(ps => ps.UserId == user.Id && ps.End == null);
@@ -478,7 +483,16 @@ public static class GameEndpoints
         foreach (var activeSession in activeSessions)
             await playSessionService.EndSessionAsync(game.Id, activeSession.UserId);
 
-        await playSessionService.StartSessionAsync(game.Id, user.Id);
+        await playSessionService.StartSessionAsync(game.Id, user.Id, serverId, alias);
+
+        // A match may already be reporting the player under that name
+        if (!string.IsNullOrWhiteSpace(alias))
+        {
+            var gameId = game.Id;
+
+            matchNotificationDispatcher.Post($"linking players of game {gameId}", (services, cancellationToken) =>
+                services.GetRequiredService<LANCommander.Server.Services.MatchStatistics.PlayerIdentityService>().ResolveOpenMatchesAsync(gameId, serverId, cancellationToken));
+        }
         #endregion
 
         #region Autostart Servers

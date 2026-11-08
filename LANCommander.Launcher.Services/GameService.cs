@@ -163,23 +163,29 @@ namespace LANCommander.Launcher.Services
         public async Task Run(Game game, SDK.Models.Manifest.Action action)
         {
             Guid userId;
+            string alias = null;
 
             if (connectionClient.IsConnected())
             {
                 var profile = await profileClient.GetAsync();
 
                 userId = profile.Id;
+                alias = String.IsNullOrWhiteSpace(profile.Alias) ? profile.UserName : profile.Alias;
             }
             else
             {
                 userId = authenticationService.GetUserId();
             }
 
+            // A server's Connect or Join action names the server, which ties the session to it for
+            // match statistics
+            Guid? serverId = SDK.Enums.ActionTypes.TryGetServerId(action, out var actionServerId) ? actionServerId : null;
+
             try
             {
                 var latestSession = await playSessionService.GetLatestSession(game.Id, userId);
 
-                await playSessionService.StartSession(game.Id, userId);
+                await playSessionService.StartSession(game.Id, userId, serverId, alias);
 
                 await WriteOptionsToManifestAsync(game);
 

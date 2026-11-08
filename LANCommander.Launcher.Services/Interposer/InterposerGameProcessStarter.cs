@@ -38,7 +38,8 @@ public sealed class InterposerGameProcessStarter(
     ProfileClient profileClient,
     InterposerSessionService sessions,
     PresenceForwarder presenceForwarder,
-    ILogger<InterposerGameProcessStarter> logger) : IGameProcessStarter
+    ILogger<InterposerGameProcessStarter> logger,
+    ServerConnectionWatcher? serverConnectionWatcher = null) : IGameProcessStarter
 {
     public async Task<StartedGameProcess?> StartAsync(GameProcessStartContext context, CancellationToken cancellationToken)
     {
@@ -136,8 +137,13 @@ public sealed class InterposerGameProcessStarter(
                 ? null
                 : presenceForwarder.Track(context.GameId, context.Manifest?.Title, interposer);
 
+            // Which of the game's servers it joins, for match statistics; same pipe, same limitation
+            var connections = deployment == InterposerDeployment.Injector
+                ? null
+                : serverConnectionWatcher?.Track(context.GameId, interposer);
+
             // The InterposerService holds the overrides and pipes the game reads; it lives as long as the game
-            return new StartedGameProcess(process, new GameLifetime(registration, presence, interposer));
+            return new StartedGameProcess(process, new GameLifetime(registration, presence, connections, interposer));
         }
         catch (Exception ex) when (ex is InjectionException or Win32Exception)
         {
@@ -255,12 +261,13 @@ public sealed class InterposerGameProcessStarter(
     /// What has to last as long as the game: its session's registration and presence first, then the
     /// service they read from.
     /// </summary>
-    private sealed class GameLifetime(IDisposable registration, IDisposable? presence, InterposerService interposer) : IDisposable
+    private sealed class GameLifetime(IDisposable registration, IDisposable? presence, IDisposable? connections, InterposerService interposer) : IDisposable
     {
         public void Dispose()
         {
             registration.Dispose();
             presence?.Dispose();
+            connections?.Dispose();
             interposer.Dispose();
         }
     }

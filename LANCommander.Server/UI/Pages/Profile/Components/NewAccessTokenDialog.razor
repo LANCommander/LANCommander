@@ -12,10 +12,10 @@
     </FormItem>
 
     <FormItem Label="Access" Help="@AccessHelp">
-        <Segmented TValue="bool" Dialog @bind-Value="_model.PluginsOnly" Items="AccessItems" />
+        <Segmented TValue="TokenAccess" Dialog @bind-Value="_model.Access" Items="AccessItems" />
     </FormItem>
 
-    @if (_model.PluginsOnly)
+    @if (_model.Access == TokenAccess.Plugins)
     {
         <FormItem Label="Plugins" Required>
             <Select TValue="string"
@@ -37,10 +37,20 @@
         new(0, "Never"),
     ];
 
-    static readonly IEnumerable<SelectItem<bool>> AccessItems =
+    enum TokenAccess
+    {
+        FullApi,
+        Plugins,
+        ReportMatches,
+        ReadMatches,
+    }
+
+    static readonly IEnumerable<SelectItem<TokenAccess>> AccessItems =
     [
-        new(false, "Full API"),
-        new(true, "Specific plugins"),
+        new(TokenAccess.FullApi, "Full API"),
+        new(TokenAccess.Plugins, "Specific plugins"),
+        new(TokenAccess.ReportMatches, "Report matches"),
+        new(TokenAccess.ReadMatches, "Read matches"),
     ];
 
     Form? _form;
@@ -48,12 +58,16 @@
 
     IEnumerable<SelectItem<string>> PluginItems => Options.PluginRoutePrefixes.Select(p => new SelectItem<string>(p, p));
 
-    string AccessHelp => _model.PluginsOnly
-        ? "The token only works on the chosen plugins' endpoints, under /api/Plugins"
-        : "The token can make any API request your account can";
+    string AccessHelp => _model.Access switch
+    {
+        TokenAccess.Plugins => "The token only works on the chosen plugins' endpoints, under /api/Plugins",
+        TokenAccess.ReportMatches => "The token only works on /api/Matches, for a game server or tool that reports matches. Reports are trusted as far as your account is",
+        TokenAccess.ReadMatches => "The token can only read /api/Matches, for dashboards such as Grafana",
+        _ => "The token can make any API request your account can",
+    };
 
     protected override bool CanConfirm =>
-        !string.IsNullOrWhiteSpace(_model.Name) && (!_model.PluginsOnly || _model.Plugins.Any());
+        !string.IsNullOrWhiteSpace(_model.Name) && (_model.Access != TokenAccess.Plugins || _model.Plugins.Any());
 
     protected override Task<bool> OnOkAsync()
     {
@@ -62,7 +76,13 @@
 
         Result = new NewAccessTokenRequest(
             _model.Name!.Trim(),
-            _model.PluginsOnly ? PersonalAccessTokenScopes.ForPlugins(_model.Plugins) : PersonalAccessTokenScopes.FullApi,
+            _model.Access switch
+            {
+                TokenAccess.Plugins => PersonalAccessTokenScopes.ForPlugins(_model.Plugins),
+                TokenAccess.ReportMatches => PersonalAccessTokenScopes.ForMatches(report: true),
+                TokenAccess.ReadMatches => PersonalAccessTokenScopes.ForMatches(report: false),
+                _ => PersonalAccessTokenScopes.FullApi,
+            },
             _model.ExpiresInDays > 0 ? DateTime.UtcNow.AddDays(_model.ExpiresInDays) : null);
 
         return Task.FromResult(true);
@@ -72,7 +92,7 @@
     {
         public string? Name { get; set; }
         public int ExpiresInDays { get; set; } = 30;
-        public bool PluginsOnly { get; set; }
+        public TokenAccess Access { get; set; }
         public IEnumerable<string> Plugins { get; set; } = [];
     }
 }

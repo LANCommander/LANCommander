@@ -685,6 +685,48 @@ Manages the keys of games. Provided by the server; inject it into a scoped plugi
 - `Task<KeyInfo> ReleaseAsync(Guid id, CancellationToken cancellationToken)`
   - Frees a claimed key so it can be handed out again.
 
+### IMatchStatisticsProvider
+
+`interface` — `LANCommander.Server.Plugins.IMatchStatisticsProvider`
+
+Reads the multiplayer matches the server has recorded: for a leaderboard, a tournament bracket or anything else built on match results. Provided by the server; inject it into a scoped plugin service or page. Returns the same shapes as the `/api/Matches` endpoints. Like the record providers, this is a trusted host service, not an authorization boundary.
+
+**Methods**
+
+- `Task<MatchPage<MatchSummary>> GetMatchesAsync(MatchQuery query, CancellationToken cancellationToken)`
+  - Matches, newest first.
+- `Task<MatchDetail> GetMatchAsync(Guid matchId, CancellationToken cancellationToken)`
+  - A match with its reporters, participants, results, statistics and attachments, or null.
+- `Task<MatchPage<MatchEventInformation>> GetEventsAsync(Guid matchId, MatchEventQuery query, CancellationToken cancellationToken)`
+  - A match's events in game-time order.
+- `Task<IReadOnlyList<MatchStatisticAggregate>> AggregateAsync(MatchStatisticQuery query, CancellationToken cancellationToken)`
+  - One statistic aggregated across a game's matches, best first: a leaderboard.
+- `Task<IReadOnlyList<PlayerIdentityInformation>> GetPlayerIdentitiesAsync(Guid userId, CancellationToken cancellationToken)`
+  - The in-game ids linked to a user.
+- `Task<Stream> OpenAttachmentAsync(Guid attachmentId, CancellationToken cancellationToken)`
+  - Opens an uploaded attachment's file. The caller owns and must dispose the stream. Null when the attachment doesn't exist or its upload hasn't completed.
+
+### IMatchStatisticsSink
+
+`interface` — `LANCommander.Server.Plugins.IMatchStatisticsSink`
+
+Records multiplayer matches from inside the server, without going through HTTP: a plugin that parses a game server's log, polls RCON or receives a game's own reports writes through this. Provided by the server; inject it into a scoped plugin service.
+
+**Methods**
+
+- `Task<MatchRegistration> CreateMatchAsync(string pluginId, MatchCreateRequest request, CancellationToken cancellationToken)`
+  - Starts a match, or returns the one already recorded for the game under `ExternalId`, with the plugin registered as a reporter.
+- `Task UpsertParticipantsAsync(Guid matchId, IEnumerable<MatchParticipantSubmission> participants, CancellationToken cancellationToken)`
+  - Adds players to a match, or updates the name, team and times of ones already in it.
+- `Task<MatchEventBatchResult> RecordAsync(Guid matchId, Guid reporterId, IReadOnlyList<MatchEventSubmission> events, CancellationToken cancellationToken)`
+  - Queues events to be written. Waits while the queue is full rather than failing. Events with an id already written are dropped, so retrying is safe.
+- `Task EndMatchAsync(Guid matchId, MatchEndRequest request, CancellationToken cancellationToken)`
+  - Ends a match with its standings and totals, replacing any sent before.
+- `Task<MatchAttachmentInformation> AddAttachmentAsync(Guid matchId, MatchAttachmentCreateRequest request, Stream content, CancellationToken cancellationToken)`
+  - Stores a file with a match. Reads `content` from its current position to the end without disposing it.
+- `Task<PlayerIdentityInformation> LinkPlayerAsync(PlayerIdentitySubmission identity, CancellationToken cancellationToken)`
+  - Links an in-game id to a user, so participants with that player key are linked to them, including ones already recorded.
+
 ### IMediaGrabberExtension
 
 `interface` — `LANCommander.Server.Plugins.IMediaGrabberExtension`
@@ -1369,6 +1411,62 @@ A CD key for a game, handed out to players as the game's allocation method decid
   - Set by the server; ignored when writing.
 - `RecordOwner Owner { get; init; }`
   - Set by the server; ignored when writing.
+
+### MatchCreatedEvent
+
+`record` — `LANCommander.Server.Plugins.MatchCreatedEvent`
+
+Raised after a multiplayer match is first recorded, by a reporter or through `IMatchStatisticsSink`.
+
+**Properties**
+
+- `Guid MatchId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid? ServerId { get; init; }`
+- `string Map { get; init; }`
+- `string Mode { get; init; }`
+
+### MatchEndedEvent
+
+`record` — `LANCommander.Server.Plugins.MatchEndedEvent`
+
+Raised after a match is ended with its results, or abandoned. Raised again if a reporter sends the results again, so handlers should replace rather than add.
+
+**Properties**
+
+- `Guid MatchId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid? ServerId { get; init; }`
+- `MatchStatus Status { get; init; }`
+- `string Reason { get; init; }`
+- `IReadOnlyList<MatchResultInformation> Results { get; init; }`
+  - The final standings, best first. Empty for an abandoned match.
+
+### MatchEventsRecordedEvent
+
+`record` — `LANCommander.Server.Plugins.MatchEventsRecordedEvent`
+
+Raised after a batch of a match's events is written. Batches are raised in order for each match, off the request that reported them; a slow handler delays later notifications but not writing.
+
+**Properties**
+
+- `Guid MatchId { get; init; }`
+- `Guid GameId { get; init; }`
+- `IReadOnlyList<MatchEventInformation> Events { get; init; }`
+
+### MatchParticipantLinkedEvent
+
+`record` — `LANCommander.Server.Plugins.MatchParticipantLinkedEvent`
+
+Raised when a match participant is linked to a LANCommander user.
+
+**Properties**
+
+- `Guid MatchId { get; init; }`
+- `Guid ParticipantId { get; init; }`
+- `string PlayerKey { get; init; }`
+- `Guid UserId { get; init; }`
+- `MatchParticipantLinkSource LinkSource { get; init; }`
 
 ### MediaGrabberItem
 

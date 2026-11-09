@@ -251,6 +251,8 @@ namespace LANCommander.SDK.Services
                 }
             }
 
+            await LauncherEventHelper.ReportAsync(apiRequestFactory, logger, LauncherEventType.ToolInstalled, planItem.EntityId);
+
             return installResult;
         }
 
@@ -378,6 +380,7 @@ namespace LANCommander.SDK.Services
 
                     await RunPostInstallScripts(installDirectory, tool);
                 }
+                await LauncherEventHelper.ReportAsync(apiRequestFactory, logger, LauncherEventType.ToolInstalled, tool.Id);
             }
             catch (Exception ex)
             {

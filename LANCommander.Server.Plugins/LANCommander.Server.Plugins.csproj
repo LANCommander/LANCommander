@@ -26,6 +26,8 @@
   <ItemGroup>
     <!-- For PluginDbContext. The host shares its EF Core with plugins, at the version it pins. -->
     <PackageReference Include="Microsoft.EntityFrameworkCore.Relational" />
+    <!-- For IServerEventTransport. Transport plugins configure the host's Rebus bus. -->
+    <PackageReference Include="Rebus" />
   </ItemGroup>
 
   <ItemGroup>

@@ -98,6 +98,7 @@ await app.SeedUIFixturesIfRequestedAsync();
 // to lifecycle events ahead of time.
 await app.Services.GetRequiredService<LANCommander.SDK.Plugins.PluginLoaderService>().InitializeAllAsync(app.Services);
 
+await app.Services.GetRequiredService<LANCommander.Server.Services.Events.ServerLifecycleEvents>().StartAsync(CancellationToken.None);
 await app.StartServersAsync();
 await app.StartBeaconAsync();
 

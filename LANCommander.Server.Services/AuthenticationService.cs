@@ -1,4 +1,4 @@
-﻿using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http;
 using System.Security.Claims;
@@ -25,7 +25,8 @@ namespace LANCommander.Server.Services
         RoleService roleService,
         ScriptService scriptService,
         ITokenProvider tokenProvider,
-        SDK.Services.ScriptClient scriptClient) : BaseService(logger, settingsProvider)
+        SDK.Services.ScriptClient scriptClient,
+        Events.IServerEventPublisher eventPublisher) : BaseService(logger, settingsProvider)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
@@ -94,6 +95,8 @@ namespace LANCommander.Server.Services
             await userService.UpdateRefreshTokenAsync(
                 user.Id, refreshToken,
                 DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime));
+
+            await eventPublisher.PublishAsync(LANCommander.Server.Plugins.Messaging.ServerEventTypes.UserLogin, "user", user.Id, new { }, user.Id);
 
             return new AuthToken
             {

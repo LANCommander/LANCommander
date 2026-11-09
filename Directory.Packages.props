@@ -39,6 +39,8 @@
     <PackageVersion Include="XtermBlazor" Version="2.1.2" />
   </ItemGroup>
   <ItemGroup Label="Utility">
+    <PackageVersion Include="Rebus" Version="8.9.5" />
+    <PackageVersion Include="Rebus.ServiceProvider" Version="10.7.2" />
     <PackageVersion Include="AsmResolver.PE.Win32Resources" Version="6.0.1" />
     <PackageVersion Include="ByteSize" Version="2.1.2" />
     <PackageVersion Include="CaseConverter" Version="2.0.1" />

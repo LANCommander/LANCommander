@@ -67,6 +67,14 @@ namespace LANCommander.Server.Data
         {
             base.OnModelCreating(builder);
 
+            builder.Entity<WebhookDelivery>()
+                .HasOne(d => d.Subscription)
+                .WithMany()
+                .HasForeignKey(d => d.SubscriptionId)
+                .OnDelete(DeleteBehavior.Cascade);
+            builder.Entity<WebhookDelivery>().HasIndex(d => new { d.Status, d.NextAttemptOn });
+            builder.Entity<WebhookDelivery>().HasIndex(d => new { d.EventId, d.SubscriptionId }).IsUnique();
+
             builder.ConfigureBaseRelationships<Models.Action>();
             builder.ConfigureBaseRelationships<Archive>();
             builder.ConfigureBaseRelationships<Category>();

@@ -81,10 +81,16 @@ namespace LANCommander.Launcher.Services
 
             // Bridge existing lifecycle events to the plugin event bus so plugins can react without
             // touching every internal call site.
-            OnInstallComplete += game =>
-                _pluginEventBus.PublishAsync(new GameInstalledEvent(game.Id, game.InstallDirectory ?? string.Empty));
-            OnInstallFail += game =>
-                _pluginEventBus.PublishAsync(new GameInstallFailedEvent(game.Id, game.InstallDirectory));
+            OnInstallComplete += async game =>
+            {
+                await _pluginEventBus.PublishAsync(new GameInstalledEvent(game.Id, game.InstallDirectory ?? string.Empty));
+                await _gameClient.ReportLifecycleAsync(SDK.Models.LauncherEventType.GameInstalled, game.Id);
+            };
+            OnInstallFail += async game =>
+            {
+                await _pluginEventBus.PublishAsync(new GameInstallFailedEvent(game.Id, game.InstallDirectory));
+                await _gameClient.ReportLifecycleAsync(SDK.Models.LauncherEventType.GameInstallFailed, game.Id);
+            };
             OnQueueChanged += () =>
                 _pluginEventBus.PublishAsync(new InstallQueueChangedEvent());
 

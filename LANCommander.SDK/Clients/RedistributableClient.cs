@@ -204,6 +204,8 @@ namespace LANCommander.SDK.Services
 
                         SaveTrackedFiles(game.InstallDirectory, redistributable.Id, fileTracker);
                     }
+
+                    await LauncherEventHelper.ReportAsync(apiRequestFactory, logger, LauncherEventType.RedistributableInstalled, redistributable.Id);
                 }
             }
             catch (Exception ex)

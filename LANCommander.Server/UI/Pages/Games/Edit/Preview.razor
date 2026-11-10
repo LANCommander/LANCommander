@@ -4,14 +4,9 @@
 @inject MediaAutoDownloadService MediaAutoDownloadService
 @inject NotificationService Notifications
 
-<GameEditView Id="Id" Title="Preview" Subtitle="exactly what the launcher shows" ContentClass="game-edit-content-bleed">
+<GameEditView Id="Id" Title="Preview" ContentClass="game-edit-content-bleed">
     <TitleExtraTemplate>
-        <span class="game-preview-saves">
-            <Icon Type="IconType.CheckCircle" />
-            Media saves as you drop it
-        </span>
-        <Button Icon="IconType.DownloadSimple" Loading="_downloadingArt" OnClick="DownloadArtAsync" title="Download the first match for each kind of art this game is missing">Download Art</Button>
-        <Button Icon="IconType.PencilSimple" Href="@($"/Games/{Id}/General")">Edit details</Button>
+        <Button Icon="IconType.DownloadSimple" Loading="_downloadingArt" OnClick="DownloadArtAsync" title="Download the first match for each kind of art this game is missing">Download Missing</Button>
     </TitleExtraTemplate>
     <ChildContent>
         <GameDetailPreview @ref="_preview" />

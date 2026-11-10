@@ -264,7 +264,7 @@ else
                             <span class="script-editor-kicker">Runs with</span>
                             <span class="script-editor-count">@_variables.Count</span>
                         </div>
-                        <p class="script-editor-help">The variables @(Article(_script.Type)) @_script.Type.GetDisplayName().ToLowerInvariant() script is given. Click to insert at the caret.</p>
+                        <p class="script-editor-help">The variables @(Article(_script.Type)) @_script.Type.GetDisplayName().ToLowerInvariant() script is given. Click to insert.</p>
                         <div class="script-editor-chips">
                             @foreach (var variable in _showAllVariables ? _variables : _variables.Take(VariablesShown))
                             {
@@ -285,7 +285,7 @@ else
                             <span class="script-editor-kicker">Global variables</span>
                             <span class="script-editor-count">@_globalVariables.Count</span>
                         </div>
-                        <p class="script-editor-help">Shared values every script can read from the var: drive, set under Scripting › Variables. Click to insert at the caret.</p>
+                        <p class="script-editor-help">Shared values every script can use, set under Scripting › Variables. Click to insert.</p>
                         <div class="script-editor-chips">
                             @foreach (var variable in _showAllGlobalVariables ? _globalVariables : _globalVariables.Take(VariablesShown))
                             {

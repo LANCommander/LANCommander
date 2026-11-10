@@ -235,7 +235,6 @@
         : @<div class="media-grabber-footer">
               <span class="media-grabber-footer-selected">@SelectedCount selected</span>
               <span class="media-grabber-footer-summary">@_allResults.Count @(_allResults.Count == 1 ? "result" : "results") · @_providers.Count(p => _answered.Contains(p.Key)) of @_providers.Count @(_providers.Count == 1 ? "provider" : "providers") answered</span>
-              <span class="media-grabber-footer-hint">Double-click a thumbnail to pick it straight away</span>
           </div>;
 
     int SelectedCount => _multiSelect ? _selectedKeys.Count : _selected != null ? 1 : 0;

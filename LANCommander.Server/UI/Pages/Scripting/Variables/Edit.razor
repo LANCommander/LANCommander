@@ -26,14 +26,14 @@
                 }
                 else
                 {
-                    <text>Scripts refer to it as <code>$var:@(String.IsNullOrWhiteSpace(_variable.Name) ? "Name" : _variable.Name.Trim())</code>. Letters, digits and underscores.</text>
+                    <text>Use in scripts as <code>$var:@(String.IsNullOrWhiteSpace(_variable.Name) ? "Name" : _variable.Name.Trim())</code>.</text>
                 }
             </HelpTemplate>
         </FormItem>
-        <FormItem Label="Value" Help="Given to scripts as a string. Clients store a copy so scripts can still use it offline.">
+        <FormItem Label="Value">
             <TextArea @bind-Value="_variable.Value" Rows="4" />
         </FormItem>
-        <FormItem Label="Description" Help="Shown beside the variable in the script editor.">
+        <FormItem Label="Description">
             <TextArea @bind-Value="_variable.Description" Rows="2" MaxLength="500" Counter />
         </FormItem>
     </Form>

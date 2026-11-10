@@ -20,6 +20,7 @@ public sealed class MatchService(
     PlayerIdentityService playerIdentityService,
     IPluginEventBus pluginEventBus,
     IFusionCache cache,
+    MatchActivityFeed activityFeed,
     SettingsProvider<Settings.Settings> settingsProvider,
     ILogger<MatchService> logger)
 {
@@ -120,6 +121,8 @@ public sealed class MatchService(
         if (created)
         {
             logger.LogInformation("Match {MatchId} started for game {GameId}", match.Id, match.GameId);
+
+            activityFeed.Publish(match.ServerId, MatchActivity.Started(match));
 
             await pluginEventBus.PublishAsync(new MatchCreatedEvent(match.Id, match.GameId, match.ServerId, match.Map, match.Mode), cancellationToken);
         }
@@ -344,6 +347,8 @@ public sealed class MatchService(
 
         logger.LogInformation("Match {MatchId} {Status}", match.Id, match.Status);
 
+        activityFeed.Publish(match.ServerId, MatchActivity.Ended(match));
+
         await PublishEndedAsync(context, match, cancellationToken);
     }
 
@@ -402,6 +407,8 @@ public sealed class MatchService(
         foreach (var match in stale)
         {
             logger.LogInformation("Match {MatchId} abandoned after {Minutes} minutes without events", match.Id, idle.TotalMinutes);
+
+            activityFeed.Publish(match.ServerId, MatchActivity.Ended(match));
 
             await pluginEventBus.PublishAsync(new MatchEndedEvent(match.Id, match.GameId, match.ServerId, match.Status, match.EndReason, []), cancellationToken);
         }

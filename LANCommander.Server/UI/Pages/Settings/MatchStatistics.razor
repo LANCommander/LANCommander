@@ -1,0 +1,181 @@
+@page "/Settings/MatchStatistics"
+@using LANCommander.SDK
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.MatchStatistics
+@using LANCommander.Server.Settings
+@using LANCommander.Server.Settings.Models
+@using LANCommander.Server.UI.Components
+@inject StorageLocationService StorageLocationService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject MatchAttachmentService MatchAttachmentService
+@inject NotificationService Notifications
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<PageHeader Title="Match Statistics" />
+
+<PageContent Loading="AttachmentStorageLocation == null">
+    @if (AttachmentStorageLocation != null)
+    {
+        <Form Model="_settings" OnSubmit="SaveAsync">
+            <FormItem Label="Enable" Help="Accept match reports from game servers, clients and plugins. When off, the reporting endpoints answer 404 and stale matches aren't swept.">
+                <Switch @bind-Value="_settings.Enabled" />
+            </FormItem>
+
+            <FormItem Label="Abandon After (minutes)" Help="How long an open match can go without events before it's marked abandoned. Set to 0 to never abandon matches.">
+                <NumberInput @bind-Value="_settings.AbandonAfter" Min="0" />
+            </FormItem>
+
+            <FormItem Label="Max Events per Request" Help="The most events a reporter can send in one request.">
+                <NumberInput @bind-Value="_settings.MaxEventsPerRequest" Min="1" />
+            </FormItem>
+
+            <FormItem Label="Max Event Payload Size (KB)" Help="The largest payload accepted for a single event.">
+                <NumberInput @bind-Value="_settings.MaxPayloadSize" Min="1" />
+            </FormItem>
+
+            <FormItem Label="Queue Capacity" Help="Events held in memory waiting to be written. When the queue is full, reporters are told to retry, so this bounds memory use rather than throughput.">
+                <NumberInput @bind-Value="_settings.QueueCapacity" Min="1" />
+            </FormItem>
+
+            <FormItem Label="Batch Size" Help="The most events written to the database in one transaction.">
+                <NumberInput @bind-Value="_settings.BatchSize" Min="1" />
+            </FormItem>
+
+            <FormItem Label="Flush Interval (ms)" Help="How long the writer waits to fill a batch before writing what it has.">
+                <NumberInput @bind-Value="_settings.FlushInterval" Min="0" />
+            </FormItem>
+
+            <FormItem Label="Attachments Storage Path" HelpTemplate="StoragePathHelp">
+                <FilePicker Root="@RootPath" EntrySelectable="x => x is FileManagerDirectory" @bind-Value="AttachmentStorageLocation.Path" OkText="Select Path" Title="Choose Path" OnSelected="OnPathSelected" />
+            </FormItem>
+
+            <FormItem Label="Max Attachment Size (MB)" Help="The largest file, such as a demo or replay, that can be attached to a match.">
+                <NumberInput @bind-Value="_settings.MaxAttachmentSize" Min="1" />
+            </FormItem>
+
+            <FormItem Label="Attachment Retention (days)" Help="How long uploaded attachments are kept. Set to 0 to keep them. Applies to files uploaded after the change.">
+                <NumberInput @bind-Value="_settings.AttachmentRetention" Min="0" />
+            </FormItem>
+
+            <FormItem Label="Incomplete Upload Timeout (hours)" Help="How long an attachment upload can stay incomplete before it's removed.">
+                <NumberInput @bind-Value="_settings.PendingAttachmentTimeout" Min="1" />
+            </FormItem>
+
+            <FormItem>
+                <Button Primary Submit Loading="_saving">Save</Button>
+            </FormItem>
+        </Form>
+    }
+</PageContent>
+
+@code {
+    string RootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
+
+    StorageLocation? AttachmentStorageLocation;
+
+    // Edited as a copy so nothing changes on the live settings until Save
+    MatchStatisticsSettings _settings = new();
+    int _attachmentCount;
+    long _attachmentBytes;
+    bool _saving;
+
+    RenderFragment StoragePathHelp => @<span>
+        Demos, replays and logs attached to matches are stored here. A relative path is resolved under the server's data directory.
+        @if (_attachmentCount > 0)
+        {
+            <text> @(_attachmentCount == 1 ? "1 attachment is" : $"{_attachmentCount} attachments are") stored here (<ByteSize Value="_attachmentBytes" />). Changing the path doesn't move existing files. Move the folder's contents yourself, or they can't be downloaded.</text>
+        }
+    </span>;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var current = SettingsProvider.CurrentValue.Server.MatchStatistics;
+
+        _settings = new MatchStatisticsSettings
+        {
+            Enabled = current.Enabled,
+            QueueCapacity = current.QueueCapacity,
+            BatchSize = current.BatchSize,
+            FlushInterval = current.FlushInterval,
+            MaxEventsPerRequest = current.MaxEventsPerRequest,
+            MaxPayloadSize = current.MaxPayloadSize,
+            AbandonAfter = current.AbandonAfter,
+            MaxAttachmentSize = current.MaxAttachmentSize,
+            AttachmentRetention = current.AttachmentRetention,
+            PendingAttachmentTimeout = current.PendingAttachmentTimeout,
+        };
+
+        try
+        {
+            AttachmentStorageLocation = await StorageLocationService.DefaultAsync(StorageLocationType.MatchAttachment)
+                                        ?? new StorageLocation { Type = StorageLocationType.MatchAttachment, Default = true, Path = "MatchAttachments" };
+
+            if (AttachmentStorageLocation.Id != Guid.Empty)
+                (_attachmentCount, _attachmentBytes) = await MatchAttachmentService.GetUsageAsync(AttachmentStorageLocation.Id);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The attachment storage location could not be loaded");
+        }
+    }
+
+    async Task SaveAsync()
+    {
+        if (string.IsNullOrWhiteSpace(AttachmentStorageLocation!.Path))
+        {
+            Notifications.Error("Choose a storage path for match attachments.");
+            return;
+        }
+
+        _saving = true;
+
+        try
+        {
+            SettingsProvider.Update(s =>
+            {
+                var target = s.Server.MatchStatistics;
+
+                target.Enabled = _settings.Enabled;
+                target.QueueCapacity = Math.Max(1, _settings.QueueCapacity);
+                target.BatchSize = Math.Max(1, _settings.BatchSize);
+                target.FlushInterval = Math.Max(0, _settings.FlushInterval);
+                target.MaxEventsPerRequest = Math.Max(1, _settings.MaxEventsPerRequest);
+                target.MaxPayloadSize = Math.Max(1, _settings.MaxPayloadSize);
+                target.AbandonAfter = Math.Max(0, _settings.AbandonAfter);
+                target.MaxAttachmentSize = Math.Max(1, _settings.MaxAttachmentSize);
+                target.AttachmentRetention = Math.Max(0, _settings.AttachmentRetention);
+                target.PendingAttachmentTimeout = Math.Max(1, _settings.PendingAttachmentTimeout);
+            });
+
+            // Fail here rather than on the next upload if the folder can't be created
+            Directory.CreateDirectory(AppPaths.ResolveStorageLocationPath(AttachmentStorageLocation.Path));
+
+            if (AttachmentStorageLocation.Id == Guid.Empty)
+                AttachmentStorageLocation = await StorageLocationService.AddAsync(AttachmentStorageLocation);
+            else
+                await StorageLocationService.UpdateAsync(AttachmentStorageLocation);
+
+            Notifications.Success("Settings saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The settings could not be saved");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+
+    // Storage paths resolve under the data directory (AppPaths.ResolveStorageLocationPath), so a
+    // folder picked inside it is stored relative to it and keeps working if the server moves
+    void OnPathSelected(string path)
+    {
+        var dataPath = AppPaths.GetConfigDirectory().TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+
+        if (path != null && path.StartsWith(dataPath, StringComparison.OrdinalIgnoreCase))
+            path = path[dataPath.Length..].TrimEnd(Path.DirectorySeparatorChar);
+
+        AttachmentStorageLocation!.Path = path ?? string.Empty;
+    }
+}

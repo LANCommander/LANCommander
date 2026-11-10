@@ -50,6 +50,8 @@
                     {
                         <MenuItem Href="@($"/Servers/{Id}/Monitor")">Monitor</MenuItem>
                     }
+
+                    <MenuItem Href="@($"/Servers/{Id}/Statistics")">Statistics</MenuItem>
                 </MenuGroup>
 
                 @if (Extension is { Sections.Count: > 0 } extension)

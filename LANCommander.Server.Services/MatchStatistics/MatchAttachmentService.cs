@@ -262,6 +262,19 @@ public sealed class MatchAttachmentService(
         return expired.Count;
     }
 
+    /// <summary>How many attachment files a storage location holds, and their total size.</summary>
+    public async Task<(int Count, long Bytes)> GetUsageAsync(Guid storageLocationId, CancellationToken cancellationToken = default)
+    {
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var sizes = await context.MatchAttachments!
+            .Where(a => a.StorageLocationId == storageLocationId && a.Status != MatchAttachmentStatus.Failed)
+            .Select(a => a.Size)
+            .ToListAsync(cancellationToken);
+
+        return (sizes.Count, sizes.Sum());
+    }
+
     private async Task<MatchAttachment> GetOwnedAsync(Guid attachmentId, MatchReporterContext caller, CancellationToken cancellationToken)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);

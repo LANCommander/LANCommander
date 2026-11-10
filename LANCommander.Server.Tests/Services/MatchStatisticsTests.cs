@@ -304,6 +304,42 @@ public class MatchStatisticsTests(ApplicationFixture fixture) : DalTest(fixture)
     }
 
     [Fact]
+    public async Task AServersActivityIsPushedToWatchersAndReadBack()
+    {
+        var game = await AddGameAsync();
+        var server = await AddServerAsync();
+        var reporter = await AddUserAsync();
+        var feed = GetService<MatchActivityFeed>();
+
+        var pushed = new System.Collections.Concurrent.ConcurrentQueue<MatchActivity>();
+
+        using (feed.Subscribe(server.Id, batch => { foreach (var a in batch) pushed.Enqueue(a); }))
+        {
+            var registration = await Matches.CreateAsync(new MatchCreateRequest { GameId = game.Id, ServerId = server.Id, Map = "q2dm1" }, Trusted(reporter));
+
+            await Matches.RecordAsync(registration.MatchId, registration.ReporterId, [Event(1, actor: "name:Ace", subject: "name:Bob"), Event(2, "flag_captured")], Trusted(reporter), waitForRoom: false);
+            await WaitForEventsAsync(registration.MatchId, 2);
+
+            var deadline = DateTime.UtcNow + WriteTimeout;
+
+            while (pushed.Count(a => a.Kind == MatchActivityKind.Event) < 2 && DateTime.UtcNow < deadline)
+                await Task.Delay(50);
+
+            await Matches.EndAsync(registration.MatchId, new MatchEndRequest(), Trusted(reporter));
+
+            pushed.Select(a => a.Kind).ShouldBe([MatchActivityKind.Started, MatchActivityKind.Event, MatchActivityKind.Event, MatchActivityKind.Ended]);
+            pushed.First().Map.ShouldBe("q2dm1");
+            pushed.ElementAt(1).ActorKey.ShouldBe("name:Ace");
+
+            var history = await Queries.GetRecentActivityAsync(server.Id, 100);
+
+            history.Select(a => a.Key).ShouldBe(pushed.Select(a => a.Key));
+        }
+
+        feed.IsWatched(server.Id).ShouldBeFalse();
+    }
+
+    [Fact]
     public void TheQueueTakesABatchWholeOrNotAtAll()
     {
         var queue = new ChannelMatchEventQueue(() => 3);

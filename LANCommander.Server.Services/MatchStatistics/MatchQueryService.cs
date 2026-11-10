@@ -43,6 +43,56 @@ public sealed class MatchQueryService(IDbContextFactory<DatabaseContext> context
         return new MatchPage<MatchSummary> { Items = items, Page = page, PageSize = pageSize, Total = total };
     }
 
+    /// <summary>
+    /// A server's latest match activity, oldest first: its recent matches starting and ending, and the
+    /// last <paramref name="count"/> events written for them.
+    /// </summary>
+    public async Task<IReadOnlyList<MatchActivity>> GetRecentActivityAsync(Guid serverId, int count, CancellationToken cancellationToken = default)
+    {
+        const int recentMatches = 25;
+
+        await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);
+
+        var matches = await context.Matches!
+            .AsNoTracking()
+            .Where(m => m.ServerId == serverId)
+            .OrderByDescending(m => m.StartedOn ?? m.CreatedOn)
+            .Take(recentMatches)
+            .ToListAsync(cancellationToken);
+
+        if (matches.Count == 0)
+            return [];
+
+        var matchIds = matches.Select(m => m.Id).ToList();
+
+        var events = await context.MatchEvents!
+            .AsNoTracking()
+            .Where(e => matchIds.Contains(e.MatchId))
+            .OrderByDescending(e => e.ReceivedOn)
+            .ThenByDescending(e => e.Sequence)
+            .Take(Math.Max(1, count))
+            .ToListAsync(cancellationToken);
+
+        // Back to written order first: events of one batch share a time, and the sort below is stable
+        var activity = Enumerable.Reverse(events).Select(MatchActivity.FromEvent)
+            .Concat(matches.Select(MatchActivity.Started))
+            .Concat(matches.Where(m => m.Status != MatchStatus.Open).Select(MatchActivity.Ended))
+            .ToList();
+
+        // Match lines older than the oldest event shown would only pad the top
+        if (events.Count >= count)
+        {
+            var since = events[^1].ReceivedOn;
+
+            activity.RemoveAll(a => a.Kind != MatchActivityKind.Event && a.Timestamp < since);
+        }
+
+        return activity
+            .OrderBy(a => a.Timestamp)
+            .ThenBy(a => a.Kind == MatchActivityKind.Started ? 0 : a.Kind == MatchActivityKind.Event ? 1 : 2)
+            .ToList();
+    }
+
     public async Task<MatchDetail?> GetMatchAsync(Guid matchId, CancellationToken cancellationToken = default)
     {
         await using var context = await contextFactory.CreateDbContextAsync(cancellationToken);

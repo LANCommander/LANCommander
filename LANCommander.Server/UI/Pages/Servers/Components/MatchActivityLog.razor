@@ -1,0 +1,275 @@
+@using System.Collections.Concurrent
+@using LANCommander.Server.Services.MatchStatistics
+@using LANCommander.Server.Settings
+@using LANCommander.Server.UI.Providers
+@using Microsoft.AspNetCore.Components.Web.Virtualization
+@inject MatchActivityFeed ActivityFeed
+@inject MatchQueryService MatchQueryService
+@inject SettingsProvider<Settings> SettingsProvider
+@inject ScriptProvider ScriptProvider
+@inject TimeProvider TimeProvider
+@inject ILogger<MatchActivityLog> Logger
+@implements IAsyncDisposable
+
+@*
+    Follows the match statistics being collected for a server: matches starting and ending, and each
+    event as it is written. Opens on the latest activity read back from the database, then follows
+    MatchActivityFeed.
+*@
+<div class="server-console">
+    <div class="server-console-toolbar">
+        @if (!SettingsProvider.CurrentValue.Server.MatchStatistics.Enabled)
+        {
+            <span class="server-console-follow server-console-follow-ended server-statistics-disabled">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                Match statistics are turned off.&nbsp;<a href="/Settings/MatchStatistics">Settings</a>
+            </span>
+        }
+        else if (_following)
+        {
+            <span class="server-console-follow">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                Following statistics
+            </span>
+        }
+        else
+        {
+            <button type="button" class="server-console-follow server-console-follow-paused" @onclick="ResumeAsync">
+                <span class="server-console-follow-dot" aria-hidden="true"></span>
+                Paused, jump to the end
+            </button>
+        }
+
+        <Button Small OnClick="Clear">Clear</Button>
+    </div>
+
+    <div class="server-console-panel">
+        <div class="server-log server-statistics-log" @ref="_scroller" role="list" aria-label="Match statistics">
+            @if (_lines.Count == 0)
+            {
+                <div class="server-log-empty">@_emptyText</div>
+            }
+
+            <Virtualize Items="_lines" ItemSize="21" OverscanCount="30" Context="line">
+                <div class="server-log-row @RowClass(line)" role="listitem">
+                    <span class="server-log-time">@Time(line)</span>
+                    <span class="server-log-level" title="@Label(line)">@Label(line)</span>
+                    <span class="server-log-message">@Message(line)</span>
+                </div>
+            </Virtualize>
+        </div>
+    </div>
+</div>
+
+@code {
+    [Parameter, EditorRequired] public Guid ServerId { get; set; }
+
+    /// <summary>Events read back when the page opens.</summary>
+    const int HistoryCount = 500;
+
+    /// <summary>Oldest lines are dropped past this, so a busy match can't grow the page without end.</summary>
+    const int MaxLines = 5000;
+
+    const int MaxPayloadLength = 400;
+
+    readonly List<MatchActivity> _lines = [];
+    readonly ConcurrentQueue<MatchActivity> _incoming = new();
+    int _flushQueued;
+
+    // Lines read back from the database, so the same ones pushed live while reading aren't shown twice
+    HashSet<string>? _loadedKeys;
+
+    IDisposable? _subscription;
+    string _emptyText = "Loading…";
+
+    ElementReference _scroller;
+    IJSObjectReference? _domHelper;
+    IJSObjectReference? _follow;
+    DotNetObjectReference<MatchActivityLog>? _self;
+    bool _following = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        // Subscribed before reading what's already there, so nothing is missed in between
+        _subscription = ActivityFeed.Subscribe(ServerId, Enqueue);
+
+        try
+        {
+            var recent = await MatchQueryService.GetRecentActivityAsync(ServerId, HistoryCount);
+
+            _lines.InsertRange(0, recent);
+            _loadedKeys = recent.Select(a => a.Key).ToHashSet();
+
+            _emptyText = "No statistics have been collected for this server yet. They appear here as matches are reported.";
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not read the match activity of server {ServerId}", ServerId);
+
+            _emptyText = $"The match activity could not be read: {ex.Message}";
+        }
+    }
+
+    void Enqueue(IReadOnlyList<MatchActivity> activity)
+    {
+        foreach (var line in activity)
+            _incoming.Enqueue(line);
+
+        // One render for a burst of lines rather than one each
+        if (Interlocked.Exchange(ref _flushQueued, 1) == 0)
+            _ = InvokeAsync(Flush);
+    }
+
+    void Flush()
+    {
+        Interlocked.Exchange(ref _flushQueued, 0);
+
+        while (_incoming.TryDequeue(out var line))
+        {
+            if (_loadedKeys?.Contains(line.Key) == true)
+                continue;
+
+            _lines.Add(line);
+        }
+
+        // Trim in chunks so a steady stream doesn't shift the whole list on every line
+        if (_lines.Count > MaxLines + MaxLines / 10)
+            _lines.RemoveRange(0, _lines.Count - MaxLines);
+
+        StateHasChanged();
+    }
+
+    void Clear()
+    {
+        _lines.Clear();
+        _incoming.Clear();
+
+        _emptyText = "Statistics appear here as matches are reported.";
+    }
+
+    static string RowClass(MatchActivity line) => line.Kind switch
+    {
+        MatchActivityKind.Started or MatchActivityKind.Ended => "server-log-row-ready",
+        MatchActivityKind.Abandoned => "server-log-row-warn",
+        _ => "server-log-row-info",
+    };
+
+    static string Label(MatchActivity line) => line.Kind switch
+    {
+        MatchActivityKind.Started => "START",
+        MatchActivityKind.Ended => "END",
+        MatchActivityKind.Abandoned => "ABANDON",
+        _ => line.Type ?? "",
+    };
+
+    string Time(MatchActivity line) =>
+        TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(line.Timestamp, DateTimeKind.Utc), TimeProvider.LocalTimeZone).ToString("HH:mm:ss");
+
+    static string Message(MatchActivity line)
+    {
+        var match = $"match {line.MatchId.ToString()[..8]}";
+
+        switch (line.Kind)
+        {
+            case MatchActivityKind.Started:
+                return Join($"Match started ({match})", line.Map, line.Mode);
+
+            case MatchActivityKind.Ended:
+            case MatchActivityKind.Abandoned:
+                return Join($"Match {(line.Kind == MatchActivityKind.Abandoned ? "abandoned" : "ended")} ({match})", line.Reason);
+        }
+
+        var parts = new List<string> { GameTime(line.GameTimeMilliseconds) };
+
+        if (line.ActorKey != null && line.SubjectKey != null)
+            parts.Add($"{Player(line.ActorKey)} → {Player(line.SubjectKey)}");
+        else if (line.ActorKey != null || line.SubjectKey != null)
+            parts.Add(Player(line.ActorKey ?? line.SubjectKey!));
+
+        if (!String.IsNullOrEmpty(line.Payload) && line.Payload != "{}")
+            parts.Add(line.Payload.Length > MaxPayloadLength ? line.Payload[..MaxPayloadLength] + "…" : line.Payload);
+
+        return String.Join("  ", parts);
+    }
+
+    static string Join(string lead, params string?[] details) =>
+        String.Join(" · ", details.Where(d => !String.IsNullOrWhiteSpace(d)).Prepend(lead));
+
+    /// <summary>A name key shows as the name; other kinds (steam:…) keep their kind.</summary>
+    static string Player(string key) => PlayerKeys.DisplayNameOf(key) ?? key;
+
+    /// <summary>Game time as [m:ss.fff], or [h:mm:ss] past an hour.</summary>
+    static string GameTime(long milliseconds)
+    {
+        var time = TimeSpan.FromMilliseconds(milliseconds);
+
+        return time.TotalHours >= 1
+            ? $"[{(int)time.TotalHours}:{time:mm\\:ss}]"
+            : $"[{(int)time.TotalMinutes}:{time:ss\\.fff}]";
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            _self = DotNetObjectReference.Create(this);
+            _domHelper = await ScriptProvider.ImportModuleAsync("DomHelper");
+
+            if (_domHelper != null)
+                _follow = await _domHelper.InvokeAsync<IJSObjectReference>("FollowOutput", _scroller, _self);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not follow the match statistics log");
+        }
+    }
+
+    /// <summary>Called from DomHelper.FollowOutput as the reader scrolls away from, or back to, the end.</summary>
+    [JSInvokable]
+    public Task FollowChanged(bool following) => InvokeAsync(() =>
+    {
+        _following = following;
+        StateHasChanged();
+    });
+
+    async Task ResumeAsync()
+    {
+        _following = true;
+
+        try
+        {
+            if (_follow != null)
+                await _follow.InvokeVoidAsync("Resume");
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not scroll the match statistics log to its end");
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _subscription?.Dispose();
+
+        try
+        {
+            if (_follow != null)
+            {
+                await _follow.InvokeVoidAsync("Dispose");
+                await _follow.DisposeAsync();
+            }
+
+            if (_domHelper != null)
+                await _domHelper.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+            // The circuit is gone, and the page with it
+        }
+
+        _self?.Dispose();
+    }
+}

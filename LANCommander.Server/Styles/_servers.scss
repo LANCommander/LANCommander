@@ -367,6 +367,18 @@
     .server-log-message { color: var(--lc-accent-text-color); }
 }
 
+// Match statistics: the level column holds the event type, so it's wider and cut short
+.server-statistics-log .server-log-level {
+    width: 16ch;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.server-statistics-disabled a {
+    color: var(--lc-accent-text-color);
+}
+
 // ── Command bar ──────────────────────────────────────────────
 .server-command-tooltip {
     display: block;

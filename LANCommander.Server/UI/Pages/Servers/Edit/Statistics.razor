@@ -1,0 +1,15 @@
+@page "/Servers/{id:guid}/Statistics"
+@using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+
+<ServerEditView Id="Id" Title="Statistics" Console="match statistics">
+    <div class="server-monitor">
+        <div class="server-monitor-console">
+            <MatchActivityLog @key="context.Id" ServerId="context.Id" />
+        </div>
+    </div>
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+}

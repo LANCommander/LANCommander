@@ -25,6 +25,7 @@ public sealed class MatchEventWriter(
     IMatchEventSource source,
     IDbContextFactory<DatabaseContext> contextFactory,
     MatchNotificationDispatcher dispatcher,
+    MatchActivityFeed activityFeed,
     SettingsProvider<Settings.Settings> settingsProvider,
     ILogger<MatchEventWriter> logger) : BackgroundService
 {
@@ -211,6 +212,23 @@ public sealed class MatchEventWriter(
         await context.SaveChangesAsync(cancellationToken);
 
         Notify(fresh, newParticipants);
+        PublishActivity(fresh, matches);
+    }
+
+    /// <summary>Shows the written events on the Statistics page of any server someone is watching.</summary>
+    private void PublishActivity(List<QueuedMatchEvent> written, List<Match> matches)
+    {
+        foreach (var serverMatches in matches.Where(m => activityFeed.IsWatched(m.ServerId)).GroupBy(m => m.ServerId))
+        {
+            var matchIds = serverMatches.Select(m => m.Id).ToHashSet();
+
+            activityFeed.Publish(serverMatches.Key, written
+                .Where(e => matchIds.Contains(e.MatchId))
+                .OrderBy(e => e.ReceivedOn)
+                .ThenBy(e => e.Sequence)
+                .Select(MatchActivity.FromEvent)
+                .ToList());
+        }
     }
 
     private static async Task<List<Guid>> AddMissingParticipantsAsync(DatabaseContext context, List<QueuedMatchEvent> events, DateTime now, CancellationToken cancellationToken)

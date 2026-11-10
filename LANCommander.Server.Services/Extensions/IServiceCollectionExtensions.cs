@@ -163,6 +163,7 @@ public static class IServiceCollectionExtensions
             sp.GetRequiredService<SettingsProvider<Settings.Settings>>().CurrentValue.Server.MatchStatistics.QueueCapacity));
         services.AddSingleton<MatchStatistics.IMatchEventQueue>(sp => sp.GetRequiredService<MatchStatistics.ChannelMatchEventQueue>());
         services.AddSingleton<MatchStatistics.IMatchEventSource>(sp => sp.GetRequiredService<MatchStatistics.ChannelMatchEventQueue>());
+        services.AddSingleton<MatchStatistics.MatchActivityFeed>();
         services.AddSingleton<MatchStatistics.MatchNotificationDispatcher>();
         services.AddHostedService(sp => sp.GetRequiredService<MatchStatistics.MatchNotificationDispatcher>());
         services.AddSingleton<MatchStatistics.MatchEventWriter>();

@@ -19,6 +19,8 @@ public class ScriptImporter(
     ServerImporter serverImporter,
     ToolImporter toolImporter) : BaseImporter<Script>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(Script record)
         => $"{nameof(Script)}/{record.Id}";
 

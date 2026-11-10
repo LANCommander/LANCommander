@@ -12,6 +12,8 @@ public class ServerHttpPathImporter(
     ServerService serverService,
     ServerImporter serverImporter) : BaseImporter<ServerHttpPath>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(ServerHttpPath record)
         => $"{nameof(ServerHttpPath)}/{record.LocalPath}";
 
@@ -59,19 +61,22 @@ public class ServerHttpPathImporter(
 
     public override async Task<bool> UpdateAsync(ServerHttpPath record)
     {
-        var existing = await serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path);
-
         try
         {
             var server = ImportContext.Manifest as SDK.Models.Manifest.Server;
 
-            if (server == null)
+            if (server == null || ImportContext.InQueue(server, serverImporter))
                 return false;
-            
+
+            // Other servers can serve the same URL path; only this server's is the one to update
+            var existing = await serverHttpPathService.FirstOrDefaultAsync(p => p.Path == record.Path && p.ServerId == server.Id);
+
+            if (existing == null)
+                return false;
+
             existing.LocalPath = record.LocalPath;
             existing.Path = record.Path;
-            existing.Server = await serverService.GetAsync(server.Id);
-            
+
             await serverHttpPathService.UpdateAsync(existing);
 
             return true;

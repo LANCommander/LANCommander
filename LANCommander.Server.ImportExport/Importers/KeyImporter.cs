@@ -12,6 +12,8 @@ public class KeyImporter(
     GameImporter gameImporter,
     GameService gameService) : BaseImporter<Key>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(Key record)
         => $"{nameof(Key)}/{record.Value}";
 

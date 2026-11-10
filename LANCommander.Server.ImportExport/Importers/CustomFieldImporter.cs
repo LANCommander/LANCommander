@@ -12,6 +12,8 @@ public class CustomFieldImporter(
     GameService gameService,
     GameImporter gameImporter) : BaseImporter<GameCustomField>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(GameCustomField record)
         => $"{nameof(GameCustomField)}/{record.Name}";
 
@@ -57,9 +59,12 @@ public class CustomFieldImporter(
             if (game == null)
                 return false;
             
+            if (ImportContext.InQueue(game, gameImporter))
+                return false;
+
             var existing = await gameService.GetCustomFieldAsync(game.Id, record.Name);
-            
-            if (existing.Value != record.Value)
+
+            if (existing?.Value != record.Value)
                 await gameService.SetCustomFieldAsync(game.Id, record.Name, record.Value);
 
             return true;

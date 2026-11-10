@@ -27,6 +27,23 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
 {
     private IHost? _realHost;
     private string? _dbPath;
+    private string? _connectionString;
+
+    /// <summary>
+    /// The database the tests run against: SQLite unless LANCOMMANDER_TEST_DATABASE names MySQL or
+    /// PostgreSQL, in which case LANCOMMANDER_TEST_DATABASE_CONNECTION is the server's connection
+    /// string without a database. Each factory creates its own database there and drops it after.
+    /// </summary>
+    public static DatabaseProvider Provider { get; } =
+        Enum.TryParse<DatabaseProvider>(Environment.GetEnvironmentVariable("LANCOMMANDER_TEST_DATABASE"), true, out var provider)
+        && provider is DatabaseProvider.MySQL or DatabaseProvider.PostgreSQL
+            ? provider
+            : DatabaseProvider.SQLite;
+
+    private static string ServerConnectionString() =>
+        Environment.GetEnvironmentVariable("LANCOMMANDER_TEST_DATABASE_CONNECTION")
+        ?? throw new InvalidOperationException(
+            $"LANCOMMANDER_TEST_DATABASE is {Provider}, so LANCOMMANDER_TEST_DATABASE_CONNECTION must give the server's connection string.");
     public string BaseAddress { get; private set; } = default!;
     public IServiceProvider RealServices => _realHost!.Services;
 
@@ -50,20 +67,46 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
                 d => d.ServiceType == typeof(DbConnection));
             if (dbConnectionDescriptor != null) services.Remove(dbConnectionDescriptor);
 
-            // Use a file-based SQLite database rather than the EF InMemory provider.
+            // Use a real database rather than the EF InMemory provider.
             // The app's DataTable queries use relational features (AsSplitQuery, Include,
             // and a translated punctuation-stripping search expression) that the InMemory
             // provider cannot translate — on CI this surfaced as a native stack overflow in
             // CountAsync that crashed the in-process server and cascaded into timeouts.
             // A real SQLite file supports those queries and concurrent connections.
-            _dbPath = Path.Combine(Path.GetTempPath(), $"LANCommander_UITest_{Guid.NewGuid():N}.db");
-
-            services.AddDbContextFactory<DatabaseContext>(optionsBuilder =>
+            switch (Provider)
             {
-                optionsBuilder.UseSqlite(
-                    $"Data Source={_dbPath}",
-                    options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
-            });
+                case DatabaseProvider.MySQL:
+                    _connectionString = $"{ServerConnectionString()};Database=lc_test_{Guid.NewGuid():N}";
+                    // Configured the way the server configures it (see DatabaseContext.OnConfiguring)
+                    services.AddDbContextFactory<DatabaseContext>(optionsBuilder =>
+                        optionsBuilder.UseMySql(_connectionString, ServerVersion.AutoDetect(_connectionString), options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.MySQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorNumbersToAdd: null);
+                        }));
+                    break;
+
+                case DatabaseProvider.PostgreSQL:
+                    _connectionString = $"{ServerConnectionString()};Database=lc_test_{Guid.NewGuid():N}";
+                    services.AddDbContextFactory<DatabaseContext>(optionsBuilder =>
+                        optionsBuilder.UseNpgsql(_connectionString, options =>
+                        {
+                            options.MigrationsAssembly("LANCommander.Server.Data.PostgreSQL");
+                            options.EnableRetryOnFailure(maxRetryCount: 3, maxRetryDelay: TimeSpan.FromSeconds(5), errorCodesToAdd: null);
+                        }));
+                    break;
+
+                default:
+                    _dbPath = Path.Combine(Path.GetTempPath(), $"LANCommander_UITest_{Guid.NewGuid():N}.db");
+
+                    services.AddDbContextFactory<DatabaseContext>(optionsBuilder =>
+                    {
+                        optionsBuilder.UseSqlite(
+                            $"Data Source={_dbPath}",
+                            options => options.MigrationsAssembly("LANCommander.Server.Data.SQLite"));
+                    });
+                    break;
+            }
 
             // Mock IVersionProvider
             var versionProviderDescriptor = services.SingleOrDefault(
@@ -100,13 +143,18 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
         _realHost = builder.Build();
         _realHost.Start();
 
-        // Create the SQLite schema from the current model before any requests run.
+        // Create the schema before any requests run. MySQL and PostgreSQL get theirs from their
+        // migrations, as a real server does, so the tests also cover what those migrations build.
         using (var scope = _realHost.Services.CreateScope())
         {
             var contextFactory = scope.ServiceProvider
                 .GetRequiredService<IDbContextFactory<DatabaseContext>>();
             using var context = contextFactory.CreateDbContext();
-            context.Database.EnsureCreated();
+
+            if (Provider == DatabaseProvider.SQLite)
+                context.Database.EnsureCreated();
+            else
+                context.Database.Migrate();
         }
 
         // Get the dynamically assigned port
@@ -148,6 +196,24 @@ public class UITestApplicationFactory : WebApplicationFactory<Program>
         }
 
         try { await base.DisposeAsync(); } catch { }
+
+        // Drop the MySQL or PostgreSQL database this factory created
+        if (_connectionString != null && _realHost != null)
+        {
+            try
+            {
+                using var scope = _realHost.Services.CreateScope();
+                await using var context = await scope.ServiceProvider
+                    .GetRequiredService<IDbContextFactory<DatabaseContext>>()
+                    .CreateDbContextAsync();
+
+                await context.Database.EnsureDeletedAsync();
+            }
+            catch
+            {
+                // Best-effort cleanup of the test database.
+            }
+        }
 
         // Release pooled SQLite connections so the temp database file can be deleted.
         if (_dbPath != null)

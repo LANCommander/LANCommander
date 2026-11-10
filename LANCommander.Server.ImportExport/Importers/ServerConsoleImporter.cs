@@ -12,6 +12,8 @@ public class ServerConsoleImporter(
     ServerService serverService,
     ServerImporter serverImporter) : BaseImporter<ServerConsole>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(ServerConsole record)
         => $"{nameof(ServerConsole)}/{record.Name}";
 

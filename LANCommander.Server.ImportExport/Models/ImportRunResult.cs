@@ -21,4 +21,9 @@ public class ImportRunResult
     /// Number of records that were imported.
     /// </summary>
     public int ImportedCount { get; set; }
+
+    /// <summary>
+    /// Records that were left out, each with the reason; empty when everything was imported.
+    /// </summary>
+    public List<string> Errors { get; set; } = [];
 }

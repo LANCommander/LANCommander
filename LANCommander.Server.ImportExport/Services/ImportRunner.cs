@@ -77,22 +77,16 @@ public class ImportRunner(
         using var context = importContextFactory.Create();
 
         cancellationToken.ThrowIfCancellationRequested();
-        var items = (await context.InitializeImportAsync(
+        await context.InitializeImportAsync(
             archivePath,
             manifestType,
-            cancellationToken)).ToList();
+            cancellationToken);
 
         // Import everything the archive offers. The record selection UI exists for the Blazor
         // dialog; an API caller that uploaded a package wants all of it.
-        var selectedRecordIds = items
-            .Select(i => Guid.TryParse(i.Key, out var id) ? (Guid?)id : null)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value)
-            .ToList();
-
         cancellationToken.ThrowIfCancellationRequested();
         await context.PrepareImportQueueAsync(
-            selectedRecordIds,
+            selectedKeys: null,
             storageLocation.Id,
             cancellationToken);
 
@@ -105,6 +99,7 @@ public class ImportRunner(
             RecordId = GetRecordId(context.Manifest),
             ManifestType = GetManifestType(context.Manifest),
             ImportedCount = context.Processed,
+            Errors = context.Errors.ToList(),
         };
     }
 

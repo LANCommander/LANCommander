@@ -45,8 +45,8 @@ public class ArchiveExporter(
 
     public override async Task<Archive> ExportAsync(Guid id)
     {
-        var entity = await archiveService.GetAsync(id);
-        
+        var entity = await archiveService.Include(a => a.GameVersion!).GetAsync(id);
+
         try
         {
             var path = await archiveService.GetArchiveFileLocationAsync(entity);
@@ -54,8 +54,14 @@ public class ArchiveExporter(
 
             if (fileInfo.Exists)
                 await WriteEntryFromFileAsync($"Archives/{entity.Id}", path);
-        
-            return manifestMapper.ToManifest(entity);
+
+            var archive = manifestMapper.ToManifest(entity);
+
+            // Changelogs moved to the game version the archive belongs to; the manifest still carries
+            // it on the archive, which is what the importer reads it from
+            archive.Changelog ??= entity.GameVersion?.Changelog;
+
+            return archive;
         }
         catch (Exception ex)
         {

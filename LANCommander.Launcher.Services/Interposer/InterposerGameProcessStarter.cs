@@ -39,7 +39,8 @@ public sealed class InterposerGameProcessStarter(
     InterposerSessionService sessions,
     PresenceForwarder presenceForwarder,
     ILogger<InterposerGameProcessStarter> logger,
-    ServerConnectionWatcher? serverConnectionWatcher = null) : IGameProcessStarter
+    ServerConnectionWatcher? serverConnectionWatcher = null,
+    MatchForwarder? matchForwarder = null) : IGameProcessStarter
 {
     public async Task<StartedGameProcess?> StartAsync(GameProcessStartContext context, CancellationToken cancellationToken)
     {
@@ -142,8 +143,13 @@ public sealed class InterposerGameProcessStarter(
                 ? null
                 : serverConnectionWatcher?.Track(context.GameId, interposer);
 
+            // The matches a patch in the game reports, when the game has no server of its own to send them to
+            var matches = deployment == InterposerDeployment.Injector
+                ? null
+                : matchForwarder?.Track(context.GameId, interposer);
+
             // The InterposerService holds the overrides and pipes the game reads; it lives as long as the game
-            return new StartedGameProcess(process, new GameLifetime(registration, presence, connections, interposer));
+            return new StartedGameProcess(process, new GameLifetime(registration, presence, connections, matches, interposer));
         }
         catch (Exception ex) when (ex is InjectionException or Win32Exception)
         {
@@ -261,13 +267,14 @@ public sealed class InterposerGameProcessStarter(
     /// What has to last as long as the game: its session's registration and presence first, then the
     /// service they read from.
     /// </summary>
-    private sealed class GameLifetime(IDisposable registration, IDisposable? presence, IDisposable? connections, InterposerService interposer) : IDisposable
+    private sealed class GameLifetime(IDisposable registration, IDisposable? presence, IDisposable? connections, IDisposable? matches, InterposerService interposer) : IDisposable
     {
         public void Dispose()
         {
             registration.Dispose();
             presence?.Dispose();
             connections?.Dispose();
+            matches?.Dispose();
             interposer.Dispose();
         }
     }

@@ -80,15 +80,15 @@ public class KeysEditorComponentTests : BUnitTestContext
 
         var cut = RenderEditor(game.Id);
 
-        var statistics = cut.FindAll(".lc-statistic")
-            .Select(s => (
-                Title: s.QuerySelector(".lc-statistic-title")?.TextContent?.Trim(),
-                Value: s.QuerySelector(".lc-statistic-value")?.TextContent?.Trim()))
-            .ToList();
+        // The statistics fill in once the keys have loaded
+        cut.WaitForAssertion(() =>
+        {
+            var statistics = Statistics(cut);
 
-        Assert.Equal("4", statistics.Single(s => s.Title == "Total").Value);
-        Assert.Equal("1", statistics.Single(s => s.Title == "Allocated").Value);
-        Assert.Equal("3", statistics.Single(s => s.Title == "Available").Value);
+            Assert.Equal("4", statistics.Single(s => s.Title == "Total").Value);
+            Assert.Equal("1", statistics.Single(s => s.Title == "Allocated").Value);
+            Assert.Equal("3", statistics.Single(s => s.Title == "Available").Value);
+        }, TimeSpan.FromSeconds(10));
     }
 
     /// <summary>
@@ -108,14 +108,19 @@ public class KeysEditorComponentTests : BUnitTestContext
         // switching games only changes this parameter and the component instance is re-used.
         var cut = Render<KeysPage>(parameters => parameters.Add(p => p.Id, first.Id));
 
+        // Wait for the first game's keys so the switch below really replaces a loaded list
+        cut.WaitForAssertion(() => Assert.Equal("2", Statistics(cut).Single(s => s.Title == "Total").Value), TimeSpan.FromSeconds(10));
+
         cut.Render(parameters => parameters.Add(p => p.Id, second.Id));
 
-        var total = cut.FindAll(".lc-statistic")
+        cut.WaitForAssertion(() => Assert.Equal("5", Statistics(cut).Single(s => s.Title == "Total").Value), TimeSpan.FromSeconds(10));
+    }
+
+    private static List<(string? Title, string? Value)> Statistics<TComponent>(IRenderedComponent<TComponent> cut)
+        where TComponent : Microsoft.AspNetCore.Components.IComponent
+        => cut.FindAll(".lc-statistic")
             .Select(s => (
                 Title: s.QuerySelector(".lc-statistic-title")?.TextContent?.Trim(),
                 Value: s.QuerySelector(".lc-statistic-value")?.TextContent?.Trim()))
-            .Single(s => s.Title == "Total");
-
-        Assert.Equal("5", total.Value);
-    }
+            .ToList();
 }

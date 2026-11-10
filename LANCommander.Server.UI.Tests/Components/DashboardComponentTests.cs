@@ -29,10 +29,13 @@ public class DashboardComponentTests : BUnitTestContext
             Assert.Equal(["Players online", "Sessions this week", "Game servers", "Archive storage"], titles);
         });
 
-        var subtitle = cut.Find(".lc-page-header-subtitle").TextContent;
+        cut.WaitForAssertion(() =>
+        {
+            var subtitle = cut.Find(".lc-page-header-subtitle").TextContent;
 
-        Assert.StartsWith(Environment.MachineName.ToLowerInvariant(), subtitle);
-        Assert.Contains(" · up ", subtitle);
+            Assert.StartsWith(Environment.MachineName.ToLowerInvariant(), subtitle);
+            Assert.Contains(" · up ", subtitle);
+        }, TimeSpan.FromSeconds(10));
     }
 
     [Fact]

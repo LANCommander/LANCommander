@@ -83,7 +83,7 @@ public class BUnitServerFixture : IAsyncLifetime
         TestGameId = game.Id;
 
         // Mark the provider as configured so the app behaves as a set-up server.
-        DatabaseContext.Provider = DatabaseProvider.SQLite;
+        DatabaseContext.Provider = UITestApplicationFactory.Provider;
     }
 
     public async Task DisposeAsync()

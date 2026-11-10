@@ -1,5 +1,6 @@
 @using LANCommander.SDK.Enums
 @inherits Dialog<ArchiveUploadOptions, bool>
+@implements IDisposable
 @inject ArchiveService ArchiveService
 @inject GameVersionService GameVersionService
 @inject StorageLocationService StorageLocationService
@@ -166,9 +167,11 @@ else
 
         await _uploader!.StartAsync(async objectKey =>
         {
+            Guid? archiveId = null;
+
             try
             {
-                var archiveId = await CompleteArchiveAsync(objectKey, details);
+                archiveId = await CompleteArchiveAsync(objectKey, details);
 
                 if (archiveId != null && onUploaded != null)
                     await onUploaded(archiveId.Value);
@@ -177,8 +180,24 @@ else
             {
                 Logger.LogError(ex, "Failed to process uploaded archive");
             }
+
+            // Runs even after the dialog was closed and the upload carried on in the background
+            if (!_disposed)
+                await InvokeAsync(async () =>
+                {
+                    if (archiveId != null)
+                        Notifications.Success("Archive uploaded!");
+                    else
+                        Notifications.Error("The archive was uploaded but could not be saved");
+
+                    await CloseAsync(archiveId != null);
+                });
         });
     }
+
+    bool _disposed;
+
+    public void Dispose() => _disposed = true;
 
     /// <summary>Links the stored upload to its game, tool or redistributable and records its sizes.</summary>
     async Task<Guid?> CompleteArchiveAsync(string objectKey, UploadDetails details)

@@ -21,8 +21,8 @@ public class ProfileComponentTests : BUnitTestContext
     {
         var cut = Render<ProfileIndex>();
 
-        // The authenticated admin's username is bound into the username input.
-        Assert.Contains(TestConstants.AdminUserName, cut.Markup);
+        // The authenticated admin's username is bound into the username input once the profile loads.
+        cut.WaitForAssertion(() => Assert.Contains(TestConstants.AdminUserName, cut.Markup), TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -30,13 +30,17 @@ public class ProfileComponentTests : BUnitTestContext
     {
         var cut = Render<ProfileIndex>();
 
-        foreach (var label in new[] { "Username", "Alias", "Email Address" })
+        // The form renders once the profile has loaded
+        cut.WaitForAssertion(() =>
         {
-            Assert.Contains(label, cut.Markup);
-        }
+            foreach (var label in new[] { "Username", "Alias", "Email Address" })
+            {
+                Assert.Contains(label, cut.Markup);
+            }
 
-        Assert.Contains(
-            cut.FindAll("button"),
-            b => b.TextContent.Contains("Save", StringComparison.OrdinalIgnoreCase));
+            Assert.Contains(
+                cut.FindAll("button"),
+                b => b.TextContent.Contains("Save", StringComparison.OrdinalIgnoreCase));
+        }, TimeSpan.FromSeconds(10));
     }
 }

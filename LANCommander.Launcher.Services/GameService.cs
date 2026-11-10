@@ -42,6 +42,85 @@ namespace LANCommander.Launcher.Services
         }
 
         /// <summary>
+        /// Whether a stored multiplayer mode is the manifest's mode. Modes carry no id, and a game can
+        /// have several of one type (two LAN modes with different player counts), so every field counts.
+        /// </summary>
+        private static bool IsSameMode(MultiplayerMode stored, SDK.Models.Manifest.MultiplayerMode mode)
+            => stored.Type == mode.Type
+               && stored.NetworkProtocol == mode.NetworkProtocol
+               && (stored.Description ?? String.Empty) == (mode.Description ?? String.Empty)
+               && stored.MinPlayers == mode.MinPlayers
+               && stored.MaxPlayers == mode.MaxPlayers
+               && stored.Spectators == mode.Spectators;
+
+        /// <summary>
+        /// Pairs each manifest mode with a stored one, each stored mode used at most once. Returns
+        /// the manifest modes with no stored counterpart and the stored modes the manifest no longer has.
+        /// </summary>
+        private static (List<SDK.Models.Manifest.MultiplayerMode> Added, List<MultiplayerMode> Removed) DiffModes(
+            IEnumerable<MultiplayerMode> stored,
+            IEnumerable<SDK.Models.Manifest.MultiplayerMode>? modes)
+        {
+            var removed = stored.ToList();
+            var added = new List<SDK.Models.Manifest.MultiplayerMode>();
+
+            foreach (var mode in modes ?? [])
+            {
+                var match = removed.FirstOrDefault(s => IsSameMode(s, mode));
+
+                if (match != null)
+                    removed.Remove(match);
+                else
+                    added.Add(mode);
+            }
+
+            return (added, removed);
+        }
+
+        /// <summary>Whether the game's stored multiplayer modes differ from the manifest's.</summary>
+        public async Task<bool> MultiplayerModesDifferAsync(Guid gameId, IEnumerable<SDK.Models.Manifest.MultiplayerMode>? modes)
+        {
+            var stored = await Context.Set<MultiplayerMode>().Where(m => m.GameId == gameId).ToListAsync();
+            var (added, removed) = DiffModes(stored, modes);
+
+            return added.Count > 0 || removed.Count > 0;
+        }
+
+        /// <summary>
+        /// Makes the game's multiplayer modes match the manifest: adds new ones, removes ones the
+        /// server no longer has, and leaves unchanged ones alone. An edited mode is replaced.
+        /// </summary>
+        public async Task SyncMultiplayerModesAsync(Guid gameId, IEnumerable<SDK.Models.Manifest.MultiplayerMode>? modes)
+        {
+            var stored = await Context.Set<MultiplayerMode>().Where(m => m.GameId == gameId).ToListAsync();
+            var (added, removed) = DiffModes(stored, modes);
+
+            Context.Set<MultiplayerMode>().RemoveRange(removed);
+
+            foreach (var mode in added)
+                Context.Set<MultiplayerMode>().Add(new MultiplayerMode
+                {
+                    GameId = gameId,
+                    Type = mode.Type,
+                    NetworkProtocol = mode.NetworkProtocol,
+                    Description = mode.Description,
+                    MinPlayers = mode.MinPlayers,
+                    MaxPlayers = mode.MaxPlayers,
+                    Spectators = mode.Spectators,
+                    CreatedOn = mode.CreatedOn,
+                    UpdatedOn = mode.UpdatedOn,
+                    ImportedOn = DateTime.UtcNow,
+                });
+
+            // Launchers before this imported modes without a game, all sharing a few rows; nothing
+            // can show those, so clear them out as games are synced
+            Context.Set<MultiplayerMode>().RemoveRange(
+                await Context.Set<MultiplayerMode>().Where(m => m.GameId == null).ToListAsync());
+
+            await Context.SaveChangesAsync();
+        }
+
+        /// <summary>
         /// Loads a game from the local database along with everything the detail view renders.
         /// </summary>
         public async Task<Game?> GetWithDetailsAsync(Guid id)

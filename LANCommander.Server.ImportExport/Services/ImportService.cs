@@ -22,11 +22,14 @@ public class ImportService : IDisposable
         context.SetId(id);
         
         _importContexts[id] = context;
-        
-        context.OnImportStarted = OnImportStarted;
-        context.OnImportComplete = OnImportComplete;
-        context.OnImportStatusUpdate = OnImportStatusUpdate;
-        context.OnImportError = OnImportError;
+
+        // Each context keeps its own events and the service-wide ones only receive a copy. Handing the
+        // context the service's own handlers would let every subscriber (an open import dialog, say)
+        // hear every other import on the server, and keep it alive for as long as the server runs.
+        context.OnImportStarted.EventRaised += OnImportStarted.InvokeAsync;
+        context.OnImportComplete.EventRaised += OnImportComplete.InvokeAsync;
+        context.OnImportStatusUpdate.EventRaised += OnImportStatusUpdate.InvokeAsync;
+        context.OnImportError.EventRaised += OnImportError.InvokeAsync;
 
         return id;
     }

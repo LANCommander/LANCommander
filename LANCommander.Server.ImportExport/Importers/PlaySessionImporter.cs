@@ -13,6 +13,8 @@ public class PlaySessionImporter(
     GameService gameService,
     GameImporter gameImporter) : BaseImporter<PlaySession>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(PlaySession record)
         => $"{nameof(PlaySession)}/{record.User}:{record.Start}:{record.End}";
 

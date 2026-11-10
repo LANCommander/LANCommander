@@ -28,8 +28,8 @@ public class GameEditComponentTests : BUnitTestContext
     {
         var cut = RenderGeneral();
 
-        // The seeded game's title is bound into the title lookup input.
-        Assert.Contains(BUnitServerFixture.TestGameTitle, cut.Markup);
+        // The seeded game's title is bound into the title lookup input once the game has loaded.
+        cut.WaitForAssertion(() => Assert.Contains(BUnitServerFixture.TestGameTitle, cut.Markup), TimeSpan.FromSeconds(10));
     }
 
     [Fact]
@@ -60,8 +60,9 @@ public class GameEditComponentTests : BUnitTestContext
     {
         var cut = RenderGeneral();
 
-        Assert.Contains(
+        // The button appears once the game has loaded, which takes longer on a networked database
+        cut.WaitForAssertion(() => Assert.Contains(
             cut.FindAll("button"),
-            b => b.TextContent.Contains("Export", StringComparison.OrdinalIgnoreCase));
+            b => b.TextContent.Contains("Export", StringComparison.OrdinalIgnoreCase)), TimeSpan.FromSeconds(10));
     }
 }

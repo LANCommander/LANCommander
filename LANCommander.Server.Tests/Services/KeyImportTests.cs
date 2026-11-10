@@ -84,7 +84,7 @@ public class KeyImportTests(ApplicationFixture fixture) : DalTest(fixture)
         };
 
         await importContext.InitializeImportAsync(packagePath);
-        await importContext.PrepareImportQueueAsync([], storageLocation!.Id);
+        await importContext.PrepareImportQueueAsync(null, storageLocation!.Id);
         await importContext.ImportQueueAsync();
 
         importContext.Dispose();

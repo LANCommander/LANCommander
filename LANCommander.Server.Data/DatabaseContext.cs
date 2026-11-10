@@ -63,6 +63,20 @@ namespace LANCommander.Server.Data
             base.OnConfiguring(optionsBuilder);
         }
 
+        protected override void ConfigureConventions(ModelConfigurationBuilder configurationBuilder)
+        {
+            base.ConfigureConventions(configurationBuilder);
+
+            // PostgreSQL rejects any DateTime that isn't UTC; without this, saving a game with a
+            // release date from an import manifest or a date field failed there. Other providers
+            // store dates without a kind and are left as they are.
+            if (Database.IsNpgsql())
+            {
+                configurationBuilder.Properties<DateTime>().HaveConversion<Converters.UtcDateTimeConverter>();
+                configurationBuilder.Properties<DateTime?>().HaveConversion<Converters.UtcDateTimeConverter>();
+            }
+        }
+
         protected override void OnModelCreating(ModelBuilder builder)
         {
             base.OnModelCreating(builder);

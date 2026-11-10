@@ -14,6 +14,8 @@ public class MediaImporter(
     GameService gameService,
     GameImporter gameImporter) : BaseImporter<Media>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(Media record)
         => $"{nameof(Media)}/{record.Id}";
 
@@ -62,6 +64,7 @@ public class MediaImporter(
                 Id = record.Id,
                 FileId = record.FileId,
                 Game = await gameService.GetAsync(game.Id),
+                Name = record.Name,
                 CreatedOn = record.CreatedOn,
                 Type = record.Type,
                 UpdatedOn = record.UpdatedOn,
@@ -121,9 +124,8 @@ public class MediaImporter(
             if (existing.StorageLocation == null)
                 existing.StorageLocation = await storageLocationService.DefaultAsync(StorageLocationType.Media);
 
-            existing = await mediaService.UpdateAsync(existing);
-            
-            await mediaService.WriteToFileAsync(existing, archiveEntry.OpenEntryStream(), true);
+            // The file, if the package has one, is written by the asset queued above
+            await mediaService.UpdateAsync(existing);
 
             return true;
         }

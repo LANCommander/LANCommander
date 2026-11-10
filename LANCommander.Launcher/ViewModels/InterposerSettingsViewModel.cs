@@ -47,6 +47,11 @@ public partial class InterposerSettingsViewModel : ViewModelBase
         "Loader.", "FileRedirects", "DnsRedirects", "Registry.", "Player.Username",
         "NetworkRelay.Server", "NetworkRelay.Port", "NetworkRelay.Network", "NetworkRelay.Ticket", "NetworkRelay.Address",
 
+        // A dedicated server's own reporting; a player's matches go through the launcher. Only
+        // MatchStatistics.Enabled, which turns reporting off, is the player's to set.
+        "MatchStatistics.ServerUrl", "MatchStatistics.Token", "MatchStatistics.GameId", "MatchStatistics.ServerId",
+        "MatchStatistics.ReporterKind", "MatchStatistics.ReporterName", "MatchStatistics.FlushInterval",
+
         // Edited as choices of this machine's devices, under Devices
         "NetworkAdapters.", "AudioDevices.", "DirectInput.DeviceFilter.",
     ];

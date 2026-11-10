@@ -25,6 +25,11 @@ namespace LANCommander.Server.Services
         {
             using var context = await contextFactory.CreateDbContextAsync();
 
+            // A caller that only set the Game navigation (the importer did) would otherwise get no
+            // version below, and the script wouldn't show up anywhere that reads a version's scripts
+            if ((script.GameId == null || script.GameId == Guid.Empty) && script.Game != null)
+                script.GameId = script.Game.Id;
+
             await cache.ExpireGameCacheAsync(script?.GameId);
             await cache.RemoveByTagAsync("Scripts");
 

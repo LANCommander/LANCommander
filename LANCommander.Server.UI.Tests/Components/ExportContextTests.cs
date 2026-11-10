@@ -150,7 +150,7 @@ public class ExportContextTests
 
         var importItems = (await importContext.InitializeImportAsync(exportPath)).ToList();
 
-        await importContext.PrepareImportQueueAsync(importItems.Select(i => Guid.Empty), storageLocation.Id);
+        await importContext.PrepareImportQueueAsync(importItems.Select(i => i.Key), storageLocation.Id);
         await importContext.ImportQueueAsync();
 
         var imported = await archiveService.GetAsync(a => a.RedistributableId == redistributable.Id);
@@ -303,7 +303,7 @@ public class ExportContextTests
 
         var importItems = (await importContext.InitializeImportAsync(exportPath)).ToList();
 
-        await importContext.PrepareImportQueueAsync(importItems.Select(i => Guid.Empty), storageLocation.Id);
+        await importContext.PrepareImportQueueAsync(importItems.Select(i => i.Key), storageLocation.Id);
         await importContext.ImportQueueAsync();
 
         var after = await archiveService.GetAsync(a => a.RedistributableId == redistributable.Id);

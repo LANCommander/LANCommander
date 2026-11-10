@@ -63,6 +63,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddSingleton<InterposerSessionService>();
             services.AddSingleton<PresenceForwarder>();
             services.AddSingleton<ServerConnectionWatcher>();
+            services.AddSingleton<MatchForwarder>();
 
             if (OperatingSystem.IsWindows())
                 services.AddSingleton<IGameProcessStarter, InterposerGameProcessStarter>();
@@ -115,7 +116,6 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<EngineImporter>();
             services.AddScoped<GameImporter>();
             services.AddScoped<GenreImporter>();
-            services.AddScoped<MultiplayerModeImporter>();
             services.AddScoped<PlatformImporter>();
             services.AddScoped<PublisherImporter>();
             services.AddScoped<TagImporter>();

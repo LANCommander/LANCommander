@@ -13,6 +13,27 @@ public abstract class BaseImporter<TRecord> : IImporter<TRecord> where TRecord :
         ImportContext = context;
     }
 
+    /// <summary>
+    /// Whether records of this type belong to the package's game, redistributable, server or tool,
+    /// and so have to wait until it has been imported.
+    /// </summary>
+    protected virtual bool BelongsToPackageRecord => false;
+
+    /// <summary>
+    /// Imports a queued record. Waiting on the package's own record is the only reason to try again
+    /// later; any other unsuccessful import is a failure, reported once instead of being retried
+    /// until the whole import gives up.
+    /// </summary>
+    public async Task<ImportOutcome> ImportQueuedAsync(
+        IImportItemInfo importItem,
+        CancellationToken cancellationToken = default)
+    {
+        if (BelongsToPackageRecord && ImportContext.PackageRecordQueued)
+            return ImportOutcome.Deferred;
+
+        return await ImportAsync(importItem, cancellationToken) ? ImportOutcome.Imported : ImportOutcome.Failed;
+    }
+
     public async Task<bool> ImportAsync(
         IImportItemInfo importItem,
         CancellationToken cancellationToken = default)

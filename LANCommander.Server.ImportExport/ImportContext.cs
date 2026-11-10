@@ -2,6 +2,7 @@ using LANCommander.SDK;
 using LANCommander.SDK.Enums;
 using LANCommander.SDK.Helpers;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.ImportExport.Exceptions;
 using LANCommander.Server.ImportExport.Importers;
 using LANCommander.Server.ImportExport.Models;
 using LANCommander.Server.ImportExport.Services;
@@ -23,11 +24,16 @@ public class ImportContext : IDisposable
     public IArchive Archive { get; private set; }
 
     public IImportItemInfo CurrentItem { get; set; }
+
+    /// <summary>Every error reported while importing: records skipped or that failed.</summary>
+    public List<string> Errors { get; } = new();
+
     public int Processed;
     public int Total;
 
     private Queue<IImportItemInfo> Queue { get; } = new();
-    private IEnumerable<Guid> SelectedRecordIds { get; set; } = [];
+    /// <summary>Keys of the records chosen for import; null imports everything.</summary>
+    private HashSet<string>? SelectedKeys { get; set; }
 
     public AsyncEventHandler<ImportStatusUpdate> OnImportStarted { get; set; } = new();
     public AsyncEventHandler<ImportStatusUpdate> OnImportStatusUpdate { get; set; } = new();
@@ -63,6 +69,15 @@ public class ImportContext : IDisposable
     private readonly TagImporter _tags;
     private readonly ToolImporter _tools;
     #endregion
+
+    /// <summary>The scope this context's importers live in, when the context owns one.</summary>
+    private readonly IServiceScope? _scope;
+
+    /// <summary>Takes ownership of <paramref name="scope"/>, disposing it with the context.</summary>
+    public ImportContext(IServiceScope scope) : this(scope.ServiceProvider)
+    {
+        _scope = scope;
+    }
 
     public ImportContext(IServiceProvider serviceProvider)
     {
@@ -150,12 +165,16 @@ public class ImportContext : IDisposable
             cancellationToken.ThrowIfCancellationRequested();
             var manifestMeta = ManifestHelper.Deserialize<SDK.Models.Manifest.BaseManifest>(manifestContents);
 
-            // Check for legacy manifest
-            if (manifestMeta.IsLegacyManifest())
+            // Check for legacy manifest. A missing version alone doesn't make one: a current-format
+            // manifest written by hand or by a tool may leave it out, and reading that as legacy
+            // drops everything the old format didn't have, like multiplayer modes and saves
+            if (manifestMeta.IsLegacyManifest() && HasLegacyLayout(manifestContents))
             {
                 if (ManifestHelper.TryDeserialize<Legacy.Models.GameManifest>(manifestContents, out var legacyGameManifest))
                     return await InitializeLegacyGameImportAsync(legacyGameManifest);
             }
+
+            manifestType ??= DetectManifestType(manifestContents);
 
             if (manifestType.HasValue)
                 return await InitializeByTypeAsync(manifestType.Value, manifestContents);
@@ -174,6 +193,65 @@ public class ImportContext : IDisposable
 
             throw new InvalidOperationException("Unknown manifest file");
         }
+    }
+
+    /// <summary>
+    /// Tells what a manifest describes from the keys only that type writes. Server, tool and
+    /// redistributable manifests all have a Name, so trying each type in turn reads a server or a
+    /// tool as a redistributable. Exporters write every property, so these keys are always there;
+    /// returns null for a sparse hand-written manifest, which falls back to trying each type.
+    /// </summary>
+    private static ManifestType? DetectManifestType(string manifestContents)
+    {
+        var document = ReadTopLevelKeys(manifestContents);
+
+        if (document == null)
+            return null;
+
+        if (document.ContainsKey(nameof(SDK.Models.Manifest.Game.Title)))
+            return ManifestType.Game;
+
+        if (document.ContainsKey(nameof(SDK.Models.Manifest.Server.ServerConsoles))
+            || document.ContainsKey(nameof(SDK.Models.Manifest.Server.HttpPaths)))
+            return ManifestType.Server;
+
+        if (document.ContainsKey(nameof(SDK.Models.Manifest.Tool.Games)))
+            return ManifestType.Tool;
+
+        if (document.ContainsKey(nameof(SDK.Models.Manifest.Redistributable.OptionSchema)))
+            return ManifestType.Redistributable;
+
+        return null;
+    }
+
+    /// <summary>The manifest's top-level keys, or null if it isn't a YAML mapping.</summary>
+    private static Dictionary<string, object>? ReadTopLevelKeys(string manifestContents)
+    {
+        try
+        {
+            return new YamlDotNet.Serialization.DeserializerBuilder()
+                .Build()
+                .Deserialize<Dictionary<string, object>>(manifestContents);
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    // Keys only the old game manifest format has, and keys only the current one has
+    private static readonly string[] LegacyOnlyKeys = ["Genre", "LanMultiplayer", "LocalMultiplayer", "OnlineMultiplayer", "DependentGames"];
+    private static readonly string[] CurrentOnlyKeys = ["Genres", "MultiplayerModes", "Saves", "PlaySessions", "InstallTo", "ShowInLibrary"];
+
+    /// <summary>Whether a manifest without a version is laid out the old way rather than the current one.</summary>
+    private static bool HasLegacyLayout(string manifestContents)
+    {
+        var document = ReadTopLevelKeys(manifestContents);
+
+        if (document == null)
+            return true;
+
+        return LegacyOnlyKeys.Any(document.ContainsKey) && !CurrentOnlyKeys.Any(document.ContainsKey);
     }
 
     private async Task<IEnumerable<IImportItemInfo>> InitializeByTypeAsync(ManifestType manifestType, string manifestContents)
@@ -330,6 +408,7 @@ public class ImportContext : IDisposable
         
         var importItemInfo = new List<IImportItemInfo>();
         
+        importItemInfo.AddRange(await GetImportItemInfoAsync(toolManifest.Actions, _actions).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(toolManifest.Archives, _archives).ToListAsync());
         importItemInfo.AddRange(await GetImportItemInfoAsync(toolManifest.Scripts, _scripts).ToListAsync());
 
@@ -337,15 +416,24 @@ public class ImportContext : IDisposable
     }
     #endregion
     
+    /// <summary>Queues the records to import.</summary>
+    /// <param name="selectedKeys">
+    /// Keys (<see cref="IImportItemInfo.Key"/>) of the records listed by
+    /// <see cref="InitializeImportAsync"/> that should be imported, or null for all of them. The
+    /// package's own game, redistributable, server or tool is always imported.
+    /// </param>
+    /// <param name="storageLocationId">Where archives go; the default archive location when not found.</param>
     public async Task PrepareImportQueueAsync(
-        IEnumerable<Guid> selectedRecordIds,
+        IEnumerable<string>? selectedKeys,
         Guid storageLocationId,
         CancellationToken cancellationToken = default)
     {
         cancellationToken.ThrowIfCancellationRequested();
-        SelectedRecordIds = selectedRecordIds;
-        
-        ArchiveStorageLocation = await _storageLocationService.GetAsync(storageLocationId);
+        SelectedKeys = selectedKeys?.ToHashSet();
+
+        // No location chosen (Guid.Empty), e.g. when an import is continued from the upload indicator
+        // and the dialog never showed its location picker: archives go to the default location
+        ArchiveStorageLocation = await _storageLocationService.GetOrDefaultAsync(storageLocationId, StorageLocationType.Archive);
         cancellationToken.ThrowIfCancellationRequested();
 
         if (Manifest is SDK.Models.Manifest.Game gameManifest)
@@ -366,7 +454,8 @@ public class ImportContext : IDisposable
         CancellationToken cancellationToken = default)
     {
         await AddAsync(game.Actions, _actions, cancellationToken);
-        await AddAsync(game.Archives, _archives, cancellationToken);
+        // Each archive becomes a version, newest last; packages may list them in any order
+        await AddAsync(game.Archives?.OrderBy(a => a.CreatedOn), _archives, cancellationToken);
         await AddAsync(game.Collections, _collections, cancellationToken);
         await AddAsync(game.CustomFields, _customFields, cancellationToken);
         await AddAsync(game.Developers, _developers, cancellationToken);
@@ -409,6 +498,7 @@ public class ImportContext : IDisposable
         SDK.Models.Manifest.Tool tool,
         CancellationToken cancellationToken = default)
     {
+        await AddAsync(tool.Actions, _actions, cancellationToken);
         await AddAsync(tool.Archives, _archives, cancellationToken);
         await AddAsync(tool.Scripts, _scripts, cancellationToken);
         await AddAsync(tool, _tools, cancellationToken);
@@ -420,7 +510,8 @@ public class ImportContext : IDisposable
         CancellationToken cancellationToken = default)
         where TRecord : class
     {
-        foreach (var record in records)
+        // A manifest written with an empty key ("Keys:") reads back as null rather than empty
+        foreach (var record in records ?? [])
         {
             cancellationToken.ThrowIfCancellationRequested();
             await AddAsync(record, importer, cancellationToken);
@@ -435,15 +526,31 @@ public class ImportContext : IDisposable
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        if (record != null && !InQueue(record, importer) && await importer.CanImportAsync(record))
+        if (record == null)
+            return;
+
+        // Records unchecked in the import dialog are left out; the package's own record never is
+        if (SelectedKeys != null && !ReferenceEquals(record, Manifest) && !SelectedKeys.Contains(importer.GetKey(record)))
+            return;
+
+        if (!InQueue(record, importer) && await importer.CanImportAsync(record))
         {
             var importInfo = await importer.GetImportInfoAsync(record);
             
             importInfo.Key = importer.GetKey(record);
-            
+
+            if (ReferenceEquals(record, Manifest))
+                _packageRecordKey = importInfo.Key;
+
             Queue.Enqueue(importInfo);
         }
     }
+
+    /// <summary>Queue key of the package's own game, redistributable, server or tool.</summary>
+    private string? _packageRecordKey;
+
+    /// <summary>Whether the package's own record is still waiting to be imported.</summary>
+    internal bool PackageRecordQueued => _packageRecordKey != null && Queue.Any(q => q.Key == _packageRecordKey);
 
     public async Task ImportQueueAsync(CancellationToken cancellationToken = default)
     {
@@ -460,6 +567,7 @@ public class ImportContext : IDisposable
         try
         {
             int deferred = 0;
+            IImportItemInfo? packageRecordFailed = null;
 
             while (Queue.Count > 0)
             {
@@ -473,22 +581,43 @@ public class ImportContext : IDisposable
                     Total = Total,
                 })!;
 
-                var success = await TryImportAsync(queueItem, cancellationToken);
+                var outcome = await TryImportAsync(queueItem, cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
-                if (success)
+                if (outcome == ImportOutcome.Imported)
                 {
                     Processed++;
                     deferred = 0;
                     continue;
                 }
 
+                if (outcome is ImportOutcome.Skipped or ImportOutcome.Failed)
+                {
+                    if (outcome == ImportOutcome.Failed && queueItem.Key == _packageRecordKey)
+                        packageRecordFailed = queueItem;
+
+                    deferred = 0;
+                    continue;
+                }
+
+                // Waiting on the package's own record; retry once the rest of the queue has had a turn
                 Queue.Enqueue(queueItem);
                 deferred++;
 
                 if (deferred >= Queue.Count)
-                    throw new InvalidOperationException("Import deadlocked: remaining jobs cannot be satisfied.");
+                {
+                    var remaining = Queue.Select(item => $"{item.Type} \"{item.Name}\"").ToList();
+
+                    throw new InvalidOperationException(
+                        $"Import could not finish. These records could not be imported: {String.Join(", ", remaining)}. Check the server log for details.");
+                }
             }
+
+            // Everything else was still tried, so a game that was saved but failed afterwards keeps
+            // what it could, but without its own record the import as a whole didn't succeed
+            if (packageRecordFailed != null)
+                throw new InvalidOperationException(
+                    $"{packageRecordFailed.Type} \"{packageRecordFailed.Name}\" could not be imported. {String.Join(" ", Errors)}".Trim());
 
             cancellationToken.ThrowIfCancellationRequested();
             await OnImportComplete?.InvokeAsync(new ImportStatusUpdate
@@ -504,104 +633,135 @@ public class ImportContext : IDisposable
         }
     }
 
-    private async Task<bool> TryImportAsync(
+    private async Task<ImportOutcome> TryImportAsync(
         IImportItemInfo queueItem,
         CancellationToken cancellationToken)
     {
         try
         {
-            cancellationToken.ThrowIfCancellationRequested();
+            var outcome = await ImportItemAsync(queueItem, cancellationToken);
 
-            switch (queueItem.Type)
-            {
-                case ImportExportRecordType.Action:
-                    return await _actions.ImportAsync(queueItem, cancellationToken);
+            // The importer logged the cause
+            if (outcome == ImportOutcome.Failed)
+                await ReportErrorAsync(queueItem, $"{queueItem.Type} \"{queueItem.Name}\" could not be imported. Check the server log for details.");
 
-                case ImportExportRecordType.Archive:
-                    return await _archives.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Collection:
-                    return await _collections.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.CustomField:
-                    return await _customFields.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Developer:
-                    return await _developers.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Engine:
-                    return await _engines.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Game:
-                    return await _games.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Genre:
-                    return await _genres.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Key:
-                    return await _keys.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Media:
-                    return await _media.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.MultiplayerMode:
-                    return await _multiplayerModes.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Platform:
-                    return await _platforms.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.PlaySession:
-                    return await _playSessions.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Publisher:
-                    return await _publishers.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Redistributable:
-                    return await _redistributables.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Save:
-                    return await _saves.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.SavePath:
-                    return await _savePaths.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Script:
-                    return await _scripts.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Server:
-                    return await _servers.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.ServerConsole:
-                    return await _serverConsoles.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.ServerHttpPath:
-                    return await _serverHttpPaths.ImportAsync(queueItem, cancellationToken);
-
-                case ImportExportRecordType.Tag:
-                    return await _tags.ImportAsync(queueItem, cancellationToken);
-                
-                case ImportExportRecordType.Tool:
-                    return await _tools.ImportAsync(queueItem, cancellationToken);
-            }
+            return outcome;
         }
         catch (OperationCanceledException)
         {
             throw;
         }
+        catch (ImportSkippedException ex)
+        {
+            _logger.LogWarning("Skipped importing {RecordType} {RecordName}: {Reason}", queueItem.Type, queueItem.Name, ex.Message);
+
+            await ReportErrorAsync(queueItem, $"{queueItem.Type} \"{queueItem.Name}\" was skipped: {ex.Message}");
+
+            return ImportOutcome.Skipped;
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error importing record {RecordName}", queueItem.Name);
-            
-            await OnImportError?.InvokeAsync(new ImportStatusUpdate
-            {
-                CurrentItem = CurrentItem,
-                Index = Processed,
-                Total = Total,
-                Error = ex.Message,
-            })!;
+
+            await ReportErrorAsync(queueItem, $"{queueItem.Type} \"{queueItem.Name}\" could not be imported: {ex.Message}");
+
+            return ImportOutcome.Failed;
+        }
+    }
+
+    /// <summary>Records an error against a queued record and tells any listener, e.g. the import dialog.</summary>
+    private async Task ReportErrorAsync(IImportItemInfo queueItem, string message)
+    {
+        Errors.Add(message);
+
+        await OnImportError.InvokeAsync(new ImportStatusUpdate
+        {
+            CurrentItem = queueItem,
+            Index = Processed,
+            Total = Total,
+            Error = message,
+        });
+    }
+
+    private async Task<ImportOutcome> ImportItemAsync(
+        IImportItemInfo queueItem,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        switch (queueItem.Type)
+        {
+            case ImportExportRecordType.Action:
+                return await _actions.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Archive:
+                return await _archives.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Collection:
+                return await _collections.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.CustomField:
+                return await _customFields.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Developer:
+                return await _developers.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Engine:
+                return await _engines.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Game:
+                return await _games.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Genre:
+                return await _genres.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Key:
+                return await _keys.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Media:
+                return await _media.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.MultiplayerMode:
+                return await _multiplayerModes.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Platform:
+                return await _platforms.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.PlaySession:
+                return await _playSessions.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Publisher:
+                return await _publishers.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Redistributable:
+                return await _redistributables.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Save:
+                return await _saves.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.SavePath:
+                return await _savePaths.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Script:
+                return await _scripts.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Server:
+                return await _servers.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.ServerConsole:
+                return await _serverConsoles.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.ServerHttpPath:
+                return await _serverHttpPaths.ImportQueuedAsync(queueItem, cancellationToken);
+
+            case ImportExportRecordType.Tag:
+                return await _tags.ImportQueuedAsync(queueItem, cancellationToken);
+                
+            case ImportExportRecordType.Tool:
+                return await _tools.ImportQueuedAsync(queueItem, cancellationToken);
         }
 
-        return false;
+        throw new InvalidOperationException($"No importer handles {queueItem.Type} records.");
     }
     
     private async IAsyncEnumerable<ImportItemInfo<TRecord>> GetImportItemInfoAsync<TRecord>(IEnumerable<TRecord> records,
@@ -621,9 +781,18 @@ public class ImportContext : IDisposable
             }
     }
 
+    /// <summary>
+    /// Closes the package and releases the context, whether or not it ever ran: a cancelled dialog
+    /// or a package that failed to read would otherwise stay registered for the life of the server.
+    /// </summary>
     public void Dispose()
     {
         if (Archive != null)
             Archive.Dispose();
+
+        if (Id.HasValue)
+            _importService.RemoveContext(Id.Value);
+
+        _scope?.Dispose();
     }
 }

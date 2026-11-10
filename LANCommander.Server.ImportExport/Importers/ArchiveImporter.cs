@@ -23,6 +23,8 @@ public class ArchiveImporter(
     RedistributableImporter redistributableImporter,
     ToolImporter toolImporter) : BaseImporter<Archive>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(Archive record)
         => $"{nameof(Archive)}/{record.Id}";
 

@@ -19,7 +19,7 @@ public class SaveExporter(
         {
             Id = record.Id,
             Type = ImportExportRecordType.Save,
-            Name = $"{record.User} - {record.CreatedOn}",
+            Name = $"{record.User?.UserName} - {record.CreatedOn}",
         };
 
         if (File.Exists(savePath))
@@ -37,7 +37,10 @@ public class SaveExporter(
 
     public override async Task<Save> ExportAsync(Guid id)
     {
-        var entity = await gameSaveService.GetAsync(id);
+        // The manifest names the save's owner, and the importer won't take a save without one
+        var entity = await gameSaveService
+            .Include(s => s.User, s => s.CreatedBy, s => s.UpdatedBy)
+            .GetAsync(id);
 
         try
         {

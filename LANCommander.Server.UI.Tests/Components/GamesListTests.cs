@@ -289,7 +289,7 @@ public class GamesListDatabaseTests(BUnitServerFixture fixture) : BUnitTestConte
 
         rail.FindAll(".games-rail-facet").First(f => f.TextContent.Contains("Logo")).Click();
 
-        Assert.NotNull(changed);
+        rail.WaitForAssertion(() => Assert.NotNull(changed), TimeSpan.FromSeconds(10));
         Assert.True(changed!.Has(GameFacet.Missing, "Logo"));
         Assert.NotNull(logo);
     }

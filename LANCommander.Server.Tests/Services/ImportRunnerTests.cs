@@ -39,7 +39,7 @@ public class ImportRunnerTests(ApplicationFixture fixture) : BaseTest(fixture)
 
         items.ShouldNotBeEmpty();
 
-        await importContext.PrepareImportQueueAsync([], storageLocation.Id);
+        await importContext.PrepareImportQueueAsync(null, storageLocation.Id);
         await importContext.ImportQueueAsync();
 
         importContext.Processed.ShouldBeGreaterThan(0);

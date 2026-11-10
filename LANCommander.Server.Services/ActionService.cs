@@ -19,7 +19,12 @@ namespace LANCommander.Server.Services
         public override async Task<Action> AddAsync(Action entity)
         {
             // Actions for a game are version-scoped. Attach new actions to the game's current
-            // version here so callers don't have to resolve and pass it in themselves.
+            // version here so callers don't have to resolve and pass it in themselves. A caller that
+            // only set the Game navigation (the importer did) would otherwise get no version at all,
+            // and the action wouldn't show up anywhere that reads a version's actions.
+            if ((entity.GameId == null || entity.GameId == Guid.Empty) && entity.Game != null)
+                entity.GameId = entity.Game.Id;
+
             if (entity.GameId.HasValue && entity.GameId != Guid.Empty
                 && (entity.GameVersionId == null || entity.GameVersionId == Guid.Empty))
                 entity.GameVersionId = await gameVersionService.GetOrCreateLatestIdAsync(entity.GameId.Value);

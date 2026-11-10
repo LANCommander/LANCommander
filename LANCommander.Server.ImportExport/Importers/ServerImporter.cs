@@ -37,6 +37,13 @@ public class ServerImporter(
     {
         var server = manifestMapper.ToData(record);
 
+        // Each of these is queued and imported by its own importer once the server exists; saving
+        // the mapped copies here as well would add them twice
+        server.Actions = null;
+        server.Scripts = null;
+        server.ServerConsoles = null;
+        server.HttpPaths = null;
+
         try
         {
             await serverService.AddAsync(server);

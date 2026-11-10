@@ -12,6 +12,8 @@ public class SavePathImporter(
     GameService gameService,
     GameImporter gameImporter) : BaseImporter<SavePath>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(SavePath record)
         => $"{nameof(SavePath)}/{record.Id}";
 

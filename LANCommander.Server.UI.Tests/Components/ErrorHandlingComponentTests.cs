@@ -134,15 +134,18 @@ public class ErrorHandlingComponentTests : BUnitTestContext
             .Add(p => p.Title, "Archives")
             .Add(p => p.ChildContent, _ => ThrowingBody(() => true)));
 
-        // The failure is contained in the content pane...
-        Assert.Contains("Simulated page failure", cut.Markup);
-
-        // ...so the tabs alongside it are still there to navigate with.
-        foreach (var tab in new[] { "General", "Archives", "Actions", "Scripts" })
+        cut.WaitForAssertion(() =>
         {
-            Assert.Contains(
-                cut.FindAll(".lc-menu-item-content"),
-                item => item.TextContent.Contains(tab, StringComparison.Ordinal));
-        }
+            // The failure is contained in the content pane (rendered once the game has loaded)...
+            Assert.Contains("Simulated page failure", cut.Markup);
+
+            // ...so the tabs alongside it are still there to navigate with.
+            foreach (var tab in new[] { "General", "Archives", "Actions", "Scripts" })
+            {
+                Assert.Contains(
+                    cut.FindAll(".lc-menu-item-content"),
+                    item => item.TextContent.Contains(tab, StringComparison.Ordinal));
+            }
+        }, TimeSpan.FromSeconds(10));
     }
 }

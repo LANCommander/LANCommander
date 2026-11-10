@@ -30,7 +30,6 @@ public class ImportContext
     private readonly GameImporter _games;
     private readonly GenreImporter _genres;
     private readonly MediaImporter _media;
-    private readonly MultiplayerModeImporter _multiplayerModes;
     private readonly PlatformImporter _platforms;
     private readonly PublisherImporter _publishers;
     private readonly TagImporter _tags;
@@ -47,7 +46,6 @@ public class ImportContext
         _games = serviceProvider.GetRequiredService<GameImporter>();
         _genres = serviceProvider.GetRequiredService<GenreImporter>();
         _media = serviceProvider.GetRequiredService<MediaImporter>();
-        _multiplayerModes = serviceProvider.GetRequiredService<MultiplayerModeImporter>();
         _platforms = serviceProvider.GetRequiredService<PlatformImporter>();
         _publishers = serviceProvider.GetRequiredService<PublisherImporter>();
         _tags = serviceProvider.GetRequiredService<TagImporter>();
@@ -69,7 +67,6 @@ public class ImportContext
         await AddAsync(game, game.Engine, _engines, gameId);
         await AddAsync(game, game.Genres, _genres, gameId);
         await AddAsync(game, game.Media, _media, gameId);
-        await AddAsync(game, game.MultiplayerModes, _multiplayerModes, gameId);
         await AddAsync(game, game.Platforms, _platforms, gameId);
         await AddAsync(game, game.Publishers, _publishers, gameId);
         await AddAsync(game, game.Tags, _tags, gameId);
@@ -242,7 +239,6 @@ public class ImportContext
         _games.UseContext(this);
         _genres.UseContext(this);
         _media.UseContext(this);
-        _multiplayerModes.UseContext(this);
         _platforms.UseContext(this);
         _publishers.UseContext(this);
         _tags.UseContext(this);
@@ -261,7 +257,6 @@ public class ImportContext
                 nameof(Game) => await _games.ImportAsync(queueItem),
                 nameof(Genre) => await _genres.ImportAsync(queueItem),
                 nameof(Media) => await _media.ImportAsync(queueItem),
-                nameof(MultiplayerMode) => await _multiplayerModes.ImportAsync(queueItem),
                 nameof(Platform) => await _platforms.ImportAsync(queueItem),
                 "Publisher" => await _publishers.ImportAsync(queueItem),
                 nameof(Tag) => await _tags.ImportAsync(queueItem),

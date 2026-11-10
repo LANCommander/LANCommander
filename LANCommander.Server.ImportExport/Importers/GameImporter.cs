@@ -12,6 +12,7 @@ public class GameImporter(
     GameService gameService,
     GameVersionService gameVersionService,
     RedistributableService redistributableService,
+    EngineService engineService,
     UserService userService) : BaseImporter<Game>
 {
     public override string GetKey(Game record)
@@ -87,11 +88,54 @@ public class GameImporter(
         }
     }
 
+    /// <summary>
+    /// The game this record is, by id, or else by title so a game moved from another server merges
+    /// into the copy already here. Two games can share a title (a remake, a reboot), so a title match
+    /// must not contradict the record's release year or its external ids.
+    /// </summary>
+    private async Task<Data.Models.Game?> FindExistingAsync(Game record)
+    {
+        var byId = await gameService
+            .Include(g => g.ExternalIds)
+            .FirstOrDefaultAsync(g => g.Id == record.Id);
+
+        if (byId != null)
+            return byId;
+
+        if (String.IsNullOrWhiteSpace(record.Title))
+            return null;
+
+        var sameTitle = await gameService
+            .Include(g => g.ExternalIds)
+            .GetAsync(g => g.Title == record.Title);
+
+        return sameTitle.FirstOrDefault(candidate => IsSameGame(candidate, record));
+    }
+
+    private static bool IsSameGame(Data.Models.Game candidate, Game record)
+    {
+        if (candidate.ReleasedOn.HasValue && candidate.ReleasedOn.Value != default && record.ReleasedOn != default
+            && candidate.ReleasedOn.Value.Year != record.ReleasedOn.Year)
+            return false;
+
+        // Both know the game by the same provider, under different ids
+        foreach (var externalId in record.ExternalIds ?? [])
+        {
+            var candidateId = candidate.ExternalIds?.FirstOrDefault(e => e.Provider == externalId.Provider);
+
+            if (candidateId != null && candidateId.ExternalId != externalId.ExternalId)
+                return false;
+        }
+
+        return true;
+    }
+
     public override async Task<bool> UpdateAsync(Game record)
     {
-        var existing = await gameService
-            .Include(g => g.ExternalIds)
-            .FirstOrDefaultAsync(g => g.Id == record.Id || g.Title == record.Title);
+        var existing = await FindExistingAsync(record);
+
+        if (existing == null)
+            return false;
 
         try
         {
@@ -136,10 +180,7 @@ public class GameImporter(
         throw new NotImplementedException();
     }
 
-    public override async Task<bool> ExistsAsync(Game record)
-    {
-        return await gameService.ExistsAsync(g => g.Id == record.Id || g.Title == record.Title);
-    }
+    public override async Task<bool> ExistsAsync(Game record) => await FindExistingAsync(record) != null;
 
     public async Task UpdateRelationshipsAsync()
     {
@@ -189,6 +230,20 @@ public class GameImporter(
             g => g.Tags,
             manifest.Tags,
             r => t => t.Name == r.Name);
+
+        // The engine record is imported (or found) by name before the game; nothing linked it
+        if (!String.IsNullOrWhiteSpace(manifest.Engine?.Name))
+        {
+            var engine = await engineService.FirstOrDefaultAsync(e => e.Name == manifest.Engine.Name);
+
+            if (engine != null && game.EngineId != engine.Id)
+            {
+                game.EngineId = engine.Id;
+                game.Engine = engine;
+
+                await gameService.UpdateAsync(game);
+            }
+        }
 
         if (manifest.Redistributables != null && manifest.Redistributables.Any())
         {

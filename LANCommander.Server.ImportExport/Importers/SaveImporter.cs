@@ -21,6 +21,8 @@ public class SaveImporter(
     GameService gameService,
     GameImporter gameImporter) : BaseImporter<Save>
 {
+    protected override bool BelongsToPackageRecord => true;
+
     public override string GetKey(Save record)
         => $"{nameof(Save)}/{record.Id}";
 
@@ -62,6 +64,8 @@ public class SaveImporter(
             
             save = await gameSaveService.AddAsync(new Data.Models.GameSave
             {
+                // The save's file is found by this id once the record exists (see IngestAsync)
+                Id = record.Id,
                 CreatedBy = user,
                 User = user,
                 CreatedOn = record.CreatedOn,
@@ -119,11 +123,16 @@ public class SaveImporter(
     {
         if (asset is ImportAssetArchiveEntry assetArchiveEntry)
         {
-            var save = await gameSaveService.GetAsync(asset.RecordId);
-            var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == assetArchiveEntry.Path);
-            
+            var save = await gameSaveService.Include(s => s.StorageLocation!).GetAsync(asset.RecordId)
+                ?? throw new InvalidOperationException($"Save {asset.RecordId} was not created, so its file has nowhere to go");
+
+            var archiveEntry = ImportContext.Archive.Entries.FirstOrDefault(e => e.Key == assetArchiveEntry.Path)
+                ?? throw new InvalidOperationException($"Save file {assetArchiveEntry.Path} does not exist in the import file");
+
             var path = gameSaveService.GetSavePath(save);
-            
+
+            Directory.CreateDirectory(Path.GetDirectoryName(path)!);
+
             archiveEntry.WriteToFile(path, new ExtractionOptions()
             {
                 Overwrite = true,

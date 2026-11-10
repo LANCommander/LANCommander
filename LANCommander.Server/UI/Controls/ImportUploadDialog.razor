@@ -94,7 +94,21 @@
 
     case ImportStage.Complete:
         <Result Success Title="Import Complete!">
-            <Button Primary OnClick="() => CloseAsync(true)">Close</Button>
+            <Content>
+                @* Records skipped or that failed; the rest of the package was imported *@
+                @if (_errors.Any())
+                {
+                    <Flex Vertical Gap="Gap.Small">
+                        @foreach (var error in _errors)
+                        {
+                            <Alert Warning>@error</Alert>
+                        }
+                    </Flex>
+                }
+            </Content>
+            <ChildContent>
+                <Button Primary OnClick="() => CloseAsync(true)">Close</Button>
+            </ChildContent>
         </Result>
         break;
 
@@ -210,14 +224,9 @@
     {
         _stage = ImportStage.Importing;
 
-        var selected = SelectedKeys
-            .Select(k => Guid.TryParse(k, out var id) ? (Guid?)id : null)
-            .Where(id => id.HasValue)
-            .Select(id => id!.Value);
-
         try
         {
-            await _importContext.PrepareImportQueueAsync(selected, _storageLocation?.Id ?? Guid.Empty);
+            await _importContext.PrepareImportQueueAsync(SelectedKeys, _storageLocation?.Id ?? Guid.Empty);
             await _importContext.ImportQueueAsync();
         }
         catch (Exception ex)

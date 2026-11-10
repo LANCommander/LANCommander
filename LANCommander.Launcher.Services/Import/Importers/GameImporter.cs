@@ -34,7 +34,10 @@ public class GameImporter(
             ||
             (record.Actions?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false)
             ||
-            (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false);
+            (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false)
+            ||
+            // Also catches games imported before modes were stored against their game
+            await gameService.MultiplayerModesDifferAsync(record.Id, record.MultiplayerModes);
     }
 
     /// <summary>
@@ -192,6 +195,9 @@ public class GameImporter(
             }) ?? [],
             (existing, incoming) => existing.Provider == incoming.Provider,
             (existing, incoming) => existing.ExternalId = incoming.ExternalId);
+
+        // Modes belong to this game alone, so they're synced here rather than queued as shared records
+        await gameService.SyncMultiplayerModesAsync(game.Id, manifest.MultiplayerModes);
     }
 
     public override async Task<bool> ExistsAsync(ImportItemInfo<Game> importItemInfo)

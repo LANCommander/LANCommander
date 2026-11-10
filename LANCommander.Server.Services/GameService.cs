@@ -115,8 +115,20 @@ namespace LANCommander.Server.Services
         {
             game = await Include(
                 g => g.Archives,
-                g => g.Media)
+                g => g.Media,
+                g => g.CustomFields!)
                 .GetAsync(game.Id);
+
+            // The custom field relationship has no delete action in the database, so a game with any
+            // custom field couldn't be deleted at all
+            if (game.CustomFields != null)
+            {
+                foreach (var customField in game.CustomFields.ToList())
+                    await gameCustomFieldService.DeleteAsync(customField);
+
+                // Already gone; left on the game, deleting it would try to detach them again
+                game.CustomFields = null;
+            }
 
             if (game.Archives != null)
                 foreach (var archive in game.Archives.ToList())
@@ -327,14 +339,15 @@ namespace LANCommander.Server.Services
             await gameVersionService.SetRedistributableOptionsAsync(versionId, redistributableId, optionsJson);
         }
 
-        public async Task<GameCustomField> GetCustomFieldAsync(Guid id, string name)
+        public async Task<GameCustomField?> GetCustomFieldAsync(Guid id, string name)
         {
             var game = await AsNoTracking()
                 .AsSplitQuery()
                 .Include(g => g.CustomFields)
                 .GetAsync(id);
 
-            return game.CustomFields.FirstOrDefault(c => c.Name == name);
+            // The game may not exist yet, e.g. while an import is still waiting to create it
+            return game?.CustomFields?.FirstOrDefault(c => c.Name == name);
         }
 
         public async Task<GameCustomField> SetCustomFieldAsync(Guid id, string name, string value)
@@ -362,7 +375,7 @@ namespace LANCommander.Server.Services
 
             await cache.ExpireGameCacheAsync(id);
 
-            return await GetCustomFieldAsync(id, name);
+            return (await GetCustomFieldAsync(id, name))!;
         }
 
         public async Task<Archive> GetLatestArchiveAsync(Guid id)

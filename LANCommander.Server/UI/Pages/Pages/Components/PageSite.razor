@@ -1,0 +1,146 @@
+@using LANCommander.Server.Services.Pages
+@using LANCommander.Server.Settings.Models
+@using Microsoft.AspNetCore.Components.Authorization
+@inject SettingsProvider<LANCommander.Server.Settings.Settings> SettingsProvider
+@inject PageRenderService PageRenderService
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject NavigationManager NavigationManager
+
+@*
+    The public face of Pages: the branding, links, header and footer set under Pages > Appearance,
+    around the page navigation and the page or search results.
+*@
+<div class="page-site">
+    @if (HasBrand)
+    {
+        <header class="page-site-header">
+            <a class="page-site-brand" href="/Pages">
+                @if (!String.IsNullOrWhiteSpace(_appearance.Logo) && IsSafeUrl(_appearance.Logo))
+                {
+                    <img class="page-site-logo" src="@_appearance.Logo" alt="@(String.IsNullOrWhiteSpace(_appearance.Title) ? "Home" : "")" />
+                }
+
+                @if (!String.IsNullOrWhiteSpace(_appearance.Title))
+                {
+                    <span class="page-site-title">@_appearance.Title</span>
+                }
+            </a>
+
+            @if (_links.Count > 0)
+            {
+                <nav class="page-site-links" aria-label="Links">
+                    @foreach (var link in _links)
+                    {
+                        <a class="page-site-link" href="@link.Url" target="_blank" rel="noopener noreferrer">
+                            @if (Enum.TryParse<IconType>(link.Icon, out var icon) && icon != IconType.None)
+                            {
+                                <Icon Type="icon" />
+                            }
+                            <span>@link.Name</span>
+                        </a>
+                    }
+                </nav>
+            }
+        </header>
+    }
+
+    @if (!String.IsNullOrWhiteSpace(_headerHtml))
+    {
+        <div class="page-site-banner page-view-content">@((MarkupString)_headerHtml)</div>
+    }
+
+    <SplitPane Class="page-view">
+        <Pane Size="25%" Class="page-nav">
+            <div class="page-search-box">
+                <TextInput @bind-Value="_query" Icon="IconType.MagnifyingGlass" Placeholder="Search pages" OnEnter="SearchAsync" aria-label="Search pages" />
+            </div>
+
+            <PageMenu CurrentRoute="@CurrentRoute" />
+        </Pane>
+
+        <Pane Size="75%">
+            @ChildContent
+        </Pane>
+    </SplitPane>
+
+    @if (!String.IsNullOrWhiteSpace(_footerHtml))
+    {
+        <footer class="page-site-footer page-view-content">@((MarkupString)_footerHtml)</footer>
+    }
+</div>
+
+<link rel="stylesheet" href="css/pages.css?v=@_stylesheetVersion" />
+
+@code {
+    /// <summary>The route of the page being shown, to highlight it in the navigation</summary>
+    [Parameter] public string? CurrentRoute { get; set; }
+
+    /// <summary>The search box's starting text, such as the query on the results page</summary>
+    [Parameter] public string? Query { get; set; }
+
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+
+    PageSettings _appearance = new();
+    List<PageLink> _links = [];
+    string? _headerHtml;
+    string? _footerHtml;
+    string? _query;
+    string? _lastQuery;
+
+    // The stylesheet is edited in place, so its modified time busts the browser's cache
+    string _stylesheetVersion = "";
+
+    bool HasBrand => !String.IsNullOrWhiteSpace(_appearance.Logo) || !String.IsNullOrWhiteSpace(_appearance.Title) || _links.Count > 0;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _appearance = SettingsProvider.CurrentValue.Server.Pages ?? new();
+        _links = (_appearance.Links ?? []).Where(l => !String.IsNullOrWhiteSpace(l.Name) && IsSafeUrl(l.Url)).ToList();
+
+        var stylesheet = Path.Combine("wwwroot", "css", "pages.css");
+
+        _stylesheetVersion = File.Exists(stylesheet) ? File.GetLastWriteTimeUtc(stylesheet).Ticks.ToString() : "0";
+
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var options = new PageRenderOptions { IsAdministrator = authState.User.IsInRole(RoleService.AdministratorRoleName) };
+
+        if (!String.IsNullOrWhiteSpace(_appearance.Header))
+            _headerHtml = await PageRenderService.RenderAsync(_appearance.Header, options);
+
+        if (!String.IsNullOrWhiteSpace(_appearance.Footer))
+            _footerHtml = await PageRenderService.RenderAsync(_appearance.Footer, options);
+    }
+
+    protected override void OnParametersSet()
+    {
+        // Follow the results page's query without overwriting what's being typed
+        if (Query != _lastQuery)
+        {
+            _query = Query;
+            _lastQuery = Query;
+        }
+    }
+
+    Task SearchAsync()
+    {
+        if (!String.IsNullOrWhiteSpace(_query))
+            NavigationManager.NavigateTo($"/Pages/Search?q={Uri.EscapeDataString(_query.Trim())}");
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Only web, mail and site-relative links, so a link can't run script when clicked
+    /// </summary>
+    public static bool IsSafeUrl(string? url)
+    {
+        if (String.IsNullOrWhiteSpace(url))
+            return false;
+
+        // Checked first: on Linux "/path" also parses as an absolute file: URI
+        if (url.StartsWith('/'))
+            return !url.StartsWith("//") || Uri.TryCreate("https:" + url, UriKind.Absolute, out _);
+
+        return Uri.TryCreate(url, UriKind.Absolute, out var absolute) && absolute.Scheme is "http" or "https" or "mailto";
+    }
+}

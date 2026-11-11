@@ -1,0 +1,45 @@
+@using LANCommander.Server.Services.Pages
+@inherits Dialog<string, string>
+@inject GameService GameService
+@inject ServerService ServerService
+@inject RedistributableService RedistributableService
+@inject PageService PageService
+@inject NotificationService Notifications
+
+@* Picks the item for an embed that needs one; Options is the embed kind, Result the embed syntax *@
+<Select TValue="Guid" Searchable Items="_items" @bind-Value="_selected" Placeholder="@($"Choose a {Options}")" />
+
+@code {
+    IEnumerable<SelectItem<Guid>> _items = [];
+    Guid _selected;
+
+    protected override bool CanConfirm => _selected != Guid.Empty;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _items = Options switch
+            {
+                "game" => (await GameService.SortBy(g => g.Title).GetAsync()).ToSelectItems(g => g.Id, g => g.Title),
+                "server" => (await ServerService.SortBy(s => s.Name).GetAsync()).ToSelectItems(s => s.Id, s => s.Name),
+                "redistributable" => (await RedistributableService.SortBy(r => r.Name).GetAsync()).ToSelectItems(r => r.Id, r => r.Name),
+                "page" => (await PageService.SortBy(p => p.Route).GetAsync()).ToSelectItems(p => p.Id, p => $"{p.Title} (/{p.Route})"),
+                _ => [],
+            };
+
+            _items = _items.ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load the items to embed!");
+        }
+    }
+
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = PageMarkdown.Embed(Options, _selected);
+
+        return Task.FromResult(true);
+    }
+}

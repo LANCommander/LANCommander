@@ -1,87 +1,81 @@
 @page "/Pages/{*route}"
-@using LANCommander.SDK.Extensions
 @using LANCommander.Server.UI.Pages.Pages.Components
-@using Markdig
+@using LANCommander.Server.Services.Pages
 @using Microsoft.AspNetCore.Components.Authorization
 @using ZiggyCreatures.Caching.Fusion
-@using LANCommander.Server.Services.Abstractions
 @inject PageService PageService
+@inject PageRenderService PageRenderService
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
-@inject IVersionProvider VersionProvider
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 @if (Page != null)
 {
-    <SplitPane Class="page-view">
-        <Pane Size="25%" Class="page-nav">
-            <PageMenu CurrentRoute="@Page.Route" />
-        </Pane>
-
-        <Pane Size="75%">
-            @if (Ancestors.Any())
-            {
-                <Breadcrumb Class="page-view-breadcrumb">
-                    @foreach (var ancestor in Ancestors)
-                    {
-                        <BreadcrumbItem Href="@($"/{ancestor.Route}")">@ancestor.Title</BreadcrumbItem>
-                    }
-                    <BreadcrumbItem>@Page.Title</BreadcrumbItem>
-                </Breadcrumb>
-            }
-
-            <PageHeader Title="@Page.Title" />
-
-            <PageContent Class="page-view-content">
-                @((MarkupString)Markdig.Markdown.ToHtml(Page.Contents ?? "", PagePipeline))
-
-                @if (Related.Any())
+    <PageSite CurrentRoute="@Page.Route">
+        @if (Ancestors.Any())
+        {
+            <Breadcrumb Class="page-view-breadcrumb">
+                @foreach (var ancestor in Ancestors)
                 {
-                    <div class="page-view-related">
-                        <Divider Left>Related</Divider>
-
-                        <Flex Gap="Gap.Small" Wrap>
-                            @foreach (var item in Related)
-                            {
-                                @* Edit pages are admin-only, so other visitors just see the name *@
-                                @if (IsAdministrator)
-                                {
-                                    <a href="@item.Href"><Tag Icon="@item.Icon">@item.Name</Tag></a>
-                                }
-                                else
-                                {
-                                    <Tag Icon="@item.Icon">@item.Name</Tag>
-                                }
-                            }
-                        </Flex>
-                    </div>
+                    <BreadcrumbItem Href="@($"/{ancestor.Route}")">@ancestor.Title</BreadcrumbItem>
                 }
-            </PageContent>
-        </Pane>
-    </SplitPane>
+                <BreadcrumbItem>@Page.Title</BreadcrumbItem>
+            </Breadcrumb>
+        }
+
+        <PageHeader Title="@Page.Title">
+            <Extra>
+                @if (IsAdministrator)
+                {
+                    <Button Icon="IconType.PencilSimple" Href="@($"/Pages/Edit/{Page.Id}")">Edit</Button>
+                }
+            </Extra>
+        </PageHeader>
+
+        <PageContent Class="page-view-content">
+            @((MarkupString)Html)
+
+            @if (Related.Any())
+            {
+                <div class="page-view-related">
+                    <Divider Left>Related</Divider>
+
+                    <Flex Gap="Gap.Small" Wrap>
+                        @foreach (var item in Related)
+                        {
+                            @* Edit pages are admin-only, so other visitors just see the name *@
+                            @if (IsAdministrator)
+                            {
+                                <a href="@item.Href"><Tag Icon="@item.Icon">@item.Name</Tag></a>
+                            }
+                            else
+                            {
+                                <Tag Icon="@item.Icon">@item.Name</Tag>
+                            }
+                        }
+                    </Flex>
+                </div>
+            }
+        </PageContent>
+    </PageSite>
 }
 else if (NotFoundResult)
 {
-    <NotFound Title="Page Not Found">
-        <Button Primary Href="/Pages">Back to Pages</Button>
-    </NotFound>
+    <PageSite>
+        <NotFound Title="Page Not Found">
+            <Button Primary Href="/Pages">Back to Pages</Button>
+        </NotFound>
+    </PageSite>
 }
 
-<link rel="stylesheet" href="~/css/pages.css?v=@(VersionProvider.GetCurrentVersion())" />
-
 @code {
-    // Markdown from page contents is rendered as raw markup, so raw HTML is stripped
-    // to prevent stored XSS from executing for public visitors.
-    static readonly MarkdownPipeline PagePipeline = new MarkdownPipelineBuilder()
-        .DisableHtml()
-        .UseAdvancedExtensions()
-        .Build();
-
     [Parameter] public string Route { get; set; }
 
     record RelatedItem(string Name, string Href, IconType Icon);
 
     Page Page;
+    // Page contents rendered by PageRenderService, which disables raw HTML and encodes embeds
+    string Html = "";
     bool NotFoundResult;
     List<Page> Ancestors = new();
     List<RelatedItem> Related = new();
@@ -130,6 +124,12 @@ else if (NotFoundResult)
                 NotFoundResult = true;
             else
             {
+                Html = await PageRenderService.RenderAsync(Page.Contents, new PageRenderOptions
+                {
+                    PageId = Page.Id,
+                    IsAdministrator = IsAdministrator,
+                });
+
                 await LoadAncestorsAsync();
                 await LoadRelatedAsync();
             }

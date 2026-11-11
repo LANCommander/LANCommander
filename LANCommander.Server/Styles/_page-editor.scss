@@ -24,3 +24,34 @@
 .page-editor-markdown-pane {
     padding: 0 24px 24px 16px;
 }
+
+.page-editor-toolbar {
+    margin-bottom: 8px;
+}
+
+.page-editor-preview {
+    min-height: 500px;
+    padding: 16px 24px;
+    border: 1px solid var(--lc-border-color);
+    border-radius: var(--lc-radius-md);
+}
+
+// Pages > Appearance
+.page-appearance-logo {
+    display: block;
+    max-height: 64px;
+    max-width: 240px;
+    object-fit: contain;
+}
+
+.page-appearance-markdown textarea {
+    font-family: var(--lc-font-mono);
+}
+
+// EasyMDE's own previews render in the browser, without embeds; the Write/Preview toggle replaces them
+.page-editor-markdown-pane .editor-toolbar {
+    .mde-tb-preview,
+    .mde-tb-side-by-side {
+        display: none;
+    }
+}

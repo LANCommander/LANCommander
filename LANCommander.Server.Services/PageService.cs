@@ -21,8 +21,11 @@ namespace LANCommander.Server.Services
         IDbContextFactory<DatabaseContext> contextFactory,
         MediaService mediaService) : BaseDatabaseService<Page>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
-        // Root-level slugs that would be shadowed by the editor's own routes under /Pages
-        static readonly string[] ReservedRootSlugs = ["Edit"];
+        // Root-level slugs that would be shadowed by the site's own routes under /Pages
+        static readonly string[] ReservedRootSlugs = ["Edit", "Search", "Appearance"];
+
+        // Characters of context kept either side of a search match in its snippet
+        const int SnippetContext = 80;
 
         // Matches media references such as /api/Media/{id}/Download in page contents
         static readonly Regex MediaReference = new(@"/api/Media/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -166,8 +169,15 @@ namespace LANCommander.Server.Services
                 var removed = candidates.Distinct().ToList();
                 var abandonedBefore = DateTime.UtcNow - AbandonedImageGracePeriod;
 
+                // The site's header, footer and logo can use uploaded page images too
+                var appearance = _settingsProvider.CurrentValue.Server.Pages;
+
                 var referenced = (await GetAsync())
-                    .SelectMany(p => GetMediaReferences(p.Contents))
+                    .Select(p => p.Contents)
+                    .Append(appearance.Logo)
+                    .Append(appearance.Header)
+                    .Append(appearance.Footer)
+                    .SelectMany(GetMediaReferences)
                     .ToHashSet();
 
                 var candidateImages = await mediaService.GetAsync(m => m.Type == SDK.Enums.MediaType.PageImage
@@ -183,6 +193,147 @@ namespace LANCommander.Server.Services
                 // The page itself saved fine; leftover images only waste space
                 _logger?.LogError(ex, "Could not clean up unused page images");
             }
+        }
+
+        /// <summary>
+        /// Finds pages containing every word of the query in their title or text, best matches
+        /// first: whole-query title matches, then title words, then how often the words appear.
+        /// </summary>
+        public async Task<IReadOnlyList<Pages.PageSearchResult>> SearchAsync(string? query, int limit = 50)
+        {
+            var terms = (query ?? "")
+                .Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToArray();
+
+            if (terms.Length == 0)
+                return [];
+
+            var allPages = await GetAsync();
+            var pagesById = allPages.ToDictionary(p => p.Id);
+            var results = new List<(Pages.PageSearchResult Result, int Score)>();
+
+            foreach (var page in allPages)
+            {
+                var title = page.Title ?? "";
+                var text = Pages.PageMarkdown.ToPlainText(page.Contents);
+
+                if (!terms.All(t => title.Contains(t, StringComparison.OrdinalIgnoreCase) || text.Contains(t, StringComparison.OrdinalIgnoreCase)))
+                    continue;
+
+                var score = 0;
+
+                if (title.Contains(query!.Trim(), StringComparison.OrdinalIgnoreCase))
+                    score += 100;
+
+                score += 10 * terms.Count(t => title.Contains(t, StringComparison.OrdinalIgnoreCase));
+                score += terms.Sum(t => Math.Min(10, CountOccurrences(text, t)));
+
+                results.Add((new Pages.PageSearchResult
+                {
+                    Id = page.Id,
+                    Title = title,
+                    Route = page.Route,
+                    Path = GetAncestorTitles(page, pagesById),
+                    Snippet = GetSnippet(text, terms),
+                }, score));
+            }
+
+            return results
+                .OrderByDescending(r => r.Score)
+                .ThenBy(r => r.Result.Title, StringComparer.OrdinalIgnoreCase)
+                .Take(limit)
+                .Select(r => r.Result)
+                .ToList();
+        }
+
+        static int CountOccurrences(string text, string term)
+        {
+            var count = 0;
+            var index = 0;
+
+            while ((index = text.IndexOf(term, index, StringComparison.OrdinalIgnoreCase)) >= 0)
+            {
+                count++;
+                index += term.Length;
+            }
+
+            return count;
+        }
+
+        static IReadOnlyList<string> GetAncestorTitles(Page page, Dictionary<Guid, Page> pagesById)
+        {
+            var titles = new List<string>();
+            var parentId = page.ParentId;
+
+            // Bounded in case of a corrupt cycle
+            while (parentId is Guid id && pagesById.TryGetValue(id, out var parent) && titles.Count < pagesById.Count)
+            {
+                titles.Insert(0, parent.Title);
+                parentId = parent.ParentId;
+            }
+
+            return titles;
+        }
+
+        /// <summary>
+        /// A short excerpt around the earliest match, or the start of the text if only the title matched
+        /// </summary>
+        public static string GetSnippet(string text, IEnumerable<string> terms)
+        {
+            if (String.IsNullOrEmpty(text))
+                return "";
+
+            var first = terms
+                .Select(t => text.IndexOf(t, StringComparison.OrdinalIgnoreCase))
+                .Where(i => i >= 0)
+                .DefaultIfEmpty(0)
+                .Min();
+
+            var start = Math.Max(0, first - SnippetContext);
+            var end = Math.Min(text.Length, first + SnippetContext * 2);
+
+            // Don't cut words in half at either end
+            if (start > 0)
+            {
+                var space = text.IndexOf(' ', start);
+
+                if (space >= 0 && space < first)
+                    start = space + 1;
+            }
+
+            if (end < text.Length)
+            {
+                var space = text.LastIndexOf(' ', end);
+
+                if (space > first)
+                    end = space;
+            }
+
+            return (start > 0 ? "…" : "") + text[start..end].Trim() + (end < text.Length ? "…" : "");
+        }
+
+        /// <summary>
+        /// Copies a page's title, contents and links into a new page beside it. Child pages aren't copied.
+        /// </summary>
+        public async Task<Page> DuplicateAsync(Guid id)
+        {
+            var original = await Include(p => p.Games, p => p.Redistributables, p => p.Servers)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (original == null)
+                throw new InvalidOperationException("The page to duplicate no longer exists");
+
+            return await AddAsync(new Page
+            {
+                Title = $"{original.Title} (Copy)",
+                Slug = "",
+                Contents = original.Contents,
+                ParentId = original.ParentId,
+                Games = original.Games ?? [],
+                Redistributables = original.Redistributables ?? [],
+                Servers = original.Servers ?? [],
+            });
         }
 
         public async Task<IReadOnlyList<PageMenuNode>> GetMenuAsync()

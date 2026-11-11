@@ -1,0 +1,200 @@
+@page "/Pages/Appearance"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Settings.Models
+@using LANCommander.Server.UI.Pages.Pages.Components
+@inject SettingsProvider<LANCommander.Server.Settings.Settings> SettingsProvider
+@inject MediaService MediaService
+@inject DialogService Dialogs
+@inject NotificationService Notifications
+
+<PageHeader Title="Pages Appearance">
+    <Extra>
+        <Button Icon="IconType.Eye" Href="/Pages" NewTab>View</Button>
+        <Button Icon="IconType.Palette" OnClick="EditStylesheetAsync">Edit Stylesheet</Button>
+        <Button Primary Icon="IconType.FloppyDisk" Loading="_saving" OnClick="SaveAsync">Save</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent>
+    <Form Model="_appearance" OnSubmit="SaveAsync">
+        <FormItem Label="Site Title" Help="Shown in the header beside the logo. Leave empty to show only the logo.">
+            <TextInput @bind-Value="_appearance.Title" Placeholder="LAN Party" />
+        </FormItem>
+
+        <FormItem Label="Logo" Help="An image shown in the header that links to the first page. PNG, JPEG, WebP or GIF.">
+            <Flex Gap="Gap.Medium" Align="Align.Center" Wrap>
+                @if (!String.IsNullOrWhiteSpace(_appearance.Logo))
+                {
+                    <img class="page-appearance-logo" src="@_appearance.Logo" alt="Logo" />
+                }
+
+                <InputFile id="page-logo-upload" OnChange="UploadLogoAsync" hidden accept=".png,.jpg,.jpeg,.webp,.gif" />
+                <Button Icon="IconType.UploadSimple" Loading="_uploading" OnClick="ChooseLogoAsync">@(String.IsNullOrWhiteSpace(_appearance.Logo) ? "Upload" : "Replace")</Button>
+
+                @if (!String.IsNullOrWhiteSpace(_appearance.Logo))
+                {
+                    <Button Icon="IconType.Trash" Danger OnClick="() => _appearance.Logo = String.Empty">Remove</Button>
+                }
+            </Flex>
+        </FormItem>
+
+        <FormItem Label="Links" Help="Shown in the header and opened in a new tab, such as your Discord server or event schedule.">
+            <Flex Vertical Gap="Gap.Small">
+                @foreach (var link in _appearance.Links)
+                {
+                    <InputGroup Block>
+                        <Select TValue="string" Items="LinkIcons" @bind-Value="link.Icon" Placeholder="Icon" Style="width: 160px" aria-label="Icon" />
+                        <TextInput @bind-Value="link.Name" Placeholder="Name" Style="flex: 1" aria-label="Name" />
+                        <TextInput @bind-Value="link.Url" Placeholder="https://discord.gg/…" Style="flex: 2" aria-label="URL" />
+                        <Button Icon="IconType.Trash" Danger OnClick="() => _appearance.Links.Remove(link)" aria-label="Remove link" />
+                    </InputGroup>
+
+                    @if (!String.IsNullOrWhiteSpace(link.Url) && !PageSite.IsSafeUrl(link.Url))
+                    {
+                        <Alert Warning>Links must start with http://, https://, mailto: or /, so this one won't be shown.</Alert>
+                    }
+                }
+
+                <div>
+                    <Button Icon="IconType.Plus" OnClick="AddLink">Add Link</Button>
+                </div>
+            </Flex>
+        </FormItem>
+
+        <FormItem Label="Header" Help="Markdown shown above every page, such as an announcement. Embeds like {{server:…}} work here too.">
+            <TextArea @bind-Value="_appearance.Header" Rows="4" Class="page-appearance-markdown" />
+        </FormItem>
+
+        <FormItem Label="Footer" Help="Markdown shown below every page, such as contact details or sponsors.">
+            <TextArea @bind-Value="_appearance.Footer" Rows="4" Class="page-appearance-markdown" />
+        </FormItem>
+    </Form>
+</PageContent>
+
+@code {
+    PageSettings _appearance = new();
+    bool _saving;
+    bool _uploading;
+
+    static readonly string[] ValidMimeTypes = ["image/png", "image/jpeg", "image/webp", "image/gif"];
+
+    static readonly IEnumerable<SelectItem<string>> LinkIcons =
+    [
+        new("", "None"),
+        new(nameof(IconType.DiscordLogo), "Discord", Icon: IconType.DiscordLogo),
+        new(nameof(IconType.TwitchLogo), "Twitch", Icon: IconType.TwitchLogo),
+        new(nameof(IconType.YoutubeLogo), "YouTube", Icon: IconType.YoutubeLogo),
+        new(nameof(IconType.SteamLogo), "Steam", Icon: IconType.SteamLogo),
+        new(nameof(IconType.GithubLogo), "GitHub", Icon: IconType.GithubLogo),
+        new(nameof(IconType.Globe), "Website", Icon: IconType.Globe),
+        new(nameof(IconType.Calendar), "Calendar", Icon: IconType.Calendar),
+        new(nameof(IconType.ChatCircle), "Chat", Icon: IconType.ChatCircle),
+        new(nameof(IconType.MapPin), "Location", Icon: IconType.MapPin),
+        new(nameof(IconType.Info), "Info", Icon: IconType.Info),
+        new(nameof(IconType.Link), "Link", Icon: IconType.Link),
+    ];
+
+    protected override void OnInitialized()
+    {
+        var current = SettingsProvider.CurrentValue.Server.Pages ?? new();
+
+        // A copy, so nothing changes until saved
+        _appearance = new PageSettings
+        {
+            Title = current.Title,
+            Logo = current.Logo,
+            Header = current.Header,
+            Footer = current.Footer,
+            Links = (current.Links ?? []).Select(l => new PageLink { Name = l.Name, Url = l.Url, Icon = l.Icon }).ToList(),
+        };
+    }
+
+    [Inject] IJSRuntime JS { get; set; } = default!;
+
+    // Opens the hidden file input's picker
+    Task ChooseLogoAsync() => JS.InvokeVoidAsync("pagesEditor.openFilePicker", "page-logo-upload").AsTask();
+
+    void AddLink() => _appearance.Links.Add(new PageLink { Icon = nameof(IconType.Link) });
+
+    async Task UploadLogoAsync(InputFileChangeEventArgs e)
+    {
+        if (!ValidMimeTypes.Contains(e.File.ContentType))
+        {
+            Notifications.Error("Choose a PNG, JPEG, WebP or GIF image");
+            return;
+        }
+
+        var maxSize = SettingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(MediaType.PageImage).MaxFileSize;
+
+        if (e.File.Size > maxSize)
+        {
+            Notifications.Error($"The logo must be smaller than {ByteSizeLib.ByteSize.FromBytes(maxSize)}");
+            return;
+        }
+
+        _uploading = true;
+
+        try
+        {
+            var media = await MediaService.WriteToFileAsync(new Media
+            {
+                Type = MediaType.PageImage,
+                MimeType = e.File.ContentType,
+                SourceUrl = "",
+            }, e.File.OpenReadStream(maxAllowedSize: maxSize));
+
+            _appearance.Logo = $"/api/Media/{media.Id}/Download?fileId={media.FileId}";
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The logo could not be uploaded");
+        }
+        finally
+        {
+            _uploading = false;
+        }
+    }
+
+    Task EditStylesheetAsync() =>
+        Dialogs.OpenAsync<StylesheetEditorDialog, string, bool>("Pages Stylesheet", "pages.css", new DialogSettings
+        {
+            Size = DialogSize.Full,
+            OkText = "Save",
+        });
+
+    Task SaveAsync()
+    {
+        _saving = true;
+
+        try
+        {
+            SettingsProvider.Update(s =>
+            {
+                s.Server.Pages = new PageSettings
+                {
+                    Title = _appearance.Title?.Trim() ?? "",
+                    Logo = _appearance.Logo?.Trim() ?? "",
+                    Header = _appearance.Header ?? "",
+                    Footer = _appearance.Footer ?? "",
+                    Links = _appearance.Links
+                        .Where(l => !String.IsNullOrWhiteSpace(l.Name) || !String.IsNullOrWhiteSpace(l.Url))
+                        .Select(l => new PageLink { Name = l.Name?.Trim() ?? "", Url = l.Url?.Trim() ?? "", Icon = l.Icon ?? "" })
+                        .ToList(),
+                };
+            });
+
+            Notifications.Success("Appearance saved!");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The appearance could not be saved");
+        }
+        finally
+        {
+            _saving = false;
+        }
+
+        return Task.CompletedTask;
+    }
+}

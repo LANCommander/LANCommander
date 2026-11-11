@@ -18,10 +18,10 @@ public class PageAuthorizationTests
         "Games", "Redistributables", "Tools", "Servers", "Settings", "Metadata", "Issues", "Scripting",
     ];
 
-    // Public on purpose: rendered wiki pages, token redemption links, and setup before any account exists
+    // Public on purpose: rendered wiki pages and searching them, token redemption links, and setup before any account exists
     static readonly string[] PublicPages =
     [
-        "Pages.Render", "Account.RedeemToken", "FirstTimeSetup.",
+        "Pages.Render", "Pages.Search", "Account.RedeemToken", "FirstTimeSetup.",
     ];
 
     static IEnumerable<Type> RoutedPages() =>

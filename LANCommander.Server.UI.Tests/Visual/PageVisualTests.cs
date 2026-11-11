@@ -1,4 +1,5 @@
 ﻿using LANCommander.Server.UI.Fixtures.Data;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 
 namespace LANCommander.Server.UI.Tests.Visual;
@@ -21,6 +22,7 @@ public class PageVisualTests(VisualServerFixture fixture)
         { "Pages.Editor", $"/Pages/Edit/{FixtureIds.For("page:house-rules")}", ".lc-tree-node-selected" },
         { "Pages.View", "/Pages/Welcome/HouseRules", ".page-view-content" },
         { "Pages.NotFound", "/Pages/Missing", ".lc-result" },
+        { "Pages.Appearance", "/Pages/Appearance", ".lc-page-content" },
         { "Metadata.Collections", "/Metadata/Collections", ".rz-data-row" },
         { "Metadata.Collection", $"/Metadata/Collections/{FixtureIds.For("collection:LAN Party Essentials")}", ".rz-data-row" },
         { "Metadata.Companies", "/Metadata/Companies", ".rz-data-row" },
@@ -113,6 +115,91 @@ public class PageVisualTests(VisualServerFixture fixture)
             await WaitForSpinnersAsync(page);
 
             await VisualAssert.MatchesBaselineAsync(page, $"Pages.{name}");
+        }
+        finally
+        {
+            await page.Context.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// A page with the site chrome from Pages > Appearance: title, links, header and footer.
+    /// </summary>
+    [Theory]
+    [InlineData("Pages.Branded", "/Pages/Welcome/HouseRules", ".page-site-header")]
+    [InlineData("Pages.Search", "/Pages/Search?q=rules", ".page-search-result")]
+    public async Task BrandedPage_MatchesBaseline(string name, string route, string readySelector)
+    {
+        // Changed in memory only: the test server shares the settings file with whoever runs it
+        var settings = fixture.Factory.RealServices
+            .GetRequiredService<Microsoft.Extensions.Options.IOptionsMonitor<LANCommander.Server.Settings.Settings>>()
+            .CurrentValue.Server;
+
+        var original = settings.Pages;
+
+        settings.Pages = new LANCommander.Server.Settings.Models.PageSettings
+        {
+            Title = "Friday Night LAN",
+            Header = "**Doors open at 6pm.** Tournament brackets are posted at 8.",
+            Footer = "Questions? Find an organizer in a red shirt.",
+            Links =
+            [
+                new() { Name = "Discord", Url = "https://discord.gg/example", Icon = "DiscordLogo" },
+                new() { Name = "Schedule", Url = "/Pages/Welcome", Icon = "Calendar" },
+                new() { Name = "Script", Url = "javascript:alert(1)", Icon = "Link" },
+            ],
+        };
+
+        var page = await fixture.NewAdminPageAsync();
+
+        try
+        {
+            await page.GotoAsync(route);
+            await page.Locator(readySelector).First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+            await WaitForSpinnersAsync(page);
+
+            // Links that could run script are dropped rather than shown
+            Assert.Equal(2, await page.Locator(".page-site-link").CountAsync());
+
+            await VisualAssert.MatchesBaselineAsync(page, $"Pages.{name}");
+        }
+        finally
+        {
+            settings.Pages = original;
+
+            await page.Context.DisposeAsync();
+        }
+    }
+
+    /// <summary>
+    /// The page editor inserting an embed at the cursor through the Insert menu, then previewing
+    /// the page as the server renders it, embeds included. Nothing is saved.
+    /// </summary>
+    [Fact]
+    public async Task PageEditorInsertAndPreview_MatchesBaseline()
+    {
+        var page = await fixture.NewAdminPageAsync();
+
+        try
+        {
+            await page.GotoAsync($"/Pages/Edit/{FixtureIds.For("page:house-rules")}");
+            await page.Locator("#page-editor-markdown .CodeMirror").WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            await page.GetByRole(AriaRole.Button, new() { Name = "Insert", Exact = true }).ClickAsync();
+            await page.GetByText("Table of Contents").ClickAsync();
+
+            // At the cursor, which starts at the top, rather than appended by the fallback
+            await page.WaitForFunctionAsync(
+                "() => document.querySelector('#page-editor-markdown .CodeMirror').CodeMirror.getValue().startsWith('{{toc}}\\n')",
+                null,
+                new PageWaitForFunctionOptions { Timeout = 10000 });
+
+            await page.GetByText("Preview", new() { Exact = true }).ClickAsync();
+            await page.Locator(".page-editor-preview .page-embed-game").WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
+
+            Assert.Equal(1, await page.Locator(".page-editor-preview .page-embed-toc").CountAsync());
+
+            await VisualAssert.MatchesBaselineAsync(page, "Pages.Pages.EditorPreview");
         }
         finally
         {

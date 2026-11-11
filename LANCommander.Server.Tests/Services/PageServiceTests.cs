@@ -288,6 +288,65 @@ public class PageServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
     }
 
     [Fact]
+    public async Task SearchFindsPagesContainingEveryWord()
+    {
+        var pageService = GetService<PageService>();
+        var word = "Zq" + Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Event", Slug = "Event" + word, Contents = "" });
+        var inText = await pageService.AddAsync(new Page { Title = "Schedule", Slug = "", Contents = $"Doors open at noon. The **{word}** tournament starts later.", ParentId = parent.Id });
+        var inTitle = await pageService.AddAsync(new Page { Title = $"{word} Rules", Slug = "", Contents = "Be nice." });
+        await pageService.AddAsync(new Page { Title = "Unrelated", Slug = "Unrelated" + word.ToLower() + "x", Contents = "Nothing here." });
+
+        var results = await pageService.SearchAsync(word.ToLower());
+
+        // Title matches rank above text matches, and the slug isn't searched
+        results.Select(r => r.Id).ShouldBe([inTitle.Id, inText.Id]);
+
+        var textResult = results[1];
+
+        textResult.Snippet.ShouldContain($"The {word} tournament");
+        textResult.Path.ShouldBe(["Event"]);
+
+        (await pageService.SearchAsync($"{word} noon")).Select(r => r.Id).ShouldBe([inText.Id]);
+        (await pageService.SearchAsync($"{word} absent")).ShouldBeEmpty();
+        (await pageService.SearchAsync("   ")).ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void SnippetsAreCutAtWords()
+    {
+        var text = String.Join(' ', Enumerable.Repeat("filler", 60)) + " needle " + String.Join(' ', Enumerable.Repeat("after", 60));
+
+        var snippet = PageService.GetSnippet(text, ["needle"]);
+
+        snippet.ShouldStartWith("…filler");
+        snippet.ShouldEndWith("after…");
+        snippet.ShouldContain("needle");
+    }
+
+    [Fact]
+    public async Task DuplicatingCopiesContentsAndLinks()
+    {
+        var pageService = GetService<PageService>();
+        var game = await GetService<GameService>().AddAsync(new Game { Title = "Duplicated " + Guid.NewGuid().ToString("N") });
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        var original = await pageService.AddAsync(new Page { Title = "Original", Slug = "", Contents = "Copied text", ParentId = parent.Id, Games = [game] });
+
+        var copy = await pageService.DuplicateAsync(original.Id);
+
+        copy = await pageService.Include(p => p.Games).FirstOrDefaultAsync(p => p.Id == copy.Id);
+
+        copy.Title.ShouldBe("Original (Copy)");
+        copy.Contents.ShouldBe("Copied text");
+        copy.ParentId.ShouldBe(parent.Id);
+        copy.Route.ShouldBe($"Pages/Parent{suffix}/OriginalCopy");
+        copy.Games.Select(g => g.Id).ShouldBe([game.Id]);
+    }
+
+    [Fact]
     public void FindsMediaReferencesInContents()
     {
         var id = Guid.NewGuid();

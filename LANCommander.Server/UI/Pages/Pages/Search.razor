@@ -1,0 +1,113 @@
+@page "/Pages/Search"
+@using System.Text.RegularExpressions
+@using LANCommander.Server.Services.Pages
+@using LANCommander.Server.UI.Pages.Pages.Components
+@inject PageService PageService
+@inject NotificationService Notifications
+
+<PageSite Query="@Query">
+    <PageHeader Title="Search" Subtitle="@Summary" />
+
+    <PageContent Class="page-search-results" Loading="_loading">
+        @if (String.IsNullOrWhiteSpace(Query))
+        {
+            <Empty Description="Type in the search box to find pages" />
+        }
+        else if (_results.Count == 0 && !_loading)
+        {
+            <Empty Description="@($"No pages match \"{Query}\"")" />
+        }
+        else
+        {
+            <ol class="page-search-list">
+                @foreach (var result in _results)
+                {
+                    <li class="page-search-result">
+                        @if (result.Path.Count > 0)
+                        {
+                            <div class="page-search-path">@String.Join(" › ", result.Path)</div>
+                        }
+
+                        <a class="page-search-title" href="/@result.Route">@Highlight(result.Title)</a>
+
+                        @if (!String.IsNullOrEmpty(result.Snippet))
+                        {
+                            <p class="page-search-snippet">@Highlight(result.Snippet)</p>
+                        }
+                    </li>
+                }
+            </ol>
+        }
+    </PageContent>
+</PageSite>
+
+@code {
+    [SupplyParameterFromQuery(Name = "q")] public string? Query { get; set; }
+
+    IReadOnlyList<PageSearchResult> _results = [];
+    bool _loading;
+    Regex? _terms;
+
+    string? Summary => String.IsNullOrWhiteSpace(Query) || _loading
+        ? null
+        : _results.Count == 1 ? "1 page" : $"{_results.Count} pages";
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _results = [];
+        _terms = null;
+
+        if (String.IsNullOrWhiteSpace(Query))
+            return;
+
+        var words = Query.Split((char[]?)null, StringSplitOptions.RemoveEmptyEntries)
+            .OrderByDescending(w => w.Length)
+            .Select(Regex.Escape);
+
+        _terms = new Regex($"({String.Join('|', words)})", RegexOptions.IgnoreCase);
+
+        _loading = true;
+
+        try
+        {
+            _results = await PageService.SearchAsync(Query);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not search pages!");
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    // Marks the searched words; built from text nodes so nothing in a page can inject markup
+    RenderFragment Highlight(string text) => builder =>
+    {
+        if (_terms == null)
+        {
+            builder.AddContent(0, text);
+            return;
+        }
+
+        var sequence = 0;
+
+        // Splitting on a capturing group keeps the matches at the odd indexes
+        var parts = _terms.Split(text);
+
+        for (var i = 0; i < parts.Length; i++)
+        {
+            if (i % 2 == 1)
+            {
+                builder.OpenElement(sequence++, "mark");
+                builder.AddContent(sequence++, parts[i]);
+                builder.CloseElement();
+            }
+            else
+            {
+                builder.AddContent(sequence++, parts[i]);
+            }
+        }
+    };
+}

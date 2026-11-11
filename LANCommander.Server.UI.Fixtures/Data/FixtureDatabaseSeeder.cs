@@ -495,7 +495,7 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
             Id = FixtureIds.For("page:welcome"),
             Title = "Welcome",
             Slug = "",
-            Contents = "# Welcome to the LAN\n\nGrab a seat, plug in, and check the house rules.",
+            Contents = "# Welcome to the LAN\n\nGrab a seat, plug in, and check the house rules.\n\n{{children}}",
             SortOrder = 0,
         });
 
@@ -508,7 +508,8 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
             Id = FixtureIds.For("page:house-rules"),
             Title = "House Rules",
             Slug = "",
-            Contents = "1. No spawn camping.\n2. Headphones on.\n3. Winner stays on.",
+            Contents = "1. No spawn camping.\n2. Headphones on.\n3. Winner stays on.\n\n"
+                + $"## Tonight's Game\n\n{{{{game:{arenaBlitzId}}}}}\n\n{{{{server:{FixtureData.Servers.Id(FixtureData.Servers.ArenaBlitzDedicated)}}}}}",
             SortOrder = 0,
             ParentId = welcome.Id,
             Games = await gameService.GetAsync(g => g.Id == arenaBlitzId),

@@ -3,8 +3,13 @@
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @using PSC.Blazor.Components.MarkdownEditor
 @using PSC.Blazor.Components.MarkdownEditor.Models
+@using LANCommander.Server.Services.Pages
+@using LANCommander.Server.UI.Pages.Pages.Components
 @inject MediaService MediaService
 @inject PageService PageService
+@inject PageRenderService PageRenderService
+@inject DialogService Dialogs
+@inject IJSRuntime JS
 @inject GameService GameService
 @inject RedistributableService RedistributableService
 @inject ServerService ServerService
@@ -16,12 +21,14 @@
     <Extra>
         @if (_selectedPage != null)
         {
+            <Button Icon="IconType.ArrowSquareOut" Href="@($"/{_selectedPage.Route}")" NewTab>View</Button>
             <Button Primary Icon="IconType.FloppyDisk" Loading="_saving" OnClick="SaveAsync">Save</Button>
             <Dropdown>
                 <ChildContent><Button Icon="IconType.DotsThree" aria-label="More actions" /></ChildContent>
                 <Overlay>
                     <Menu>
                         <MenuItem Icon="IconType.Plus" OnClick="AddNewPageAsync">New Page</MenuItem>
+                        <MenuItem Icon="IconType.Copy" OnClick="() => DuplicatePageAsync(_selectedPage)">Duplicate</MenuItem>
                         <MenuItem Icon="IconType.Trash" Danger OnClick="() => DeletePageAsync(_selectedPage)">Delete</MenuItem>
                     </Menu>
                 </Overlay>
@@ -91,14 +98,48 @@
                     </FormItem>
                 </Flex>
 
-                <FormItem>
-                    <MarkdownEditor @bind-Value="_selectedPage.Contents"
-                                    UploadImage="true"
-                                    ImageUploadEndpoint="/api/Media/Upload/PageImage"
-                                    CustomImageUpload="UploadImageAsync"
-                                    SpellChecker="false"
-                                    MinHeight="500px" />
-                </FormItem>
+                <Flex Justify="Justify.SpaceBetween" Align="Align.Center" Class="page-editor-toolbar">
+                    <Segmented TValue="bool" Items="EditorModes" Value="_preview" ValueChanged="SetPreviewAsync" Small aria-label="Editor mode" />
+
+                    <Dropdown>
+                        <ChildContent><Button Small Icon="IconType.Plus" Disabled="_preview">Insert</Button></ChildContent>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem Icon="IconType.GameController" OnClick="@(() => InsertEmbedAsync("game"))">Game</MenuItem>
+                                <MenuItem Icon="IconType.HardDrives" OnClick="@(() => InsertEmbedAsync("server"))">Server</MenuItem>
+                                <MenuItem Icon="IconType.Package" OnClick="@(() => InsertEmbedAsync("redistributable"))">Redistributable</MenuItem>
+                                <MenuItem Icon="IconType.Link" OnClick="@(() => InsertEmbedAsync("page"))">Link to Page</MenuItem>
+                                <MenuDivider />
+                                <MenuItem Icon="IconType.TreeStructure" OnClick="@(() => InsertEmbedAsync("children"))">Child Pages</MenuItem>
+                                <MenuItem Icon="IconType.ListBullets" OnClick="@(() => InsertEmbedAsync("toc"))">Table of Contents</MenuItem>
+                            </Menu>
+                        </Overlay>
+                    </Dropdown>
+                </Flex>
+
+                @if (_preview)
+                {
+                    @* Rendered by the server exactly as visitors see it, embeds included *@
+                    <div class="page-editor-preview page-view-content">
+                        @((MarkupString)_previewHtml)
+                    </div>
+
+                    <link rel="stylesheet" href="css/pages.css" />
+                }
+                else
+                {
+                    <FormItem>
+                        @* Wrapped so pages-editor.js can find this editor to insert embeds *@
+                        <div id="@EditorHostId">
+                            <MarkdownEditor @bind-Value="_selectedPage.Contents"
+                                            UploadImage="true"
+                                            ImageUploadEndpoint="/api/Media/Upload/PageImage"
+                                            CustomImageUpload="UploadImageAsync"
+                                            SpellChecker="false"
+                                            MinHeight="500px" />
+                        </div>
+                    </FormItem>
+                }
             </Form>
         }
         else
@@ -132,9 +173,21 @@
     // The title the current slug was derived from, so the slug follows the title until customized
     string? _lastTitle;
 
+    const string EditorHostId = "page-editor-markdown";
+
+    bool _preview;
+    string _previewHtml = "";
+
+    static readonly IEnumerable<SelectItem<bool>> EditorModes =
+    [
+        new(false, "Write", Icon: IconType.PencilSimple),
+        new(true, "Preview", Icon: IconType.Eye),
+    ];
+
     RenderFragment PageMenuFor(Page page) => @<Menu>
         <MenuItem Icon="IconType.Plus" OnClick="() => CreatePageAsync(page.ParentId)">New Page</MenuItem>
         <MenuItem Icon="IconType.TreeStructure" OnClick="() => CreatePageAsync(page.Id)">Add Child Page</MenuItem>
+        <MenuItem Icon="IconType.Copy" OnClick="() => DuplicatePageAsync(page)">Duplicate</MenuItem>
         <MenuItem Icon="IconType.Trash" Danger OnClick="() => DeletePageAsync(page)">Delete</MenuItem>
     </Menu>;
 
@@ -176,7 +229,60 @@
 
         _savedSnapshot = Snapshot();
         _lastTitle = _selectedPage.Title;
+        _preview = false;
     }
+
+    async Task SetPreviewAsync(bool preview)
+    {
+        if (preview && _selectedPage != null)
+        {
+            try
+            {
+                _previewHtml = await PageRenderService.RenderAsync(_selectedPage.Contents, new PageRenderOptions
+                {
+                    PageId = _selectedPage.Id,
+                    IsAdministrator = true,
+                });
+            }
+            catch (Exception ex)
+            {
+                Notifications.Error(ex, "Could not render the preview!");
+                return;
+            }
+        }
+
+        _preview = preview;
+    }
+
+    async Task InsertEmbedAsync(string kind)
+    {
+        var embed = PageRenderService.Kinds.TryGetValue(kind, out var needsItem) && needsItem
+            ? await Dialogs.OpenAsync<InsertEmbedDialog, string, string>(InsertTitle(kind), kind, new DialogSettings { OkText = "Insert" })
+            : PageMarkdown.Embed(kind);
+
+        if (String.IsNullOrEmpty(embed))
+            return;
+
+        try
+        {
+            if (!await JS.InvokeAsync<bool>("pagesEditor.insertBlock", EditorHostId, embed))
+                throw new InvalidOperationException("The editor isn't ready");
+        }
+        catch (Exception ex)
+        {
+            // Still usable by hand if the editor couldn't be reached
+            _selectedPage!.Contents = (_selectedPage.Contents ?? "").TrimEnd() + "\n\n" + embed + "\n";
+
+            Notifications.Warning("The embed was added to the end of the page", ex.Message);
+        }
+    }
+
+    static string InsertTitle(string kind) => kind switch
+    {
+        "page" => "Link to Page",
+        "redistributable" => "Insert Redistributable",
+        _ => $"Insert {Char.ToUpperInvariant(kind[0])}{kind[1..]}",
+    };
 
     // Covers every field the editor changes, so any of them counts as an unsaved change
     string Snapshot() => _selectedPage == null ? "" : String.Join('\n',
@@ -371,29 +477,55 @@
 
     async Task SelectPageAsync(Page? page)
     {
-        if (page == null)
+        if (page == null || !await ConfirmLeaveAsync())
             return;
 
-        var modified = _selectedPage != null && Snapshot() != _savedSnapshot;
-
-        if (modified)
-        {
-            switch (await Alerts.ConfirmUnsavedChangesAsync("You are about to leave this page with unsaved changes."))
-            {
-                case UnsavedChangesChoice.Save:
-                    await SaveAsync();
-                    break;
-
-                case UnsavedChangesChoice.Discard:
-                    await LoadAsync();
-                    break;
-
-                default:
-                    return;
-            }
-        }
-
         NavigationManager.NavigateTo($"/Pages/Edit/{page.Id}");
+    }
+
+    /// <summary>
+    /// Offers to save or discard unsaved changes before moving to another page. False means stay.
+    /// </summary>
+    async Task<bool> ConfirmLeaveAsync()
+    {
+        if (_selectedPage == null || Snapshot() == _savedSnapshot)
+            return true;
+
+        switch (await Alerts.ConfirmUnsavedChangesAsync("You are about to leave this page with unsaved changes."))
+        {
+            case UnsavedChangesChoice.Save:
+                await SaveAsync();
+                return true;
+
+            case UnsavedChangesChoice.Discard:
+                await LoadAsync();
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    async Task DuplicatePageAsync(Page? page)
+    {
+        // The copy is made from what's saved, so offer to save edits to it first
+        if (page == null || !await ConfirmLeaveAsync())
+            return;
+
+        try
+        {
+            var copy = await PageService.DuplicateAsync(page.Id);
+
+            Notifications.Success("Page duplicated!");
+
+            await LoadAsync();
+
+            NavigationManager.NavigateTo($"/Pages/Edit/{copy.Id}");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not duplicate the page!");
+        }
     }
 
     async Task<FileEntry> UploadImageAsync(MarkdownEditor editor, FileEntry entry)

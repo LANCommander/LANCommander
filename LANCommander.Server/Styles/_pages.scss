@@ -23,3 +23,243 @@
 .page-view-breadcrumb {
     padding: 16px 24px 0;
 }
+
+// The site chrome set under Pages > Appearance
+.page-site {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+
+    .page-view {
+        flex-grow: 1;
+    }
+}
+
+.page-site-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px 24px;
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+}
+
+.page-site-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--lc-text-title-color);
+    text-decoration: none;
+
+    &:hover {
+        color: var(--lc-text-title-color);
+    }
+}
+
+.page-site-logo {
+    display: block;
+    max-height: 48px;
+    max-width: 240px;
+    object-fit: contain;
+}
+
+.page-site-title {
+    font-size: 20px;
+    font-weight: 600;
+}
+
+.page-site-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px 16px;
+}
+
+.page-site-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    color: var(--lc-text-secondary-color);
+    text-decoration: none;
+
+    &:hover {
+        color: var(--lc-text-title-color);
+    }
+}
+
+.page-site-banner {
+    padding: 16px 24px;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+    background: var(--lc-well);
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+}
+
+.page-site-footer {
+    padding: 24px;
+    border-top: 1px solid var(--lc-border-subtle-color);
+    color: var(--lc-text-secondary-color);
+
+    > :first-child { margin-top: 0; }
+    > :last-child { margin-bottom: 0; }
+}
+
+.page-search-box {
+    margin-bottom: 16px;
+}
+
+// Search results
+.page-search-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.page-search-result {
+    padding: 12px 0;
+    border-bottom: 1px solid var(--lc-border-subtle-color);
+
+    &:last-child {
+        border-bottom: none;
+    }
+
+    // A background rather than a colour, since result titles are already link-coloured
+    mark {
+        padding: 0 2px;
+        border-radius: var(--lc-radius-sm);
+        background: var(--lc-hover-background);
+        color: inherit;
+        font-weight: 600;
+    }
+}
+
+.page-search-path {
+    font-size: 12px;
+    color: var(--lc-text-tertiary-color);
+}
+
+.page-search-title {
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.page-search-snippet {
+    margin: 4px 0 0;
+    color: var(--lc-text-secondary-color);
+}
+
+// Embeds such as {{game:…}}, rendered by PageRenderService
+.page-embed {
+    margin: 16px 0;
+}
+
+.page-embed-game,
+.page-embed-server,
+.page-embed-redistributable {
+    display: flex;
+    gap: 16px;
+    max-width: 640px;
+    padding: 12px;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-md);
+    background: var(--lc-raised);
+}
+
+.page-embed-cover {
+    flex: none;
+    width: 96px;
+    aspect-ratio: 2 / 3;
+    object-fit: cover;
+    border-radius: var(--lc-radius-sm);
+}
+
+.page-embed-body {
+    min-width: 0;
+}
+
+.page-embed-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--lc-text-title-color);
+}
+
+.page-embed-meta {
+    margin-top: 2px;
+    font-size: 13px;
+    color: var(--lc-text-tertiary-color);
+}
+
+.page-embed-description {
+    margin: 8px 0 0;
+    color: var(--lc-text-secondary-color);
+}
+
+.page-embed-status {
+    margin-left: 8px;
+    font-size: 12px;
+    font-weight: 500;
+    color: var(--lc-text-tertiary-color);
+
+    &::before {
+        content: "";
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        margin-right: 6px;
+        border-radius: 50%;
+        background: currentColor;
+    }
+}
+
+.page-embed-status-running {
+    color: var(--lc-success-text-color);
+}
+
+.page-embed-status-starting,
+.page-embed-status-stopping {
+    color: var(--lc-warning-text-color);
+}
+
+.page-embed-status-error {
+    color: var(--lc-danger-text-color);
+}
+
+.page-embed-page a {
+    font-weight: 600;
+
+    &::after {
+        content: " →";
+    }
+}
+
+.page-embed-toc {
+    margin: 16px 0;
+    padding: 12px 16px;
+    border-left: 2px solid var(--lc-border-color);
+
+    ul {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+
+    li {
+        padding: 2px 0;
+    }
+
+    @for $level from 2 through 6 {
+        .page-embed-toc-level-#{$level} {
+            padding-left: ($level - 1) * 16px;
+        }
+    }
+}
+
+.page-embed-missing {
+    padding: 8px 12px;
+    border: 1px dashed var(--lc-warning-text-color);
+    border-radius: var(--lc-radius-sm);
+    color: var(--lc-warning-text-color);
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+}

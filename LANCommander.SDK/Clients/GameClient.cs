@@ -962,12 +962,17 @@ namespace LANCommander.SDK.Services
 
         private async Task<Key> RequestKeyAsync(Guid id, string route)
         {
+            // Identify the machine by the interface it actually reaches the server through. Taking the
+            // first adapter the OS lists picks up VPN/virtual adapters (ZeroTier, Hyper-V switches)
+            // whose order has nothing to do with how the server sees this machine.
+            var serverAddress = connectionClient.GetServerAddress();
+
             var request = new KeyRequest()
             {
                 GameId = id,
-                MacAddress = networkInformationProvider.GetMacAddress(),
+                MacAddress = await networkInformationProvider.GetMacAddressAsync(serverAddress),
                 ComputerName = Environment.MachineName,
-                IpAddress = networkInformationProvider.GetIpAddress(),
+                IpAddress = await networkInformationProvider.GetIpAddressAsync(serverAddress),
             };
 
             try

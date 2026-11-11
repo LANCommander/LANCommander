@@ -328,7 +328,7 @@ public static class SaveEndpoints
                         await saveService.DeleteAsync(saveToCull);
                 }
 
-                await eventPublisher.PublishAsync(Plugins.Messaging.ServerEventTypes.SaveUploaded, "game", gameId,
+                await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.SaveUploaded, "game", gameId,
                     new { saveId = save.Id, save.Size, save.Platforms }, user.Id);
 
                 return TypedResults.Ok(sdkMapper.ToSdk(save));

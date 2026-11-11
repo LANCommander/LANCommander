@@ -14,6 +14,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Endpoints;
 using LANCommander.Server.Plugins;
 using LANCommander.Server.Services.Events;
+using LANCommander.SDK.Events;
 using LANCommander.Server.Plugins.Messaging;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Authentication;
@@ -64,7 +65,7 @@ public sealed class WebhookTests
         body.RootElement.GetProperty("actorId").GetGuid().ShouldBe(actorId);
         body.RootElement.GetProperty("targetId").GetGuid().ShouldBe(gameId);
         body.RootElement.GetProperty("eventId").GetGuid().ShouldBe(delivery.EventId);
-        body.RootElement.GetProperty("source").GetString().ShouldBe("LANCommander.Server");
+        body.RootElement.GetProperty("source").GetString().ShouldBe(ServerEventSources.Server);
         body.RootElement.GetProperty("occurredAt").GetDateTime().Kind.ShouldBe(DateTimeKind.Utc);
         body.RootElement.GetProperty("payload").GetProperty("title").GetString().ShouldBe("Example");
         delivery.Body.ShouldNotContain(Secret);
@@ -86,8 +87,98 @@ public sealed class WebhookTests
 
         await using var updated = await test.Factory.CreateDbContextAsync();
         (await updated.Set<WebhookSubscription>().FindAsync(id))!.ProtectedSecret.ShouldBe(encrypted);
+        (await test.Webhooks.GetAsync()).ShouldHaveSingleItem().HasSigningSecret.ShouldBeTrue();
         JsonSerializer.Serialize(await test.Webhooks.GetAsync()).ShouldNotContain(Secret);
         JsonSerializer.Serialize(await test.Webhooks.GetAsync()).ShouldNotContain(encrypted);
+    }
+
+    [Theory]
+    [InlineData(null)]
+    [InlineData("")]
+    public async Task UnsignedSubscriptionSendsWithoutSignature(string? secret)
+    {
+        await using var test = await TestHost.CreateAsync();
+        var edit = Edit(ServerEventTypes.GameCreated);
+        edit.Secret = secret;
+        var id = await test.Webhooks.SaveAsync(null, edit);
+        (await test.Webhooks.GetAsync()).ShouldHaveSingleItem().HasSigningSecret.ShouldBeFalse();
+
+        var deliveryId = await test.Webhooks.TestAsync(id);
+        await test.Handler.DeliverAsync(deliveryId);
+
+        var request = test.Receiver.Requests.ShouldHaveSingleItem();
+        request.Signature.ShouldBeNull();
+        request.Timestamp.ShouldNotBeNullOrEmpty();
+        (await test.Webhooks.GetDeliveriesAsync(id)).ShouldHaveSingleItem().Status.ShouldBe(WebhookDeliveryStatus.Delivered);
+    }
+
+    [Fact]
+    public async Task SigningSecretCanBeRemovedAndAddedAgain()
+    {
+        await using var test = await TestHost.CreateAsync();
+        var id = await test.Webhooks.SaveAsync(null, Edit(ServerEventTypes.GameCreated));
+        var edit = Edit(ServerEventTypes.GameCreated);
+        edit.Secret = null;
+        edit.ClearSecret = true;
+        await test.Webhooks.SaveAsync(id, edit);
+        (await test.Webhooks.GetAsync()).ShouldHaveSingleItem().HasSigningSecret.ShouldBeFalse();
+
+        var unsignedId = await test.Webhooks.TestAsync(id);
+        await test.Handler.DeliverAsync(unsignedId);
+        test.Receiver.Requests.ShouldHaveSingleItem().Signature.ShouldBeNull();
+
+        edit.ClearSecret = false;
+        edit.Secret = Secret;
+        await test.Webhooks.SaveAsync(id, edit);
+        (await test.Webhooks.GetAsync()).ShouldHaveSingleItem().HasSigningSecret.ShouldBeTrue();
+        var signedId = await test.Webhooks.TestAsync(id);
+        await test.Handler.DeliverAsync(signedId);
+
+        var signed = test.Receiver.Requests.Last();
+        signed.Signature.ShouldBe("sha256=" + Convert.ToHexStringLower(HMACSHA256.HashData(
+            Encoding.UTF8.GetBytes(Secret), Encoding.UTF8.GetBytes(signed.Timestamp + "." + signed.Body))));
+    }
+
+    [Fact]
+    public async Task UnavailableSigningKeyDoesNotSendAnUnsignedRequest()
+    {
+        await using var test = await TestHost.CreateAsync();
+        var edit = Edit(ServerEventTypes.GameCreated);
+        edit.MaxAttempts = 1;
+        var id = await test.Webhooks.SaveAsync(null, edit);
+        await using (var context = await test.Factory.CreateDbContextAsync())
+        {
+            var subscription = (await context.Set<WebhookSubscription>().FindAsync(id))!;
+            subscription.ProtectedSecret = new EphemeralDataProtectionProvider()
+                .CreateProtector("LANCommander.Webhooks.Secrets.v1").Protect(Secret);
+            await context.SaveChangesAsync();
+        }
+        var deliveryId = await test.Webhooks.TestAsync(id);
+
+        await test.Handler.DeliverAsync(deliveryId);
+
+        test.Receiver.Requests.ShouldBeEmpty();
+        var delivery = (await test.Webhooks.GetDeliveriesAsync(id)).ShouldHaveSingleItem();
+        delivery.Status.ShouldBe(WebhookDeliveryStatus.Failed);
+        delivery.Error.ShouldBe("Signing key unavailable");
+    }
+
+    [Theory]
+    [InlineData(31)]
+    [InlineData(1025)]
+    public void SuppliedSigningSecretsMustHaveValidLength(int length)
+    {
+        var edit = Edit(ServerEventTypes.GameCreated);
+        edit.Secret = new string('x', length);
+        Should.Throw<ArgumentException>(() => WebhookService.Validate(edit));
+    }
+
+    [Fact]
+    public void ReplacingAndRemovingASecretTogetherIsRejected()
+    {
+        var edit = Edit(ServerEventTypes.GameCreated);
+        edit.ClearSecret = true;
+        Should.Throw<ArgumentException>(() => WebhookService.Validate(edit));
     }
 
     [Fact]
@@ -112,6 +203,65 @@ public sealed class WebhookTests
         delivery.Status.ShouldBe(WebhookDeliveryStatus.Delivered);
         delivery.Attempts.ShouldBe(1);
         delivery.StatusCode.ShouldBe(204);
+    }
+
+    [Theory]
+    [InlineData(ServerEventTypes.GameCreated, "game", "completed", "title", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.ArchiveUploaded, "game", "completed", "archiveId,gameVersionId,version", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.PlayStarted, "game", "completed", "sessionId,start", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.PlayEnded, "game", "completed", "sessionId,start,end,timedOut", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.UserLogin, "user", "completed", "", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.UserLogout, "user", "completed", "", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.SaveUploaded, "game", "completed", "saveId,size,platforms", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.ServerStarted, "server", "completed", "serverName", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.ServerStopped, "server", "completed", "serverName", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.GameInstalled, "game", "completed", "reportedByLauncher", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.GameInstallFailed, "game", "failed", "reportedByLauncher", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.GameUninstalled, "game", "completed", "reportedByLauncher", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.ToolInstalled, "tool", "completed", "reportedByLauncher", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.RedistributableInstalled, "redistributable", "completed", "reportedByLauncher", ServerEventSources.Launcher)]
+    [InlineData(ServerEventTypes.Test, "webhook", "completed", "message", ServerEventSources.Server)]
+    public async Task SelectedEventTestsUseExamplePayloadsAndOnlyTheChosenSubscription(
+        string eventType, string targetType, string status, string payloadKeys, string source)
+    {
+        await using var test = await TestHost.CreateAsync();
+        var id = await test.Webhooks.SaveAsync(null, Edit(ServerEventTypes.GameCreated));
+        var otherId = await test.Webhooks.SaveAsync(null, Edit(eventType));
+
+        var preview = WebhookService.CreateTestPreview(eventType, id);
+        var deliveryId = await test.Webhooks.TestAsync(id, eventType);
+        await test.Handler.DeliverAsync(deliveryId);
+
+        var body = await test.Webhooks.GetDeliveryBodyAsync(id, deliveryId);
+        body.ShouldBe(test.Receiver.Requests.ShouldHaveSingleItem().Body);
+        body.ShouldNotContain(Secret);
+        using var json = JsonDocument.Parse(body!);
+        json.RootElement.GetProperty("eventType").GetString().ShouldBe(eventType);
+        json.RootElement.GetProperty("targetType").GetString().ShouldBe(targetType);
+        json.RootElement.GetProperty("source").GetString().ShouldBe(source);
+        json.RootElement.GetProperty("status").GetString().ShouldBe(status);
+        var payload = json.RootElement.GetProperty("payload");
+        payload.EnumerateObject().Select(p => p.Name).ShouldBe(payloadKeys.Split(',', StringSplitOptions.RemoveEmptyEntries));
+        payload.EnumerateObject().Select(p => p.Value.ValueKind)
+            .ShouldBe(preview.Payload.EnumerateObject().Select(p => p.Value.ValueKind));
+        if (eventType == ServerEventTypes.SaveUploaded)
+            payload.GetProperty("platforms").GetInt32().ShouldBe((int)SDK.Enums.RuntimePlatform.Windows);
+        (await test.Webhooks.GetDeliveriesAsync(otherId)).ShouldBeEmpty();
+        (await test.Webhooks.GetDeliveryBodyAsync(otherId, deliveryId)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task InvalidOrDisabledTestEventsDoNotQueueDeliveries()
+    {
+        await using var test = await TestHost.CreateAsync();
+        var id = await test.Webhooks.SaveAsync(null, Edit(ServerEventTypes.GameCreated));
+        await Should.ThrowAsync<ArgumentException>(() => test.Webhooks.TestAsync(id, "custom.unknown"));
+        var disabled = Edit(ServerEventTypes.GameCreated);
+        disabled.Enabled = false;
+        disabled.Secret = null;
+        await test.Webhooks.SaveAsync(id, disabled);
+        await Should.ThrowAsync<ArgumentException>(() => test.Webhooks.TestAsync(id, ServerEventTypes.GameCreated));
+        (await test.Webhooks.GetDeliveriesAsync(id)).ShouldBeEmpty();
     }
 
     [Theory]
@@ -314,7 +464,8 @@ public sealed class WebhookTests
     public async Task WebhookApiRequiresAnAdministratorAndNeverReturnsTheSecret(string? role, HttpStatusCode expected)
     {
         await using var test = await TestHost.CreateAsync();
-        await test.Webhooks.SaveAsync(null, Edit(ServerEventTypes.GameCreated));
+        var subscriptionId = await test.Webhooks.SaveAsync(null, Edit(ServerEventTypes.GameCreated));
+        var deliveryId = await test.Webhooks.TestAsync(subscriptionId);
         var builder = WebApplication.CreateBuilder();
         builder.WebHost.UseTestServer();
         builder.Logging.ClearProviders();
@@ -337,10 +488,40 @@ public sealed class WebhookTests
         var body = await response.Content.ReadAsStringAsync();
         body.ShouldNotContain(Secret);
         body.ShouldNotContain("protectedSecret");
+        using var payloadResponse = await client.GetAsync($"/api/Webhooks/{subscriptionId}/Deliveries/{deliveryId}/Body");
+        payloadResponse.StatusCode.ShouldBe(expected);
+        if (expected == HttpStatusCode.OK)
+        {
+            using var subscriptions = JsonDocument.Parse(body);
+            subscriptions.RootElement[0].GetProperty("hasSigningSecret").GetBoolean().ShouldBeTrue();
+            var unsignedEdit = Edit(ServerEventTypes.GameCreated);
+            unsignedEdit.Secret = null;
+            using var createUnsigned = await client.PostAsJsonAsync("/api/Webhooks", unsignedEdit);
+            createUnsigned.StatusCode.ShouldBe(HttpStatusCode.OK);
+            using var created = JsonDocument.Parse(await createUnsigned.Content.ReadAsStringAsync());
+            var unsignedId = created.RootElement.GetProperty("id").GetGuid();
+            (await test.Webhooks.GetAsync()).Single(s => s.Id == unsignedId).HasSigningSecret.ShouldBeFalse();
+            unsignedEdit.ClearSecret = true;
+            using var removeSigning = await client.PutAsJsonAsync($"/api/Webhooks/{subscriptionId}", unsignedEdit);
+            removeSigning.StatusCode.ShouldBe(HttpStatusCode.OK);
+            (await test.Webhooks.GetAsync()).Single(s => s.Id == subscriptionId).HasSigningSecret.ShouldBeFalse();
+
+            (await payloadResponse.Content.ReadAsStringAsync())
+                .ShouldBe(await test.Webhooks.GetDeliveryBodyAsync(subscriptionId, deliveryId));
+            using var selectedTest = await client.PostAsync($"/api/Webhooks/{subscriptionId}/Test?eventType={ServerEventTypes.GameInstallFailed}", null);
+            selectedTest.StatusCode.ShouldBe(HttpStatusCode.Accepted);
+            (await test.Webhooks.GetDeliveriesAsync(subscriptionId)).ShouldContain(d => d.EventType == ServerEventTypes.GameInstallFailed);
+            using var invalidTest = await client.PostAsync($"/api/Webhooks/{subscriptionId}/Test?eventType=unknown", null);
+            invalidTest.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
+            using var missingPayload = await client.GetAsync($"/api/Webhooks/{Guid.NewGuid()}/Deliveries/{deliveryId}/Body");
+            missingPayload.StatusCode.ShouldBe(HttpStatusCode.NotFound);
+        }
         if (expected != HttpStatusCode.OK)
         {
             using var write = await client.PostAsJsonAsync("/api/Webhooks", Edit(ServerEventTypes.GameCreated));
             write.StatusCode.ShouldBe(expected);
+            using var sendTest = await client.PostAsync($"/api/Webhooks/{subscriptionId}/Test?eventType={ServerEventTypes.GameCreated}", null);
+            sendTest.StatusCode.ShouldBe(expected);
         }
     }
 
@@ -438,7 +619,7 @@ public sealed class WebhookTests
         edit.Endpoint = endpoint;
         edit.TimeoutSeconds = timeout;
         edit.MaxAttempts = attempts;
-        Should.Throw<ArgumentException>(() => WebhookService.Validate(edit, creating: true));
+        Should.Throw<ArgumentException>(() => WebhookService.Validate(edit));
     }
 
     private static WebhookEdit Edit(string type) => new()
@@ -446,7 +627,7 @@ public sealed class WebhookTests
         Name = "Example", Endpoint = "https://example.com/events", Secret = Secret, EventTypes = [type],
     };
 
-    private sealed record ReceivedRequest(string Body, string Signature, string Timestamp, string EventId);
+    private sealed record ReceivedRequest(string Body, string? Signature, string Timestamp, string EventId);
 
     private sealed class RecordingTransport : IServerEventTransport
     {
@@ -486,7 +667,7 @@ public sealed class WebhookTests
         protected override async Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken cancellationToken)
         {
             var received = new ReceivedRequest(await request.Content!.ReadAsStringAsync(cancellationToken),
-                request.Headers.GetValues("X-LANCommander-Signature").Single(),
+                request.Headers.TryGetValues("X-LANCommander-Signature", out var signatures) ? signatures.Single() : null,
                 request.Headers.GetValues("X-LANCommander-Timestamp").Single(),
                 request.Headers.GetValues("X-LANCommander-Event-Id").Single());
             Requests.Enqueue(received);

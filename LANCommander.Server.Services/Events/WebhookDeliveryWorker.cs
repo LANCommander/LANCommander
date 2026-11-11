@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.SDK.Events;
 using LANCommander.Server.Plugins.Messaging;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Hosting;

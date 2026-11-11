@@ -1,6 +1,6 @@
 using LANCommander.SDK.Plugins;
 using LANCommander.Server.Plugins;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 

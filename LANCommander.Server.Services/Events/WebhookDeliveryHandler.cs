@@ -82,8 +82,6 @@ public sealed class WebhookDeliveryHandler(
 
         try
         {
-            var secret = protectionProvider.CreateProtector("LANCommander.Webhooks.Secrets.v1")
-                .Unprotect(subscription.ProtectedSecret);
             var timestamp = DateTimeOffset.UtcNow.ToUnixTimeSeconds().ToString(CultureInfo.InvariantCulture);
             using var request = new HttpRequestMessage(HttpMethod.Post, subscription.Endpoint);
             request.Content = new ByteArrayContent(Encoding.UTF8.GetBytes(delivery.Body));
@@ -91,7 +89,12 @@ public sealed class WebhookDeliveryHandler(
             request.Headers.Add("X-LANCommander-Event-Id", delivery.EventId.ToString());
             request.Headers.Add("X-LANCommander-Delivery-Id", delivery.Id.ToString());
             request.Headers.Add("X-LANCommander-Timestamp", timestamp);
-            request.Headers.Add("X-LANCommander-Signature", Sign(secret, timestamp, delivery.Body));
+            if (!string.IsNullOrEmpty(subscription.ProtectedSecret))
+            {
+                var secret = protectionProvider.CreateProtector("LANCommander.Webhooks.Secrets.v1")
+                    .Unprotect(subscription.ProtectedSecret);
+                request.Headers.Add("X-LANCommander-Signature", Sign(secret, timestamp, delivery.Body));
+            }
 
             using var timeout = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
             timeout.CancelAfter(TimeSpan.FromSeconds(subscription.TimeoutSeconds));

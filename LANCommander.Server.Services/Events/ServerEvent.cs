@@ -1,5 +1,5 @@
 using LANCommander.Server.Data;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 
 namespace LANCommander.Server.Services.Events;
 

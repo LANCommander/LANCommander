@@ -1,3 +1,4 @@
+using LANCommander.SDK.Events;
 using LANCommander.Server.Plugins.Messaging;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;

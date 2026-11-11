@@ -4,12 +4,39 @@ sidebar_label: Webhooks
 
 # Server events and webhooks
 
-Administrators can create subscriptions under **Settings > Integrations > Webhooks**.
-Set a name, HTTP(S) endpoint, signing secret (32-1024 characters), event types,
-timeout (1-30 seconds), and maximum attempts (1-10, including the first attempt).
-Use a unique random signing secret for each subscription. Keep the same secret at
-the receiver; LANCommander never returns a saved secret. Leave the secret field
-blank when editing to preserve it.
+Administrators can manage subscriptions under **Settings > Integrations > Webhooks**.
+The list shows registered webhooks. Select **Add webhook** to create one, or click
+a webhook's name to open its editor. Each row has an **Actions** menu with **Edit**,
+**Run test**, **Deliveries**, and **Delete**. Deletion requires confirmation and
+removes the webhook's pending deliveries and history.
+
+Set a name, HTTP(S) endpoint, event types, timeout (1-30 seconds), and maximum
+attempts (1-10, including the first attempt). A signing secret is optional. When
+used, choose a unique random secret of 32-1024 characters for each subscription
+and configure the same secret at the receiver. LANCommander never returns a saved
+secret. Leave the field blank when editing to preserve it, or select **Remove
+existing signing secret** to disable signing.
+
+Without a signing secret, deliveries have no signature and the receiver cannot
+use LANCommander to verify their authenticity or integrity.
+
+The dedicated editor has **General** and **Deliveries** sections. General groups
+short settings such as timeout and attempt limits in paired columns. Use the
+searchable event picker to add event tags and remove a tag to unsubscribe.
+
+The General form includes **Preview and test event**. Select a lifecycle
+event to see its example JSON envelope and payload before saving. **Save and send
+test** saves the current form and queues that example for this endpoint only,
+regardless of the subscription's event filter. The subscription must be enabled.
+Examples use synthetic data, do not change games or other resources, and may
+trigger automation at the receiving endpoint. IDs and timestamps are generated
+when the test is queued, so they differ from the preview.
+
+The queued delivery opens on the **Deliveries** page. Use **Refresh** to see its status,
+attempts, HTTP status, and errors. **View JSON** on any delivery shows its stored
+request body, including the event ID and event timestamp, pretty-printed with syntax
+highlighting. Use **Show raw** to see the exact bytes that were sent (for example,
+when verifying signatures).
 
 URLs cannot contain embedded credentials, query strings, or fragments. HTTPS is
 recommended; HTTP and private network addresses are permitted for trusted LAN
@@ -20,16 +47,21 @@ disabled for webhook delivery.
 
 ## Event envelope
 
-Event names are stable, lowercase, dot-separated names describing a resource and
-its completed transition. Times are UTC; IDs are UUIDs. Consumers should ignore
-unknown properties to allow additive schema changes.
+Event names are stable, lowercase, dot-separated names formatted as
+`{source}.{resource}.{action}`. The source prefix identifies where the action
+originated and always matches the envelope's `source` property: `server` for
+actions performed on the server (for example an administrator creating a game or
+uploading an archive), and `launcher` for actions performed in a launcher and
+reported to the server (installs, play sessions, and save uploads). Times are UTC;
+IDs are UUIDs. Consumers should ignore unknown properties to allow additive schema
+changes.
 
 ```json
 {
   "eventId": "8071d99c-cd01-495e-95c7-28355a10a814",
-  "eventType": "game.archive.upload_completed",
+  "eventType": "server.game.archive.upload_completed",
   "occurredAt": "2026-11-09T05:00:00Z",
-  "source": "LANCommander.Server",
+  "source": "server",
   "actorId": null,
   "targetType": "game",
   "targetId": "56ad8a83-31e7-437b-8882-45c5dcf47e28",
@@ -45,21 +77,21 @@ unknown properties to allow additive schema changes.
 
 `actorId` identifies the authenticated user when known, otherwise it is null.
 `correlationId` is optional and currently null for built-in events. The status is
-`completed`, except for `game.install.failed`, which uses `failed`. Targets
+`completed`, except for `launcher.game.install.failed`, which uses `failed`. Targets
 identify the game, user, dedicated server, tool, or redistributable, not a local
 file path.
 
 | Events | Payload |
 | --- | --- |
-| `game.created` | `title` |
-| `game.archive.upload_completed` | `archiveId`, `gameVersionId`, `version` |
-| `game.play.started` | `sessionId`, `start` |
-| `game.play.ended` | `sessionId`, `start`, `end`, `timedOut` |
-| `user.login`, `user.logout` | Empty object |
-| `game.save.uploaded` | `saveId`, `size`, `platforms` |
-| `server.started`, `server.stopped` | `serverName` |
-| `game.install.completed`, `game.install.failed`, `game.uninstall.completed`, `tool.installed`, `redistributable.installed` | `reportedByLauncher: true` |
-| `webhook.test` | `message` |
+| `server.game.created` | `title` |
+| `server.game.archive.upload_completed` | `archiveId`, `gameVersionId`, `version` |
+| `launcher.game.play.started` | `sessionId`, `start` |
+| `launcher.game.play.ended` | `sessionId`, `start`, `end`, `timedOut` |
+| `server.user.login`, `server.user.logout` | Empty object |
+| `launcher.game.save.uploaded` | `saveId`, `size`, `platforms` |
+| `server.game_server.started`, `server.game_server.stopped` | `serverName` |
+| `launcher.game.install.completed`, `launcher.game.install.failed`, `launcher.game.uninstall.completed`, `launcher.tool.installed`, `launcher.redistributable.installed` | `reportedByLauncher: true` |
+| `server.webhook.test` | `message` |
 
 Game creation, archive uploads, and play sessions reuse the server's existing
 plugin lifecycle events. Archive completion is raised only after an uploaded
@@ -93,9 +125,9 @@ Each POST contains UTF-8 JSON with these headers:
 | `X-LANCommander-Event-Id` | Stable event ID across subscriptions and retries |
 | `X-LANCommander-Delivery-Id` | Stable ID for this subscription's delivery |
 | `X-LANCommander-Timestamp` | Unix timestamp in seconds, regenerated for each attempt |
-| `X-LANCommander-Signature` | `sha256=` followed by lowercase hexadecimal HMAC-SHA256 |
+| `X-LANCommander-Signature` | When signing is configured, `sha256=` followed by lowercase hexadecimal HMAC-SHA256 |
 
-The signature covers the UTF-8 bytes of `timestamp + "." + raw_request_body`,
+When configured, the signature covers the UTF-8 bytes of `timestamp + "." + raw_request_body`,
 using the UTF-8 signing secret as the key. Verify against the **raw bytes**, not
 reformatted/deserialized JSON; compare signatures in constant time, reject stale
 timestamps (for example, over five minutes old), and deduplicate by delivery ID.
@@ -140,7 +172,7 @@ Edits apply to pending deliveries, including key rotation and destination change
 Deleting a subscription removes its pending deliveries and history. History is
 otherwise retained until the subscription is deleted.
 
-**Test** queues a signed `webhook.test` event for that subscription only,
+The subscription list's **Run test** action queues a `server.webhook.test` event for that subscription only,
 regardless of its event filter; disabled subscriptions cannot be tested. Refresh
 the delivery list to see the result. A test payload has `targetType: "webhook"`,
 the subscription's ID as `targetId`, and:
@@ -148,6 +180,12 @@ the subscription's ID as `targetId`, and:
 ```json
 { "message": "LANCommander test webhook" }
 ```
+
+API callers can select a lifecycle example with
+`POST /api/Webhooks/{id}/Test?eventType=server.game.created`. Omitting `eventType`
+preserves the `server.webhook.test` connectivity test. Retrieve an exact request body with
+`GET /api/Webhooks/{id}/Deliveries/{deliveryId}/Body`; this endpoint also requires
+an administrator and returns 404 if the delivery does not belong to the subscription.
 
 Administrator API endpoints are `/api/Webhooks`, `/api/Webhooks/EventTypes`,
 `/api/Webhooks/{id}`, `/api/Webhooks/{id}/Test`, and
@@ -159,20 +197,33 @@ DELETE. Creation/edit accepts:
   "name": "Archive announcements",
   "endpoint": "https://receiver.example/events",
   "secret": "replace-with-a-unique-random-secret-at-least-32-characters",
-  "eventTypes": ["game.archive.upload_completed"],
+  "eventTypes": ["server.game.archive.upload_completed"],
   "enabled": true,
   "timeoutSeconds": 10,
   "maxAttempts": 5
 }
 ```
 
+Omit `secret` or leave it empty to create an unsigned subscription. On edit, an
+omitted or empty secret preserves the existing one; set `clearSecret` to `true`
+without a replacement secret to remove it. The subscription response reports
+`hasSigningSecret` without revealing the secret. Signing changes apply to pending
+deliveries on their next attempt.
+
 Secrets are encrypted with ASP.NET Core Data Protection. Preserve the server
-identity's Data Protection key ring as well a## Architecture and plugins
+identity's Data Protection key ring as well as the database when backing up or
+moving the server. If a configured secret cannot be decrypted, delivery fails
+with "Signing key unavailable" rather than being sent unsigned.
+
+## Architecture and plugins
 
 Core producers use `IServerEventPublisher`, not HTTP or a notification provider.
 The common `ServerEvent` message is carried by Rebus using System.Text.Json.
-`ServerEvent`, `ServerEventTypes`, and the extension points below are in the
-`LANCommander.Server.Plugins.Messaging` namespace of the server plugin package.
+The `ServerEvent` envelope and the `ServerEventTypes` / `ServerEventSources`
+constants are in the `LANCommander.SDK.Events` namespace of the SDK package, so
+launchers, launcher plugins, and .NET webhook receivers can share them. The
+extension points below are in the `LANCommander.Server.Plugins.Messaging`
+namespace of the server plugin package.
 Register implementations from a plugin's `ConfigureServices`.
 
 **Consumers.** Implement `IServerEventConsumer` to react to every published event,

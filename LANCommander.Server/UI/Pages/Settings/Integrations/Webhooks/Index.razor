@@ -1,0 +1,135 @@
+@page "/Settings/Integrations/Webhooks"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject WebhookService WebhookService
+@inject NavigationManager Navigation
+@inject AlertService Alerts
+@inject NotificationService Notifications
+
+<PageHeader Title="Webhooks" Subtitle="Send lifecycle events to your integrations.">
+    <Extra>
+        <Button Icon="IconType.ArrowClockwise" OnClick="RefreshAsync" Disabled="_loading">Refresh</Button>
+        <Button Primary Icon="IconType.Plus" Href="/Settings/Integrations/Webhooks/Add">Add webhook</Button>
+    </Extra>
+</PageHeader>
+
+<PageContent Loading="_loading">
+    @if (_loadError)
+    {
+        <Alert Danger Title="Webhooks could not be loaded">
+            Check the server database and migrations, then refresh to try again.
+        </Alert>
+    }
+    else
+    {
+        <Table TItem="WebhookInformation" Items="_subscriptions" Key="s => s.Id" NoPaging EmptyText="No webhooks registered"
+               OnRowDoubleClick="@(s => Navigation.NavigateTo($"/Settings/Integrations/Webhooks/{s.Id}/General"))">
+            <Columns>
+                <TemplateColumn Title="Name">
+                    <a href="@($"/Settings/Integrations/Webhooks/{context.Id}/General")">@context.Name</a>
+                </TemplateColumn>
+                <TemplateColumn Title="Endpoint" CellClass="webhook-endpoint">@context.Endpoint</TemplateColumn>
+                <TemplateColumn Title="Events">@context.EventTypes.Length</TemplateColumn>
+                <TemplateColumn Title="Status">
+                    <Tag Success="context.Enabled">@(context.Enabled ? "Enabled" : "Disabled")</Tag>
+                </TemplateColumn>
+                <TemplateColumn Title="Signing">@(context.HasSigningSecret ? "Signed" : "Unsigned")</TemplateColumn>
+                <ActionsColumn TItem="WebhookInformation" Width="52px">
+                    <Dropdown Disabled="@(_busyId == context.Id)">
+                        <ChildContent>
+                            <Button Text Icon="IconType.DotsThreeVertical" Disabled="@(_busyId == context.Id)"
+                                    aria-label="@($"Actions for {context.Name}")" title="Actions" />
+                        </ChildContent>
+                        <Overlay>
+                            <Menu>
+                                <MenuItem Icon="IconType.PencilSimple" Href="@($"/Settings/Integrations/Webhooks/{context.Id}/General")">Edit</MenuItem>
+                                <MenuItem Icon="IconType.PaperPlaneTilt" Disabled="@(!context.Enabled || _busyId.HasValue)"
+                                          OnClick="() => RunAsync(context.Id)">Run test</MenuItem>
+                                <MenuItem Icon="IconType.ClockCounterClockwise" Href="@($"/Settings/Integrations/Webhooks/{context.Id}/Deliveries")">Deliveries</MenuItem>
+                                <MenuDivider />
+                                <MenuItem Icon="IconType.Trash" Danger Disabled="_busyId.HasValue" OnClick="() => DeleteAsync(context)">Delete</MenuItem>
+                            </Menu>
+                        </Overlay>
+                    </Dropdown>
+                </ActionsColumn>
+            </Columns>
+        </Table>
+    }
+</PageContent>
+
+@code {
+    IReadOnlyList<WebhookInformation> _subscriptions = [];
+    bool _loading = true;
+    bool _loadError;
+    Guid? _busyId;
+
+    protected override Task OnInitializedAsync() => RefreshAsync();
+
+    async Task RefreshAsync()
+    {
+        _loading = true;
+        _loadError = false;
+        try
+        {
+            _subscriptions = await WebhookService.GetAsync();
+        }
+        catch
+        {
+            _loadError = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    async Task RunAsync(Guid id)
+    {
+        if (_busyId.HasValue)
+            return;
+        _busyId = id;
+        try
+        {
+            var deliveryId = await WebhookService.TestAsync(id);
+            Notifications.Success("Test queued.");
+            Navigation.NavigateTo($"/Settings/Integrations/Webhooks/{id}/Deliveries?delivery={deliveryId}");
+        }
+        catch (ArgumentException ex)
+        {
+            Notifications.Error(ex.Message);
+        }
+        catch
+        {
+            Notifications.Error("Could not queue the test webhook.");
+        }
+        finally
+        {
+            _busyId = null;
+        }
+    }
+
+    async Task DeleteAsync(WebhookInformation subscription)
+    {
+        if (_busyId.HasValue)
+            return;
+        if (!await Alerts.ConfirmAsync($"Delete {subscription.Name}, including its pending deliveries and history? This cannot be undone.",
+                "Delete webhook", "Delete", danger: true))
+            return;
+        _busyId = subscription.Id;
+        try
+        {
+            if (await WebhookService.DeleteAsync(subscription.Id))
+                Notifications.Success("Webhook deleted.");
+            else
+                Notifications.Error("The webhook no longer exists.");
+            await RefreshAsync();
+        }
+        catch
+        {
+            Notifications.Error("Could not delete the webhook.");
+        }
+        finally
+        {
+            _busyId = null;
+        }
+    }
+}

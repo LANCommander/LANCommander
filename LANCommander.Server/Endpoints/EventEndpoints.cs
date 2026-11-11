@@ -2,7 +2,7 @@ using System.Security.Claims;
 using LANCommander.SDK.Models;
 using LANCommander.Server.Data;
 using LANCommander.Server.Services.Events;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 using Microsoft.EntityFrameworkCore;
 
 namespace LANCommander.Server.Endpoints;

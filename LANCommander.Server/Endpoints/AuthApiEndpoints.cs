@@ -108,7 +108,7 @@ public static class AuthApiEndpoints
         {
             await userService.SignOut();
             if (Guid.TryParse(userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
-                await eventPublisher.PublishAsync(Plugins.Messaging.ServerEventTypes.UserLogout, "user", userId, new { }, userId);
+                await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.UserLogout, "user", userId, new { }, userId);
         }
 
         logger.LogInformation("Logged out user {UserName}", userPrincipal?.Identity?.Name);

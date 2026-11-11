@@ -1,7 +1,7 @@
 using System.Security.Claims;
 using System.Text.Json;
 using LANCommander.Server.Data;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
@@ -27,7 +27,7 @@ public sealed class ServerEventPublisher(
         actorId ??= Guid.TryParse(httpContextAccessor.HttpContext?.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)
             ? userId : null;
 
-        var message = new ServerEvent(Guid.NewGuid(), eventType, DateTime.UtcNow, "LANCommander.Server",
+        var message = new ServerEvent(Guid.NewGuid(), eventType, DateTime.UtcNow, ServerEventTypes.GetSource(eventType),
             actorId, targetType, targetId, status, correlationId, JsonSerializer.SerializeToElement(payload, JsonOptions));
 
         try

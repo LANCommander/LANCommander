@@ -1,0 +1,133 @@
+@page "/Settings/Integrations/Webhooks/{id:guid}/Deliveries"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject WebhookService WebhookService
+@inject NotificationService Notifications
+
+<WebhookEditView Id="Id" Subscription="_subscription" Title="Deliveries" Loading="_loading">
+    <HeaderExtra>
+        @if (_subscription != null)
+        {
+            <Button Icon="IconType.PaperPlaneTilt" OnClick="RunAsync" Loading="_sending" Disabled="@(!_subscription.Enabled || _loading)">Run test</Button>
+        }
+        <Button Icon="IconType.ArrowClockwise" OnClick="RefreshAsync" Disabled="_loading">Refresh</Button>
+    </HeaderExtra>
+    <ChildContent>
+        @if (_loadError)
+        {
+            <Alert Danger Title="Deliveries could not be loaded">Refresh to try again.</Alert>
+        }
+        else if (_subscription == null)
+        {
+            <NotFound SubTitle="This webhook no longer exists." />
+        }
+        else
+        {
+            <p class="edit-form-intro">Latest 100 deliveries. Refresh to update pending attempts. Deleting a webhook also deletes its history.</p>
+            <Table TItem="WebhookDeliveryInformation" Items="_deliveries" Key="d => d.Id" NoPaging ColumnPicker EmptyText="No deliveries yet">
+                <Columns>
+                    <TemplateColumn Title="Created (UTC)">@context.CreatedOn.ToString("u")</TemplateColumn>
+                    <TemplateColumn Title="Event">@context.EventType</TemplateColumn>
+                    <TemplateColumn Title="Status">@context.Status</TemplateColumn>
+                    <TemplateColumn Title="Attempts">@context.Attempts</TemplateColumn>
+                    <TemplateColumn Title="HTTP / error">@context.StatusCode @context.Error</TemplateColumn>
+                    <TemplateColumn Title="Next attempt (UTC)">@(context.Status == Data.Models.WebhookDeliveryStatus.Pending ? context.NextAttemptOn.ToString("u") : "-")</TemplateColumn>
+                    <TemplateColumn Title="Delivery ID" Hide>@context.Id</TemplateColumn>
+                    <ActionsColumn TItem="WebhookDeliveryInformation">
+                        <Button Text Icon="IconType.Code" OnClick="@(() => ShowPayloadAsync(context.Id))" aria-label="@($"View JSON for delivery {context.Id}")">View JSON</Button>
+                    </ActionsColumn>
+                </Columns>
+            </Table>
+            @if (_deliveryBody != null)
+            {
+                <Divider />
+                <Typography Strong>Request JSON for delivery @_selectedId</Typography>
+                <p class="edit-form-intro">The stored request body, formatted for reading. Use Show raw to see the exact bytes that were sent.</p>
+                                <WebhookJson Json="@_deliveryBody" Label="Delivery request JSON" AllowRaw />
+            }
+        }
+    </ChildContent>
+</WebhookEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [SupplyParameterFromQuery(Name = "delivery")] public Guid? RequestedDeliveryId { get; set; }
+
+    WebhookInformation? _subscription;
+    IReadOnlyList<WebhookDeliveryInformation> _deliveries = [];
+    Guid? _selectedId;
+    string? _deliveryBody;
+    bool _loading = true;
+    bool _loadError;
+    bool _sending;
+
+    protected override Task OnParametersSetAsync()
+    {
+        _selectedId = RequestedDeliveryId;
+        return RefreshAsync();
+    }
+
+    async Task RefreshAsync()
+    {
+        _loading = true;
+        _loadError = false;
+        _subscription = null;
+        _deliveries = [];
+        _deliveryBody = null;
+        try
+        {
+            _subscription = await WebhookService.GetAsync(Id);
+            _deliveries = _subscription == null ? [] : await WebhookService.GetDeliveriesAsync(Id);
+            if (_subscription != null && _selectedId.HasValue)
+                await ShowPayloadAsync(_selectedId.Value);
+        }
+        catch
+        {
+            _loadError = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    async Task ShowPayloadAsync(Guid id)
+    {
+        _selectedId = id;
+        _deliveryBody = null;
+        try
+        {
+            _deliveryBody = await WebhookService.GetDeliveryBodyAsync(Id, id);
+            if (_deliveryBody == null)
+                Notifications.Error("The delivery no longer exists.");
+        }
+        catch
+        {
+            Notifications.Error("Could not load the webhook payload.");
+        }
+    }
+
+    async Task RunAsync()
+    {
+        if (_sending)
+            return;
+        _sending = true;
+        try
+        {
+            _selectedId = await WebhookService.TestAsync(Id);
+            await RefreshAsync();
+            Notifications.Success("Test queued. Refresh to see the result.");
+        }
+        catch (ArgumentException ex)
+        {
+            Notifications.Error(ex.Message);
+        }
+        catch
+        {
+            Notifications.Error("Could not queue the test webhook.");
+        }
+        finally
+        {
+            _sending = false;
+        }
+    }
+}

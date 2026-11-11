@@ -1,6 +1,6 @@
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Events;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 using Microsoft.AspNetCore.Authorization;
 
 namespace LANCommander.Server.Endpoints;
@@ -18,11 +18,14 @@ public static class WebhookEndpoints
         group.MapDelete("/{id:guid}", async (Guid id, WebhookService service) =>
             await service.DeleteAsync(id) ? Results.NoContent() : Results.NotFound());
         group.MapGet("/{id:guid}/Deliveries", (Guid id, WebhookService service) => service.GetDeliveriesAsync(id));
-        group.MapPost("/{id:guid}/Test", async (Guid id, WebhookService service) =>
+        group.MapGet("/{id:guid}/Deliveries/{deliveryId:guid}/Body", async (Guid id, Guid deliveryId, WebhookService service) =>
+            await service.GetDeliveryBodyAsync(id, deliveryId) is { } body
+                ? Results.Text(body, "application/json") : Results.NotFound());
+        group.MapPost("/{id:guid}/Test", async (Guid id, string? eventType, WebhookService service) =>
         {
             try
             {
-                return Results.Accepted(value: new { deliveryId = await service.TestAsync(id) });
+                return Results.Accepted(value: new { deliveryId = await service.TestAsync(id, eventType ?? ServerEventTypes.Test) });
             }
             catch (KeyNotFoundException)
             {

@@ -1,0 +1,127 @@
+@using System.Text
+@using System.Text.Encodings.Web
+@using System.Text.Json
+
+@if (AllowRaw && _isJson)
+{
+    <div class="webhook-json-toolbar">
+        <Button Text Small OnClick="@(() => _showRaw = !_showRaw)" aria-pressed="@_showRaw.ToString().ToLowerInvariant()">
+            @(_showRaw ? "Show formatted" : "Show raw")
+        </Button>
+    </div>
+}
+<pre class="webhook-json" tabindex="0" aria-label="@Label"><code>@if (_showRaw || !_isJson) {@Json} else { foreach (var token in _tokens) { if (token.Class == null) {@token.Text} else {<span class="@token.Class">@token.Text</span>} } }</code></pre>
+
+@code {
+    [Parameter, EditorRequired] public string Json { get; set; } = "";
+    [Parameter] public string Label { get; set; } = "JSON";
+    [Parameter] public bool AllowRaw { get; set; }
+
+    readonly record struct Token(string Text, string? Class);
+
+    static readonly JsonWriterOptions WriterOptions = new()
+    {
+        Indented = true,
+        Encoder = JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
+    string? _formattedSource;
+    List<Token> _tokens = [];
+    bool _isJson;
+    bool _showRaw;
+
+    protected override void OnParametersSet()
+    {
+        if (_formattedSource == Json)
+            return;
+
+        _formattedSource = Json;
+        _isJson = TryFormat(Json, out var formatted);
+        _tokens = _isJson ? Tokenize(formatted) : [];
+    }
+
+    static bool TryFormat(string json, out string formatted)
+    {
+        formatted = json;
+        if (string.IsNullOrWhiteSpace(json))
+            return false;
+
+        try
+        {
+            using var document = JsonDocument.Parse(json);
+            using var stream = new MemoryStream();
+            using (var writer = new Utf8JsonWriter(stream, WriterOptions))
+                document.WriteTo(writer);
+            formatted = Encoding.UTF8.GetString(stream.ToArray());
+            return true;
+        }
+        catch (JsonException)
+        {
+            return false;
+        }
+    }
+
+    static List<Token> Tokenize(string json)
+    {
+        var tokens = new List<Token>();
+        var plain = new StringBuilder();
+        var i = 0;
+
+        void FlushPlain()
+        {
+            if (plain.Length == 0)
+                return;
+            tokens.Add(new Token(plain.ToString(), null));
+            plain.Clear();
+        }
+
+        while (i < json.Length)
+        {
+            var c = json[i];
+            if (c == '"')
+            {
+                var start = i++;
+                while (i < json.Length && json[i] != '"')
+                    i += json[i] == '\\' ? 2 : 1;
+                i = Math.Min(i + 1, json.Length);
+
+                var next = i;
+                while (next < json.Length && char.IsWhiteSpace(json[next]))
+                    next++;
+
+                FlushPlain();
+                tokens.Add(new Token(json[start..i], next < json.Length && json[next] == ':' ? "webhook-json-key" : "webhook-json-string"));
+            }
+            else if (c == '-' || char.IsDigit(c))
+            {
+                var start = i;
+                while (i < json.Length && (char.IsDigit(json[i]) || json[i] is '-' or '+' or '.' or 'e' or 'E'))
+                    i++;
+                FlushPlain();
+                tokens.Add(new Token(json[start..i], "webhook-json-number"));
+            }
+            else if (char.IsLetter(c))
+            {
+                var start = i;
+                while (i < json.Length && char.IsLetter(json[i]))
+                    i++;
+                FlushPlain();
+                tokens.Add(new Token(json[start..i], "webhook-json-literal"));
+            }
+            else if (c is '{' or '}' or '[' or ']' or ':' or ',')
+            {
+                FlushPlain();
+                tokens.Add(new Token(c.ToString(), "webhook-json-punctuation"));
+                i++;
+            }
+            else
+            {
+                plain.Append(c);
+                i++;
+            }
+        }
+
+        FlushPlain();
+        return tokens;
+    }
+}

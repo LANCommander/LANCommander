@@ -1,4 +1,8 @@
-﻿using LANCommander.Server.UI.Tests.Pages;
+using System.Text.RegularExpressions;
+using LANCommander.SDK.Events;
+using LANCommander.Server.Services.Events;
+using LANCommander.Server.UI.Tests.Pages;
+using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Playwright;
 using Xunit.Abstractions;
 
@@ -64,6 +68,53 @@ public class AdminNavigationTests : IAsyncLifetime
         Assert.Contains(menuItems, m => m.Contains("Issues"));
         Assert.Contains(menuItems, m => m.Contains("Files"));
         Assert.Contains(menuItems, m => m.Contains("Settings"));
+    }
+
+    [Theory]
+    [InlineData(1440)]
+    [InlineData(390)]
+    public async Task Webhooks_UseDedicatedPagesAndResponsiveEditor(int width)
+    {
+        await _page.SetViewportSizeAsync(width, 900);
+        using var scope = _fixture.Factory.RealServices.CreateScope();
+        var webhooks = scope.ServiceProvider.GetRequiredService<WebhookService>();
+        var name = $"Navigation webhook ({width})";
+        var id = await webhooks.SaveAsync(null, new WebhookEdit
+        {
+            Name = name,
+            Endpoint = "http://127.0.0.1:1/events",
+            EventTypes = [ServerEventTypes.GameCreated],
+        });
+        try
+        {
+            await _page.GotoAsync("/Settings/Integrations/Webhooks");
+            await _page.GetByRole(AriaRole.Button, new() { Name = $"Actions for {name}", Exact = true }).ClickAsync();
+            await _page.GetByRole(AriaRole.Link, new() { Name = "Edit", Exact = true }).ClickAsync();
+            await Assertions.Expect(_page).ToHaveURLAsync(new Regex($"/Webhooks/{id}/General$"));
+            await Assertions.Expect(_page.GetByLabel("Name")).ToHaveValueAsync(name);
+            await Assertions.Expect(_page.Locator(".lc-tags-input")).ToContainTextAsync(ServerEventTypes.GameCreated);
+
+            var pair = _page.Locator(".webhook-delivery-settings");
+            var columns = await pair.EvaluateAsync<string>("el => getComputedStyle(el).gridTemplateColumns");
+            Assert.Equal(width > 900 ? 2 : 1, columns.Split(' ', StringSplitOptions.RemoveEmptyEntries).Length);
+            var timeout = await pair.Locator("input").First.BoundingBoxAsync();
+            Assert.NotNull(timeout);
+            Assert.InRange(timeout.Width, 40, 448);
+            await ScreenshotHelper.CaptureAsync(_page, _output);
+
+            await _page.GetByRole(AriaRole.Link, new() { Name = "Webhooks", Exact = true }).ClickAsync();
+            await _page.GetByRole(AriaRole.Button, new() { Name = $"Actions for {name}", Exact = true }).ClickAsync();
+            await _page.GetByRole(AriaRole.Button, new() { Name = "Run test", Exact = true }).ClickAsync();
+            await Assertions.Expect(_page).ToHaveURLAsync(new Regex($"/Webhooks/{id}/Deliveries\\?delivery="));
+            await Assertions.Expect(_page.Locator("pre code")).ToContainTextAsync(ServerEventTypes.Test);
+            await Assertions.Expect(_page.Locator("form")).ToHaveCountAsync(0);
+            await _page.GetByRole(AriaRole.Link, new() { Name = "General", Exact = true }).ClickAsync();
+            await Assertions.Expect(_page).ToHaveURLAsync(new Regex($"/Webhooks/{id}/General$"));
+        }
+        finally
+        {
+            await webhooks.DeleteAsync(id);
+        }
     }
 
     [Fact]

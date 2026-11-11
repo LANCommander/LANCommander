@@ -7,7 +7,7 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Events;
-using LANCommander.Server.Plugins.Messaging;
+using LANCommander.SDK.Events;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;

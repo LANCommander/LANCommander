@@ -1,51 +1,9 @@
-using System.Text.Json;
+using LANCommander.SDK.Events;
 using Rebus.Config;
 using Rebus.Subscriptions;
 using Rebus.Transport;
 
 namespace LANCommander.Server.Plugins.Messaging;
-
-/// <summary>
-/// The envelope LANCommander publishes for every server lifecycle event. Consumers should
-/// ignore unknown properties and event types so additive changes stay compatible.
-/// </summary>
-public sealed record ServerEvent(
-    Guid EventId,
-    string EventType,
-    DateTime OccurredAt,
-    string Source,
-    Guid? ActorId,
-    string TargetType,
-    Guid TargetId,
-    string Status,
-    Guid? CorrelationId,
-    JsonElement Payload);
-
-public static class ServerEventTypes
-{
-    public const string GameCreated = "game.created";
-    public const string ArchiveUploaded = "game.archive.upload_completed";
-    public const string GameInstalled = "game.install.completed";
-    public const string GameInstallFailed = "game.install.failed";
-    public const string GameUninstalled = "game.uninstall.completed";
-    public const string PlayStarted = "game.play.started";
-    public const string PlayEnded = "game.play.ended";
-    public const string UserLogin = "user.login";
-    public const string UserLogout = "user.logout";
-    public const string SaveUploaded = "game.save.uploaded";
-    public const string ServerStarted = "server.started";
-    public const string ServerStopped = "server.stopped";
-    public const string ToolInstalled = "tool.installed";
-    public const string RedistributableInstalled = "redistributable.installed";
-    public const string Test = "webhook.test";
-
-    public static IReadOnlyList<string> All { get; } =
-    [
-        GameCreated, ArchiveUploaded, GameInstalled, GameInstallFailed, GameUninstalled,
-        PlayStarted, PlayEnded, UserLogin, UserLogout, SaveUploaded, ServerStarted,
-        ServerStopped, ToolInstalled, RedistributableInstalled, Test,
-    ];
-}
 
 /// <summary>
 /// Receives every published <see cref="ServerEvent"/>, for example to forward it to Slack.

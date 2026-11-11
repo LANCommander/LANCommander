@@ -1,0 +1,210 @@
+@page "/Settings/Integrations/Webhooks/Add"
+@page "/Settings/Integrations/Webhooks/{id:guid}"
+@page "/Settings/Integrations/Webhooks/{id:guid}/General"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using System.Text.Json
+@inject WebhookService WebhookService
+@inject NavigationManager Navigation
+@inject NotificationService Notifications
+
+<WebhookEditView Id="@(_subscription?.Id ?? Id)" Subscription="_subscription" Loading="_loading">
+    <HeaderExtra>
+        @if (_edit != null)
+        {
+            @if (_dirty)
+            {
+                <span class="edit-unsaved" role="status"><span class="edit-unsaved-dot" aria-hidden="true"></span>Unsaved changes</span>
+            }
+            <Button Disabled="@(!_dirty || _saving)" OnClick="LoadAsync">Discard</Button>
+            <Button Primary Loading="_saving" OnClick="SaveAsync">Save</Button>
+        }
+    </HeaderExtra>
+    <ChildContent>
+        @if (_loadError)
+        {
+            <Alert Danger Title="The webhook could not be loaded">
+                <Button OnClick="LoadAsync">Retry</Button>
+            </Alert>
+        }
+        else if (_edit == null)
+        {
+            <NotFound SubTitle="This webhook no longer exists." />
+        }
+        else
+        {
+            <Form @ref="_form" Model="_edit" OnSubmit="SaveAsync" OnFieldChanged="_ => _dirty = true" Loading="_saving" Class="edit-form">
+                <div class="edit-form-pair">
+                    <FormItem Label="Name" Required><TextInput @bind-Value="_edit.Name" /></FormItem>
+                    <FormItem Label="Endpoint" Required Help="HTTP(S) URL. Use HTTPS outside a trusted LAN.">
+                        <TextInput @bind-Value="_edit.Endpoint" />
+                    </FormItem>
+                </div>
+                <Switch @bind-Value="_edit.Enabled" Class="edit-form-switch">
+                    <span class="edit-form-switch-title">Enabled</span>
+                    <span class="edit-form-switch-help">Deliver matching events to this endpoint. Failed deliveries retry automatically.</span>
+                </Switch>
+                <FormItem Label="Event types" Help="Search for lifecycle events to add them. Remove a tag to stop subscribing to that event.">
+                    <TagsInput TItem="string" Items="ServerEventTypes.All" Values="_edit.EventTypes" ValuesChanged="EventTypesChanged"
+                               Text="type => type" Placeholder="Add an event..." Disabled="_saving" />
+                </FormItem>
+
+                <Divider Class="edit-form-divider" />
+
+                <FormItem Label="Signing secret (optional)" Help="32-1024 characters if provided. Leave blank when editing to keep the current secret.">
+                    <PasswordInput @bind-Value="_edit.Secret" Disabled="_edit.ClearSecret" NewPassword />
+                </FormItem>
+                @if (_subscription?.HasSigningSecret == true)
+                {
+                    <FormItem>
+                        <Checkbox @bind-Value="_edit.ClearSecret" @bind-Value:after="ClearSecretChanged">Remove existing signing secret</Checkbox>
+                    </FormItem>
+                }
+                <Typography Secondary>Without a signing secret, the receiving endpoint cannot verify the authenticity or integrity of deliveries.</Typography>
+
+                <Divider Class="edit-form-divider" />
+
+                <div class="edit-form-pair webhook-delivery-settings">
+                    <FormItem Label="Timeout (seconds)" Help="1-30 seconds."><NumberInput @bind-Value="_edit.TimeoutSeconds" Min="1" Max="30" /></FormItem>
+                    <FormItem Label="Maximum attempts" Help="1-10, including the first attempt."><NumberInput @bind-Value="_edit.MaxAttempts" Min="1" Max="10" /></FormItem>
+                </div>
+
+                <Divider Class="edit-form-divider" />
+
+                <FormItem Label="Preview and test event">
+                    <Select TValue="string" Items="PreviewEventTypes" @bind-Value="_previewEventType" @bind-Value:after="ResetPreview" />
+                </FormItem>
+                <Typography Secondary>
+                    Example data only. IDs and timestamps are generated when sending.
+                    The selected event is sent only to this endpoint, regardless of its event filter.
+                    Receivers may run automation in response to test events.
+                </Typography>
+                <WebhookJson Json="@PreviewJson" Label="Example webhook JSON" />
+                <Flex>
+                    <Button Icon="IconType.PaperPlaneTilt" Loading="_saving" Disabled="@(_saving || !_edit.Enabled)" OnClick="SaveAndTestAsync">Save and send test</Button>
+                </Flex>
+                <Typography Secondary>Sending a test saves this form and opens its delivery result.</Typography>
+            </Form>
+        }
+    </ChildContent>
+</WebhookEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    WebhookInformation? _subscription;
+    WebhookEdit? _edit;
+    Form? _form;
+    Guid? _loadedId;
+    bool _loading = true;
+    bool _loadError;
+    bool _saving;
+    bool _dirty;
+    string _previewEventType = ServerEventTypes.GameCreated;
+    ServerEvent? _preview;
+    static readonly JsonSerializerOptions PreviewOptions = new(JsonSerializerDefaults.Web) { WriteIndented = true };
+    static readonly SelectItem<string>[] PreviewEventTypes = ServerEventTypes.All.Select(type => new SelectItem<string>(type, type)).ToArray();
+    string PreviewJson => JsonSerializer.Serialize(_preview ??= WebhookService.CreateTestPreview(_previewEventType, _subscription?.Id), PreviewOptions);
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_loadedId == Id)
+            return;
+        _loadedId = Id;
+        await LoadAsync();
+    }
+
+    async Task LoadAsync()
+    {
+        _loading = true;
+        _loadError = false;
+        _edit = null;
+        _subscription = null;
+        try
+        {
+            if (Id != Guid.Empty)
+                _subscription = await WebhookService.GetAsync(Id);
+            if (Id == Guid.Empty || _subscription != null)
+            {
+                _edit = _subscription == null ? new WebhookEdit() : new WebhookEdit
+                {
+                    Name = _subscription.Name, Endpoint = _subscription.Endpoint, Enabled = _subscription.Enabled,
+                    EventTypes = _subscription.EventTypes.ToArray(), TimeoutSeconds = _subscription.TimeoutSeconds,
+                    MaxAttempts = _subscription.MaxAttempts,
+                };
+                _previewEventType = _edit.EventTypes.FirstOrDefault() ?? ServerEventTypes.GameCreated;
+                ResetPreview();
+                _dirty = false;
+            }
+        }
+        catch
+        {
+            _loadError = true;
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    void ResetPreview() => _preview = null;
+
+    void EventTypesChanged(IEnumerable<string> values)
+    {
+        _edit!.EventTypes = values.ToArray();
+        _dirty = true;
+    }
+
+    void ClearSecretChanged()
+    {
+        if (_edit!.ClearSecret)
+            _edit.Secret = null;
+    }
+
+    Task SaveAsync() => SaveAsync(sendTest: false);
+    Task SaveAndTestAsync() => SaveAsync(sendTest: true);
+
+    async Task SaveAsync(bool sendTest)
+    {
+        if (_saving || _edit == null || _form?.Validate() == false)
+            return;
+        _saving = true;
+        var saved = false;
+        try
+        {
+            var isNew = _subscription == null;
+            var id = await WebhookService.SaveAsync(_subscription?.Id, _edit);
+            saved = true;
+            _subscription = await WebhookService.GetAsync(id)
+                ?? throw new KeyNotFoundException("The saved webhook no longer exists.");
+            _edit.Secret = null;
+            _edit.ClearSecret = false;
+            _dirty = false;
+            _form?.MarkAsUnmodified();
+            ResetPreview();
+            if (sendTest)
+            {
+                var deliveryId = await WebhookService.TestAsync(id, _previewEventType);
+                Notifications.Success("Webhook saved and test queued.");
+                Navigation.NavigateTo($"/Settings/Integrations/Webhooks/{id}/Deliveries?delivery={deliveryId}");
+            }
+            else
+            {
+                Notifications.Success("Webhook saved.");
+                if (isNew)
+                    Navigation.NavigateTo($"/Settings/Integrations/Webhooks/{id}/General");
+            }
+        }
+        catch (ArgumentException ex)
+        {
+            Notifications.Error(ex.Message);
+        }
+        catch
+        {
+            Notifications.Error(saved ? "Webhook saved, but the operation could not be completed. Check deliveries before trying again." : "Could not save the webhook.");
+        }
+        finally
+        {
+            _saving = false;
+        }
+    }
+}

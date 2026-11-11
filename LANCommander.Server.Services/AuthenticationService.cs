@@ -96,7 +96,7 @@ namespace LANCommander.Server.Services
                 user.Id, refreshToken,
                 DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime));
 
-            await eventPublisher.PublishAsync(LANCommander.Server.Plugins.Messaging.ServerEventTypes.UserLogin, "user", user.Id, new { }, user.Id);
+            await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.UserLogin, "user", user.Id, new { }, user.Id);
 
             return new AuthToken
             {

@@ -2469,3 +2469,28 @@ Where a plugin context is in being made ready for use.
 | `MigrationFailed` = `4` | Applying its migrations failed; the plugin is turned off until an administrator retries. |
 | `Ready` = `5` | Checked and migrated; the context can be used. |
 
+## `LANCommander.Server.Plugins.Messaging`
+
+### IServerEventConsumer
+
+`interface` — `LANCommander.Server.Plugins.Messaging.IServerEventConsumer`
+
+Receives every published `ServerEvent`, for example to forward it to Slack. Register an implementation in `IPlugin.ConfigureServices`. Consumers run in the background after the originating operation and are isolated from each other. Consumers own their own filtering, retries and persistence: an exception is logged and the event is dropped for that consumer.
+
+**Methods**
+
+- `Task HandleAsync(ServerEvent serverEvent, CancellationToken cancellationToken)`
+
+### IServerEventTransport
+
+`interface` — `LANCommander.Server.Plugins.Messaging.IServerEventTransport`
+
+Replaces the default in-memory transport that carries server events, for example with RabbitMQ. Register one implementation in `IPlugin.ConfigureServices`; when several are registered, the first is used. Every server instance sharing the transport consumes from the same queue, so each event is handled by one instance.
+
+**Methods**
+
+- `void ConfigureTransport(StandardConfigurer<ITransport> transport, string queueName)`
+  - Configures the Rebus transport, consuming from `queueName`.
+- `void ConfigureSubscriptions(StandardConfigurer<ISubscriptionStorage> subscriptions)`
+  - Configures subscription storage for transports without native publish/subscribe support. Brokers such as RabbitMQ do not need this.
+

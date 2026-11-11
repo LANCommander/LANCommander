@@ -9,6 +9,7 @@
 @inject ArchiveService ArchiveService
 @inject ImportContextFactory ImportContextFactory
 @inject AlertService Alerts
+@inject UploadTracker UploadTracker
 @inject NotificationService Notifications
 @inject ILogger<ImportUploadDialog> Logger
 
@@ -261,9 +262,32 @@
             return;
         }
 
+        foreach (var upload in UploadTracker.ActiveUploads.Values.Where(u => u.CompletedObjectKey == objectKey).ToList())
+            UploadTracker.RemoveUpload(upload.UploadId);
+
         _uploadObjectKey = objectKey;
 
-        var archivePath = await ArchiveService.GetArchiveFileLocationAsync(objectKey);
+        string archivePath;
+
+        try
+        {
+            var archive = await ArchiveService.FirstOrDefaultAsync(a => a.ObjectKey == objectKey);
+
+            if (archive == null)
+                throw new FileNotFoundException("The uploaded import file no longer exists on the server");
+
+            archivePath = await ArchiveService.GetArchiveFileLocationAsync(archive);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not locate the uploaded import file {ObjectKey}", objectKey);
+            Notifications.Error(ex, "The import file could not be found");
+
+            _uploadObjectKey = null;
+            _stage = ImportStage.Upload;
+            StateHasChanged();
+            return;
+        }
 
         await ReadImportFileAsync(archivePath);
     }
@@ -299,6 +323,8 @@
 
             _stage = ImportStage.Upload;
         }
+
+        StateHasChanged();
     }
 
     async Task OnUploadErrorAsync(string message)

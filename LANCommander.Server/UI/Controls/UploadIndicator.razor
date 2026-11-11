@@ -86,6 +86,9 @@
 
     Task UploadCompletedAsync(BackgroundUploadInfo info) => InvokeAsync(() =>
     {
+        if (!UploadTracker.ActiveUploads.ContainsKey(info.UploadId))
+            return;
+
         if (info.Type == UploadType.Import && !string.IsNullOrEmpty(info.CompletedObjectKey))
         {
             var objectKey = info.CompletedObjectKey;

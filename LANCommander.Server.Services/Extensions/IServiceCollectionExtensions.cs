@@ -25,6 +25,7 @@ public static class IServiceCollectionExtensions
 {
     public static IServiceCollection AddLANCommanderServer(this IServiceCollection services)
     {
+        Events.EventServiceCollectionExtensions.AddServerEvents(services);
         services.AddScoped<IGitHubService, GitHubService>();
         services.AddScoped<IdentityContextFactory>();
         services.AddScoped<AuthenticationService>();

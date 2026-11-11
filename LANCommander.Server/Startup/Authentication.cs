@@ -6,10 +6,13 @@ using System.Text.Json;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Events;
+using LANCommander.SDK.Events;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Authentication.OAuth.Claims;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.IdentityModel.Protocols.OpenIdConnect;
@@ -23,6 +26,26 @@ public static class Authentication
     public static WebApplicationBuilder ConfigureAuthentication(this WebApplicationBuilder builder)
     {
         builder.Services.AddCascadingAuthenticationState();
+        builder.Services.PostConfigure<CookieAuthenticationOptions>(IdentityConstants.ApplicationScheme, options =>
+        {
+            var signedIn = options.Events.OnSignedIn;
+            var signingOut = options.Events.OnSigningOut;
+            options.Events.OnSignedIn = async context =>
+            {
+                await signedIn(context);
+                if (Guid.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+                    await context.HttpContext.RequestServices.GetRequiredService<IServerEventPublisher>()
+                        .PublishAsync(ServerEventTypes.UserLogin, "user", id, new { }, id);
+            };
+            options.Events.OnSigningOut = async context =>
+            {
+                await signingOut(context);
+                if (context.HttpContext.User.Identity?.IsAuthenticated == true
+                    && Guid.TryParse(context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
+                    await context.HttpContext.RequestServices.GetRequiredService<IServerEventPublisher>()
+                        .PublishAsync(ServerEventTypes.UserLogout, "user", id, new { }, id);
+            };
+        });
 
         return builder;
     }

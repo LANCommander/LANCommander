@@ -1,0 +1,54 @@
+<PageHeader Title="@(Title ?? (Id == Guid.Empty ? "New webhook" : Subscription?.Name ?? "Webhook"))">
+    <Breadcrumb>
+        <Breadcrumb>
+            <BreadcrumbItem Href="/Settings/Integrations/Webhooks">Webhooks</BreadcrumbItem>
+            @if (Title != null)
+            {
+                <BreadcrumbItem Href="@($"/Settings/Integrations/Webhooks/{Id}/General")">@(Subscription?.Name ?? "Webhook")</BreadcrumbItem>
+                <BreadcrumbItem>@Title</BreadcrumbItem>
+            }
+            else
+            {
+                <BreadcrumbItem>@(Id == Guid.Empty ? "New webhook" : Subscription?.Name ?? "Webhook")</BreadcrumbItem>
+            }
+        </Breadcrumb>
+    </Breadcrumb>
+    <Tags>
+        @if (Subscription != null)
+        {
+            <Tag Success="Subscription.Enabled">@(Subscription.Enabled ? "Enabled" : "Disabled")</Tag>
+        }
+    </Tags>
+    <Extra>@HeaderExtra</Extra>
+</PageHeader>
+
+<SideLayout>
+    <Side>
+        <Menu Variant="MenuVariant.Section">
+            <MenuGroup Title="Webhook">
+                <MenuItem Href="@(Id == Guid.Empty ? "/Settings/Integrations/Webhooks/Add" : $"/Settings/Integrations/Webhooks/{Id}/General")" Exact>General</MenuItem>
+                @if (Id != Guid.Empty)
+                {
+                    <MenuItem Href="@($"/Settings/Integrations/Webhooks/{Id}/Deliveries")">Deliveries</MenuItem>
+                }
+            </MenuGroup>
+        </Menu>
+    </Side>
+    <ChildContent>
+        <PageContent Loading="Loading" Class="edit-form-content">
+            @if (!Loading)
+            {
+                @ChildContent
+            }
+        </PageContent>
+    </ChildContent>
+</SideLayout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public WebhookInformation? Subscription { get; set; }
+    [Parameter] public string? Title { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public RenderFragment? HeaderExtra { get; set; }
+    [Parameter] public RenderFragment? ChildContent { get; set; }
+}

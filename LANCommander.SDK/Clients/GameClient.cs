@@ -1036,6 +1036,30 @@ namespace LANCommander.SDK.Services
         /// </exception>
         public async Task<InstallResult> InstallAsync(Guid gameId, string installDirectory = "", Guid[] addonIds = null, int maxAttempts = 10, CancellationToken cancellationToken = default)
         {
+            try
+            {
+                cancellationToken.ThrowIfCancellationRequested();
+                var result = await InstallCoreAsync(gameId, installDirectory, addonIds, maxAttempts, cancellationToken);
+                await ReportLifecycleAsync(LauncherEventType.GameInstalled, gameId);
+                return result;
+            }
+            catch (InstallCanceledException)
+            {
+                throw;
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                await ReportLifecycleAsync(LauncherEventType.GameInstallFailed, gameId);
+                throw;
+            }
+        }
+
+        private async Task<InstallResult> InstallCoreAsync(Guid gameId, string installDirectory, Guid[] addonIds, int maxAttempts, CancellationToken cancellationToken)
+        {
             var installResult = new InstallResult(installDirectory, gameId);
             var gameFileList = installResult.FileList;
             SDK.Models.Manifest.Game manifest = null;
@@ -1639,6 +1663,9 @@ namespace LANCommander.SDK.Services
             return installResult;
         }
 
+        public Task ReportLifecycleAsync(LauncherEventType type, Guid gameId) =>
+            LauncherEventHelper.ReportAsync(apiRequestFactory, logger, type, gameId);
+
         private async Task ExecuteGamePlanItemAsync(InstallPlanItem planItem, InstallResult installResult, CancellationToken cancellationToken)
         {
             logger?.LogInformation("[InstallQueue] ExecuteGamePlanItem: Starting for {Title} ({EntityId}), type={Type}, installDir={InstallDir}, taskCount={TaskCount}",
@@ -2102,6 +2129,8 @@ namespace LANCommander.SDK.Services
 
             DirectoryHelper.DeleteEmptyDirectories(installDirectory);
             #endregion
+
+            await ReportLifecycleAsync(LauncherEventType.GameUninstalled, gameId);
 
             return installResult;
         }

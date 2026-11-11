@@ -40,6 +40,8 @@ public static class Endpoints
             endpoints.MapServerEndpoints();
             endpoints.MapServerFileEndpoints();
             endpoints.MapSettingsEndpoints();
+            endpoints.MapWebhookEndpoints();
+            endpoints.MapEventEndpoints();
             endpoints.MapLogEndpoints();
             endpoints.MapHqEndpoints();
             endpoints.MapMetadataEndpoints();

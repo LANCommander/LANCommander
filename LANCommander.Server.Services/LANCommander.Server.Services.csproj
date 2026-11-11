@@ -1,6 +1,8 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
+    <PackageReference Include="Rebus" />
+    <PackageReference Include="Rebus.ServiceProvider" />
     <PackageReference Include="AsmResolver.PE.Win32Resources" />
     <PackageReference Include="Riok.Mapperly">
       <PrivateAssets>all</PrivateAssets>

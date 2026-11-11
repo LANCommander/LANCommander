@@ -1,0 +1,42 @@
+.webhook-delivery-settings {
+    max-width: 28rem;
+}
+
+.webhook-json {
+    max-width: 900px;
+    max-height: 24rem;
+    margin: 0;
+    padding: 16px;
+    overflow: auto;
+    white-space: pre-wrap;
+    overflow-wrap: anywhere;
+    color: var(--lc-text-color);
+    background: var(--lc-well);
+    border: 1px solid var(--lc-border-subtle-color);
+    border-radius: var(--lc-border-radius);
+    font-family: var(--lc-font-mono);
+    font-size: 13px;
+    line-height: 1.55;
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-selection-rail-color);
+        outline-offset: 2px;
+    }
+}
+
+.webhook-json-toolbar {
+    display: flex;
+    justify-content: flex-end;
+    max-width: 900px;
+    margin-bottom: 4px;
+}
+
+.webhook-json-key { color: var(--lc-accent-text-color); }
+.webhook-json-string { color: var(--lc-success-text-color); }
+.webhook-json-number { color: var(--lc-warning-text-color); }
+.webhook-json-literal { color: var(--lc-danger-text-color); }
+.webhook-json-punctuation { color: var(--lc-text-secondary-color); }
+
+.webhook-endpoint {
+    overflow-wrap: anywhere;
+}

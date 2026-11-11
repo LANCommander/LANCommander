@@ -2,34 +2,144 @@
 @page "/Scripting/Snippets/{Group}/{Name}"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ScriptService ScriptService
+@inject ModuleService ModuleService
 @inject NavigationManager NavigationManager
 @inject NotificationService Notifications
+@inject AlertService Alerts
+@inject ILogger<Edit> Logger
 
-<PageHeader Title="@(IsNew ? "Add Snippet" : $"{_snippet.Group} / {_snippet.Name}")">
+@*
+    Adds or edits a snippet, laid out like the script editor dialog: the snippets on the left, the
+    editor in the middle, the snippet's name and what it can insert on the right, and a status bar
+    along the foot.
+*@
+<PageHeader Title="@(IsNew ? "Add Snippet" : $"{_savedGroup} / {_savedName}")">
+    <Tags>
+        @if (IsDirty)
+        {
+            <span class="script-editor-unsaved">• unsaved</span>
+        }
+    </Tags>
     <Extra>
         <Button Icon="IconType.ArrowLeft" Href="/Scripting/Snippets">Back</Button>
-        <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
+        <Button Primary Icon="IconType.FloppyDisk" OnClick="SaveAsync">Save</Button>
     </Extra>
 </PageHeader>
 
 <PageContent>
-    <Form Model="_snippet" @ref="_form">
-        <Row Gap="Gap.Medium">
-            <Column Span="12">
-                <FormItem Label="Group" Required>
-                    <TextInput @bind-Value="_snippet.Group" />
-                </FormItem>
-            </Column>
-            <Column Span="12">
-                <FormItem Label="Name" Required>
-                    <TextInput @bind-Value="_snippet.Name" />
-                </FormItem>
-            </Column>
-        </Row>
-        <FormItem Label="Content">
-            <PowerShellScriptEditor @bind-Value="_snippet.Content" OnSave="Save" Height="500" />
-        </FormItem>
-    </Form>
+    <div class="script-editor script-editor-framed">
+        <div class="script-editor-toolbar" role="toolbar" aria-label="Snippet">
+            <Button Small Icon="IconType.FloppyDisk" Disabled="@(!IsDirty && !IsNew)" OnClick="SaveAsync">Save</Button>
+            <Button Text Small Disabled="!IsDirty" OnClick="DiscardAsync">Discard</Button>
+
+            <span class="script-editor-divider" aria-hidden="true"></span>
+
+            <ScriptEditorInsertMenus References="_references" SnippetFilter="IsOther" OnInsertText="InsertTextAsync" OnInsertSnippet="InsertSnippetAsync" />
+
+            <span class="script-editor-toolbar-spacer"></span>
+
+            @if (!IsNew)
+            {
+                <Popconfirm OnConfirm="Delete" Title="Are you sure you want to delete this snippet?" OkText="Delete" Danger>
+                    <Button Text Small Danger Icon="IconType.Trash">Delete</Button>
+                </Popconfirm>
+            }
+        </div>
+
+        <div class="script-editor-body">
+            <nav class="script-editor-scripts" aria-label="Snippets">
+                <div class="script-editor-panel-header">
+                    <span class="script-editor-kicker">Snippets</span>
+                    <span class="script-editor-count">@_references.Snippets.Count</span>
+                </div>
+
+                <div class="script-editor-script-list">
+                    @foreach (var group in ListedGroups)
+                    {
+                        var expanded = !_collapsedGroups.Contains(group.Key);
+
+                        <div class="script-editor-group" @key="group.Key">
+                            <button type="button" class="script-editor-group-header" aria-expanded="@(expanded ? "true" : "false")" @onclick="() => ToggleGroup(group.Key)">
+                                <Icon Type="IconType.CaretRight" Class="@(expanded ? "script-editor-group-caret script-editor-group-caret-open" : "script-editor-group-caret")" />
+                                <span class="script-editor-group-name">@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)</span>
+                                <span class="script-editor-group-kind">@group.Snippets.Count</span>
+                            </button>
+
+                            @if (expanded)
+                            {
+                                <ul class="script-editor-group-scripts">
+                                    @foreach (var snippet in group.Snippets)
+                                    {
+                                        var current = IsCurrent(snippet);
+
+                                        <li @key="EntryKey(snippet)">
+                                            <button type="button"
+                                                    class="@(current ? "script-editor-script script-editor-script-current" : "script-editor-script")"
+                                                    aria-current="@(current ? "true" : null)"
+                                                    @onclick="() => SelectAsync(snippet)">
+                                                <span class="script-editor-script-name">@(current ? DisplayName : snippet.Name)@(current && IsDirty ? " *" : "")@(current && IsNew ? " (new)" : "")</span>
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+                </div>
+
+                <div class="script-editor-panel-footer">
+                    <Button Small Block Icon="IconType.Plus" OnClick="AddAsync">Add snippet</Button>
+                </div>
+            </nav>
+
+            <div class="script-editor-main">
+                <div class="script-editor-code">
+                    <CodeInput @ref="_codeInput"
+                               @bind-Value="_snippet.Content"
+                               Language="Languages.PowerShell"
+                               OnSave="SaveAsync"
+                               ModuleFunctions="@_references.ModuleFunctions"
+                               GlobalVariables="@_references.GlobalVariableCompletions"
+                               OnCaretMoved="caret => _caret = caret"
+                               OnProblemsChanged="count => _problems = count" />
+                </div>
+            </div>
+
+            <aside class="script-editor-rail">
+                <section class="script-editor-card">
+                    <div class="script-editor-kicker">Snippet</div>
+                    <Form @ref="_form" Model="_snippet">
+                        <FormItem Label="Group" Required>
+                            <TextInput @bind-Value="_snippet.Group" Immediate />
+                        </FormItem>
+
+                        <FormItem Label="Name" Required>
+                            <TextInput @bind-Value="_snippet.Name" Immediate />
+                        </FormItem>
+                    </Form>
+
+                    <p class="script-editor-path">Snippets\@(_snippet.Group)\@(_snippet.Name).ps1</p>
+                </section>
+
+                <ScriptEditorReferenceCards References="_references"
+                                            SnippetFilter="IsOther"
+                                            OnInsertText="InsertTextAsync"
+                                            OnInsertSnippet="InsertSnippetAsync" />
+            </aside>
+        </div>
+
+        <div class="script-editor-statusbar">
+            <div class="script-editor-status" role="status">
+                <span class="script-editor-status-state">@(IsNew ? "New snippet" : IsDirty ? "Unsaved changes" : "Saved")</span>
+                @if (_problems > 0)
+                {
+                    <span class="script-editor-status-problems">@(_problems == 1 ? "1 parse error" : $"{_problems} parse errors")</span>
+                }
+                <span class="script-editor-status-mono">Ln @_caret.Line, Col @_caret.Column</span>
+                <span class="script-editor-status-mono">PowerShell</span>
+            </div>
+        </div>
+    </div>
 </PageContent>
 
 @code {
@@ -37,49 +147,205 @@
     [Parameter] public string? Name { get; set; }
 
     Form? _form;
+    CodeInput? _codeInput;
+    ScriptEditorReferences _references = ScriptEditorReferences.Empty;
+
     Snippet _snippet = new();
-    string? _originalGroup;
-    string? _originalName;
 
-    bool IsNew => string.IsNullOrEmpty(_originalName);
+    // Where the open snippet is saved, empty for a new one; and what was saved, to tell if it changed
+    string? _savedGroup;
+    string? _savedName;
+    (string? Group, string? Name, string? Content) _saved;
 
-    protected override void OnParametersSet()
+    // The route the open snippet was loaded for, so a re-render does not reload it
+    string? _loadedKey;
+
+    readonly HashSet<string> _collapsedGroups = new();
+
+    // Status bar
+    (int Line, int Column) _caret = (1, 1);
+    int _problems;
+
+    bool IsNew => String.IsNullOrEmpty(_savedName);
+
+    bool IsDirty => (_snippet.Group, _snippet.Name, _snippet.Content ?? "") != (_saved.Group, _saved.Name, _saved.Content ?? "");
+
+    string DisplayName => String.IsNullOrWhiteSpace(_snippet.Name) ? "(unnamed)" : _snippet.Name;
+
+    static string KeyOf(string? group, string? name) => $"{group}/{name}";
+
+    string EntryKey(Snippet snippet) => ReferenceEquals(snippet, _newEntry) ? "new" : KeyOf(snippet.Group, snippet.Name);
+
+    // Stands in the list for a snippet not saved yet
+    readonly Snippet _newEntry = new();
+
+    bool IsCurrent(Snippet snippet) => IsNew
+        ? ReferenceEquals(snippet, _newEntry)
+        : KeyOf(snippet.Group, snippet.Name) == KeyOf(_savedGroup, _savedName);
+
+    // A snippet inserting itself would be odd
+    bool IsOther(Snippet snippet) => !IsCurrent(snippet);
+
+    record SnippetGroup(string Key, List<Snippet> Snippets);
+
+    /// <summary>The saved snippets by group, with a new one listed under the group it is being given.</summary>
+    IEnumerable<SnippetGroup> ListedGroups
     {
-        if (string.IsNullOrEmpty(Name))
-            return;
-
-        var snippet = ScriptService.GetSnippet(Group, Name);
-
-        if (snippet != null)
+        get
         {
-            _snippet = snippet;
-            _originalGroup = snippet.Group;
-            _originalName = snippet.Name;
+            _newEntry.Group = _snippet.Group ?? "";
+            _newEntry.Name = DisplayName;
+
+            return (IsNew ? _references.Snippets.Append(_newEntry) : _references.Snippets)
+                .GroupBy(s => s.Group ?? "")
+                .OrderBy(g => g.Key)
+                .Select(g => new SnippetGroup(g.Key, g.OrderBy(s => s.Name).ToList()));
         }
     }
 
-    void Save()
+    protected override void OnParametersSet()
     {
-        if (_form != null && !_form.Validate())
+        var key = KeyOf(Group, Name);
+
+        if (key == _loadedKey)
             return;
 
+        _loadedKey = key;
+
+        Load();
+    }
+
+    void Load()
+    {
+        _references = ScriptEditorReferences.Load(ScriptService, ModuleService, Logger);
+
+        _snippet = !String.IsNullOrEmpty(Name) ? ScriptService.GetSnippet(Group, Name) ?? new Snippet() : new Snippet();
+
+        _savedGroup = String.IsNullOrEmpty(_snippet.Name) ? null : _snippet.Group;
+        _savedName = _snippet.Name;
+        _saved = (_snippet.Group, _snippet.Name, _snippet.Content);
+        _problems = 0;
+        _caret = (1, 1);
+    }
+
+    void ToggleGroup(string key)
+    {
+        if (!_collapsedGroups.Add(key))
+            _collapsedGroups.Remove(key);
+    }
+
+    /// <summary>Offers to save the snippet's changes before leaving it; false to stay.</summary>
+    async Task<bool> LeaveCurrentAsync()
+    {
+        if (!IsDirty)
+            return true;
+
+        switch (await Alerts.ConfirmUnsavedChangesAsync($"\"{DisplayName}\" has unsaved changes."))
+        {
+            case UnsavedChangesChoice.Save:
+                return await SaveSnippetAsync();
+
+            case UnsavedChangesChoice.Discard:
+                return true;
+
+            default:
+                return false;
+        }
+    }
+
+    async Task SelectAsync(Snippet snippet)
+    {
+        if (IsCurrent(snippet) || !await LeaveCurrentAsync())
+            return;
+
+        NavigationManager.NavigateTo(EditUrl(snippet.Group, snippet.Name));
+    }
+
+    async Task AddAsync()
+    {
+        if (!await LeaveCurrentAsync())
+            return;
+
+        if (IsNew)
+            Load();
+        else
+            NavigationManager.NavigateTo("/Scripting/Snippets/Add");
+    }
+
+    static string EditUrl(string? group, string? name) => $"/Scripting/Snippets/{group}/{name}";
+
+    async Task SaveAsync()
+    {
         try
         {
-            if (!IsNew && (_originalGroup != _snippet.Group || _originalName != _snippet.Name))
-                ScriptService.DeleteSnippet(_originalGroup, _originalName);
-
-            ScriptService.SaveSnippet(_snippet);
-
-            _originalGroup = _snippet.Group;
-            _originalName = _snippet.Name;
-
-            Notifications.Success("Snippet saved!");
-
-            NavigationManager.NavigateTo("/Scripting/Snippets");
+            if (await SaveSnippetAsync())
+                Notifications.Success("Snippet saved!");
         }
         catch (Exception ex)
         {
             Notifications.Error(ex, "Could not save snippet!");
         }
+    }
+
+    /// <summary>Writes the snippet, moving its file if it was renamed, and follows it to its new address.</summary>
+    Task<bool> SaveSnippetAsync()
+    {
+        if (_form != null && !_form.Validate())
+            return Task.FromResult(false);
+
+        if (!IsNew && (_savedGroup != _snippet.Group || _savedName != _snippet.Name))
+            ScriptService.DeleteSnippet(_savedGroup, _savedName);
+
+        ScriptService.SaveSnippet(_snippet);
+
+        _savedGroup = _snippet.Group;
+        _savedName = _snippet.Name;
+        _saved = (_snippet.Group, _snippet.Name, _snippet.Content);
+        _references = ScriptEditorReferences.Load(ScriptService, ModuleService, Logger);
+
+        // Keep the address on the snippet without loading it again
+        _loadedKey = KeyOf(_snippet.Group, _snippet.Name);
+
+        NavigationManager.NavigateTo(EditUrl(_snippet.Group, _snippet.Name), replace: true);
+
+        return Task.FromResult(true);
+    }
+
+    async Task DiscardAsync()
+    {
+        if (!await Alerts.ConfirmAsync("Discard your changes to this snippet?", "Discard Changes", "Discard", danger: true))
+            return;
+
+        _snippet.Group = _saved.Group;
+        _snippet.Name = _saved.Name;
+        _snippet.Content = _saved.Content;
+    }
+
+    void Delete()
+    {
+        try
+        {
+            ScriptService.DeleteSnippet(_savedGroup, _savedName);
+
+            Notifications.Success("Snippet deleted!");
+
+            NavigationManager.NavigateTo("/Scripting/Snippets");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete snippet!");
+        }
+    }
+
+    async Task InsertTextAsync(string text)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertText(text);
+    }
+
+    async Task InsertSnippetAsync(Snippet snippet)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertSnippet(snippet.Content);
     }
 }

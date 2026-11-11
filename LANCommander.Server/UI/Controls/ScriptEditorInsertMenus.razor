@@ -1,0 +1,75 @@
+@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
+
+@*
+    The Snippets and Variables menus of a script editor's toolbar (see _script-editor.scss). Each is
+    left out when it would be empty.
+*@
+@if (Snippets.Any())
+{
+    <Dropdown>
+        <Overlay>
+            <Menu>
+                @foreach (var group in Snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
+                {
+                    <MenuGroup Title="@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)">
+                        @foreach (var snippet in group.OrderBy(s => s.Name))
+                        {
+                            <MenuItem OnClick="() => OnInsertSnippet.InvokeAsync(snippet)">@snippet.Name</MenuItem>
+                        }
+                    </MenuGroup>
+                }
+            </Menu>
+        </Overlay>
+        <ChildContent>
+            <Button Small>Snippets <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
+        </ChildContent>
+    </Dropdown>
+}
+
+@if (Variables.Any() || References.GlobalVariables.Any())
+{
+    <Dropdown>
+        <Overlay>
+            <Menu>
+                @if (Variables.Any())
+                {
+                    <MenuGroup Title="Runs with">
+                        @foreach (var variable in Variables)
+                        {
+                            <MenuItem OnClick="() => OnInsertText.InvokeAsync(variable)">@variable</MenuItem>
+                        }
+                    </MenuGroup>
+                }
+                @if (References.GlobalVariables.Any())
+                {
+                    <MenuGroup Title="Global">
+                        @foreach (var variable in References.GlobalVariables)
+                        {
+                            <MenuItem OnClick="() => InsertGlobalVariable(variable)" title="@variable.Description">$var:@variable.Name</MenuItem>
+                        }
+                    </MenuGroup>
+                }
+            </Menu>
+        </Overlay>
+        <ChildContent>
+            <Button Small Icon="IconType.BracketsCurly">Variables <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
+        </ChildContent>
+    </Dropdown>
+}
+
+@code {
+    [Parameter, EditorRequired] public ScriptEditorReferences References { get; set; } = ScriptEditorReferences.Empty;
+
+    /// <summary>The variables the script is run with, if it is run with any.</summary>
+    [Parameter] public IReadOnlyList<string> Variables { get; set; } = [];
+
+    /// <summary>Which snippets to offer; all of them unless set (the snippet editor leaves out the one open).</summary>
+    [Parameter] public Func<Snippet, bool>? SnippetFilter { get; set; }
+
+    [Parameter] public EventCallback<string> OnInsertText { get; set; }
+    [Parameter] public EventCallback<Snippet> OnInsertSnippet { get; set; }
+
+    IEnumerable<Snippet> Snippets => SnippetFilter == null ? References.Snippets : References.Snippets.Where(SnippetFilter);
+
+    Task InsertGlobalVariable(GlobalVariable variable) => OnInsertText.InvokeAsync($"$var:{variable.Name}");
+}

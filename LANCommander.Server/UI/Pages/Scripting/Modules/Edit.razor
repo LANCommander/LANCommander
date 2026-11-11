@@ -2,193 +2,345 @@
 @page "/Scripting/Modules/{Name}"
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ModuleService ModuleService
+@inject ScriptService ScriptService
 @inject NavigationManager NavigationManager
 @inject NotificationService Notifications
+@inject AlertService Alerts
+@inject ILogger<Edit> Logger
 
+@*
+    Adds or edits a module, laid out like the script editor dialog: its functions (and, when written
+    by hand, its manifest) on the left, the editor in the middle, the open function's name and the
+    module's manifest on the right with what they can insert, and a status bar along the foot.
+*@
 <PageHeader Title="@(IsNew ? "Add Module" : Module.Name)">
+    <Tags>
+        @if (IsDirty)
+        {
+            <span class="script-editor-unsaved">• unsaved</span>
+        }
+    </Tags>
     <Extra>
         <Button Icon="IconType.ArrowLeft" Href="/Scripting/Modules">Back</Button>
         <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
     </Extra>
 </PageHeader>
 
-<PageContent Class="module-editor">
-    <Tabs @bind-SelectedIndex="_activeTab">
-        <Tab Title="Functions" Icon="IconType.Function">
-            <Row Gap="Gap.Medium">
-                <Column Span="6">
-                    <Button Primary Block Icon="IconType.Plus" OnClick="AddFunction" Style="margin-bottom: 16px">Add Function</Button>
+<PageContent>
+    <div class="script-editor script-editor-framed">
+        <div class="script-editor-toolbar" role="toolbar" aria-label="Module">
+            <Button Small Icon="IconType.FloppyDisk" Disabled="@(!IsDirty && !IsNew)" OnClick="Save">Save</Button>
+            <Button Text Small Disabled="!IsDirty" OnClick="DiscardAsync">Discard</Button>
 
-                    <Tree TItem="FunctionNode"
-                          Items="FunctionTree"
-                          Children="n => n.Children"
-                          Key="n => n.Key"
-                          Text="n => n.Title"
-                          Icon="@(n => n.Function == null ? IconType.Folder : IconType.Function)"
-                          Value="SelectedNode"
-                          ValueChanged="SelectNode"
-                          ExpandAll />
-                </Column>
+            <span class="script-editor-divider" aria-hidden="true"></span>
 
-                <Column Span="18">
-                    @if (_selectedFunction != null)
+            <ScriptEditorInsertMenus References="_references" OnInsertText="InsertTextAsync" OnInsertSnippet="InsertSnippetAsync" />
+        </div>
+
+        <div class="script-editor-body">
+            <nav class="script-editor-scripts" aria-label="Functions">
+                <div class="script-editor-panel-header">
+                    <span class="script-editor-kicker">Functions</span>
+                    <span class="script-editor-count">@Module.Functions.Count</span>
+                </div>
+
+                <div class="script-editor-script-list">
+                    @foreach (var visibility in Enum.GetValues<FunctionVisibility>())
                     {
-                        <Form Model="_selectedFunction">
-                            <FormItem Label="Function Name">
-                                <Flex Gap="Gap.Small" Align="Align.Center">
-                                    <Select TValue="string" Items="_verbOptions" @bind-Value="Verb" Searchable Style="width: 160px" />
-                                    <span>-</span>
-                                    <TextInput @bind-Value="Noun" Immediate Placeholder="Noun" Style="flex-grow: 1" />
-                                    <EnumSelect @bind-Value="_selectedFunction.Visibility" Style="width: 140px" />
-                                    <Popconfirm OnConfirm="() => DeleteFunction(_selectedFunction)" Title="Are you sure you want to delete this function?" OkText="Delete" Danger>
-                                        <Button Danger Icon="IconType.Trash" title="Delete function" />
-                                    </Popconfirm>
-                                </Flex>
-                            </FormItem>
-                        </Form>
+                        var key = visibility.ToString();
+                        var groupFunctions = Module.Functions.Where(f => f.Visibility == visibility).OrderBy(f => f.Name, StringComparer.OrdinalIgnoreCase).ToList();
+                        var expanded = !_collapsedGroups.Contains(key);
 
-                        @if (!string.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsValidFunctionName(_selectedFunction.Name))
-                        {
-                            <Alert Danger>Function names must use Verb-Noun format (e.g. Get-Thing).</Alert>
-                        }
-                        else if (!string.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsApprovedVerb(_selectedFunction.Name))
-                        {
-                            <Alert Warning>That verb is not an approved PowerShell verb. Run Get-Verb to see the approved list.</Alert>
-                        }
+                        <div class="script-editor-group" @key="key">
+                            <button type="button" class="script-editor-group-header" aria-expanded="@(expanded ? "true" : "false")" @onclick="() => ToggleGroup(key)">
+                                <Icon Type="IconType.CaretRight" Class="@(expanded ? "script-editor-group-caret script-editor-group-caret-open" : "script-editor-group-caret")" />
+                                <span class="script-editor-group-name">@key</span>
+                                <span class="script-editor-group-kind">@groupFunctions.Count</span>
+                            </button>
 
-                        <PowerShellScriptEditor @key="_selectedFunction" @bind-Value="_selectedFunction.Content" OnSave="Save" Height="400" />
+                            @if (expanded)
+                            {
+                                <ul class="script-editor-group-scripts">
+                                    @foreach (var function in groupFunctions)
+                                    {
+                                        var current = function == _selectedFunction;
+
+                                        <li @key="function.Id">
+                                            <button type="button"
+                                                    class="@(current ? "script-editor-script script-editor-script-current" : "script-editor-script")"
+                                                    aria-current="@(current ? "true" : null)"
+                                                    @onclick="() => SelectFunction(function)">
+                                                <span class="script-editor-script-name">@FunctionTitle(function)</span>
+                                                @if (!ModuleService.IsValidFunctionName(function.Name ?? ""))
+                                                {
+                                                    <Tag Caps Small Danger title="Function names must use Verb-Noun format">Invalid</Tag>
+                                                }
+                                            </button>
+                                        </li>
+                                    }
+                                </ul>
+                            }
+                        </div>
+                    }
+
+                    @if (_advancedManifest)
+                    {
+                        <div class="script-editor-group" @key="ManifestKey">
+                            <div class="script-editor-group-header">
+                                <span class="script-editor-group-name">Module</span>
+                            </div>
+                            <ul class="script-editor-group-scripts">
+                                <li>
+                                    <button type="button"
+                                            class="@(_manifestSelected ? "script-editor-script script-editor-script-current" : "script-editor-script")"
+                                            aria-current="@(_manifestSelected ? "true" : null)"
+                                            @onclick="SelectManifest">
+                                        <span class="script-editor-script-name">Manifest</span>
+                                        <Tag Caps Small title="PowerShell data file">PSD1</Tag>
+                                    </button>
+                                </li>
+                            </ul>
+                        </div>
+                    }
+                </div>
+
+                <div class="script-editor-panel-footer">
+                    <Button Small Block Icon="IconType.Plus" OnClick="AddFunction">Add function</Button>
+                </div>
+            </nav>
+
+            <div class="script-editor-main">
+                <div class="script-editor-code">
+                    @if (_selectedFunction != null || _manifestSelected)
+                    {
+                        <CodeInput @ref="_codeInput"
+                                   @bind-Value="Contents"
+                                   Language="Languages.PowerShell"
+                                   OnSave="Save"
+                                   ModuleFunctions="@_references.ModuleFunctions"
+                                   GlobalVariables="@_references.GlobalVariableCompletions"
+                                   OnCaretMoved="caret => _caret = caret"
+                                   OnProblemsChanged="count => _problems = count" />
                     }
                     else
                     {
                         <Empty Description="No function is selected" />
                     }
-                </Column>
-            </Row>
-        </Tab>
-        <Tab Title="Manifest" Icon="IconType.FileText">
-            <Form Model="Module">
-                <FormItem Label="Module Name" Required>
-                    <TextInput @bind-Value="Module.Name" Disabled="@(!IsNew)" />
-                </FormItem>
-            </Form>
+                </div>
+            </div>
 
-            <Flex Justify="Justify.End" Style="margin-bottom: 16px">
-                <Switch Value="_advancedManifest" ValueChanged="OnManifestModeChanged">Advanced</Switch>
-            </Flex>
-
-            @if (_advancedManifest)
-            {
-                <CodeInput @bind-Value="Module.Manifest" Language="Languages.PowerShell" OnSave="Save" Height="400" />
-            }
-            else
-            {
-                <Form Model="_manifest">
-                    <Row Gap="Gap.Medium">
-                        <Column Span="12">
-                            <FormItem Label="Module Version">
-                                <TextInput @bind-Value="_manifest.ModuleVersion" />
+            <aside class="script-editor-rail">
+                @if (_selectedFunction != null)
+                {
+                    <section class="script-editor-card">
+                        <div class="script-editor-kicker">Function</div>
+                        <Form Model="_selectedFunction">
+                            <FormItem Label="Name" Required>
+                                <div class="script-editor-function-name">
+                                    <Select TValue="string" Items="_verbOptions" @bind-Value="Verb" Searchable Placeholder="Verb" Class="script-editor-function-verb" />
+                                    <span aria-hidden="true">-</span>
+                                    <TextInput @bind-Value="Noun" Immediate Placeholder="Noun" Class="script-editor-function-noun" />
+                                </div>
                             </FormItem>
-                        </Column>
-                        <Column Span="12">
+
+                            <FormItem Label="Visibility">
+                                <EnumSelect @bind-Value="_selectedFunction.Visibility" />
+                            </FormItem>
+                        </Form>
+
+                        @if (!String.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsValidFunctionName(_selectedFunction.Name))
+                        {
+                            <Alert Danger>Function names must use Verb-Noun format (e.g. Get-Thing).</Alert>
+                        }
+                        else if (!String.IsNullOrWhiteSpace(_selectedFunction.Name) && !ModuleService.IsApprovedVerb(_selectedFunction.Name))
+                        {
+                            <Alert Warning>That verb is not an approved PowerShell verb. Run Get-Verb to see the approved list.</Alert>
+                        }
+
+                        <p class="script-editor-path">@Module.Name\@_selectedFunction.Visibility\@(FunctionTitle(_selectedFunction)).ps1</p>
+
+                        <div class="script-editor-card-actions">
+                            <Popconfirm OnConfirm="() => DeleteFunction(_selectedFunction)" Title="Are you sure you want to delete this function?" OkText="Delete" Danger>
+                                <Button Text Small Danger Icon="IconType.Trash">Delete function</Button>
+                            </Popconfirm>
+                        </div>
+                    </section>
+                }
+
+                <section class="script-editor-card">
+                    <div class="script-editor-kicker">Module</div>
+                    <Form Model="Module">
+                        <FormItem Label="Name" Required>
+                            <TextInput @bind-Value="Module.Name" Immediate Disabled="@(!IsNew)" />
+                        </FormItem>
+                    </Form>
+
+                    @if (!_advancedManifest)
+                    {
+                        <Form Model="_manifest">
+                            <FormItem Label="Version">
+                                <TextInput @bind-Value="_manifest.ModuleVersion" Immediate />
+                            </FormItem>
+
                             <FormItem Label="GUID">
-                                <TextInput @bind-Value="_manifest.Guid" />
+                                <TextInput @bind-Value="_manifest.Guid" Immediate />
                             </FormItem>
-                        </Column>
-                    </Row>
-                    <FormItem Label="Author">
-                        <TextInput @bind-Value="_manifest.Author" />
-                    </FormItem>
-                    <FormItem Label="Description">
-                        <TextArea @bind-Value="_manifest.Description" />
-                    </FormItem>
-                    <FormItem Label="Exported Functions">
-                        @if (ExportedFunctions.Count == 0)
+
+                            <FormItem Label="Author">
+                                <TextInput @bind-Value="_manifest.Author" Immediate />
+                            </FormItem>
+
+                            <FormItem Label="Description">
+                                <TextArea @bind-Value="_manifest.Description" Rows="2" Immediate />
+                            </FormItem>
+                        </Form>
+
+                        <div class="script-editor-card-header">
+                            <span class="script-editor-kicker">Exports</span>
+                            <span class="script-editor-count">@(ExportedFunctions.Count + ExportedAliases.Count)</span>
+                        </div>
+                        @if (ExportedFunctions.Count == 0 && ExportedAliases.Count == 0)
                         {
-                            <Typography Secondary>None. Mark functions as Public to export them.</Typography>
+                            <p class="script-editor-help">None. Make a function Public to export it.</p>
                         }
                         else
                         {
-                            @foreach (var function in ExportedFunctions)
-                            {
-                                <Tag>@function</Tag>
-                            }
+                            <div class="script-editor-exports">
+                                @foreach (var function in ExportedFunctions)
+                                {
+                                    <Tag Small>@function</Tag>
+                                }
+                                @foreach (var alias in ExportedAliases)
+                                {
+                                    <Tag Small title="Alias">@alias</Tag>
+                                }
+                            </div>
                         }
-                    </FormItem>
-                    <FormItem Label="Exported Aliases">
-                        @if (ExportedAliases.Count == 0)
-                        {
-                            <Typography Secondary>None detected.</Typography>
-                        }
-                        else
-                        {
-                            @foreach (var alias in ExportedAliases)
-                            {
-                                <Tag>@alias</Tag>
-                            }
-                        }
-                    </FormItem>
-                </Form>
-            }
-        </Tab>
-    </Tabs>
+                    }
+
+                    <div class="script-editor-rail-divider"></div>
+
+                    <Switch Value="_advancedManifest" ValueChanged="OnManifestModeChanged" Class="script-editor-admin">
+                        <span class="script-editor-admin-label">Write the manifest by hand</span>
+                        <span class="script-editor-admin-help">@(_advancedManifest ? "Open it from the list to edit the .psd1." : "Otherwise it is generated from these fields when saved.")</span>
+                    </Switch>
+                </section>
+
+                <ScriptEditorReferenceCards References="_references"
+                                            OnInsertText="InsertTextAsync"
+                                            OnInsertSnippet="InsertSnippetAsync" />
+            </aside>
+        </div>
+
+        <div class="script-editor-statusbar">
+            <div class="script-editor-status" role="status">
+                <span class="script-editor-status-state">@(IsNew ? "New module" : IsDirty ? "Unsaved changes" : "Saved")</span>
+                @if (_problems > 0)
+                {
+                    <span class="script-editor-status-problems">@(_problems == 1 ? "1 parse error" : $"{_problems} parse errors")</span>
+                }
+                <span class="script-editor-status-mono">Ln @_caret.Line, Col @_caret.Column</span>
+                <span class="script-editor-status-mono">PowerShell</span>
+            </div>
+        </div>
+    </div>
 </PageContent>
 
 @code {
-    [Parameter] public string Name { get; set; }
+    [Parameter] public string? Name { get; set; }
+
+    const string ManifestKey = "manifest";
 
     Module Module { get; set; } = new();
     ModuleManifest _manifest = new();
     ModuleFunction? _selectedFunction;
+    bool _manifestSelected;
+    bool _advancedManifest;
+
+    CodeInput? _codeInput;
+    ScriptEditorReferences _references = ScriptEditorReferences.Empty;
 
     string _verb = string.Empty;
     string _noun = string.Empty;
     List<SelectItem<string>> _verbOptions = new();
 
-    int _activeTab;
+    readonly HashSet<string> _collapsedGroups = new();
 
-    /// <summary>A row in the function tree: a Public/Private group, or a function within one.</summary>
-    record FunctionNode(string Key, string Title, ModuleFunction? Function, IReadOnlyList<FunctionNode> Children);
+    // Status bar
+    (int Line, int Column) _caret = (1, 1);
+    int _problems;
 
-    IReadOnlyList<FunctionNode> FunctionTree =>
-    [
-        Group("Public", FunctionVisibility.Public),
-        Group("Private", FunctionVisibility.Private),
-    ];
-
-    FunctionNode Group(string title, FunctionVisibility visibility) =>
-        new(title, title, null, Module.Functions
-            .Where(f => f.Visibility == visibility)
-            .Select(f => new FunctionNode(f.Id.ToString(), FunctionTitle(f), f, []))
-            .ToList());
-
-    FunctionNode? SelectedNode => FunctionTree.SelectMany(g => g.Children).FirstOrDefault(n => n.Function == _selectedFunction);
-
-    // Group rows only organise the functions; selecting one does nothing
-    void SelectNode(FunctionNode? node)
-    {
-        if (node?.Function != null)
-            SelectFunction(node.Function);
-    }
-    bool _advancedManifest;
-
+    // What was loaded or last saved, to tell whether anything changed; and the module it was loaded for
+    string _saved = string.Empty;
+    string? _loadedName;
     bool _isNew = true;
+
     bool IsNew => _isNew;
+
+    bool IsDirty => Snapshot() != _saved;
 
     IReadOnlyList<string> ExportedFunctions => ModuleService.GetExportedFunctions(Module);
     IReadOnlyList<string> ExportedAliases => ModuleService.GetExportedAliases(Module);
 
+    /// <summary>What the editor shows: the open function, or the manifest written by hand.</summary>
+    string? Contents
+    {
+        get => _manifestSelected ? Module.Manifest : _selectedFunction?.Content;
+        set
+        {
+            if (_manifestSelected)
+                Module.Manifest = value ?? string.Empty;
+            else if (_selectedFunction != null)
+                _selectedFunction.Content = value ?? string.Empty;
+        }
+    }
+
+    /// <summary>Everything saving writes, as one string to compare.</summary>
+    string Snapshot()
+    {
+        var builder = new System.Text.StringBuilder();
+
+        builder.Append(Module.Name).Append('\0').Append(_advancedManifest).Append('\0');
+
+        if (_advancedManifest)
+            builder.Append(Module.Manifest);
+        else
+            builder.Append(_manifest.ModuleVersion).Append('\0').Append(_manifest.Guid).Append('\0').Append(_manifest.Author).Append('\0').Append(_manifest.Description);
+
+        foreach (var function in Module.Functions)
+            builder.Append('\0').Append(function.Name).Append('\0').Append(function.Visibility).Append('\0').Append(function.Content);
+
+        return builder.ToString();
+    }
+
     protected override void OnInitialized()
     {
-        if (!string.IsNullOrEmpty(Name))
-        {
-            var module = ModuleService.GetModule(Name);
+        _verbOptions = ModuleService.GetApprovedVerbGroups()
+            .SelectMany(g => g.Verbs)
+            .Distinct()
+            .Order()
+            .Select(v => new SelectItem<string>(v, v))
+            .ToList();
+    }
 
-            if (module != null)
-            {
-                Module = module;
-                _isNew = false;
-            }
-        }
+    protected override void OnParametersSet()
+    {
+        if (_loadedName != null && _loadedName == (Name ?? string.Empty))
+            return;
+
+        _loadedName = Name ?? string.Empty;
+
+        Load();
+    }
+
+    void Load()
+    {
+        _references = ScriptEditorReferences.Load(ScriptService, ModuleService, Logger);
+
+        var module = String.IsNullOrEmpty(Name) ? null : ModuleService.GetModule(Name);
+
+        _isNew = module == null;
+        Module = module ?? new Module();
 
         if (_isNew && Module.Functions.Count == 0)
         {
@@ -200,18 +352,25 @@
             });
         }
 
-        _verbOptions = ModuleService.GetApprovedVerbGroups()
-            .SelectMany(g => g.Verbs)
-            .Distinct()
-            .Order()
-            .Select(v => new SelectItem<string>(v, v))
-            .ToList();
         _manifest = ModuleService.ParseManifest(Module.Manifest);
+        _advancedManifest = false;
+        _manifestSelected = false;
+        _problems = 0;
+        _caret = (1, 1);
+
         SelectFunction(Module.Functions.FirstOrDefault());
+
+        _saved = Snapshot();
     }
 
     string FunctionTitle(ModuleFunction function) =>
-        string.IsNullOrWhiteSpace(function.Name) ? "(unnamed)" : function.Name;
+        String.IsNullOrWhiteSpace(function.Name) ? "(unnamed)" : function.Name;
+
+    void ToggleGroup(string key)
+    {
+        if (!_collapsedGroups.Add(key))
+            _collapsedGroups.Remove(key);
+    }
 
     void AddFunction()
     {
@@ -223,13 +382,25 @@
         };
 
         Module.Functions.Add(function);
+        _collapsedGroups.Remove(function.Visibility.ToString());
+
         SelectFunction(function);
     }
 
     void SelectFunction(ModuleFunction? function)
     {
         _selectedFunction = function;
+        _manifestSelected = false;
+        _problems = 0;
+
         LoadNameParts();
+    }
+
+    void SelectManifest()
+    {
+        _selectedFunction = null;
+        _manifestSelected = true;
+        _problems = 0;
     }
 
     void DeleteFunction(ModuleFunction function)
@@ -245,7 +416,7 @@
         _verb = string.Empty;
         _noun = string.Empty;
 
-        if (_selectedFunction == null || string.IsNullOrEmpty(_selectedFunction.Name))
+        if (_selectedFunction == null || String.IsNullOrEmpty(_selectedFunction.Name))
             return;
 
         var dash = _selectedFunction.Name.IndexOf('-');
@@ -273,16 +444,17 @@
         set { _noun = value; UpdateFunctionName(); }
     }
 
+    /// <summary>Renames the open function, and its declaration in the code to match.</summary>
     void UpdateFunctionName()
     {
         if (_selectedFunction == null)
             return;
 
-        var name = string.IsNullOrEmpty(_noun) ? _verb : $"{_verb}-{_noun}";
+        var name = String.IsNullOrEmpty(_noun) ? _verb : $"{_verb}-{_noun}";
 
         _selectedFunction.Name = name;
 
-        if (!string.IsNullOrEmpty(name) && !string.IsNullOrEmpty(_selectedFunction.Content))
+        if (!String.IsNullOrEmpty(name) && !String.IsNullOrEmpty(_selectedFunction.Content))
         {
             var declaration = new System.Text.RegularExpressions.Regex(
                 @"function\s+[^\s{(]+", System.Text.RegularExpressions.RegexOptions.IgnoreCase);
@@ -292,28 +464,45 @@
         }
     }
 
+    /// <summary>
+    /// Writing the manifest by hand starts from what the fields generate and opens it; going back
+    /// reads the fields out of it.
+    /// </summary>
     void OnManifestModeChanged(bool advanced)
     {
         if (advanced)
         {
-            if (string.IsNullOrWhiteSpace(_manifest.RootModule))
+            if (String.IsNullOrWhiteSpace(_manifest.RootModule))
                 _manifest.RootModule = $"{Module.Name}.psm1";
 
             Module.Manifest = ModuleService.GenerateManifest(_manifest, ExportedFunctions, ExportedAliases);
+            _advancedManifest = true;
+
+            SelectManifest();
         }
         else
         {
             _manifest = ModuleService.ParseManifest(Module.Manifest);
-        }
+            _advancedManifest = false;
 
-        _advancedManifest = advanced;
+            if (_manifestSelected)
+                SelectFunction(Module.Functions.FirstOrDefault());
+        }
+    }
+
+    async Task DiscardAsync()
+    {
+        if (!await Alerts.ConfirmAsync("Discard your changes to this module?", "Discard Changes", "Discard", danger: true))
+            return;
+
+        Load();
     }
 
     void Save()
     {
         try
         {
-            if (string.IsNullOrWhiteSpace(Module.Name))
+            if (String.IsNullOrWhiteSpace(Module.Name))
             {
                 Notifications.Error("Name is required.");
                 return;
@@ -329,7 +518,8 @@
             {
                 if (!ModuleService.IsValidFunctionName(function.Name))
                 {
-                    Notifications.Error($"'{function.Name}' is not a valid function name. Use Verb-Noun format.");
+                    Notifications.Error($"'{FunctionTitle(function)}' is not a valid function name. Use Verb-Noun format.");
+                    SelectFunction(function);
                     return;
                 }
             }
@@ -346,7 +536,7 @@
 
             if (!_advancedManifest)
             {
-                if (string.IsNullOrWhiteSpace(_manifest.RootModule))
+                if (String.IsNullOrWhiteSpace(_manifest.RootModule))
                     _manifest.RootModule = $"{Module.Name}.psm1";
 
                 Module.Manifest = ModuleService.GenerateManifest(_manifest, ExportedFunctions, ExportedAliases);
@@ -354,15 +544,37 @@
 
             ModuleService.SaveModule(Module);
 
+            var wasNew = _isNew;
+
             _isNew = false;
+            _saved = Snapshot();
+            _references = ScriptEditorReferences.Load(ScriptService, ModuleService, Logger);
 
             Notifications.Success("Module saved!");
 
-            NavigationManager.NavigateTo("/Scripting/Modules");
+            // Follow the new module to its address without loading it again
+            if (wasNew)
+            {
+                _loadedName = Module.Name;
+
+                NavigationManager.NavigateTo($"/Scripting/Modules/{Uri.EscapeDataString(Module.Name)}", replace: true);
+            }
         }
         catch (Exception ex)
         {
             Notifications.Error(ex, "Could not save module!");
         }
+    }
+
+    async Task InsertTextAsync(string text)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertText(text);
+    }
+
+    async Task InsertSnippetAsync(Snippet snippet)
+    {
+        if (_codeInput != null)
+            await _codeInput.InsertSnippet(snippet.Content);
     }
 }

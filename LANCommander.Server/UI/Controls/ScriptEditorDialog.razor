@@ -2,7 +2,6 @@
 @using LANCommander.Server.Models
 @using LANCommander.Server.UI.Components
 @using OptionSchema = LANCommander.SDK.Models.OptionSchema
-@using GlobalVariable = LANCommander.SDK.Models.GlobalVariable
 @using OptionChoiceYamlConverter = LANCommander.SDK.Models.OptionChoiceYamlConverter
 @using YamlDotNet.Serialization
 @using YamlDotNet.Serialization.NamingConventions
@@ -47,58 +46,7 @@ else
 
             <span class="script-editor-divider" aria-hidden="true"></span>
 
-            @if (_snippets.Any())
-            {
-                <Dropdown>
-                    <Overlay>
-                        <Menu>
-                            @foreach (var group in _snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
-                            {
-                                <MenuGroup Title="@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)">
-                                    @foreach (var snippet in group.OrderBy(s => s.Name))
-                                    {
-                                        <MenuItem OnClick="() => InsertSnippetAsync(snippet)">@snippet.Name</MenuItem>
-                                    }
-                                </MenuGroup>
-                            }
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button Small>Snippets <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
-                    </ChildContent>
-                </Dropdown>
-            }
-
-            @if (_variables.Any() || _globalVariables.Any())
-            {
-                <Dropdown>
-                    <Overlay>
-                        <Menu>
-                            @if (_variables.Any())
-                            {
-                                <MenuGroup Title="Runs with">
-                                    @foreach (var variable in _variables)
-                                    {
-                                        <MenuItem OnClick="() => InsertTextAsync(variable)">@variable</MenuItem>
-                                    }
-                                </MenuGroup>
-                            }
-                            @if (_globalVariables.Any())
-                            {
-                                <MenuGroup Title="Global">
-                                    @foreach (var variable in _globalVariables)
-                                    {
-                                        <MenuItem OnClick="() => InsertGlobalVariableAsync(variable)" title="@variable.Description">$var:@variable.Name</MenuItem>
-                                    }
-                                </MenuGroup>
-                            }
-                        </Menu>
-                    </Overlay>
-                    <ChildContent>
-                        <Button Small Icon="IconType.BracketsCurly">Variables <Icon Type="IconType.CaretDown" Class="script-editor-caret" /></Button>
-                    </ChildContent>
-                </Dropdown>
-            }
+            <ScriptEditorInsertMenus References="_references" Variables="_variables" OnInsertText="InsertTextAsync" OnInsertSnippet="InsertSnippetAsync" />
 
             @if (_optionKeys.Any())
             {
@@ -215,8 +163,8 @@ else
                                Language="Languages.PowerShell"
                                OnSave="SaveFromEditorAsync"
                                ScriptType="@_script.Type.ToString()"
-                               ModuleFunctions="@_moduleFunctions"
-                               GlobalVariables="@_globalVariableCompletions"
+                               ModuleFunctions="@_references.ModuleFunctions"
+                               GlobalVariables="@_references.GlobalVariableCompletions"
                                OnCaretMoved="caret => _caret = caret"
                                OnProblemsChanged="count => _problems = count"
                                OnReady="OnEditorReadyAsync" />
@@ -257,91 +205,11 @@ else
                     </Switch>
                 </section>
 
-                @if (_variables.Any())
-                {
-                    <section class="script-editor-card script-editor-variables">
-                        <div class="script-editor-card-header">
-                            <span class="script-editor-kicker">Runs with</span>
-                            <span class="script-editor-count">@_variables.Count</span>
-                        </div>
-                        <p class="script-editor-help">The variables @(Article(_script.Type)) @_script.Type.GetDisplayName().ToLowerInvariant() script is given. Click to insert.</p>
-                        <div class="script-editor-chips">
-                            @foreach (var variable in _showAllVariables ? _variables : _variables.Take(VariablesShown))
-                            {
-                                <button type="button" class="script-editor-chip" title="@($"Insert {variable}")" @onclick="() => InsertTextAsync(variable)">@variable</button>
-                            }
-                            @if (!_showAllVariables && _variables.Count > VariablesShown)
-                            {
-                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_variables.Count - VariablesShown} more variables")" @onclick="() => _showAllVariables = true">+@(_variables.Count - VariablesShown) more</button>
-                            }
-                        </div>
-                    </section>
-                }
-
-                @if (_globalVariables.Any())
-                {
-                    <section class="script-editor-card script-editor-global-variables">
-                        <div class="script-editor-card-header">
-                            <span class="script-editor-kicker">Global variables</span>
-                            <span class="script-editor-count">@_globalVariables.Count</span>
-                        </div>
-                        <p class="script-editor-help">Shared values every script can use, set under Scripting › Variables. Click to insert.</p>
-                        <div class="script-editor-chips">
-                            @foreach (var variable in _showAllGlobalVariables ? _globalVariables : _globalVariables.Take(VariablesShown))
-                            {
-                                <button type="button" class="script-editor-chip" title="@(String.IsNullOrWhiteSpace(variable.Description) ? $"Insert $var:{variable.Name}" : variable.Description)" @onclick="() => InsertGlobalVariableAsync(variable)">$var:@variable.Name</button>
-                            }
-                            @if (!_showAllGlobalVariables && _globalVariables.Count > VariablesShown)
-                            {
-                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_globalVariables.Count - VariablesShown} more global variables")" @onclick="() => _showAllGlobalVariables = true">+@(_globalVariables.Count - VariablesShown) more</button>
-                            }
-                        </div>
-                    </section>
-                }
-
-                @if (_moduleFunctions.Any())
-                {
-                    <section class="script-editor-card script-editor-cmdlets">
-                        <div class="script-editor-card-header">
-                            <span class="script-editor-kicker">Cmdlets</span>
-                            <span class="script-editor-count">@_moduleFunctions.Count</span>
-                        </div>
-                        <p class="script-editor-help">The functions the LANCommander PowerShell modules provide. Click to insert at the caret.</p>
-                        <div class="script-editor-chips">
-                            @foreach (var function in _showAllCmdlets ? _moduleFunctions : _moduleFunctions.Take(CmdletsShown))
-                            {
-                                <button type="button" class="script-editor-chip script-editor-chip-cmdlet" title="@(String.IsNullOrWhiteSpace(function.Synopsis) ? $"Insert {function.Name}" : function.Synopsis)" @onclick="() => InsertTextAsync(function.Name)">@function.Name</button>
-                            }
-                            @if (!_showAllCmdlets && _moduleFunctions.Count > CmdletsShown)
-                            {
-                                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {_moduleFunctions.Count - CmdletsShown} more cmdlets")" @onclick="() => _showAllCmdlets = true">+@(_moduleFunctions.Count - CmdletsShown) more</button>
-                            }
-                        </div>
-                    </section>
-                }
-
-                @if (_snippets.Any())
-                {
-                    <section class="script-editor-card script-editor-snippets">
-                        <div class="script-editor-card-header">
-                            <span class="script-editor-kicker">Snippets</span>
-                            <span class="script-editor-count">@_snippets.Count()</span>
-                        </div>
-                        <p class="script-editor-help">Reusable blocks you can drop into the script. Click to insert at the caret.</p>
-                        @foreach (var group in _snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
-                        {
-                            <div class="script-editor-snippet-group">
-                                <span class="script-editor-snippet-group-name">@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)</span>
-                                <div class="script-editor-chips">
-                                    @foreach (var snippet in group.OrderBy(s => s.Name))
-                                    {
-                                        <button type="button" class="script-editor-chip script-editor-chip-snippet" title="@($"Insert {snippet.Name}")" @onclick="() => InsertSnippetAsync(snippet)">@snippet.Name</button>
-                                    }
-                                </div>
-                            </div>
-                        }
-                    </section>
-                }
+                <ScriptEditorReferenceCards References="_references"
+                                            Variables="_variables"
+                                            VariablesHelp="@($"The variables {Article(_script.Type)} {_script.Type.GetDisplayName().ToLowerInvariant()} script is given. Click to insert.")"
+                                            OnInsertText="InsertTextAsync"
+                                            OnInsertSnippet="InsertSnippetAsync" />
             </aside>
         </div>
     </div>
@@ -353,11 +221,8 @@ else
     Form? _form;
     CodeInput? _codeInput;
     PowerShellConsole? _console;
-    IEnumerable<Snippet> _snippets = [];
-    List<ModuleFunctionCompletion> _moduleFunctions = new();
+    ScriptEditorReferences _references = ScriptEditorReferences.Empty;
     List<string> _variables = new();
-    List<GlobalVariable> _globalVariables = new();
-    List<GlobalVariableCompletion> _globalVariableCompletions = new();
     List<string> _optionKeys = new();
     string _redistributableName = string.Empty;
 
@@ -379,15 +244,6 @@ else
     List<ScriptEditorGroup> _groups = [];
     readonly HashSet<string> _collapsedGroups = new();
     string? _ownerName;
-
-    // Runs with: the first few variables, the rest behind "+N more"
-    const int VariablesShown = 8;
-    bool _showAllVariables;
-    bool _showAllGlobalVariables;
-
-    // Cmdlets: the first few module functions, the rest behind "+N more"
-    const int CmdletsShown = 12;
-    bool _showAllCmdlets;
 
     // When the script was last written, for "saved 2m ago"
     DateTime? _savedAt;
@@ -534,14 +390,8 @@ else
         _saved = ScriptSnapshot.Of(_script);
         _savedAt = SavedAtOf(_script);
         _variables = VariablesFor(_script.Type);
-        _snippets = ScriptService.GetSnippets().ToList();
+        _references = ScriptEditorReferences.Load(ScriptService, ModuleService, Logger);
         _ownerName = await OwnerNameAsync();
-
-        LoadGlobalVariables();
-
-        _moduleFunctions = ModuleService.GetPublicFunctionCompletions()
-            .Select(f => new ModuleFunctionCompletion(f.Name, string.IsNullOrWhiteSpace(f.Synopsis) ? null : f.Synopsis, f.Module))
-            .ToList();
 
         await LoadTreeAsync();
 
@@ -661,7 +511,6 @@ else
         _saved = ScriptSnapshot.Of(_script);
         _savedAt = SavedAtOf(_script);
         _variables = VariablesFor(_script.Type);
-        _showAllVariables = false;
         _problems = 0;
         _caret = (1, 1);
 
@@ -701,7 +550,6 @@ else
         _saved = ScriptSnapshot.Of(_script);
         _savedAt = null;
         _variables = VariablesFor(type);
-        _showAllVariables = false;
         _problems = 0;
         _caret = (1, 1);
 
@@ -831,23 +679,6 @@ else
         if (_codeInput != null)
             await _codeInput.InsertText(text);
     }
-
-    void LoadGlobalVariables()
-    {
-        try
-        {
-            _globalVariables = ScriptService.GetGlobalVariables().ToList();
-            _globalVariableCompletions = _globalVariables
-                .Select(v => new GlobalVariableCompletion(v.Name, String.IsNullOrWhiteSpace(v.Description) ? null : v.Description))
-                .ToList();
-        }
-        catch (Exception ex)
-        {
-            Logger.LogWarning(ex, "Could not load the global script variables");
-        }
-    }
-
-    Task InsertGlobalVariableAsync(GlobalVariable variable) => InsertTextAsync($"$var:{variable.Name}");
 
     async Task InsertSnippetAsync(Snippet snippet)
     {

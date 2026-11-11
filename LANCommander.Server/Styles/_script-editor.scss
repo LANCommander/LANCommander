@@ -500,6 +500,77 @@ $script-editor-rail-width: 288px;
     color: var(--lc-text-disabled-color);
 }
 
+// ── As a page: the snippet and module editors ──
+// The same editor framed as a card, filling the window under the page header (98px) and the
+// content's padding (20 + 28), with the status bar along its foot instead of in a dialog footer
+.script-editor-framed {
+    flex: none;
+    height: calc(100vh - 146px);
+    min-height: 520px;
+    overflow: hidden;
+    border: 1px solid var(--lc-border-card-color);
+    border-radius: var(--lc-radius-lg);
+    background: var(--lc-panel-background);
+
+    // Without a console, the editor takes the column
+    .script-editor-code {
+        flex: 1;
+    }
+}
+
+.script-editor-statusbar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    height: 32px;
+    padding: 0 14px;
+    border-top: 1px solid var(--lc-border-color);
+    background: var(--lc-well);
+}
+
+// A file's path as it is saved, under the fields that name it
+.script-editor-path {
+    margin: 0;
+    overflow-wrap: anywhere;
+    color: var(--lc-text-disabled-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+// Function name: the verb, a dash, the noun
+.script-editor-function-name {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+
+    > .script-editor-function-verb {
+        flex: 0 0 116px;
+        min-width: 0;
+    }
+
+    > .script-editor-function-noun {
+        flex: 1;
+        min-width: 0;
+    }
+}
+
+.script-editor-card .lc-alert {
+    margin-bottom: 12px;
+}
+
+.script-editor-exports {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+}
+
+.script-editor-card-actions {
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 12px;
+}
+
 @media (max-width: 1100px) {
     .script-editor-body {
         flex-direction: column;

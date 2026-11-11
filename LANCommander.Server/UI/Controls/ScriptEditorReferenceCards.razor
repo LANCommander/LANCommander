@@ -1,0 +1,135 @@
+@*
+    The cards at the foot of a script editor's rail (see _script-editor.scss): the variables the
+    script runs with, the global variables, the modules' cmdlets and the snippets, each a set of
+    chips that insert at the caret. Each card is left out when it would be empty; long lists show
+    their first few behind "+N more".
+*@
+@if (Variables.Any())
+{
+    <section class="script-editor-card script-editor-variables">
+        <div class="script-editor-card-header">
+            <span class="script-editor-kicker">Runs with</span>
+            <span class="script-editor-count">@Variables.Count</span>
+        </div>
+        @if (!String.IsNullOrWhiteSpace(VariablesHelp))
+        {
+            <p class="script-editor-help">@VariablesHelp</p>
+        }
+        <div class="script-editor-chips">
+            @foreach (var variable in _showAllVariables ? Variables : Variables.Take(VariablesShown))
+            {
+                <button type="button" class="script-editor-chip" title="@($"Insert {variable}")" @onclick="() => OnInsertText.InvokeAsync(variable)">@variable</button>
+            }
+            @if (!_showAllVariables && Variables.Count > VariablesShown)
+            {
+                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {Variables.Count - VariablesShown} more variables")" @onclick="() => _showAllVariables = true">+@(Variables.Count - VariablesShown) more</button>
+            }
+        </div>
+    </section>
+}
+
+@if (References.GlobalVariables.Any())
+{
+    var globalVariables = References.GlobalVariables;
+
+    <section class="script-editor-card script-editor-global-variables">
+        <div class="script-editor-card-header">
+            <span class="script-editor-kicker">Global variables</span>
+            <span class="script-editor-count">@globalVariables.Count</span>
+        </div>
+        <p class="script-editor-help">Shared values every script can use, set under Scripting › Variables. Click to insert.</p>
+        <div class="script-editor-chips">
+            @foreach (var variable in _showAllGlobalVariables ? globalVariables : globalVariables.Take(VariablesShown))
+            {
+                <button type="button" class="script-editor-chip" title="@(String.IsNullOrWhiteSpace(variable.Description) ? $"Insert $var:{variable.Name}" : variable.Description)" @onclick="@(() => OnInsertText.InvokeAsync($"$var:{variable.Name}"))">$var:@variable.Name</button>
+            }
+            @if (!_showAllGlobalVariables && globalVariables.Count > VariablesShown)
+            {
+                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {globalVariables.Count - VariablesShown} more global variables")" @onclick="() => _showAllGlobalVariables = true">+@(globalVariables.Count - VariablesShown) more</button>
+            }
+        </div>
+    </section>
+}
+
+@if (References.ModuleFunctions.Any())
+{
+    var moduleFunctions = References.ModuleFunctions;
+
+    <section class="script-editor-card script-editor-cmdlets">
+        <div class="script-editor-card-header">
+            <span class="script-editor-kicker">Cmdlets</span>
+            <span class="script-editor-count">@moduleFunctions.Count</span>
+        </div>
+        <p class="script-editor-help">The functions the LANCommander PowerShell modules provide. Click to insert at the caret.</p>
+        <div class="script-editor-chips">
+            @foreach (var function in _showAllCmdlets ? moduleFunctions : moduleFunctions.Take(CmdletsShown))
+            {
+                <button type="button" class="script-editor-chip script-editor-chip-cmdlet" title="@(String.IsNullOrWhiteSpace(function.Synopsis) ? $"Insert {function.Name}" : function.Synopsis)" @onclick="() => OnInsertText.InvokeAsync(function.Name)">@function.Name</button>
+            }
+            @if (!_showAllCmdlets && moduleFunctions.Count > CmdletsShown)
+            {
+                <button type="button" class="script-editor-chip script-editor-chip-more" aria-label="@($"Show {moduleFunctions.Count - CmdletsShown} more cmdlets")" @onclick="() => _showAllCmdlets = true">+@(moduleFunctions.Count - CmdletsShown) more</button>
+            }
+        </div>
+    </section>
+}
+
+@if (Snippets.Any())
+{
+    <section class="script-editor-card script-editor-snippets">
+        <div class="script-editor-card-header">
+            <span class="script-editor-kicker">Snippets</span>
+            <span class="script-editor-count">@Snippets.Count()</span>
+        </div>
+        <p class="script-editor-help">Reusable blocks you can drop into the script. Click to insert at the caret.</p>
+        @foreach (var group in Snippets.GroupBy(s => s.Group).OrderBy(g => g.Key))
+        {
+            <div class="script-editor-snippet-group">
+                <span class="script-editor-snippet-group-name">@(String.IsNullOrWhiteSpace(group.Key) ? "General" : group.Key)</span>
+                <div class="script-editor-chips">
+                    @foreach (var snippet in group.OrderBy(s => s.Name))
+                    {
+                        <button type="button" class="script-editor-chip script-editor-chip-snippet" title="@($"Insert {snippet.Name}")" @onclick="() => OnInsertSnippet.InvokeAsync(snippet)">@snippet.Name</button>
+                    }
+                </div>
+            </div>
+        }
+    </section>
+}
+
+@code {
+    [Parameter, EditorRequired] public ScriptEditorReferences References { get; set; } = ScriptEditorReferences.Empty;
+
+    /// <summary>The variables the script is run with, if it is run with any.</summary>
+    [Parameter] public IReadOnlyList<string> Variables { get; set; } = [];
+
+    /// <summary>What the "Runs with" card says above its chips.</summary>
+    [Parameter] public string? VariablesHelp { get; set; }
+
+    /// <summary>Which snippets to offer; all of them unless set (the snippet editor leaves out the one open).</summary>
+    [Parameter] public Func<Snippet, bool>? SnippetFilter { get; set; }
+
+    [Parameter] public EventCallback<string> OnInsertText { get; set; }
+    [Parameter] public EventCallback<Snippet> OnInsertSnippet { get; set; }
+
+    const int VariablesShown = 8;
+    const int CmdletsShown = 12;
+
+    bool _showAllVariables;
+    bool _showAllGlobalVariables;
+    bool _showAllCmdlets;
+
+    IReadOnlyList<string>? _shownVariables;
+
+    IEnumerable<Snippet> Snippets => SnippetFilter == null ? References.Snippets : References.Snippets.Where(SnippetFilter);
+
+    protected override void OnParametersSet()
+    {
+        // Another script's variables start folded again
+        if (!ReferenceEquals(Variables, _shownVariables))
+        {
+            _shownVariables = Variables;
+            _showAllVariables = false;
+        }
+    }
+}

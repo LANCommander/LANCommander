@@ -10,7 +10,7 @@
       launcher (InterposerService.PresenceChanged), with or without Discord. To build against an unreleased Interposer, pack it
       into a folder and pass -p:InterposerVersion=<version> -p:RestoreAdditionalProjectSources=<folder>.
     -->
-    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.5.1</InterposerVersion>
+    <InterposerVersion Condition="'$(InterposerVersion)' == ''">1.5.3</InterposerVersion>
   </PropertyGroup>
   <ItemGroup Label="Aspire">
     <PackageVersion Include="Aspire.Hosting.AppHost" Version="9.5.2" />

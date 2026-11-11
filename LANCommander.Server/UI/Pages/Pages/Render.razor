@@ -2,12 +2,14 @@
 @using LANCommander.SDK.Extensions
 @using LANCommander.Server.UI.Pages.Pages.Components
 @using Markdig
+@using Microsoft.AspNetCore.Components.Authorization
 @using ZiggyCreatures.Caching.Fusion
 @using LANCommander.Server.Services.Abstractions
 @inject PageService PageService
 @inject IFusionCache Cache
 @inject NavigationManager NavigationManager
 @inject IVersionProvider VersionProvider
+@inject AuthenticationStateProvider AuthenticationStateProvider
 
 @if (Page != null)
 {
@@ -32,6 +34,28 @@
 
             <PageContent Class="page-view-content">
                 @((MarkupString)Markdig.Markdown.ToHtml(Page.Contents ?? "", PagePipeline))
+
+                @if (Related.Any())
+                {
+                    <div class="page-view-related">
+                        <Divider Left>Related</Divider>
+
+                        <Flex Gap="Gap.Small" Wrap>
+                            @foreach (var item in Related)
+                            {
+                                @* Edit pages are admin-only, so other visitors just see the name *@
+                                @if (IsAdministrator)
+                                {
+                                    <a href="@item.Href"><Tag Icon="@item.Icon">@item.Name</Tag></a>
+                                }
+                                else
+                                {
+                                    <Tag Icon="@item.Icon">@item.Name</Tag>
+                                }
+                            }
+                        </Flex>
+                    </div>
+                }
             </PageContent>
         </Pane>
     </SplitPane>
@@ -55,15 +79,27 @@ else if (NotFoundResult)
 
     [Parameter] public string Route { get; set; }
 
+    record RelatedItem(string Name, string Href, IconType Icon);
+
     Page Page;
     bool NotFoundResult;
     List<Page> Ancestors = new();
+    List<RelatedItem> Related = new();
+    bool IsAdministrator;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        IsAdministrator = authState.User.IsInRole(RoleService.AdministratorRoleName);
+    }
 
     protected override async Task OnParametersSetAsync()
     {
         Page = null;
         NotFoundResult = false;
         Ancestors = new();
+        Related = new();
 
         if (Route == null)
         {
@@ -93,8 +129,28 @@ else if (NotFoundResult)
             if (Page == null)
                 NotFoundResult = true;
             else
+            {
                 await LoadAncestorsAsync();
+                await LoadRelatedAsync();
+            }
         }
+    }
+
+    // Loaded outside the page cache so renamed games and servers show their current names
+    async Task LoadRelatedAsync()
+    {
+        var linked = await PageService
+            .Include(p => p.Games, p => p.Redistributables, p => p.Servers)
+            .FirstOrDefaultAsync(p => p.Id == Page.Id);
+
+        if (linked == null)
+            return;
+
+        Related = [
+            .. (linked.Games ?? []).OrderBy(g => g.Title).Select(g => new RelatedItem(g.Title, $"/Games/{g.Id}", IconType.GameController)),
+            .. (linked.Redistributables ?? []).OrderBy(r => r.Name).Select(r => new RelatedItem(r.Name, $"/Redistributables/{r.Id}", IconType.Package)),
+            .. (linked.Servers ?? []).OrderBy(s => s.Name).Select(s => new RelatedItem(s.Name, $"/Servers/{s.Id}", IconType.HardDrives)),
+        ];
     }
 
     async Task LoadAncestorsAsync()

@@ -122,4 +122,196 @@ public class PageServiceTests(ApplicationFixture fixture) : BaseTest(fixture)
 
         await Should.ThrowAsync<Exception>(async () => await pageService.UpdateAsync(reparentedA));
     }
+
+    [Fact]
+    public async Task AddingWithOnlyParentIdNestsTheRoute()
+    {
+        var pageService = GetService<PageService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        var child = await pageService.AddAsync(new Page { Title = "Child", Slug = "Child" + suffix, Contents = "", ParentId = parent.Id });
+
+        child.Route.ShouldBe($"Pages/Parent{suffix}/Child{suffix}");
+        (await pageService.GetAsync(child.Id)).ParentId.ShouldBe(parent.Id);
+    }
+
+    [Fact]
+    public async Task RootSlugCannotShadowTheEditor()
+    {
+        var pageService = GetService<PageService>();
+
+        var page = await pageService.AddAsync(new Page { Title = "Edit", Slug = "", Contents = "" });
+
+        // /Pages/Edit is the editor, so a root page there could never be reached
+        page.Slug.ShouldNotBe("Edit");
+        page.Route.ShouldNotBe("Pages/Edit");
+
+        await pageService.DeleteAsync(page);
+    }
+
+    [Fact]
+    public async Task SlugsDifferingOnlyByCaseCollide()
+    {
+        var pageService = GetService<PageService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        await pageService.AddAsync(new Page { Title = "Rules", Slug = "HouseRules", Contents = "", ParentId = parent.Id });
+        var second = await pageService.AddAsync(new Page { Title = "Rules", Slug = "Houserules", Contents = "", ParentId = parent.Id });
+
+        second.Slug.ShouldBe("Houserules-1");
+    }
+
+    [Fact]
+    public async Task NewPagesAreAppendedAfterTheirSiblings()
+    {
+        var pageService = GetService<PageService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        var first = await pageService.AddAsync(new Page { Title = "First", Slug = "First", Contents = "", ParentId = parent.Id });
+        var second = await pageService.AddAsync(new Page { Title = "Second", Slug = "Second", Contents = "", ParentId = parent.Id });
+
+        (await pageService.GetAsync(second.Id)).SortOrder.ShouldBeGreaterThan((await pageService.GetAsync(first.Id)).SortOrder);
+    }
+
+    [Fact]
+    public async Task MovingAPageToTheRootClearsItsParent()
+    {
+        var pageService = GetService<PageService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        var child = await pageService.AddAsync(new Page { Title = "Child", Slug = "Child" + suffix, Contents = "", ParentId = parent.Id });
+
+        await pageService.UpdateOrderAsync(Guid.Empty, [child.Id]);
+
+        var moved = await pageService.GetAsync(child.Id);
+
+        moved.ParentId.ShouldBeNull();
+        moved.Route.ShouldBe($"Pages/Child{suffix}");
+    }
+
+    [Fact]
+    public async Task CountsEveryDescendant()
+    {
+        var pageService = GetService<PageService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = "" });
+        var child = await pageService.AddAsync(new Page { Title = "Child", Slug = "Child", Contents = "", ParentId = parent.Id });
+        await pageService.AddAsync(new Page { Title = "Grandchild", Slug = "Grandchild", Contents = "", ParentId = child.Id });
+        await pageService.AddAsync(new Page { Title = "Sibling", Slug = "Sibling", Contents = "", ParentId = parent.Id });
+
+        (await pageService.CountDescendantsAsync(parent.Id)).ShouldBe(3);
+        (await pageService.CountDescendantsAsync(child.Id)).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task RemovingAnImageFromAPageDeletesIt()
+    {
+        var pageService = GetService<PageService>();
+        var mediaService = GetService<MediaService>();
+
+        var image = await AddPageImageAsync();
+        var page = await pageService.AddAsync(new Page { Title = "Image", Slug = "Image" + Guid.NewGuid().ToString("N"), Contents = ImageMarkdown(image) });
+
+        page = await pageService.GetAsync(page.Id);
+        page.Contents = "No more image";
+        await pageService.UpdateAsync(page);
+
+        (await mediaService.GetAsync(image.Id)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task AnImageAnotherPageStillUsesIsKept()
+    {
+        var pageService = GetService<PageService>();
+        var mediaService = GetService<MediaService>();
+
+        var image = await AddPageImageAsync();
+        var page = await pageService.AddAsync(new Page { Title = "Image", Slug = "Image" + Guid.NewGuid().ToString("N"), Contents = ImageMarkdown(image) });
+        await pageService.AddAsync(new Page { Title = "Other", Slug = "Other" + Guid.NewGuid().ToString("N"), Contents = ImageMarkdown(image) });
+
+        page = await pageService.GetAsync(page.Id);
+        page.Contents = "";
+        await pageService.UpdateAsync(page);
+
+        (await mediaService.GetAsync(image.Id)).ShouldNotBeNull();
+    }
+
+    [Fact]
+    public async Task DeletingAPageDeletesItsAndItsChildrensImages()
+    {
+        var pageService = GetService<PageService>();
+        var mediaService = GetService<MediaService>();
+        var suffix = Guid.NewGuid().ToString("N");
+
+        var parentImage = await AddPageImageAsync();
+        var childImage = await AddPageImageAsync();
+
+        var parent = await pageService.AddAsync(new Page { Title = "Parent", Slug = "Parent" + suffix, Contents = ImageMarkdown(parentImage) });
+        var child = await pageService.AddAsync(new Page { Title = "Child", Slug = "Child", Contents = ImageMarkdown(childImage), ParentId = parent.Id });
+
+        await pageService.DeleteAsync(await pageService.GetAsync(parent.Id));
+
+        (await pageService.GetAsync(child.Id)).ShouldBeNull();
+        (await mediaService.GetAsync(parentImage.Id)).ShouldBeNull();
+        (await mediaService.GetAsync(childImage.Id)).ShouldBeNull();
+    }
+
+    [Fact]
+    public async Task LinkingGamesLeavesTheGamesIntact()
+    {
+        var pageService = GetService<PageService>();
+        var gameService = GetService<GameService>();
+
+        var game = await gameService.AddAsync(new Game { Title = "Linked " + Guid.NewGuid().ToString("N") });
+        var page = await pageService.AddAsync(new Page { Title = "Links", Slug = "Links" + Guid.NewGuid().ToString("N"), Contents = "" });
+
+        // As the editor saves: the page with its links loaded, given freshly loaded games
+        page = await pageService.Include(p => p.Parent, p => p.Games, p => p.Redistributables, p => p.Servers).FirstOrDefaultAsync(p => p.Id == page.Id);
+        page.Games = await gameService.GetAsync(g => g.Id == game.Id);
+        await pageService.UpdateAsync(page);
+
+        var linked = await pageService.Include(p => p.Games).FirstOrDefaultAsync(p => p.Id == page.Id);
+
+        linked.Games.Select(g => g.Id).ShouldBe([game.Id]);
+        (await gameService.GetAsync(game.Id)).Title.ShouldBe(game.Title);
+
+        // Unlinking everything clears the links rather than being skipped as "not loaded"
+        linked.Games = [];
+        await pageService.UpdateAsync(linked);
+
+        (await pageService.Include(p => p.Games).FirstOrDefaultAsync(p => p.Id == page.Id)).Games.ShouldBeEmpty();
+    }
+
+    [Fact]
+    public void FindsMediaReferencesInContents()
+    {
+        var id = Guid.NewGuid();
+
+        var contents = $"![a](/api/Media/{id}/Download?fileId={Guid.NewGuid()}) and ![b](/api/Media/{id.ToString().ToUpper()}/Thumbnail)";
+
+        PageService.GetMediaReferences(contents).ShouldBe([id]);
+        PageService.GetMediaReferences(null).ShouldBeEmpty();
+    }
+
+    static string ImageMarkdown(Media media) => $"![image](/api/Media/{media.Id}/Download?fileId={media.FileId})";
+
+    async Task<Media> AddPageImageAsync()
+    {
+        await EnsureStorageLocationsExistAsync();
+
+        var mediaService = GetService<MediaService>();
+
+        return await mediaService.AddAsync(new Media
+        {
+            Type = LANCommander.SDK.Enums.MediaType.PageImage,
+            Crc32 = string.Empty,
+            FileId = Guid.NewGuid(),
+            StorageLocation = await mediaService.GetDefaultStorageLocationAsync(),
+        });
+    }
 }

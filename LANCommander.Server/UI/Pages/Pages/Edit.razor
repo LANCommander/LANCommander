@@ -5,6 +5,9 @@
 @using PSC.Blazor.Components.MarkdownEditor.Models
 @inject MediaService MediaService
 @inject PageService PageService
+@inject GameService GameService
+@inject RedistributableService RedistributableService
+@inject ServerService ServerService
 @inject AlertService Alerts
 @inject NavigationManager NavigationManager
 @inject NotificationService Notifications
@@ -74,17 +77,28 @@
                     <SlugEditorInput @bind-Page="_selectedPage" />
                 </FormItem>
 
-                @if (_selectedPage.Children == null || !_selectedPage.Children.Any())
-                {
-                    <FormItem>
-                        <MarkdownEditor @bind-Value="_selectedPage.Contents"
-                                        UploadImage="true"
-                                        ImageUploadEndpoint="/api/Media/Upload/PageImage"
-                                        CustomImageUpload="UploadImageAsync"
-                                        SpellChecker="false"
-                                        MinHeight="500px" />
+                <Flex Gap="Gap.Medium" Wrap>
+                    <FormItem Label="Games" Style="flex: 1; min-width: 200px">
+                        <Select TValue="Guid" Multiple Clearable Searchable Items="_gameItems" @bind-Values="_linkedGameIds" Placeholder="Link games" />
                     </FormItem>
-                }
+
+                    <FormItem Label="Redistributables" Style="flex: 1; min-width: 200px">
+                        <Select TValue="Guid" Multiple Clearable Searchable Items="_redistributableItems" @bind-Values="_linkedRedistributableIds" Placeholder="Link redistributables" />
+                    </FormItem>
+
+                    <FormItem Label="Servers" Style="flex: 1; min-width: 200px">
+                        <Select TValue="Guid" Multiple Clearable Searchable Items="_serverItems" @bind-Values="_linkedServerIds" Placeholder="Link servers" />
+                    </FormItem>
+                </Flex>
+
+                <FormItem>
+                    <MarkdownEditor @bind-Value="_selectedPage.Contents"
+                                    UploadImage="true"
+                                    ImageUploadEndpoint="/api/Media/Upload/PageImage"
+                                    CustomImageUpload="UploadImageAsync"
+                                    SpellChecker="false"
+                                    MinHeight="500px" />
+                </FormItem>
             </Form>
         }
         else
@@ -104,8 +118,16 @@
     ICollection<Page> _pages = new List<Page>();
     bool _saving;
 
-    string? _originalContent;
-    string? _originalTitle;
+    // What the page looked like when loaded or last saved, to detect unsaved changes
+    string? _savedSnapshot;
+
+    IEnumerable<SelectItem<Guid>> _gameItems = [];
+    IEnumerable<SelectItem<Guid>> _redistributableItems = [];
+    IEnumerable<SelectItem<Guid>> _serverItems = [];
+
+    IEnumerable<Guid> _linkedGameIds = [];
+    IEnumerable<Guid> _linkedRedistributableIds = [];
+    IEnumerable<Guid> _linkedServerIds = [];
 
     // The title the current slug was derived from, so the slug follows the title until customized
     string? _lastTitle;
@@ -116,7 +138,21 @@
         <MenuItem Icon="IconType.Trash" Danger OnClick="() => DeletePageAsync(page)">Delete</MenuItem>
     </Menu>;
 
-    protected override async Task OnInitializedAsync() => await LoadAsync();
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAsync();
+
+        try
+        {
+            _gameItems = (await GameService.SortBy(g => g.Title).GetAsync()).ToSelectItems(g => g.Id, g => g.Title).ToList();
+            _redistributableItems = (await RedistributableService.SortBy(r => r.Name).GetAsync()).ToSelectItems(r => r.Id, r => r.Name).ToList();
+            _serverItems = (await ServerService.SortBy(s => s.Name).GetAsync()).ToSelectItems(s => s.Id, s => s.Name).ToList();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not load games, redistributables and servers to link!");
+        }
+    }
 
     protected override async Task OnParametersSetAsync()
     {
@@ -124,7 +160,9 @@
             return;
 
         // Include the parent so RenderRoute produces the nested route on save
-        _selectedPage = await PageService.Include(p => p.Parent).FirstOrDefaultAsync(p => p.Id == Id);
+        _selectedPage = await PageService
+            .Include(p => p.Parent, p => p.Games, p => p.Redistributables, p => p.Servers)
+            .FirstOrDefaultAsync(p => p.Id == Id);
 
         if (_selectedPage == null)
         {
@@ -132,10 +170,22 @@
             return;
         }
 
-        _originalContent = _selectedPage.Contents;
-        _originalTitle = _selectedPage.Title;
+        _linkedGameIds = _selectedPage.Games?.Select(g => g.Id).ToList() ?? [];
+        _linkedRedistributableIds = _selectedPage.Redistributables?.Select(r => r.Id).ToList() ?? [];
+        _linkedServerIds = _selectedPage.Servers?.Select(s => s.Id).ToList() ?? [];
+
+        _savedSnapshot = Snapshot();
         _lastTitle = _selectedPage.Title;
     }
+
+    // Covers every field the editor changes, so any of them counts as an unsaved change
+    string Snapshot() => _selectedPage == null ? "" : String.Join('\n',
+        _selectedPage.Title,
+        _selectedPage.Slug,
+        _selectedPage.Contents,
+        String.Join(',', _linkedGameIds.Order()),
+        String.Join(',', _linkedRedistributableIds.Order()),
+        String.Join(',', _linkedServerIds.Order()));
 
     void SyncSlugFromTitle()
     {
@@ -223,15 +273,14 @@
     {
         try
         {
+            // Created directly beneath its parent so the slug is made unique among its real siblings
             var newPage = await PageService.AddAsync(new Page
             {
                 Title = "New Page",
                 Slug = "new-page",
                 Contents = "",
+                ParentId = parentId is Guid pid && pid != Guid.Empty ? pid : null,
             });
-
-            if (parentId is Guid pid && pid != Guid.Empty)
-                await PageService.ChangeParentAsync(newPage.Id, pid);
 
             await LoadAsync();
 
@@ -245,7 +294,20 @@
 
     async Task DeletePageAsync(Page? page)
     {
-        if (page == null || !await Alerts.ConfirmAsync($"Delete \"{page.Title}\"?", "Delete Page", okText: "Delete", danger: true))
+        if (page == null)
+            return;
+
+        // Deleting a page also deletes everything beneath it, so say so up front
+        var descendants = await PageService.CountDescendantsAsync(page.Id);
+
+        var message = descendants switch
+        {
+            0 => $"Delete \"{page.Title}\"?",
+            1 => $"Delete \"{page.Title}\" and the page beneath it?",
+            _ => $"Delete \"{page.Title}\" and the {descendants} pages beneath it?",
+        };
+
+        if (!await Alerts.ConfirmAsync(message, "Delete Page", okText: "Delete", danger: true))
             return;
 
         try
@@ -277,13 +339,22 @@
 
         try
         {
+            // Freshly loaded, not id-only stubs: the relationship update copies these entities'
+            // values onto the stored rows, so a stub would blank out every linked item.
+            var gameIds = _linkedGameIds.ToList();
+            var redistributableIds = _linkedRedistributableIds.ToList();
+            var serverIds = _linkedServerIds.ToList();
+
+            _selectedPage.Games = await GameService.GetAsync(g => gameIds.Contains(g.Id));
+            _selectedPage.Redistributables = await RedistributableService.GetAsync(r => redistributableIds.Contains(r.Id));
+            _selectedPage.Servers = await ServerService.GetAsync(s => serverIds.Contains(s.Id));
+
             await PageService.UpdateAsync(_selectedPage);
 
             Notifications.Success("Page updated!");
 
             // Reset the change-tracking baseline so navigating away doesn't prompt
-            _originalContent = _selectedPage.Contents;
-            _originalTitle = _selectedPage.Title;
+            _savedSnapshot = Snapshot();
             _lastTitle = _selectedPage.Title;
 
             await LoadAsync();
@@ -303,7 +374,7 @@
         if (page == null)
             return;
 
-        var modified = _selectedPage != null && (_selectedPage.Contents != _originalContent || _selectedPage.Title != _originalTitle);
+        var modified = _selectedPage != null && Snapshot() != _savedSnapshot;
 
         if (modified)
         {

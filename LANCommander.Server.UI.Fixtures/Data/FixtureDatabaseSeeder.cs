@@ -499,6 +499,10 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
             SortOrder = 0,
         });
 
+        var gameService = provider.GetRequiredService<GameService>();
+        var arenaBlitzId = Games.Id(Games.ArenaBlitz);
+
+        // Created beneath its parent, as the page editor does, so the route is nested
         await pageService.AddAsync(new Page
         {
             Id = FixtureIds.For("page:house-rules"),
@@ -506,10 +510,9 @@ public sealed class FixtureDatabaseSeeder(IServiceProvider services)
             Slug = "",
             Contents = "1. No spawn camping.\n2. Headphones on.\n3. Winner stays on.",
             SortOrder = 0,
+            ParentId = welcome.Id,
+            Games = await gameService.GetAsync(g => g.Id == arenaBlitzId),
         });
-
-        // As the page editor does, so the child's route is nested under its parent's
-        await pageService.ChangeParentAsync(FixtureIds.For("page:house-rules"), welcome.Id);
     }
 
     private static async Task SeedPlaySessionsAsync(IServiceProvider provider)

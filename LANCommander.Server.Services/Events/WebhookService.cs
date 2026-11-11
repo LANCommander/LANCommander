@@ -115,6 +115,46 @@ public sealed class WebhookService(
             case ServerEventTypes.GameCreated:
                 payload = new { title = "Example game" };
                 break;
+            case ServerEventTypes.GameUpdated:
+            case ServerEventTypes.GameDeleted:
+                payload = new { title = "Example game" };
+                break;
+            case ServerEventTypes.UserCreated:
+                targetType = "user";
+                payload = new { userName = "example", approved = false };
+                break;
+            case ServerEventTypes.UserApproved:
+            case ServerEventTypes.UserDeleted:
+                targetType = "user";
+                payload = new { userName = "example" };
+                break;
+            case ServerEventTypes.IssueCreated:
+                payload = new { issueId = Guid.NewGuid(), description = "The game crashes on launch." };
+                break;
+            case ServerEventTypes.IssueResolved:
+                payload = new { issueId = Guid.NewGuid() };
+                break;
+            case ServerEventTypes.MatchCreated:
+                payload = new { matchId = Guid.NewGuid(), serverId = (Guid?)Guid.NewGuid(), map = "Example map", mode = "Deathmatch" };
+                break;
+            case ServerEventTypes.MatchEnded:
+                payload = new
+                {
+                    matchId = Guid.NewGuid(),
+                    serverId = (Guid?)Guid.NewGuid(),
+                    status = SDK.Enums.MatchStatus.Ended,
+                    reason = "Frag limit reached",
+                    results = new[]
+                    {
+                        new
+                        {
+                            participantId = (Guid?)Guid.NewGuid(), playerKey = "player-1", userId = (Guid?)Guid.NewGuid(),
+                            team = "Red", rank = 1, score = (double?)25, status = SDK.Enums.MatchResultStatus.Finished,
+                            timeMilliseconds = (long?)600000,
+                        },
+                    },
+                };
+                break;
             case ServerEventTypes.ArchiveUploaded:
                 payload = new { archiveId = Guid.NewGuid(), gameVersionId = Guid.NewGuid(), version = "1.0" };
                 break;

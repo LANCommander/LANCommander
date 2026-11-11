@@ -207,6 +207,15 @@ public sealed class WebhookTests
 
     [Theory]
     [InlineData(ServerEventTypes.GameCreated, "game", "completed", "title", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.GameUpdated, "game", "completed", "title", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.GameDeleted, "game", "completed", "title", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.UserCreated, "user", "completed", "userName,approved", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.UserApproved, "user", "completed", "userName", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.UserDeleted, "user", "completed", "userName", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.IssueCreated, "game", "completed", "issueId,description", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.IssueResolved, "game", "completed", "issueId", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.MatchCreated, "game", "completed", "matchId,serverId,map,mode", ServerEventSources.Server)]
+    [InlineData(ServerEventTypes.MatchEnded, "game", "completed", "matchId,serverId,status,reason,results", ServerEventSources.Server)]
     [InlineData(ServerEventTypes.ArchiveUploaded, "game", "completed", "archiveId,gameVersionId,version", ServerEventSources.Server)]
     [InlineData(ServerEventTypes.PlayStarted, "game", "completed", "sessionId,start", ServerEventSources.Launcher)]
     [InlineData(ServerEventTypes.PlayEnded, "game", "completed", "sessionId,start,end,timedOut", ServerEventSources.Launcher)]
@@ -394,15 +403,50 @@ public sealed class WebhookTests
         await bus.PublishAsync(new ServerStatusChangedEvent(serverId, "Dedicated", ServerEngineStatus.Running, null));
         await bus.PublishAsync(new ServerStatusChangedEvent(serverId, "Dedicated", ServerEngineStatus.Running, null));
         await bus.PublishAsync(new ServerStatusChangedEvent(serverId, "Dedicated", ServerEngineStatus.Error, Secret));
+        await bus.PublishAsync(new GameUpdatedEvent(gameId, "A game"));
+        await bus.PublishAsync(new GameDeletedEvent(gameId, "A game"));
+        await bus.PublishAsync(new UserCreatedEvent(userId, "player", false));
+        await bus.PublishAsync(new UserApprovedEvent(userId, "player"));
+        await bus.PublishAsync(new UserDeletedEvent(userId, "player"));
+        var issueId = Guid.NewGuid();
+        await bus.PublishAsync(new IssueCreatedEvent(issueId, gameId, userId, "Crashes"));
+        await bus.PublishAsync(new IssueResolvedEvent(issueId, gameId, userId));
+        var matchId = Guid.NewGuid();
+        await bus.PublishAsync(new MatchCreatedEvent(matchId, gameId, serverId, "Map", "Mode"));
+        await bus.PublishAsync(new MatchEndedEvent(matchId, gameId, serverId, SDK.Enums.MatchStatus.Ended, null,
+        [
+            new SDK.Models.MatchResultInformation
+            {
+                PlayerKey = "player-1", UserId = userId, Rank = 1, Score = 10,
+                Payload = JsonSerializer.SerializeToElement(new { secret = Secret }),
+            },
+        ]));
 
         var deliveries = await test.Webhooks.GetDeliveriesAsync(id);
         deliveries.Select(d => d.EventType).ShouldBe(new[]
         {
             ServerEventTypes.GameCreated, ServerEventTypes.ArchiveUploaded, ServerEventTypes.PlayStarted,
             ServerEventTypes.PlayEnded, ServerEventTypes.ServerStarted, ServerEventTypes.ServerStopped,
+            ServerEventTypes.GameUpdated, ServerEventTypes.GameDeleted, ServerEventTypes.UserCreated,
+            ServerEventTypes.UserApproved, ServerEventTypes.UserDeleted, ServerEventTypes.IssueCreated,
+            ServerEventTypes.IssueResolved, ServerEventTypes.MatchCreated, ServerEventTypes.MatchEnded,
         }, ignoreOrder: true);
         await using var context = await test.Factory.CreateDbContextAsync();
         (await context.Set<WebhookDelivery>().Select(d => d.Body).ToListAsync()).ShouldAllBe(body => !body.Contains(Secret));
+
+        using var issue = JsonDocument.Parse(await context.Set<WebhookDelivery>()
+            .Where(d => d.EventType == ServerEventTypes.IssueCreated).Select(d => d.Body).SingleAsync());
+        issue.RootElement.GetProperty("actorId").GetGuid().ShouldBe(userId);
+        issue.RootElement.GetProperty("payload").GetProperty("description").GetString().ShouldBe("Crashes");
+
+        using var match = JsonDocument.Parse(await context.Set<WebhookDelivery>()
+            .Where(d => d.EventType == ServerEventTypes.MatchEnded).Select(d => d.Body).SingleAsync());
+        var matchPayload = match.RootElement.GetProperty("payload");
+        matchPayload.GetProperty("status").GetString().ShouldBe("Ended");
+        var result = matchPayload.GetProperty("results").EnumerateArray().ShouldHaveSingleItem();
+        result.GetProperty("playerKey").GetString().ShouldBe("player-1");
+        result.GetProperty("status").GetString().ShouldBe("Finished");
+        result.TryGetProperty("payload", out _).ShouldBeFalse();
     }
 
     [Fact]

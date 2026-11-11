@@ -83,7 +83,13 @@ file path.
 
 | Events | Payload |
 | --- | --- |
-| `server.game.created` | `title` |
+| `server.game.created`, `server.game.updated`, `server.game.deleted` | `title` |
+| `server.user.created` | `userName`, `approved` |
+| `server.user.approved`, `server.user.deleted` | `userName` |
+| `server.game.issue.created` | `issueId`, `description` |
+| `server.game.issue.resolved` | `issueId` |
+| `server.game.match.created` | `matchId`, `serverId`, `map`, `mode` |
+| `server.game.match.ended` | `matchId`, `serverId`, `status`, `reason`, `results` |
 | `server.game.archive.upload_completed` | `archiveId`, `gameVersionId`, `version` |
 | `launcher.game.play.started` | `sessionId`, `start` |
 | `launcher.game.play.ended` | `sessionId`, `start`, `end`, `timedOut` |
@@ -93,8 +99,22 @@ file path.
 | `launcher.game.install.completed`, `launcher.game.install.failed`, `launcher.game.uninstall.completed`, `launcher.tool.installed`, `launcher.redistributable.installed` | `reportedByLauncher: true` |
 | `server.webhook.test` | `message` |
 
-Game creation, archive uploads, and play sessions reuse the server's existing
-plugin lifecycle events. Archive completion is raised only after an uploaded
+Game, user, issue, match, archive upload, and play session events reuse the
+server's existing plugin lifecycle events, so changes a plugin makes raise them
+too. Game events cover add-ons. `server.user.created` covers registration,
+administrator-created accounts, and first external sign-in; when `approved` is
+false, `server.user.approved` follows once an administrator approves the account.
+Issue events target the game the issue is about; the actor is the reporting or
+resolving user.
+
+Match events target the match's game; `serverId` is null when the match wasn't
+reported by a managed dedicated server. `server.game.match.ended` is raised both
+for ended and abandoned matches; its payload `status` is `Ended` or `Abandoned`,
+and `results` is empty for an abandoned match. It is raised again if a reporter
+resends results, so receivers should replace stored standings rather than add
+to them. Each result has `participantId`, `playerKey`, `userId`, `team`, `rank`,
+`score`, `status`, and `timeMilliseconds`; a reporter's free-form result payload
+is not included. Archive completion is raised only after an uploaded
 archive is stored and linked, not for packages created by import or packaging.
 Save completion is raised after the file is written. Ended play sessions include
 those ended by the stale-session sweep. Dedicated server notifications describe

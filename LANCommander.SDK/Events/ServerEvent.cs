@@ -42,9 +42,18 @@ public static class ServerEventSources
 public static class ServerEventTypes
 {
     public const string GameCreated = "server.game.created";
+    public const string GameUpdated = "server.game.updated";
+    public const string GameDeleted = "server.game.deleted";
     public const string ArchiveUploaded = "server.game.archive.upload_completed";
     public const string UserLogin = "server.user.login";
     public const string UserLogout = "server.user.logout";
+    public const string UserCreated = "server.user.created";
+    public const string UserApproved = "server.user.approved";
+    public const string UserDeleted = "server.user.deleted";
+    public const string IssueCreated = "server.game.issue.created";
+    public const string IssueResolved = "server.game.issue.resolved";
+    public const string MatchCreated = "server.game.match.created";
+    public const string MatchEnded = "server.game.match.ended";
     public const string ServerStarted = "server.game_server.started";
     public const string ServerStopped = "server.game_server.stopped";
     public const string Test = "server.webhook.test";
@@ -60,7 +69,8 @@ public static class ServerEventTypes
 
     public static IReadOnlyList<string> All { get; } =
     [
-        GameCreated, ArchiveUploaded, UserLogin, UserLogout, ServerStarted, ServerStopped,
+        GameCreated, GameUpdated, GameDeleted, ArchiveUploaded, UserLogin, UserLogout, UserCreated,
+        UserApproved, UserDeleted, IssueCreated, IssueResolved, MatchCreated, MatchEnded, ServerStarted, ServerStopped,
         GameInstalled, GameInstallFailed, GameUninstalled, PlayStarted, PlayEnded, SaveUploaded,
         ToolInstalled, RedistributableInstalled, Test,
     ];

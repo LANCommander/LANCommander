@@ -4,10 +4,11 @@
 @using LANCommander.Server.ImportExport.Factories
 @using LANCommander.Server.ImportExport.Models
 @using LANCommander.Server.ImportExport.Services
+@using LANCommander.Server.UI.Providers
 @inherits Dialog<ExportDialogOptions, bool>
 @inject ExportService ExportService
 @inject ExportContextFactory ExportContextFactory
-@inject NavigationManager NavigationManager
+@inject ScriptProvider ScriptProvider
 
 @* Lists what exporting the record will include, grouped by type, and downloads the checked items as an .lcx *@
 <Spin Loading="_loading" Tip="Gathering export details">
@@ -81,8 +82,10 @@
 
         var contextId = ExportService.EnqueueContext(_exportContext);
 
-        // The endpoint answers with a file download, so the page stays where it is
-        NavigationManager.NavigateTo($"/api/Export/{contextId}", true);
+        // Download through a hidden link rather than navigating: a forced navigation starts unloading the
+        // page (and its circuit) even though the response turns out to be a file
+        await using (var domHelper = await ScriptProvider.ImportModuleAsync("DomHelper"))
+            await domHelper.InvokeVoidAsync("Download", $"/api/Export/{contextId}");
 
         Result = true;
 

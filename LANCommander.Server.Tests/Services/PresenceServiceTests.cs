@@ -88,6 +88,41 @@ public class PresenceServiceTests(ApplicationFixture fixture) : DalTest(fixture)
     };
 
     [Fact]
+    public async Task PluginsAreToldWhatEveryoneMaySee()
+    {
+        var changes = new ConcurrentQueue<LANCommander.Server.Plugins.PresenceChangedEvent>();
+        using var subscription = GetService<IPluginEventBus>().Subscribe<LANCommander.Server.Plugins.PresenceChangedEvent>((e, _) =>
+        {
+            changes.Enqueue(e);
+            return Task.CompletedTask;
+        });
+
+        var (user, game) = await StartPlayingAsync();
+
+        changes.ShouldContain(e => e.UserId == user.Id && e.Presence != null && e.Presence.GameId == game.Id);
+
+        await _presence.UpdateActivityAsync(user.Id, game.Id, Activity());
+
+        changes.Last(e => e.UserId == user.Id).Presence!.Activity!.Details.ShouldBe("de_dust2");
+
+        // The player still sees their own activity, but nobody else does, plugins included
+        await _presence.SetVisibilityAsync(user.Id, PresenceVisibility.GameOnly);
+
+        var gameOnly = changes.Last(e => e.UserId == user.Id).Presence!;
+        gameOnly.GameId.ShouldBe(game.Id);
+        gameOnly.Activity.ShouldBeNull();
+
+        await _presence.SetVisibilityAsync(user.Id, PresenceVisibility.Hidden);
+
+        changes.Last(e => e.UserId == user.Id).Presence.ShouldBeNull();
+
+        await _presence.SetVisibilityAsync(user.Id, PresenceVisibility.Visible);
+        await GetService<PlaySessionService>().EndSessionAsync(game.Id, user.Id);
+
+        changes.Last(e => e.UserId == user.Id).Presence.ShouldBeNull();
+    }
+
+    [Fact]
     public async Task StartingAGameTellsEveryoneWhoIsPlayingIt()
     {
         var user = await AddUserAsync(alias: "Ace");

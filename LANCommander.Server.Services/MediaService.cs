@@ -30,7 +30,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         StorageLocationService storageLocationService,
-        MediaToolService mediaToolService) : BaseDatabaseService<Media>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        MediaToolService mediaToolService,
+        LANCommander.SDK.Plugins.IPluginEventBus pluginEventBus) : BaseDatabaseService<Media>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public const long MaxIconSourceExecutableSize = 50 * 1024 * 1024;
 
@@ -46,6 +47,8 @@ namespace LANCommander.Server.Services
             });
 
             await TouchGamesAsync(media.GameId ?? entity.GameId);
+
+            await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.MediaCreatedEvent(media.Id, media.GameId, media.UserId, media.Type));
 
             return media;
         }
@@ -63,6 +66,8 @@ namespace LANCommander.Server.Services
 
             await TouchGamesAsync(media.GameId ?? entity.GameId);
 
+            await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.MediaUpdatedEvent(media.Id, media.GameId, media.UserId, media.Type));
+
             return media;
         }
 
@@ -75,6 +80,8 @@ namespace LANCommander.Server.Services
             await base.DeleteAsync(entity);
 
             await TouchGamesAsync(entity.GameId);
+
+            await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.MediaDeletedEvent(entity.Id, entity.GameId, entity.UserId, entity.Type));
         }
 
         public override async Task DeleteRangeAsync(IEnumerable<Media> entities)
@@ -90,6 +97,9 @@ namespace LANCommander.Server.Services
             await base.DeleteRangeAsync(materialized);
 
             await TouchGamesAsync(gameIds);
+
+            foreach (var media in materialized)
+                await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.MediaDeletedEvent(media.Id, media.GameId, media.UserId, media.Type));
         }
 
         private async Task TouchGamesAsync(params Guid?[] gameIds)

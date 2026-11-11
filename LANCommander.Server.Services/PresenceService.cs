@@ -164,6 +164,7 @@ public sealed class PresenceService(
             if (session == null)
             {
                 await broadcaster.EndedAsync(userId);
+                await eventBus.PublishAsync(new PresenceChangedEvent(userId, null));
                 return;
             }
 
@@ -204,6 +205,8 @@ public sealed class PresenceService(
 
         if (visibility != PresenceVisibility.Visible)
             await broadcaster.ChangedAsync(presence.UserId, presence);
+
+        await eventBus.PublishAsync(new PresenceChangedEvent(presence.UserId, shared));
     }
 
     private async Task<UserPresence?> ForViewerAsync(UserPresence presence, Guid viewerId)

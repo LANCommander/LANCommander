@@ -4,6 +4,8 @@ using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.Server.Services.Mappers;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using LANCommander.SDK.Services;
 using Microsoft.AspNetCore.Http;
 using Microsoft.Extensions.Logging;
@@ -22,19 +24,24 @@ namespace LANCommander.Server.Services
         SdkMapper sdkMapper,
         ManifestMapper manifestMapper,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Redistributable>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Redistributable>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Redistributable> AddAsync(Redistributable entity)
         {
             await cache.ExpireGameCacheAsync();
             
-            return await base.AddAsync(entity, async context =>
+            var added = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(r => r.Archives);
                 await context.UpdateRelationshipAsync(r => r.Games);
                 await context.UpdateRelationshipAsync(r => r.Pages);
                 await context.UpdateRelationshipAsync(r => r.Scripts);
             });
+
+            await pluginEventBus.PublishAsync(new RedistributableCreatedEvent(added.Id, added.Name));
+
+            return added;
         }
 
         public override async Task<Redistributable> UpdateAsync(Redistributable entity)
@@ -47,13 +54,34 @@ namespace LANCommander.Server.Services
                 }
             }
             
-            return await base.UpdateAsync(entity, async context =>
+            var updated = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(r => r.Archives);
                 await context.UpdateRelationshipAsync(r => r.Games);
                 await context.UpdateRelationshipAsync(r => r.Pages);
                 await context.UpdateRelationshipAsync(r => r.Scripts);
             });
+
+            await pluginEventBus.PublishAsync(new RedistributableUpdatedEvent(updated.Id, updated.Name));
+
+            return updated;
+        }
+
+        public override async Task DeleteAsync(Redistributable entity)
+        {
+            // A plugin deletes by id alone, so the name may need looking up
+            var name = entity.Name;
+
+            if (name == null)
+            {
+                await using var context = await contextFactory.CreateDbContextAsync();
+
+                name = await context.Set<Redistributable>().Where(x => x.Id == entity.Id).Select(x => x.Name).FirstOrDefaultAsync();
+            }
+
+            await base.DeleteAsync(entity);
+
+            await pluginEventBus.PublishAsync(new RedistributableDeletedEvent(entity.Id, name));
         }
 
         public async Task<SDK.Models.Manifest.Redistributable> GetManifestAsync(Guid manifestId)

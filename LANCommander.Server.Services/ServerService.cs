@@ -1,5 +1,7 @@
 ﻿using LANCommander.Server.Data;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using LANCommander.SDK.PowerShell;
 using Microsoft.Extensions.Logging;
 using LANCommander.Server.Services.Extensions;
@@ -20,7 +22,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         ServerManager serverManager,
-        UserService userService) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        UserService userService,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Data.Models.Server>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Data.Models.Server> AddAsync(Data.Models.Server entity)
         {
@@ -38,6 +41,8 @@ namespace LANCommander.Server.Services
 
             // Update tracking, helpful if tracked server has changed engines
             await serverManager.RefreshTrackingAsync();
+
+            await pluginEventBus.PublishAsync(new ServerCreatedEvent(entity.Id, entity.GameId, entity.Name));
 
             return entity;
         }
@@ -59,7 +64,16 @@ namespace LANCommander.Server.Services
             // Update tracking, helpful if tracked server has changed engines
             await serverManager.RefreshTrackingAsync();
 
+            await pluginEventBus.PublishAsync(new ServerUpdatedEvent(entity.Id, entity.GameId, entity.Name));
+
             return entity;
+        }
+
+        public override async Task DeleteAsync(Data.Models.Server entity)
+        {
+            await base.DeleteAsync(entity);
+
+            await pluginEventBus.PublishAsync(new ServerDeletedEvent(entity.Id, entity.GameId, entity.Name));
         }
 
         public async Task<SDK.Models.Manifest.Server> GetManifestAsync(Guid serverId)

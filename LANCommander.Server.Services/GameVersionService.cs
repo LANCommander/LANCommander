@@ -1,5 +1,7 @@
+using LANCommander.SDK.Plugins;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Services.Extensions;
 using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
@@ -13,29 +15,45 @@ namespace LANCommander.Server.Services
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<GameVersion>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<GameVersion>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<GameVersion> AddAsync(GameVersion entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return await base.AddAsync(entity, async context =>
+            var version = await base.AddAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(v => v.Game);
             });
+
+            await pluginEventBus.PublishAsync(new GameVersionCreatedEvent(version.Id, version.GameId, version.Version, version.Published));
+
+            return version;
         }
 
         public override async Task<GameVersion> UpdateAsync(GameVersion entity)
         {
             await cache.ExpireGameCacheAsync(entity.GameId);
 
-            return await base.UpdateAsync(entity, async context =>
+            var version = await base.UpdateAsync(entity, async context =>
             {
                 await context.UpdateRelationshipAsync(v => v.Archive);
                 await context.UpdateRelationshipAsync(v => v.Scripts);
                 await context.UpdateRelationshipAsync(v => v.Actions);
                 await context.UpdateRelationshipAsync(v => v.SavePaths);
             });
+
+            await pluginEventBus.PublishAsync(new GameVersionUpdatedEvent(version.Id, version.GameId, version.Version));
+
+            return version;
+        }
+
+        public override async Task DeleteAsync(GameVersion entity)
+        {
+            await base.DeleteAsync(entity);
+
+            await pluginEventBus.PublishAsync(new GameVersionDeletedEvent(entity.Id, entity.GameId, entity.Version));
         }
 
         /// <summary>
@@ -88,9 +106,11 @@ namespace LANCommander.Server.Services
         /// </summary>
         public async Task SetPublishedAsync(Guid versionId, bool published)
         {
+            GameVersion? version;
+
             using (var context = await contextFactory.CreateDbContextAsync())
             {
-                var version = await context.GameVersions.FirstOrDefaultAsync(v => v.Id == versionId);
+                version = await context.GameVersions.FirstOrDefaultAsync(v => v.Id == versionId);
 
                 if (version == null || version.Published == published)
                     return;
@@ -102,6 +122,8 @@ namespace LANCommander.Server.Services
 
             // The game's own config mirrors the version launchers are offered, which may have changed
             await MirrorCurrentToGameAsync(versionId, force: true);
+
+            await pluginEventBus.PublishAsync(new GameVersionPublishedChangedEvent(version.Id, version.GameId, version.Version, published));
         }
 
         /// <summary>
@@ -258,11 +280,13 @@ namespace LANCommander.Server.Services
                 .FirstOrDefaultAsync();
 
             // Moving on from a draft releases it: creating a newer version publishes the current one
+            GameVersion? releasedDraft = null;
+
             if (previous is { Published: false })
             {
-                var draft = await context.GameVersions.FirstAsync(v => v.Id == previous.Id);
+                releasedDraft = await context.GameVersions.FirstAsync(v => v.Id == previous.Id);
 
-                draft.Published = true;
+                releasedDraft.Published = true;
             }
 
             var gameVersion = new GameVersion
@@ -309,6 +333,12 @@ namespace LANCommander.Server.Services
 
             await context.SaveChangesAsync();
             await cache.ExpireGameCacheAsync(gameId);
+
+            if (releasedDraft != null)
+                await pluginEventBus.PublishAsync(new GameVersionPublishedChangedEvent(
+                    releasedDraft.Id, releasedDraft.GameId, releasedDraft.Version, true));
+
+            await pluginEventBus.PublishAsync(new GameVersionCreatedEvent(gameVersion.Id, gameId, gameVersion.Version, gameVersion.Published));
 
             return gameVersion;
         }
@@ -551,6 +581,8 @@ namespace LANCommander.Server.Services
 
                 await context.SaveChangesAsync();
                 await cache.ExpireGameCacheAsync(gameId);
+
+                await pluginEventBus.PublishAsync(new GameVersionUpdatedEvent(version.Id, gameId, version.Version));
 
                 return version;
             }

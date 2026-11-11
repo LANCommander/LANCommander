@@ -16,6 +16,98 @@ public sealed record GameUpdatedEvent(Guid GameId, string? Title);
 public sealed record GameDeletedEvent(Guid GameId, string? Title);
 
 /// <summary>
+/// Raised after a game version is added, by an administrator, a plugin, or an upload that needed a
+/// version for its archive. <paramref name="Version"/> can be empty for a placeholder version that an
+/// archive fills in later, which raises <see cref="GameVersionUpdatedEvent"/>.
+/// </summary>
+public sealed record GameVersionCreatedEvent(Guid VersionId, Guid GameId, string? Version, bool Published);
+
+/// <summary>Raised after a game version is saved, or an archive is linked to it.</summary>
+public sealed record GameVersionUpdatedEvent(Guid VersionId, Guid GameId, string? Version);
+
+/// <summary>
+/// Raised when a game version is published or unpublished. Launchers are offered a game's newest
+/// published version. Adding a version after an unpublished one publishes the earlier one, which
+/// raises this too.
+/// </summary>
+public sealed record GameVersionPublishedChangedEvent(Guid VersionId, Guid GameId, string? Version, bool Published);
+
+/// <summary>Raised after a game version is deleted.</summary>
+public sealed record GameVersionDeletedEvent(Guid VersionId, Guid GameId, string? Version);
+
+/// <summary>Raised after a redistributable is added, by hand, by an import or through <see cref="IRedistributableProvider"/>.</summary>
+public sealed record RedistributableCreatedEvent(Guid RedistributableId, string? Name);
+
+/// <summary>Raised after a redistributable is saved.</summary>
+public sealed record RedistributableUpdatedEvent(Guid RedistributableId, string? Name);
+
+/// <summary>Raised after a redistributable is deleted.</summary>
+public sealed record RedistributableDeletedEvent(Guid RedistributableId, string? Name);
+
+/// <summary>Raised after a tool is added, by hand, by an import or through <see cref="IToolProvider"/>.</summary>
+public sealed record ToolCreatedEvent(Guid ToolId, string? Name);
+
+/// <summary>Raised after a tool is saved.</summary>
+public sealed record ToolUpdatedEvent(Guid ToolId, string? Name);
+
+/// <summary>Raised after a tool is deleted.</summary>
+public sealed record ToolDeletedEvent(Guid ToolId, string? Name);
+
+/// <summary>
+/// Raised after a game server is added, by hand, by an import or through <see cref="IServerProvider"/>.
+/// Whether it is running is reported by <see cref="ServerStatusChangedEvent"/>.
+/// </summary>
+public sealed record ServerCreatedEvent(Guid ServerId, Guid? GameId, string? Name);
+
+/// <summary>Raised after a game server's settings are saved.</summary>
+public sealed record ServerUpdatedEvent(Guid ServerId, Guid? GameId, string? Name);
+
+/// <summary>Raised after a game server is deleted.</summary>
+public sealed record ServerDeletedEvent(Guid ServerId, Guid? GameId, string? Name);
+
+/// <summary>
+/// Raised after a media item is added: a game's artwork, a user's avatar or an image on a page. Its
+/// file is written first when one is uploaded or downloaded with it.
+/// </summary>
+/// <param name="GameId">The game the media belongs to, if any.</param>
+/// <param name="UserId">The user the media belongs to, such as for an avatar, if any.</param>
+public sealed record MediaCreatedEvent(Guid MediaId, Guid? GameId, Guid? UserId, LANCommander.SDK.Enums.MediaType Type);
+
+/// <summary>
+/// Raised after a media item is saved, including when its file is replaced and when it is
+/// reordered among the game's media.
+/// </summary>
+public sealed record MediaUpdatedEvent(Guid MediaId, Guid? GameId, Guid? UserId, LANCommander.SDK.Enums.MediaType Type);
+
+/// <summary>Raised after a media item and its file are deleted, including when its game is.</summary>
+public sealed record MediaDeletedEvent(Guid MediaId, Guid? GameId, Guid? UserId, LANCommander.SDK.Enums.MediaType Type);
+
+/// <summary>
+/// Raised for each game added to a user's library. Adding an add-on adds its base game too, which
+/// raises its own event.
+/// </summary>
+public sealed record LibraryGameAddedEvent(Guid UserId, Guid GameId);
+
+/// <summary>
+/// Raised for each game removed from a user's library. Removing a game removes its hidden add-ons and
+/// any add-ons the user picked, which each raise their own event.
+/// </summary>
+public sealed record LibraryGameRemovedEvent(Guid UserId, Guid GameId);
+
+/// <summary>
+/// Raised when what other players see of a player changes: they start or stop playing, their game
+/// reports new activity, or they change their presence visibility. Games can report activity often,
+/// so keep handlers quick. A player who isn't playing can be reported as not playing again, for
+/// example when they change their visibility.
+/// </summary>
+/// <param name="Presence">
+/// What everyone may see under the player's <see cref="LANCommander.SDK.Enums.PresenceVisibility"/>: no
+/// activity when it is <c>GameOnly</c>. Null when the player isn't shown as playing, because they
+/// stopped or their visibility is <c>Hidden</c>.
+/// </param>
+public sealed record PresenceChangedEvent(Guid UserId, LANCommander.SDK.Models.UserPresence? Presence);
+
+/// <summary>
 /// Raised after an uploaded archive is stored and linked to what it belongs to, and for a game, to its
 /// version. Exactly one of <paramref name="GameId"/>, <paramref name="RedistributableId"/> and
 /// <paramref name="ToolId"/> is set. Archives an import or packaging creates don't raise it.

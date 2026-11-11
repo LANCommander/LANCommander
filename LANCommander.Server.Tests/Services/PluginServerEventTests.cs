@@ -230,6 +230,150 @@ public class PluginServerEventTests(ApplicationFixture fixture) : DalTest(fixtur
         @event.UserId.ShouldBe(user.Id);
     }
 
+    [Fact]
+    public async Task GameVersionsRaiseCreatedUpdatedPublishedAndDeleted()
+    {
+        using var created = Record<GameVersionCreatedEvent>();
+        using var updated = Record<GameVersionUpdatedEvent>();
+        using var published = Record<GameVersionPublishedChangedEvent>();
+        using var deleted = Record<GameVersionDeletedEvent>();
+
+        var game = await AddGameAsync();
+        var versions = GetService<GameVersionService>();
+
+        var first = await versions.CreateAsync(game.Id, "1.0");
+        await versions.SetPublishedAsync(first.Id, false);
+
+        // Adding a version after a draft publishes the draft
+        var second = await versions.CreateAsync(game.Id, "1.1", "Fixes");
+
+        created.Events.ShouldContain(e => e.VersionId == first.Id && e.GameId == game.Id && e.Version == "1.0");
+        created.Events.ShouldContain(e => e.VersionId == second.Id && e.Version == "1.1" && !e.Published);
+        published.Events.Where(e => e.VersionId == first.Id).Select(e => e.Published).ShouldBe([false, true]);
+
+        // No change, no event
+        await versions.SetPublishedAsync(first.Id, true);
+        published.Events.Count(e => e.VersionId == first.Id).ShouldBe(2);
+
+        var loaded = await versions.GetAsync(second.Id);
+        loaded.Changelog = "More fixes";
+        await versions.UpdateAsync(loaded);
+
+        updated.Events.ShouldContain(e => e.VersionId == second.Id && e.Version == "1.1");
+
+        await versions.DeleteAsync(await versions.GetAsync(second.Id));
+
+        deleted.Events.ShouldContain(e => e.VersionId == second.Id && e.GameId == game.Id && e.Version == "1.1");
+    }
+
+    [Fact]
+    public async Task RedistributablesRaiseCreatedUpdatedAndDeleted()
+    {
+        using var created = Record<RedistributableCreatedEvent>();
+        using var updated = Record<RedistributableUpdatedEvent>();
+        using var deleted = Record<RedistributableDeletedEvent>();
+
+        var service = GetService<RedistributableService>();
+        var redistributable = await AddRedistributableAsync();
+
+        redistributable.Name = Unique("Renamed");
+        await service.UpdateAsync(redistributable);
+
+        // Plugins delete by id alone; the name still comes through
+        await service.DeleteAsync(new Redistributable { Id = redistributable.Id });
+
+        created.Events.ShouldContain(e => e.RedistributableId == redistributable.Id);
+        updated.Events.ShouldContain(e => e.RedistributableId == redistributable.Id && e.Name == redistributable.Name);
+        deleted.Events.ShouldContain(e => e.RedistributableId == redistributable.Id && e.Name == redistributable.Name);
+    }
+
+    [Fact]
+    public async Task ToolsRaiseCreatedUpdatedAndDeleted()
+    {
+        using var created = Record<ToolCreatedEvent>();
+        using var updated = Record<ToolUpdatedEvent>();
+        using var deleted = Record<ToolDeletedEvent>();
+
+        var service = GetService<ToolService>();
+        var tool = await service.AddAsync(new Tool { Name = Unique("Tool") });
+
+        tool.Name = Unique("Renamed");
+        await service.UpdateAsync(tool);
+
+        await service.DeleteAsync(new Tool { Id = tool.Id });
+
+        created.Events.ShouldContain(e => e.ToolId == tool.Id);
+        updated.Events.ShouldContain(e => e.ToolId == tool.Id && e.Name == tool.Name);
+        deleted.Events.ShouldContain(e => e.ToolId == tool.Id && e.Name == tool.Name);
+    }
+
+    [Fact]
+    public async Task ServersRaiseCreatedUpdatedAndDeleted()
+    {
+        using var created = Record<ServerCreatedEvent>();
+        using var updated = Record<ServerUpdatedEvent>();
+        using var deleted = Record<ServerDeletedEvent>();
+
+        var service = GetService<ServerService>();
+        var server = await AddServerAsync();
+
+        server.Name = Unique("Renamed");
+        await service.UpdateAsync(server);
+
+        await service.DeleteAsync(server);
+
+        created.Events.ShouldContain(e => e.ServerId == server.Id);
+        updated.Events.ShouldContain(e => e.ServerId == server.Id && e.Name == server.Name);
+        deleted.Events.ShouldContain(e => e.ServerId == server.Id && e.Name == server.Name);
+    }
+
+    [Fact]
+    public async Task MediaRaisesCreatedUpdatedAndDeleted()
+    {
+        using var created = Record<MediaCreatedEvent>();
+        using var updated = Record<MediaUpdatedEvent>();
+        using var deleted = Record<MediaDeletedEvent>();
+
+        var service = GetService<MediaService>();
+        var game = await AddGameAsync();
+        var first = await AddMediaAsync(game.Id);
+        var second = await AddMediaAsync(game.Id);
+
+        first.Type = LANCommander.SDK.Enums.MediaType.Icon;
+        await service.UpdateAsync(first);
+
+        // Deleting removes the file too, which needs to know where it is stored
+        first.StorageLocation = second.StorageLocation =
+            await GetStorageLocationAsync(LANCommander.SDK.Enums.StorageLocationType.Media);
+
+        await service.DeleteAsync(first);
+        await service.DeleteRangeAsync([second]);
+
+        created.Events.ShouldContain(e => e.MediaId == first.Id && e.GameId == game.Id);
+        updated.Events.ShouldContain(e => e.MediaId == first.Id && e.Type == LANCommander.SDK.Enums.MediaType.Icon);
+        deleted.Events.ShouldContain(e => e.MediaId == first.Id && e.GameId == game.Id);
+        deleted.Events.ShouldContain(e => e.MediaId == second.Id && e.GameId == game.Id);
+    }
+
+    [Fact]
+    public async Task LibrariesRaiseGameAddedAndRemoved()
+    {
+        using var added = Record<LibraryGameAddedEvent>();
+        using var removed = Record<LibraryGameRemovedEvent>();
+
+        var user = await GetService<UserService>().AddAsync(new User { UserName = Unique("player"), Approved = true });
+        var first = await AddGameAsync();
+        var second = await AddGameAsync();
+        var library = GetService<LibraryService>();
+
+        await library.AddToLibraryAsync(user.Id, first.Id);
+        await library.AddToLibraryAsync(user.Id, second.Id);
+        await library.RemoveFromLibraryAsync(user.Id, first.Id);
+
+        added.Events.Where(e => e.UserId == user.Id).Select(e => e.GameId).ShouldBe([first.Id, second.Id]);
+        removed.Events.Where(e => e.UserId == user.Id).Select(e => e.GameId).ShouldBe([first.Id]);
+    }
+
     private sealed class StatusEngine : IServerEngine
     {
         public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;

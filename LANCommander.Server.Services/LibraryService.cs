@@ -16,7 +16,8 @@ namespace LANCommander.Server.Services
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
         GameService gameService,
-        UserService userService) : BaseDatabaseService<Library>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        UserService userService,
+        LANCommander.SDK.Plugins.IPluginEventBus pluginEventBus) : BaseDatabaseService<Library>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Library> AddAsync(Library entity)
         {
@@ -59,10 +60,15 @@ namespace LANCommander.Server.Services
 
             var library = await GetByUserIdAsync(userId);
 
+            var alreadyAdded = library.Games.Any(g => g.Id == gameId);
+
             library.Games.Add(game);
 
             await UpdateAsync(library);
             await cache.RemoveByTagAsync([$"Library/{userId}"]);
+
+            if (!alreadyAdded)
+                await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.LibraryGameAddedEvent(userId, gameId));
 
             if (game.BaseGame != null && !library.Games.Any(g => g.Id == game.BaseGame.Id) && game.BaseGame.Id != game.Id)
                 await AddToLibraryAsync(userId, game.BaseGame.Id);
@@ -76,6 +82,8 @@ namespace LANCommander.Server.Services
         public async Task RemoveFromLibraryAsync(Guid userId, Guid gameId, Guid[] addonIds)
         {
             var library = await GetByUserIdAsync(userId);
+
+            var before = library.Games.Select(g => g.Id).ToHashSet();
 
             var game = library.Games.FirstOrDefault(g => g.Id == gameId);
 
@@ -98,6 +106,11 @@ namespace LANCommander.Server.Services
             await UpdateAsync(library);
 
             await cache.RemoveByTagAsync([$"Library/{userId}"]);
+
+            before.ExceptWith(library.Games.Select(g => g.Id));
+
+            foreach (var removedId in before)
+                await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.LibraryGameRemovedEvent(userId, removedId));
         }
     }
 }

@@ -28,6 +28,13 @@ public sealed class ServerLifecycleEvents(
             PublishAsync(ServerEventTypes.UserCreated, "user", e.UserId, new { e.UserName, e.Approved })));
         _subscriptions.Add(pluginEvents.Subscribe<UserApprovedEvent>((e, _) =>
             PublishAsync(ServerEventTypes.UserApproved, "user", e.UserId, new { e.UserName })));
+        _subscriptions.Add(pluginEvents.Subscribe<UserSignedInEvent>((e, _) =>
+            PublishAsync(ServerEventTypes.UserLogin, "user", e.UserId, new { }, e.UserId)));
+        _subscriptions.Add(pluginEvents.Subscribe<UserSignedOutEvent>((e, _) =>
+            PublishAsync(ServerEventTypes.UserLogout, "user", e.UserId, new { }, e.UserId)));
+        _subscriptions.Add(pluginEvents.Subscribe<SaveUploadedEvent>((e, _) =>
+            PublishAsync(ServerEventTypes.SaveUploaded, "game", e.GameId,
+                new { e.SaveId, e.Size, e.Platforms }, e.UserId)));
         _subscriptions.Add(pluginEvents.Subscribe<UserDeletedEvent>((e, _) =>
             PublishAsync(ServerEventTypes.UserDeleted, "user", e.UserId, new { e.UserName })));
         _subscriptions.Add(pluginEvents.Subscribe<IssueCreatedEvent>((e, _) =>

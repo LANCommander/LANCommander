@@ -225,7 +225,7 @@ public static class SaveEndpoints
         [FromServices] UserService userService,
         [FromServices] GameService gameService,
         [FromServices] StorageLocationService storageLocationService,
-        [FromServices] Services.Events.IServerEventPublisher eventPublisher,
+        [FromServices] LANCommander.SDK.Plugins.IPluginEventBus pluginEventBus,
         [FromServices] GameSaveService saveService)
     {
         var user = await userService.GetAsync(userPrincipal?.Identity?.Name ?? string.Empty);
@@ -328,8 +328,8 @@ public static class SaveEndpoints
                         await saveService.DeleteAsync(saveToCull);
                 }
 
-                await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.SaveUploaded, "game", gameId,
-                    new { saveId = save.Id, save.Size, save.Platforms }, user.Id);
+                await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.SaveUploadedEvent(
+                    save.Id, game.Id, user.Id, save.Size, save.Platforms));
 
                 return TypedResults.Ok(sdkMapper.ToSdk(save));
             }

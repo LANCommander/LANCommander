@@ -6,8 +6,8 @@ using System.Text.Json;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Models;
 using LANCommander.Server.Services;
-using LANCommander.Server.Services.Events;
-using LANCommander.SDK.Events;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.Server.Settings.Models;
@@ -34,16 +34,16 @@ public static class Authentication
             {
                 await signedIn(context);
                 if (Guid.TryParse(context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
-                    await context.HttpContext.RequestServices.GetRequiredService<IServerEventPublisher>()
-                        .PublishAsync(ServerEventTypes.UserLogin, "user", id, new { }, id);
+                    await context.HttpContext.RequestServices.GetRequiredService<IPluginEventBus>()
+                        .PublishAsync(new UserSignedInEvent(id, context.Principal?.Identity?.Name));
             };
             options.Events.OnSigningOut = async context =>
             {
                 await signingOut(context);
                 if (context.HttpContext.User.Identity?.IsAuthenticated == true
                     && Guid.TryParse(context.HttpContext.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id))
-                    await context.HttpContext.RequestServices.GetRequiredService<IServerEventPublisher>()
-                        .PublishAsync(ServerEventTypes.UserLogout, "user", id, new { }, id);
+                    await context.HttpContext.RequestServices.GetRequiredService<IPluginEventBus>()
+                        .PublishAsync(new UserSignedOutEvent(id, context.HttpContext.User.Identity?.Name));
             };
         });
 

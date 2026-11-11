@@ -26,7 +26,7 @@ namespace LANCommander.Server.Services
         ScriptService scriptService,
         ITokenProvider tokenProvider,
         SDK.Services.ScriptClient scriptClient,
-        Events.IServerEventPublisher eventPublisher) : BaseService(logger, settingsProvider)
+        LANCommander.SDK.Plugins.IPluginEventBus pluginEventBus) : BaseService(logger, settingsProvider)
     {
         public async Task<AuthToken> LoginAsync(string userName, string password)
         {
@@ -96,7 +96,7 @@ namespace LANCommander.Server.Services
                 user.Id, refreshToken,
                 DateTime.UtcNow.AddDays(_settingsProvider.CurrentValue.Server.Authentication.TokenLifetime));
 
-            await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.UserLogin, "user", user.Id, new { }, user.Id);
+            await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.UserSignedInEvent(user.Id, user.UserName));
 
             return new AuthToken
             {

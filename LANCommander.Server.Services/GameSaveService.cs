@@ -7,6 +7,8 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 using ZiggyCreatures.Caching.Fusion;
 using LANCommander.SDK;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.Services
 {
@@ -16,7 +18,8 @@ namespace LANCommander.Server.Services
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
         IDbContextFactory<DatabaseContext> contextFactory,
-        StorageLocationService storageLocationService) : BaseDatabaseService<GameSave>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        StorageLocationService storageLocationService,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<GameSave>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<GameSave> AddAsync(GameSave entity)
         {
@@ -43,6 +46,8 @@ namespace LANCommander.Server.Services
             FileHelpers.DeleteIfExists(await GetSavePathAsync(entity.Id));
 
             await base.DeleteAsync(entity);
+
+            await pluginEventBus.PublishAsync(new SaveDeletedEvent(entity.Id, entity.GameId, entity.UserId));
         }
         
         public async Task<string?> GetSavePathAsync(Guid gameId, Guid userId)

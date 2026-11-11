@@ -1,4 +1,6 @@
 ﻿using LANCommander.SDK.Enums;
+using LANCommander.SDK.Plugins;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Data;
 using LANCommander.Server.Data.Models;
 using Microsoft.AspNetCore.Http;
@@ -13,7 +15,8 @@ namespace LANCommander.Server.Services
         SettingsProvider<Settings.Settings> settingsProvider,
         IFusionCache cache,
         IHttpContextAccessor httpContextAccessor,
-        IDbContextFactory<DatabaseContext> contextFactory) : BaseDatabaseService<Key>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
+        IDbContextFactory<DatabaseContext> contextFactory,
+        IPluginEventBus pluginEventBus) : BaseDatabaseService<Key>(logger, settingsProvider, cache, httpContextAccessor, contextFactory)
     {
         public override async Task<Key> AddAsync(Key entity)
         {
@@ -44,6 +47,9 @@ namespace LANCommander.Server.Services
 
             key = await UpdateAsync(key);
 
+            await pluginEventBus.PublishAsync(new KeyAllocatedEvent(
+                key.Id, key.GameId, KeyAllocationMethod.UserAccount, user.Id, null, await CountAvailableAsync(key.GameId)));
+
             return key;
         }
 
@@ -57,6 +63,9 @@ namespace LANCommander.Server.Services
             key.AllocationMethod = KeyAllocationMethod.MacAddress;
 
             key = await UpdateAsync(key);
+
+            await pluginEventBus.PublishAsync(new KeyAllocatedEvent(
+                key.Id, key.GameId, KeyAllocationMethod.MacAddress, null, macAddress, await CountAvailableAsync(key.GameId)));
 
             return key;
         }
@@ -73,13 +82,33 @@ namespace LANCommander.Server.Services
 
         public async Task<Key> ReleaseAsync(Key key)
         {
+            var wasAllocated = key.IsAllocated();
+            var userId = key.AllocationMethod == KeyAllocationMethod.UserAccount ? key.ClaimedByUserId : null;
+            var macAddress = key.AllocationMethod == KeyAllocationMethod.MacAddress ? key.ClaimedByMacAddress : null;
+
             key.ClaimedByUser = null;
             key.ClaimedByUserId = null;
             key.ClaimedByMacAddress = null;
             key.ClaimedOn = null;
             key.AllocationMethod = null;
 
-            return await UpdateAsync(key);
+            key = await UpdateAsync(key);
+
+            if (wasAllocated)
+                await pluginEventBus.PublishAsync(new KeyReleasedEvent(
+                    key.Id, key.GameId, userId, macAddress, await CountAvailableAsync(key.GameId)));
+
+            return key;
+        }
+
+        // Mirrors Key.IsAvailable, which EF can't translate.
+        private async Task<int> CountAvailableAsync(Guid gameId)
+        {
+            await using var context = await contextFactory.CreateDbContextAsync();
+
+            return await context.Set<Key>().CountAsync(k => k.GameId == gameId
+                && !(k.AllocationMethod == KeyAllocationMethod.MacAddress && k.ClaimedByMacAddress != null && k.ClaimedByMacAddress.Trim() != ""
+                    || k.AllocationMethod == KeyAllocationMethod.UserAccount && k.ClaimedByUserId != null));
         }
     }
 }

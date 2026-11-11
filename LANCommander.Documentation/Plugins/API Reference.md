@@ -1387,6 +1387,24 @@ Raised after an issue is marked resolved.
 - `Guid GameId { get; init; }`
 - `Guid ResolvedByUserId { get; init; }`
 
+### KeyAllocatedEvent
+
+`record` — `LANCommander.Server.Plugins.KeyAllocatedEvent`
+
+Raised after a game key is allocated to a user or a machine, by a launcher requesting one or an administrator assigning it. A launcher swapping keys raises `KeyReleasedEvent` for the key it held first.
+
+**Properties**
+
+- `Guid KeyId { get; init; }`
+- `Guid GameId { get; init; }`
+- `KeyAllocationMethod Method { get; init; }`
+- `Guid? UserId { get; init; }`
+  - Set when `Method` is `UserAccount`.
+- `string MacAddress { get; init; }`
+  - Set when `Method` is `MacAddress`.
+- `int AvailableKeys { get; init; }`
+  - How many of the game's keys are still unallocated afterwards.
+
 ### KeyInfo
 
 `record` — `LANCommander.Server.Plugins.KeyInfo`
@@ -1411,6 +1429,21 @@ A CD key for a game, handed out to players as the game's allocation method decid
   - Set by the server; ignored when writing.
 - `RecordOwner Owner { get; init; }`
   - Set by the server; ignored when writing.
+
+### KeyReleasedEvent
+
+`record` — `LANCommander.Server.Plugins.KeyReleasedEvent`
+
+Raised after a game key is released. The previous holder is given when there was one.
+
+**Properties**
+
+- `Guid KeyId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid? UserId { get; init; }`
+- `string MacAddress { get; init; }`
+- `int AvailableKeys { get; init; }`
+  - How many of the game's keys are unallocated afterwards.
 
 ### MatchCreatedEvent
 
@@ -1726,6 +1759,18 @@ Software games need installed alongside them, such as a runtime. Games link to r
 - `DateTime UpdatedOn { get; init; }`
   - Set by the server; ignored when writing.
 
+### SaveDeletedEvent
+
+`record` — `LANCommander.Server.Plugins.SaveDeletedEvent`
+
+Raised after a cloud save and its file are deleted: by its owner, an administrator, or the server making room under a user's save count or storage limits.
+
+**Properties**
+
+- `Guid SaveId { get; init; }`
+- `Guid? GameId { get; init; }`
+- `Guid UserId { get; init; }`
+
 ### SavePathInfo
 
 `record` — `LANCommander.Server.Plugins.SavePathInfo`
@@ -1744,6 +1789,20 @@ A file, folder or registry path where a game keeps its saves.
   - The platforms the path applies to.
 - `RecordOwner Owner { get; init; }`
   - Set by the server; ignored when writing.
+
+### SaveUploadedEvent
+
+`record` — `LANCommander.Server.Plugins.SaveUploadedEvent`
+
+Raised after a cloud save is uploaded and its file written.
+
+**Properties**
+
+- `Guid SaveId { get; init; }`
+- `Guid GameId { get; init; }`
+- `Guid UserId { get; init; }`
+- `long Size { get; init; }`
+- `RuntimePlatform Platforms { get; init; }`
 
 ### ScriptInfo
 
@@ -2158,6 +2217,28 @@ Raised after a user account is deleted.
 - `Guid UserId { get; init; }`
 - `string UserName { get; init; }`
 
+### UserSignedInEvent
+
+`record` — `LANCommander.Server.Plugins.UserSignedInEvent`
+
+Raised when a user signs in to the server: a launcher or API client getting a token, or a browser sign-in, including through an external provider. Refreshing a token doesn't raise it.
+
+**Properties**
+
+- `Guid UserId { get; init; }`
+- `string UserName { get; init; }`
+
+### UserSignedOutEvent
+
+`record` — `LANCommander.Server.Plugins.UserSignedOutEvent`
+
+Raised when a client reports a sign-out or a browser session is signed out. Tokens already issued to the user stay valid until they expire.
+
+**Properties**
+
+- `Guid UserId { get; init; }`
+- `string UserName { get; init; }`
+
 ### RecordOwner
 
 `struct` — `LANCommander.Server.Plugins.RecordOwner`
@@ -2468,4 +2549,29 @@ Where a plugin context is in being made ready for use.
 | `Migrating` = `3` | Its migrations are being applied. |
 | `MigrationFailed` = `4` | Applying its migrations failed; the plugin is turned off until an administrator retries. |
 | `Ready` = `5` | Checked and migrated; the context can be used. |
+
+## `LANCommander.Server.Plugins.Messaging`
+
+### IServerEventConsumer
+
+`interface` — `LANCommander.Server.Plugins.Messaging.IServerEventConsumer`
+
+Receives every published `ServerEvent`, for example to forward it to Slack. Register an implementation in `IPlugin.ConfigureServices`. Consumers run in the background after the originating operation and are isolated from each other. Consumers own their own filtering, retries and persistence: an exception is logged and the event is dropped for that consumer.
+
+**Methods**
+
+- `Task HandleAsync(ServerEvent serverEvent, CancellationToken cancellationToken)`
+
+### IServerEventTransport
+
+`interface` — `LANCommander.Server.Plugins.Messaging.IServerEventTransport`
+
+Replaces the default in-memory transport that carries server events, for example with RabbitMQ. Register one implementation in `IPlugin.ConfigureServices`; when several are registered, the first is used. Every server instance sharing the transport consumes from the same queue, so each event is handled by one instance.
+
+**Methods**
+
+- `void ConfigureTransport(StandardConfigurer<ITransport> transport, string queueName)`
+  - Configures the Rebus transport, consuming from `queueName`.
+- `void ConfigureSubscriptions(StandardConfigurer<ISubscriptionStorage> subscriptions)`
+  - Configures subscription storage for transports without native publish/subscribe support. Brokers such as RabbitMQ do not need this.
 

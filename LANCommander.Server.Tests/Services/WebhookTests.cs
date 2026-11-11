@@ -404,6 +404,12 @@ public sealed class WebhookTests
         await bus.PublishAsync(new ServerStatusChangedEvent(serverId, "Dedicated", ServerEngineStatus.Running, null));
         await bus.PublishAsync(new ServerStatusChangedEvent(serverId, "Dedicated", ServerEngineStatus.Error, Secret));
         await bus.PublishAsync(new GameUpdatedEvent(gameId, "A game"));
+        await bus.PublishAsync(new UserSignedInEvent(userId, "player"));
+        await bus.PublishAsync(new UserSignedOutEvent(userId, "player"));
+        var saveId = Guid.NewGuid();
+        await bus.PublishAsync(new SaveUploadedEvent(saveId, gameId, userId, 2048, SDK.Enums.RuntimePlatform.Windows));
+        await bus.PublishAsync(new KeyAllocatedEvent(Guid.NewGuid(), gameId, SDK.Enums.KeyAllocationMethod.UserAccount, userId, null, 0));
+        await bus.PublishAsync(new SaveDeletedEvent(saveId, gameId, userId));
         await bus.PublishAsync(new GameDeletedEvent(gameId, "A game"));
         await bus.PublishAsync(new UserCreatedEvent(userId, "player", false));
         await bus.PublishAsync(new UserApprovedEvent(userId, "player"));
@@ -430,6 +436,7 @@ public sealed class WebhookTests
             ServerEventTypes.GameUpdated, ServerEventTypes.GameDeleted, ServerEventTypes.UserCreated,
             ServerEventTypes.UserApproved, ServerEventTypes.UserDeleted, ServerEventTypes.IssueCreated,
             ServerEventTypes.IssueResolved, ServerEventTypes.MatchCreated, ServerEventTypes.MatchEnded,
+            ServerEventTypes.UserLogin, ServerEventTypes.UserLogout, ServerEventTypes.SaveUploaded,
         }, ignoreOrder: true);
         await using var context = await test.Factory.CreateDbContextAsync();
         (await context.Set<WebhookDelivery>().Select(d => d.Body).ToListAsync()).ShouldAllBe(body => !body.Contains(Secret));
@@ -438,6 +445,16 @@ public sealed class WebhookTests
             .Where(d => d.EventType == ServerEventTypes.IssueCreated).Select(d => d.Body).SingleAsync());
         issue.RootElement.GetProperty("actorId").GetGuid().ShouldBe(userId);
         issue.RootElement.GetProperty("payload").GetProperty("description").GetString().ShouldBe("Crashes");
+
+        // The same envelope the save endpoint published directly before it raised a plugin event.
+        using var save = JsonDocument.Parse(await context.Set<WebhookDelivery>()
+            .Where(d => d.EventType == ServerEventTypes.SaveUploaded).Select(d => d.Body).SingleAsync());
+        save.RootElement.GetProperty("targetId").GetGuid().ShouldBe(gameId);
+        save.RootElement.GetProperty("actorId").GetGuid().ShouldBe(userId);
+        var savePayload = save.RootElement.GetProperty("payload");
+        savePayload.EnumerateObject().Select(p => p.Name).ShouldBe(["saveId", "size", "platforms"]);
+        savePayload.GetProperty("saveId").GetGuid().ShouldBe(saveId);
+        savePayload.GetProperty("platforms").GetInt32().ShouldBe((int)SDK.Enums.RuntimePlatform.Windows);
 
         using var match = JsonDocument.Parse(await context.Set<WebhookDelivery>()
             .Where(d => d.EventType == ServerEventTypes.MatchEnded).Select(d => d.Body).SingleAsync());

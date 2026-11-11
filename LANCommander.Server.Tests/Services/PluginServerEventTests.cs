@@ -160,6 +160,76 @@ public class PluginServerEventTests(ApplicationFixture fixture) : DalTest(fixtur
         resolved.Events.ShouldContain(e => e.IssueId == issue.Id && e.ResolvedByUserId == user.Id);
     }
 
+    [Fact]
+    public async Task KeysRaiseAllocatedAndReleasedWithTheRemainingCount()
+    {
+        using var allocated = Record<KeyAllocatedEvent>();
+        using var released = Record<KeyReleasedEvent>();
+
+        var user = await EnsureAdminUserCreatedAsync();
+        var game = await AddGameAsync();
+        var first = await AddKeyAsync(game.Id);
+        var second = await AddKeyAsync(game.Id);
+        var keyService = GetService<KeyService>();
+
+        await keyService.AllocateAsync(first, user);
+        await keyService.AllocateAsync(second, "00-11-22-33-44-55");
+
+        var byUser = allocated.Events.Single(e => e.KeyId == first.Id);
+        byUser.GameId.ShouldBe(game.Id);
+        byUser.Method.ShouldBe(LANCommander.SDK.Enums.KeyAllocationMethod.UserAccount);
+        byUser.UserId.ShouldBe(user.Id);
+        byUser.MacAddress.ShouldBeNull();
+        byUser.AvailableKeys.ShouldBe(1);
+
+        var byMac = allocated.Events.Single(e => e.KeyId == second.Id);
+        byMac.Method.ShouldBe(LANCommander.SDK.Enums.KeyAllocationMethod.MacAddress);
+        byMac.UserId.ShouldBeNull();
+        byMac.MacAddress.ShouldBe("00-11-22-33-44-55");
+        byMac.AvailableKeys.ShouldBe(0);
+
+        await keyService.ReleaseAsync(first.Id);
+        await keyService.ReleaseAsync(second);
+
+        var fromUser = released.Events.Single(e => e.KeyId == first.Id);
+        fromUser.UserId.ShouldBe(user.Id);
+        fromUser.MacAddress.ShouldBeNull();
+        fromUser.AvailableKeys.ShouldBe(1);
+
+        var fromMac = released.Events.Single(e => e.KeyId == second.Id);
+        fromMac.UserId.ShouldBeNull();
+        fromMac.MacAddress.ShouldBe("00-11-22-33-44-55");
+        fromMac.AvailableKeys.ShouldBe(2);
+
+        // Releasing a key nobody holds isn't a release.
+        await keyService.ReleaseAsync(first.Id);
+
+        released.Events.Count(e => e.KeyId == first.Id).ShouldBe(1);
+    }
+
+    [Fact]
+    public async Task DeletingASaveRaisesSaveDeleted()
+    {
+        using var deleted = Record<SaveDeletedEvent>();
+
+        var user = await EnsureAdminUserCreatedAsync();
+        var game = await AddGameAsync();
+        var saveService = GetService<GameSaveService>();
+
+        var save = await saveService.AddAsync(new GameSave
+        {
+            GameId = game.Id,
+            UserId = user.Id,
+            StorageLocationId = (await GetStorageLocationAsync(LANCommander.SDK.Enums.StorageLocationType.Save)).Id,
+        });
+
+        await saveService.DeleteAsync(save);
+
+        var @event = deleted.Events.Where(e => e.SaveId == save.Id).ShouldHaveSingleItem();
+        @event.GameId.ShouldBe(game.Id);
+        @event.UserId.ShouldBe(user.Id);
+    }
+
     private sealed class StatusEngine : IServerEngine
     {
         public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;

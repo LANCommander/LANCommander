@@ -99,7 +99,7 @@ public static class AuthApiEndpoints
     internal static async Task<IResult> LogoutAsync(
         ClaimsPrincipal userPrincipal,
         [FromServices] UserService userService,
-        [FromServices] Services.Events.IServerEventPublisher eventPublisher,
+        [FromServices] LANCommander.SDK.Plugins.IPluginEventBus pluginEventBus,
         [FromServices] ILoggerFactory loggerFactory)
     {
         var logger = loggerFactory.CreateLogger("AuthApi");
@@ -108,7 +108,7 @@ public static class AuthApiEndpoints
         {
             await userService.SignOut();
             if (Guid.TryParse(userPrincipal.FindFirstValue(ClaimTypes.NameIdentifier), out var userId))
-                await eventPublisher.PublishAsync(LANCommander.SDK.Events.ServerEventTypes.UserLogout, "user", userId, new { }, userId);
+                await pluginEventBus.PublishAsync(new LANCommander.Server.Plugins.UserSignedOutEvent(userId, userPrincipal.Identity?.Name));
         }
 
         logger.LogInformation("Logged out user {UserName}", userPrincipal?.Identity?.Name);

@@ -41,6 +41,47 @@ public sealed record UserApprovedEvent(Guid UserId, string UserName);
 /// <summary>Raised after a user account is deleted.</summary>
 public sealed record UserDeletedEvent(Guid UserId, string UserName);
 
+/// <summary>
+/// Raised when a user signs in to the server: a launcher or API client getting a token, or a browser
+/// sign-in, including through an external provider. Refreshing a token doesn't raise it.
+/// </summary>
+public sealed record UserSignedInEvent(Guid UserId, string? UserName);
+
+/// <summary>
+/// Raised when a client reports a sign-out or a browser session is signed out. Tokens already issued
+/// to the user stay valid until they expire.
+/// </summary>
+public sealed record UserSignedOutEvent(Guid UserId, string? UserName);
+
+/// <summary>
+/// Raised after a game key is allocated to a user or a machine, by a launcher requesting one or an
+/// administrator assigning it. A launcher swapping keys raises <see cref="KeyReleasedEvent"/> for the
+/// key it held first.
+/// </summary>
+/// <param name="UserId">Set when <paramref name="Method"/> is <see cref="LANCommander.SDK.Enums.KeyAllocationMethod.UserAccount"/>.</param>
+/// <param name="MacAddress">Set when <paramref name="Method"/> is <see cref="LANCommander.SDK.Enums.KeyAllocationMethod.MacAddress"/>.</param>
+/// <param name="AvailableKeys">How many of the game's keys are still unallocated afterwards.</param>
+public sealed record KeyAllocatedEvent(
+    Guid KeyId,
+    Guid GameId,
+    LANCommander.SDK.Enums.KeyAllocationMethod Method,
+    Guid? UserId,
+    string? MacAddress,
+    int AvailableKeys);
+
+/// <summary>Raised after a game key is released. The previous holder is given when there was one.</summary>
+/// <param name="AvailableKeys">How many of the game's keys are unallocated afterwards.</param>
+public sealed record KeyReleasedEvent(Guid KeyId, Guid GameId, Guid? UserId, string? MacAddress, int AvailableKeys);
+
+/// <summary>Raised after a cloud save is uploaded and its file written.</summary>
+public sealed record SaveUploadedEvent(Guid SaveId, Guid GameId, Guid UserId, long Size, LANCommander.SDK.Enums.RuntimePlatform Platforms);
+
+/// <summary>
+/// Raised after a cloud save and its file are deleted: by its owner, an administrator, or the server
+/// making room under a user's save count or storage limits.
+/// </summary>
+public sealed record SaveDeletedEvent(Guid SaveId, Guid? GameId, Guid UserId);
+
 /// <summary>Raised when a player starts a game.</summary>
 public sealed record PlaySessionStartedEvent(Guid SessionId, Guid GameId, Guid UserId, DateTime Start);
 

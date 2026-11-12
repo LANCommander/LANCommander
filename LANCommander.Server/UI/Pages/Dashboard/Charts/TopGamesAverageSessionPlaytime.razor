@@ -1,13 +1,15 @@
 @inject PlaySessionService PlaySessionService
 
+@* Horizontal bars give every title its own row; as columns, up to 20 titles collide on the axis *@
 <AsyncContent T="List<Playtime>" Load="LoadAsync" LoadingText="Loading session lengths">
     <BarChart Items="context"
               Label="g => g.Label"
               Value="g => g.Seconds"
               ValueFormat="Playtime.Format"
               ValueTitle="Average Session Playtime"
-              CategoryTitle="Game"
-              Height="360"
+              CategoryFormat="t => DashboardFormat.Abbreviate(t, 32)"
+              Horizontal
+              Height="@Math.Max(200, context.Count * 26 + 60)"
               EmptyText="No sessions have been played yet" />
 </AsyncContent>
 

@@ -3,8 +3,10 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Data.Models;
 using LANCommander.Server.Services;
 using LANCommander.Server.Settings.Enums;
+using LANCommander.Server.UI.Controls;
 using LANCommander.Server.UI.Pages.Servers.Components;
 using LANCommander.Server.UI.Pages.Servers.Edit;
+using Microsoft.AspNetCore.Components;
 using Microsoft.Extensions.DependencyInjection;
 using ServerModel = LANCommander.Server.Data.Models.Server;
 
@@ -110,6 +112,33 @@ public class ServerEditHeaderTests : BUnitTestContext
         // A blank new server starts clean: no unsaved indicator, Discard disabled.
         Assert.Empty(cut.FindAll(".edit-unsaved"));
         Assert.True(cut.FindAll("button").Single(b => b.TextContent.Trim() == "Discard").HasAttribute("disabled"));
+
+        // Nothing to delete until it's saved
+        Assert.DoesNotContain(cut.FindAll("button"), b => b.TextContent.Trim() == "Delete");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Header_Delete_RequiresConfirmation(bool confirm)
+    {
+        var host = Render<ComponentHost>();
+        var cut = RenderGeneral(_serverId);
+
+        cut.FindAll(".lc-page-header button").Single(b => b.TextContent.Trim() == "Delete").Click();
+
+        host.WaitForAssertion(() => Assert.Contains($"Delete {ServerName}?", host.Markup), TimeSpan.FromSeconds(10));
+        host.FindAll(".lc-dialog-footer button").Single(b => b.TextContent.Trim() == (confirm ? "Delete" : "Cancel")).Click();
+
+        var navigation = Services.GetRequiredService<NavigationManager>();
+
+        if (confirm)
+            cut.WaitForAssertion(() => Assert.EndsWith("/Servers", navigation.Uri), TimeSpan.FromSeconds(10));
+
+        using var scope = Fixture.Factory.RealServices.CreateScope();
+        var servers = await scope.ServiceProvider.GetRequiredService<ServerService>().GetAsync(s => s.Id == _serverId);
+
+        Assert.Equal(!confirm, servers.Any());
     }
 }
 

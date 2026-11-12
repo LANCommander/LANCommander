@@ -5,6 +5,8 @@
 @inject ServerManager ServerManager
 @inject LANCommander.Server.Plugins.PluginServerEngines PluginEngines
 @inject NavigationManager NavigationManager
+@inject AlertService Alerts
+@inject NotificationService Notifications
 @inject ILogger<ServerEditView> Logger
 @implements IDisposable
 
@@ -113,6 +115,8 @@
                     {
                         <ServerControl ServerId="Server.Id" Header CurrentStatus="_live.Status" CurrentStatusChanged="SetStatus" />
                     }
+
+                    <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
                 }
                 @TitleExtraTemplate?.Invoke(Server)
             </Extra>
@@ -157,6 +161,7 @@
     Server Server { get; set; } = new();
     Guid? _id;
     bool _loading = true;
+    bool _deleting;
 
     // Sampled every two seconds; the header only re-renders when what it shows changes, while the
     // Monitor's process card listens to the feed for every sample
@@ -250,6 +255,31 @@
     }
 
     public void Dispose() => _poll?.Dispose();
+
+    async Task DeleteAsync()
+    {
+        if (!await Alerts.ConfirmAsync($"Delete {Server.Name}? This cannot be undone.", "Delete Server", "Delete", danger: true))
+            return;
+
+        _deleting = true;
+
+        try
+        {
+            await ServerService.DeleteAsync(await ServerService.GetAsync(Id));
+
+            Notifications.Success($"Deleted {Server.Name}");
+
+            NavigationManager.NavigateTo("/Servers");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete the server!");
+        }
+        finally
+        {
+            _deleting = false;
+        }
+    }
 
     // Only once the server has been saved with its engine, which has then been told about it
     IReadOnlyList<LANCommander.Server.Plugins.ServerEngineConsole> EngineConsoles => Extension == null ? [] : PluginEngines.GetConsoles(Id);

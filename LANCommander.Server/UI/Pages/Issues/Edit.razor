@@ -8,6 +8,7 @@
 @inject UserService UserService
 @inject NotificationService Notifications
 @inject NavigationManager NavigationManager
+@inject AlertService Alerts
 @inject AuthenticationStateProvider AuthenticationStateProvider
 
 <PageHeader Title="@(Id == Guid.Empty ? "Add New Issue" : "Edit Issue")">
@@ -17,6 +18,7 @@
             <Button Icon="IconType.PushPin" OnClick="TogglePinnedAsync" Loading="_pinning"
                     title="Pinned issues are listed first on the game's Issues tab in the launcher">@(_issue.IsPinned ? "Unpin" : "Pin")</Button>
             <Button Icon="IconType.CheckCircle" OnClick="ResolveAsync" Disabled="IsResolved" Loading="_resolving">Resolve</Button>
+            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync" Loading="_deleting">Delete</Button>
         }
         <Button Primary Icon="IconType.FloppyDisk" OnClick="SaveAsync" Disabled="IsResolved" Loading="_saving">Save</Button>
     </Extra>
@@ -87,6 +89,7 @@
     bool _loading = true;
     bool _saving;
     bool _resolving;
+    bool _deleting;
     bool _pinning;
 
     bool IsResolved => _issue.ResolvedOn != null;
@@ -149,6 +152,31 @@
         finally
         {
             _saving = false;
+        }
+    }
+
+    async Task DeleteAsync()
+    {
+        if (!await Alerts.ConfirmAsync($"Delete the issue \"{_issue.Title}\", with its attachments? This cannot be undone.", "Delete Issue", "Delete", danger: true))
+            return;
+
+        _deleting = true;
+
+        try
+        {
+            await IssueService.DeleteAsync(await IssueService.GetAsync(_issue.Id));
+
+            Notifications.Success("Issue was successfully deleted!");
+
+            NavigationManager.NavigateTo("/Issues");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete issue!");
+        }
+        finally
+        {
+            _deleting = false;
         }
     }
 

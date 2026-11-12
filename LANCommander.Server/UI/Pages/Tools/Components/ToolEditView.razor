@@ -1,6 +1,7 @@
 @inject ToolService ToolService
 @inject NavigationManager NavigationManager
 @inject NotificationService Notifications
+@inject AlertService Alerts
 
 <SideLayout>
     <Side>
@@ -33,6 +34,11 @@
                 }
             </TitleTemplate>
             <Extra>
+                @if (Id != Guid.Empty && !_loading)
+                {
+                    <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+                }
+
                 @TitleExtraTemplate?.Invoke(Tool)
             </Extra>
         </PageHeader>
@@ -59,6 +65,7 @@
     Tool Tool { get; set; } = new();
     Guid? _id;
     bool _loading = true;
+    bool _deleting;
 
     protected override async Task OnParametersSetAsync()
     {
@@ -88,6 +95,31 @@
             Tool = new();
 
         _loading = false;
+    }
+
+    async Task DeleteAsync()
+    {
+        if (!await Alerts.ConfirmAsync($"Delete {Tool.Name}? This cannot be undone.", "Delete Tool", "Delete", danger: true))
+            return;
+
+        _deleting = true;
+
+        try
+        {
+            await ToolService.DeleteAsync(await ToolService.GetAsync(Id));
+
+            Notifications.Success($"Deleted {Tool.Name}");
+
+            NavigationManager.NavigateTo("/Tools");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete the tool!");
+        }
+        finally
+        {
+            _deleting = false;
+        }
     }
 
     public async Task Save()

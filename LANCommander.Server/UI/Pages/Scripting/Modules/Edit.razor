@@ -22,6 +22,10 @@
     </Tags>
     <Extra>
         <Button Icon="IconType.ArrowLeft" Href="/Scripting/Modules">Back</Button>
+        @if (!IsNew)
+        {
+            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync">Delete</Button>
+        }
         <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
     </Extra>
 </PageHeader>
@@ -487,6 +491,30 @@
 
             if (_manifestSelected)
                 SelectFunction(Module.Functions.FirstOrDefault());
+        }
+    }
+
+    async Task DeleteAsync()
+    {
+        var name = String.IsNullOrEmpty(_loadedName) ? Module.Name : _loadedName;
+
+        if (!await Alerts.ConfirmAsync($"Delete the module {name}? Scripts that import it will fail. This cannot be undone.", "Delete Module", "Delete", danger: true))
+            return;
+
+        try
+        {
+            ModuleService.DeleteModule(name);
+
+            // Nothing left to save, so leaving shouldn't ask about unsaved changes
+            _saved = Snapshot();
+
+            Notifications.Success("Module deleted!");
+
+            NavigationManager.NavigateTo("/Scripting/Modules");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete module!");
         }
     }
 

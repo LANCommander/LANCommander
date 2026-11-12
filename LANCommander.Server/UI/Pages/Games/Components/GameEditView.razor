@@ -84,6 +84,11 @@
         }
     </Tags>
     <Extra>
+        @if (Id != Guid.Empty && !_loading)
+        {
+            <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+        }
+
         @TitleExtraTemplate?.Invoke(Game)
     </Extra>
 </PageHeader>
@@ -200,6 +205,7 @@
     Game Game { get; set; } = new();
     Guid? _id;
     bool _loading = true;
+    bool _deleting;
     long? _latestArchiveSize;
     string? _summary;
     SectionCounts? _counts;
@@ -335,6 +341,31 @@
         _versionId = versionId;
 
         NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("version", index > 0 ? versionId : (Guid?)null), replace: true);
+    }
+
+    async Task DeleteAsync()
+    {
+        if (!await Alerts.ConfirmAsync($"Delete {Game.Title}, with its archives and media? This cannot be undone.", "Delete Game", "Delete", danger: true))
+            return;
+
+        _deleting = true;
+
+        try
+        {
+            await GameService.DeleteAsync(await GameService.GetAsync(Id));
+
+            Notifications.Success($"{Game.Title} was successfully deleted!");
+
+            NavigationManager.NavigateTo("/Games");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete the game!");
+        }
+        finally
+        {
+            _deleting = false;
+        }
     }
 
     /// <summary>The figures beside the section menu's items.</summary>

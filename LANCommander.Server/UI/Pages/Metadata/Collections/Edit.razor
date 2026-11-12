@@ -5,12 +5,17 @@
 @inject CollectionService CollectionService
 @inject NotificationService Notifications
 @inject NavigationManager NavigationManager
+@inject AlertService Alerts
 
 <PageHeader>
     <TitleTemplate>
         <TextInput Large @bind-Value="_collection.Name" Placeholder="Collection name" />
     </TitleTemplate>
     <Extra>
+        @if (_collection.Id != Guid.Empty)
+        {
+            <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+        }
         <Button Primary Icon="IconType.FloppyDisk" Loading="_saving" OnClick="SaveAsync">Save</Button>
     </Extra>
 </PageHeader>
@@ -68,6 +73,7 @@
     Collection _collection = new() { Games = [] };
     bool _loading = true;
     bool _saving;
+    bool _deleting;
 
     protected override async Task OnInitializedAsync()
     {
@@ -122,6 +128,31 @@
         finally
         {
             _saving = false;
+        }
+    }
+
+    async Task DeleteAsync()
+    {
+        if (!await Alerts.ConfirmAsync($"Delete the collection {_collection.Name}? Its games aren't deleted. This cannot be undone.", "Delete Collection", "Delete", danger: true))
+            return;
+
+        _deleting = true;
+
+        try
+        {
+            await CollectionService.DeleteAsync(await CollectionService.GetAsync(_collection.Id));
+
+            Notifications.Success("Collection deleted!");
+
+            NavigationManager.NavigateTo("/Metadata/Collections");
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "Could not delete collection!");
+        }
+        finally
+        {
+            _deleting = false;
         }
     }
 

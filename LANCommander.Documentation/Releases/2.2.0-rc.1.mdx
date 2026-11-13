@@ -3,6 +3,7 @@ title: 2.2.0-rc.1
 ---
 
 import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ScreenshotCarousel from '@site/src/components/ScreenshotCarousel';
 import ContributorGrid from '@site/src/components/ContributorGrid';
 
 # LANCommander 2.2.0 Release Candidate 1 Release Notes
@@ -63,6 +64,26 @@ In the launcher, players can switch between versions from the game's **Manage** 
 Games can now define an option schema, similar to the one redistributables gained in 2.1.0. Players fill in those options from the launcher, and scripts can read the values with the new `Get-GameOptions` cmdlet. This makes it possible to expose things like resolution, language, or a player-facing config switch without editing scripts for each player.
 
 ## Launcher
+
+<ScreenshotCarousel screenshots={[
+  { src: require('./_Assets/2.2.0 - Launcher - Library - Main.jpg').default, alt: 'Library', label: 'Library', caption: 'The redesigned library with the always-present left rail' },
+  { src: require('./_Assets/2.2.0 - Launcher - Depot - Main.jpg').default, alt: 'Depot', label: 'Depot', caption: 'Browsing the depot' },
+  { src: require('./_Assets/2.2.0 - Launcher - Depot - Carousels.jpg').default, alt: 'Depot Carousels', label: 'Depot Carousels', caption: 'Categorized carousels in the depot' },
+  { src: require('./_Assets/2.2.0 - Launcher - Depot - Filter.jpg').default, alt: 'Depot Filtering', label: 'Depot Filtering', caption: 'Filtering the depot' },
+  { src: require('./_Assets/2.2.0 - Launcher - Game Details - Main.jpg').default, alt: 'Game Details', label: 'Game Details', caption: 'The reworked game details view' },
+  { src: require('./_Assets/2.2.0 - Launcher - Game Details - Media Lightbox.jpg').default, alt: 'Media Lightbox', label: 'Media Lightbox', caption: 'The media lightbox with thumbnails' },
+  { src: require('./_Assets/2.2.0 - Launcher - Game Details - Servers.jpg').default, alt: 'Servers Tab', label: 'Servers', caption: 'The new Servers tab on a game' },
+  { src: require('./_Assets/2.2.0 - Launcher - Game Details - Issues.jpg').default, alt: 'Issues', label: 'Issues', caption: 'Reporting an issue from game details' },
+  { src: require('./_Assets/2.2.0 - Launcher - Game Details - Installing.jpg').default, alt: 'Installing', label: 'Installing', caption: 'A game installing from the details view' },
+  { src: require('./_Assets/2.2.0 - Launcher - Manage Dialog - Modify.jpg').default, alt: 'Manage Dialog', label: 'Manage', caption: 'The new Manage dialog' },
+  { src: require('./_Assets/2.2.0 - Launcher - Manage Dialog - Versions.jpg').default, alt: 'Manage Versions', label: 'Versions', caption: 'Switching game versions from the Manage dialog' },
+  { src: require('./_Assets/2.2.0 - Launcher - Manage Dialog - Saves.jpg').default, alt: 'Manage Saves', label: 'Saves', caption: 'Save management in the Manage dialog' },
+  { src: require('./_Assets/2.2.0 - Launcher - Manage Dialog - Interposer.jpg').default, alt: 'Manage Interposer', label: 'Interposer', caption: 'Per-game Interposer options' },
+  { src: require('./_Assets/2.2.0 - Launcher - Downloads - In Progress.jpg').default, alt: 'Downloads In Progress', label: 'Downloads', caption: 'The download queue mid-install' },
+  { src: require('./_Assets/2.2.0 - Launcher - Downloads - Complete.jpg').default, alt: 'Downloads Complete', label: 'Downloads Complete', caption: 'A completed download queue' },
+  { src: require('./_Assets/2.2.0 - Launcher - Packager - Elevation.jpg').default, alt: 'Packager Elevation', label: 'Packaging', caption: 'The launcher offering to restart packaging elevated' },
+  { src: require('./_Assets/2.2.0 - Launcher - Script Debugger.jpg').default, alt: 'Script Debugger', label: 'Script Debugger', caption: 'Stepping through a script in the debugger' },
+]} />
 
 ### Unified Design
 The launcher has had a full redesign in order to mature and establish a uniform style. As always, getting quick access to your games and bringing art to the forefront was of the upmost concern. The left rail is now always shown and contains navigation to the library and depot, carousels are now shown in the Library to show you recently played games or your collections, and the game details view has been reworked to give the best look at your game's rich metadata. Big picture mode has also gained status bar items for battery, volume, and time.

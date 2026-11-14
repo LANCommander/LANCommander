@@ -86,6 +86,21 @@ public class NavigationAndDisplayTests : ControlsTestContext
         Assert.Contains("lc-menu-item-danger", menu.Find(".lc-menu-item").ClassList);
     }
 
+    [Fact]
+    public void MenuItem_NewTab_IsALinkThatOpensANewTab()
+    {
+        var menu = Render<Menu>(p => p.AddChildContent<MenuItem>(i => i
+            .Add(x => x.Href, "https://github.com/LANCommander/LANCommander")
+            .Add(x => x.NewTab, true)
+            .AddChildContent("Source code")));
+
+        var link = menu.Find("a.lc-menu-item-content");
+
+        Assert.Equal("https://github.com/LANCommander/LANCommander", link.GetAttribute("href"));
+        Assert.Equal("_blank", link.GetAttribute("target"));
+        Assert.Equal("noopener noreferrer", link.GetAttribute("rel"));
+    }
+
     [Theory]
     [InlineData(MenuVariant.Default, null)]
     [InlineData(MenuVariant.Sidebar, "lc-menu-sidebar")]

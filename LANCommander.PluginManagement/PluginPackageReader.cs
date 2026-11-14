@@ -99,6 +99,7 @@ public static class PluginPackageReader
                     Authors = NullIfEmpty(nuspec.GetAuthors()),
                     Description = NullIfEmpty(nuspec.GetDescription()),
                     ProjectUrl = NullIfEmpty(nuspec.GetProjectUrl()),
+                    RepositoryUrl = NullIfEmpty(nuspec.GetRepositoryMetadata()?.Url),
                     IconUrl = NullIfEmpty(nuspec.GetIconUrl()),
                     SourceName = sourceName,
                     SourceUrl = sourceUrl,

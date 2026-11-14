@@ -5,7 +5,13 @@
 @inject NavigationManager Navigation
 
 <li @attributes="AdditionalAttributes" class="@_class" style="@Style">
-    @if (Href != null)
+    @if (Href != null && NewTab)
+    {
+        <a href="@Href" target="_blank" rel="noopener noreferrer" class="lc-menu-item-content" @onclick="ClickAsync">
+            @Content
+        </a>
+    }
+    else if (Href != null)
     {
         <NavLink href="@Href" Match="@(Exact ? NavLinkMatch.All : NavLinkMatch.Prefix)" class="lc-menu-item-content" ActiveClass="lc-menu-item-active" @onclick="ClickAsync">
             @Content
@@ -28,6 +34,9 @@
 
     /// <summary>Highlight only on exactly <see cref="Href"/>, not on pages beneath it.</summary>
     [Parameter] public bool Exact { get; set; }
+
+    /// <summary>Opens <see cref="Href"/> in a new tab, e.g. for a link off the site. The item is never highlighted.</summary>
+    [Parameter] public bool NewTab { get; set; }
 
     [Parameter] public IconType Icon { get; set; }
 

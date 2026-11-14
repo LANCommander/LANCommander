@@ -18,6 +18,7 @@ public sealed class PluginPackageRecord
     public string? Authors { get; set; }
     public string? Description { get; set; }
     public string? ProjectUrl { get; set; }
+    public string? RepositoryUrl { get; set; }
     public string? IconUrl { get; set; }
 
     /// <summary>The source it came from; both null for an uploaded package.</summary>

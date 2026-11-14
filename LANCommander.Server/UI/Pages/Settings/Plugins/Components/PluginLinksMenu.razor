@@ -1,0 +1,63 @@
+@* A plugin row's links off the site: its source code and its project website. Nothing shows when it has neither. *@
+@if (_sourceCode != null || _website != null)
+{
+    <Dropdown>
+        <ChildContent>
+            <Button Text Icon="IconType.DotsThreeVertical" aria-label="@($"Links for {Name}")" title="Links" />
+        </ChildContent>
+        <Overlay>
+            <Menu>
+                @if (_sourceCode != null)
+                {
+                    <MenuItem Icon="IconType.Code" Href="@_sourceCode" NewTab>Source code</MenuItem>
+                }
+                @if (_website != null)
+                {
+                    <MenuItem Icon="IconType.Globe" Href="@_website" NewTab>Project website</MenuItem>
+                }
+            </Menu>
+        </Overlay>
+    </Dropdown>
+}
+
+@code {
+    /// <summary>The plugin's name, for the button's accessible label.</summary>
+    [Parameter, EditorRequired] public string Name { get; set; } = string.Empty;
+
+    /// <summary>The package's repository URL.</summary>
+    [Parameter] public string? RepositoryUrl { get; set; }
+
+    /// <summary>The package's project URL.</summary>
+    [Parameter] public string? ProjectUrl { get; set; }
+
+    string? _sourceCode;
+    string? _website;
+
+    protected override void OnParametersSet()
+    {
+        _sourceCode = WebUrl(RepositoryUrl);
+        _website = WebUrl(ProjectUrl);
+
+        // Many packages, the official ones among them, give the repository as their project URL too
+        if (_website != null && _sourceCode != null && string.Equals(Normalize(_website), Normalize(_sourceCode), StringComparison.OrdinalIgnoreCase))
+            _website = null;
+    }
+
+    /// <summary>A repository URL without the trailing slash or ".git" that often differs from the project URL.</summary>
+    static string Normalize(string url)
+    {
+        var uri = new Uri(url);
+        var path = uri.AbsolutePath.TrimEnd('/');
+
+        if (path.EndsWith(".git", StringComparison.OrdinalIgnoreCase))
+            path = path[..^4];
+
+        return $"{uri.Host}{path}";
+    }
+
+    /// <summary>The URL when it is an absolute http(s) link, so package metadata can't inject other schemes.</summary>
+    static string? WebUrl(string? url) =>
+        Uri.TryCreate(url, UriKind.Absolute, out var uri) && (uri.Scheme == Uri.UriSchemeHttps || uri.Scheme == Uri.UriSchemeHttp)
+            ? uri.ToString()
+            : null;
+}

@@ -98,7 +98,7 @@
                                     <Tag Primary>@update.Version available</Tag>
                                 }
                             </TemplateColumn>
-                            <ActionsColumn TItem="InstalledPlugin" Width="128px">
+                            <ActionsColumn TItem="InstalledPlugin" Width="160px">
                                 @if (UpdateFor(context) is { } update)
                                 {
                                     <Tooltip Title="@($"Update to {update.Version}")">
@@ -126,6 +126,8 @@
                                         <Button Text Danger Icon="IconType.Trash" title="Uninstall" />
                                     </Popconfirm>
                                 }
+
+                                <PluginLinksMenu Name="@context.Name" RepositoryUrl="@context.EffectivePackage?.RepositoryUrl" ProjectUrl="@context.EffectivePackage?.ProjectUrl" />
                             </ActionsColumn>
                         </Columns>
                     </Table>
@@ -190,7 +192,7 @@
                                     @context.DownloadCount?.ToString("N0")
                                 </TemplateColumn>
                                 <BoundColumn Property="p => p.SourceName" Title="Source" Width="140px" />
-                                <ActionsColumn TItem="PluginPackageListing" Width="140px">
+                                <ActionsColumn TItem="PluginPackageListing" Width="180px">
                                     @switch (InstalledVersionOf(context))
                                     {
                                         case null:
@@ -203,6 +205,8 @@
                                             <Tag Success>Installed</Tag>
                                             break;
                                     }
+
+                                    <PluginLinksMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
                                 </ActionsColumn>
                             </Columns>
                         </Table>
@@ -251,7 +255,7 @@
                                     <Switch Value="context.Required" ValueChanged="(bool required) => SetRequiredAsync(context, required)" aria-label="@($"Require {context.Name}")" />
                                 </Tooltip>
                             </TemplateColumn>
-                            <ActionsColumn TItem="CachedLauncherPlugin" Width="96px">
+                            <ActionsColumn TItem="CachedLauncherPlugin" Width="128px">
                                 @if (LauncherUpdateFor(context) is { } update)
                                 {
                                     <Tooltip Title="@($"Update to {update.Version}")">
@@ -262,6 +266,8 @@
                                 <Popconfirm OnConfirm="() => RemoveLauncherPluginAsync(context)" Title="@($"Remove {context.Name}? Launchers that installed it keep it.")" OkText="Remove" Danger>
                                     <Button Text Danger Icon="IconType.Trash" title="Remove" />
                                 </Popconfirm>
+
+                                <PluginLinksMenu Name="@context.Name" RepositoryUrl="@context.Package.RepositoryUrl" ProjectUrl="@context.Package.ProjectUrl" />
                             </ActionsColumn>
                         </Columns>
                     </Table>
@@ -312,7 +318,7 @@
                                     @context.DownloadCount?.ToString("N0")
                                 </TemplateColumn>
                                 <BoundColumn Property="p => p.SourceName" Title="Source" Width="140px" />
-                                <ActionsColumn TItem="PluginPackageListing" Width="140px">
+                                <ActionsColumn TItem="PluginPackageListing" Width="180px">
                                     @switch (CachedVersionOf(context))
                                     {
                                         case null:
@@ -325,6 +331,8 @@
                                             <Tag Success>Added</Tag>
                                             break;
                                     }
+
+                                    <PluginLinksMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
                                 </ActionsColumn>
                             </Columns>
                         </Table>

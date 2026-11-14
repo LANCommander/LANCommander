@@ -216,7 +216,12 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
         SelectedSortBy        = SortBy.Title;
         SortAscending         = true;
         SelectedGroupBy       = IsHorizontalView ? GroupBy.FirstLetter : GroupBy.None;
+
+        OnFiltersCleared();
     }
+
+    /// <summary>Runs after <see cref="ClearFiltersCommand"/> has reset every filter.</summary>
+    protected virtual void OnFiltersCleared() { }
 
     [RelayCommand]
     protected abstract Task ViewGameDetailsAsync(GameItemViewModel? gameItem);

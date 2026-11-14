@@ -26,6 +26,9 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
     private readonly ILogger<DepotBrowseViewModel> _logger;
     private readonly INavigationService _navigationService;
 
+    // What the view was opened with; Reload re-applies it, Clear drops it
+    private (string? Genre, string? Tag, string? Collection, string? Search, DepotBrowsePreset Preset) _initialFilter;
+
     // ── Locked filter ─────────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -97,7 +100,10 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         _allGames.Clear();
         _allGames.AddRange(allGames);
 
+        _initialFilter = (preFilterGenre, preFilterTag, preFilterCollection, preFilterSearch, preset);
+
         PopulateGenres();
+        PopulateCollections();
         PopulateTags();
         PopulateDevelopers();
         PopulatePublishers();
@@ -113,6 +119,7 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         // Reset all filters (won't trigger ApplyFilters when values haven't changed)
         SearchText              = string.Empty;
         SelectedGenre           = null;
+        SelectedCollection      = null;
         SelectedTag             = null;
         SelectedDeveloper       = null;
         SelectedPublisher       = null;
@@ -139,7 +146,10 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
         }
 
         if (!string.IsNullOrEmpty(preFilterCollection))
-            SelectedGroupBy = GroupBy.Collection;
+        {
+            SelectedCollection = AvailableCollections.FirstOrDefault(c =>
+                string.Equals(c, preFilterCollection, StringComparison.OrdinalIgnoreCase)) ?? preFilterCollection;
+        }
 
         if (!string.IsNullOrEmpty(preFilterSearch))
             SearchText = preFilterSearch;
@@ -184,26 +194,32 @@ public partial class DepotBrowseViewModel : GamesCollectionViewModel
     private void GoBack() => _navigationService.GoBack();
 
     /// <summary>
-    /// Clears user-added filters while preserving the locked initial filter.
-    /// Bound to the clear (✕) button in the view instead of the base ClearFiltersCommand.
+    /// Re-runs <see cref="Initialize"/> with fresh games, keeping whatever entry filter is still in effect.
     /// </summary>
-    [RelayCommand]
-    private void ClearAdditionalFilters()
+    public void Reload(IEnumerable<GameItemViewModel> allGames)
+        => Initialize(allGames,
+            _initialFilter.Genre,
+            _initialFilter.Tag,
+            _initialFilter.Collection,
+            _initialFilter.Search,
+            _initialFilter.Preset);
+
+    /// <summary>
+    /// Clear also removes the genre/tag/collection the view was opened with. The base reset already
+    /// undoes search, sort (New Releases) and in-library (Backlog), so the view becomes All Games,
+    /// except Play Together, whose game pool was narrowed in Initialize and stays narrowed.
+    /// </summary>
+    protected override void OnFiltersCleared()
     {
-        // Only reset search if it's not the locked dimension (search is never locked, but be explicit)
-        SearchText = string.Empty;
+        LockedFilterKind  = LockedFilterKind.None;
+        LockedFilterValue = string.Empty;
 
-        if (!IsGenreLocked)      SelectedGenre  = null;
-        if (!IsTagLocked)        SelectedTag    = null;
-        if (!IsCollectionLocked) SelectedGroupBy = GroupBy.None;
+        if (_initialFilter.Preset == DepotBrowsePreset.PlayTogether)
+            return;
 
-        SelectedDeveloper       = null;
-        SelectedPublisher       = null;
-        SelectedMultiplayerType = null;
-        SelectedMinPlayers      = null;
-        ShowInLibraryOnly       = false;
-        SelectedSortBy          = SortBy.Title;
-        SortAscending           = true;
+        _initialFilter = default;
+        BrowseTitle    = "All Games";
+        RailSelection  = "All";
     }
 
     protected override async Task ViewGameDetailsAsync(GameItemViewModel? gameItem)

@@ -13,7 +13,7 @@
             <Setter Property="Background" Value="{DynamicResource AccentFillBrush}" />
             <Setter Property="CornerRadius" Value="{DynamicResource RadiusMedium}" />
             <Setter Property="Padding" Value="8,5" />
-            <Setter Property="HorizontalAlignment" Value="Left" />
+            <Setter Property="HorizontalAlignment" Value="Stretch" />
         </Style>
 
         <!-- Rail filters: a small label over each full-width control -->
@@ -46,11 +46,11 @@
             <!-- ── Filters ─────────────────────────────────────────────── -->
             <StackPanel Margin="16,0" Spacing="14">
                 <DockPanel>
-                    <!-- Clears what the user added; a locked genre/tag/collection stays -->
+                    <!-- Clears everything, including the genre/tag/collection the view was opened with -->
                     <Button DockPanel.Dock="Right"
                             Classes="Text Primary"
                             Content="Clear"
-                            Command="{Binding ClearAdditionalFiltersCommand}"
+                            Command="{Binding ClearFiltersCommand}"
                             FontSize="{DynamicResource FontSizeCaption}"
                             Padding="6,2"
                             Margin="0,0,-6,0"
@@ -60,18 +60,24 @@
 
                 <!-- Locked filter chip — shown when navigated from genre/tag/collection -->
                 <Border Classes="locked-chip" IsVisible="{Binding HasLockedFilter}">
-                    <StackPanel Orientation="Horizontal" Spacing="5">
-                        <TextBlock Text="{Binding LockedFilterLabel}"
+                    <Grid ColumnDefinitions="Auto,*,Auto">
+                        <TextBlock Grid.Column="0"
+                                   Text="{Binding LockedFilterLabel}"
                                    FontSize="{DynamicResource FontSizeKicker}"
                                    Opacity="0.7"
                                    VerticalAlignment="Center" />
-                        <TextBlock Text="{Binding LockedFilterValue}"
+                        <TextBlock Grid.Column="1"
+                                   Text="{Binding LockedFilterValue}"
                                    FontSize="{DynamicResource FontSizeCaption}"
                                    FontWeight="SemiBold"
+                                   TextTrimming="CharacterEllipsis"
+                                   ToolTip.Tip="{Binding LockedFilterValue}"
+                                   Margin="5,0"
                                    VerticalAlignment="Center" />
-                        <Icon Type="Regular" Value="Lock" Width="10" Height="10"
+                        <Icon Grid.Column="2"
+                              Type="Regular" Value="Lock" Width="10" Height="10"
                               Opacity="0.7" VerticalAlignment="Center" />
-                    </StackPanel>
+                    </Grid>
                 </Border>
 
                 <TextBox Watermark="Search titles…"

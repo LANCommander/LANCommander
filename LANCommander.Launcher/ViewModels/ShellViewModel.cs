@@ -220,9 +220,6 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isNavigating;
 
-    // Tracks the most recent depot browse filter so the view can be refreshed after library changes
-    private (string? Genre, string? Tag, string? Collection, string? Search, DepotBrowsePreset Preset) _lastDepotBrowseFilter;
-
     public event EventHandler? LogoutRequested;
 
     public ShellViewModel(IServiceProvider serviceProvider)
@@ -765,8 +762,6 @@ public partial class ShellViewModel : ViewModelBase
     private void NavigateToDepotBrowse(string? genre = null, string? tag = null, string? collection = null, string? search = null,
         DepotBrowsePreset preset = DepotBrowsePreset.None)
     {
-        _lastDepotBrowseFilter = (genre, tag, collection, search, preset);
-        
         DepotBrowseViewModel.Initialize(GamesListViewModel.GetAllGames(), genre, tag, collection, search, preset);
         IsDepotActive = true;
         
@@ -781,13 +776,7 @@ public partial class ShellViewModel : ViewModelBase
         
         // Re-initialize the browse view with fresh data so "in library" badges update
         if (_navigationService.CurrentView == DepotBrowseViewModel)
-            DepotBrowseViewModel.Initialize(
-                GamesListViewModel.GetAllGames(),
-                _lastDepotBrowseFilter.Genre,
-                _lastDepotBrowseFilter.Tag,
-                _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search,
-                _lastDepotBrowseFilter.Preset);
+            DepotBrowseViewModel.Reload(GamesListViewModel.GetAllGames());
     }
 
     private void OnInstallRequested(object? sender, EventArgs e) => DownloadQueue.Show();
@@ -800,13 +789,7 @@ public partial class ShellViewModel : ViewModelBase
 
         // Re-initialize the browse view with fresh data so install status updates
         if (_navigationService.CurrentView == DepotBrowseViewModel)
-            DepotBrowseViewModel.Initialize(
-                GamesListViewModel.GetAllGames(),
-                _lastDepotBrowseFilter.Genre,
-                _lastDepotBrowseFilter.Tag,
-                _lastDepotBrowseFilter.Collection,
-                _lastDepotBrowseFilter.Search,
-                _lastDepotBrowseFilter.Preset);
+            DepotBrowseViewModel.Reload(GamesListViewModel.GetAllGames());
 
         if (DepotGameDetailViewModel.Id == gameId)
             await DepotGameDetailViewModel.RefreshInstallStatusAsync();

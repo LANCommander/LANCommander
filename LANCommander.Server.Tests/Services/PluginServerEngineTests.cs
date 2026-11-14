@@ -249,12 +249,12 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
         return manager;
     }
 
-    private Task<ServerModel> AddServerAsync(string engineId, string settings = "") =>
+    private Task<ServerModel> AddServerAsync(string engineId, string settings = "", string host = "10.0.0.5", int port = 27015) =>
         GetService<ServerService>().AddAsync(new ServerModel
         {
             Name = Unique("Server"),
-            Host = "10.0.0.5",
-            Port = 27015,
+            Host = host,
+            Port = port,
             Engine = ServerEngine.Extension,
             EngineExtensionId = engineId,
             EngineSettings = settings,
@@ -739,6 +739,63 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
 
         engines.Extensions.ShouldBe([first]);
         engines.Find(id.ToUpperInvariant()).ShouldBe(first);
+    }
+
+    [Fact]
+    public async Task AReportedAddressFillsWhatTheServerLeavesBlank()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Address);
+        var server = await AddServerAsync(extension.Id, host: "", port: 0);
+        var manager = await CreateManagerAsync(CreateEngines(extension));
+
+        manager.GetAddress(server).ShouldBe(new ServerAddress("", 0));
+
+        extension.Host!.ReportAddress(server.Id, " 10.0.0.9 ", 27960);
+
+        manager.GetAddress(server).ShouldBe(new ServerAddress("10.0.0.9", 27960));
+
+        // What isn't reported keeps what was
+        extension.Host.ReportAddress(server.Id, null, 27961);
+
+        manager.GetAddress(server).ShouldBe(new ServerAddress("10.0.0.9", 27961));
+
+        // The report isn't saved over the server's own blank fields
+        var saved = await GetService<ServerService>().AsNoTracking().GetAsync(server.Id);
+        saved!.Host.ShouldBe("");
+        saved.Port.ShouldBe(0);
+        extension.Servers.Single(s => s.Id == server.Id).Host.ShouldBe("");
+    }
+
+    [Fact]
+    public async Task TheServersOwnHostAndPortOverrideTheReport()
+    {
+        var extension = new FakeExtension(NewEngineId(), ServerEngineFeatures.Address);
+        var both = await AddServerAsync(extension.Id);
+        var hostOnly = await AddServerAsync(extension.Id, host: "game.lan", port: 0);
+        var manager = await CreateManagerAsync(CreateEngines(extension));
+
+        extension.Host!.ReportAddress(both.Id, "10.0.0.9", 27960);
+        extension.Host.ReportAddress(hostOnly.Id, "10.0.0.9", 27960);
+
+        manager.GetAddress(both).ShouldBe(new ServerAddress("10.0.0.5", 27015));
+        manager.GetAddress(hostOnly).ShouldBe(new ServerAddress("game.lan", 27960));
+    }
+
+    [Fact]
+    public async Task AReportedAddressIsIgnoredWithoutTheFeature()
+    {
+        var without = new FakeExtension(NewEngineId());
+        var with = new FakeExtension(NewEngineId(), ServerEngineFeatures.Address);
+        var plain = await AddServerAsync(without.Id, host: "", port: 0);
+        var featured = await AddServerAsync(with.Id, host: "", port: 0);
+        var manager = await CreateManagerAsync(CreateEngines(without, with));
+
+        without.Host!.ReportAddress(plain.Id, "10.0.0.9", 27960);
+        with.Host!.ReportAddress(featured.Id, "10.0.0.9", 70000);
+        with.Host.ReportAddress(Guid.NewGuid(), "10.0.0.9", 27960);
+
+        manager.GetReportedAddress(plain.Id).ShouldBeNull();
+        manager.GetReportedAddress(featured.Id).ShouldBe(new ReportedServerAddress("10.0.0.9", null));
     }
 
     private sealed class Settings

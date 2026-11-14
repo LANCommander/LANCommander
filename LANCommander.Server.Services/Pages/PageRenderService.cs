@@ -1,6 +1,7 @@
 using System.Text;
 using LANCommander.SDK.Enums;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Models;
 using Markdig;
 using Markdig.Renderers;
 using Markdig.Renderers.Html;
@@ -121,7 +122,7 @@ public sealed class PageRenderService(
             embed.Html = embed.Kind switch
             {
                 "game" => games.TryGetValue(id, out var game) ? RenderGame(game, options) : null,
-                "server" => servers.TryGetValue(id, out var server) ? RenderServer(server, statuses[server.Id], options) : null,
+                "server" => servers.TryGetValue(id, out var server) ? RenderServer(server, serverManager.GetAddress(server), statuses[server.Id], options) : null,
                 "redistributable" => redistributables.TryGetValue(id, out var redistributable) ? RenderRedistributable(redistributable, options) : null,
                 "page" => pages.TryGetValue(id, out var page) ? RenderPageLink(page) : null,
                 "children" => RenderChildren(children),
@@ -183,7 +184,7 @@ public sealed class PageRenderService(
         return html.ToString();
     }
 
-    static string RenderServer(Data.Models.Server server, ServerProcessStatus status, PageRenderOptions options)
+    static string RenderServer(Data.Models.Server server, ServerAddress address, ServerProcessStatus status, PageRenderOptions options)
     {
         var html = new StringBuilder("<div class=\"page-embed page-embed-server\">");
 
@@ -196,8 +197,8 @@ public sealed class PageRenderService(
         if (server.Game != null)
             details.Add(server.Game.Title);
 
-        if (!String.IsNullOrWhiteSpace(server.Host))
-            details.Add(server.Port > 0 ? $"{server.Host}:{server.Port}" : server.Host);
+        if (!String.IsNullOrWhiteSpace(address.Host))
+            details.Add(address.ToString());
 
         if (details.Count > 0)
             html.Append($"<div class=\"page-embed-meta\">{HtmlEncode(String.Join(" · ", details))}</div>");

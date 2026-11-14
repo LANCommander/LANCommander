@@ -95,6 +95,21 @@ public class ServerEngineExtensionTests : BUnitTestContext
     }
 
     [Fact]
+    public async Task AnEngineThatReportsAddressesSaysBlankFieldsUseIt()
+    {
+        var cut = RenderGeneral();
+
+        Assert.DoesNotContain("Containers reports", cut.Markup);
+
+        var engine = cut.FindComponents<Select<string>>().First();
+
+        await cut.InvokeAsync(() => engine.Instance.ValueChanged.InvokeAsync($"Extension:{EngineId}"));
+
+        cut.WaitForAssertion(() => Assert.Contains("Leave blank to use the host Containers reports", cut.Markup));
+        Assert.Contains("Set to 0 to use the port Containers reports", cut.Markup);
+    }
+
+    [Fact]
     public async Task AServerUsingAPluginEngineListsItsPages()
     {
         using (var scope = Fixture.Factory.RealServices.CreateScope())
@@ -345,7 +360,7 @@ public class ServerEngineExtensionTests : BUnitTestContext
     {
         public string Id => EngineId;
         public string Name => "Containers";
-        public ServerEngineFeatures Features => ServerEngineFeatures.Consoles;
+        public ServerEngineFeatures Features => ServerEngineFeatures.Consoles | ServerEngineFeatures.Address;
         public Type? EditorComponent => typeof(FakeEditor);
         public Type? SettingsComponent => typeof(FakeEngineSettings);
         public IReadOnlyList<ServerEngineSection> Sections { get; } = [new("Container", "Container", typeof(FakeSection))];

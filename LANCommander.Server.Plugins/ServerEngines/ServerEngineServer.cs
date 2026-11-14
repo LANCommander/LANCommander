@@ -12,9 +12,13 @@ public sealed record ServerEngineServer
     /// <summary>The game the server is for, if any.</summary>
     public Guid? GameId { get; init; }
 
-    /// <summary>The address players connect to.</summary>
+    /// <summary>
+    /// The host players connect to, as the administrator set it; empty when they left it to what the
+    /// engine reports. Not what the engine reported.
+    /// </summary>
     public string Host { get; init; } = "";
 
+    /// <summary>The port players connect to, as the administrator set it; 0 when they left it to what the engine reports.</summary>
     public int Port { get; init; }
 
     /// <summary>

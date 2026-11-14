@@ -88,6 +88,29 @@ public sealed class ServerManager(
 
     #endregion
 
+    #region Address
+
+    /// <summary>Where the server's engine last reported players connect to it; null if it hasn't.</summary>
+    public ReportedServerAddress? GetReportedAddress(Guid serverId)
+    {
+        foreach (var engine in serverEngines)
+        {
+            if (engine.IsManaging(serverId))
+                return engine.GetReportedAddress(serverId);
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// Where players connect to the server: its Host and Port where they are set, as overrides, and
+    /// what its engine reported for those left blank.
+    /// </summary>
+    public ServerAddress GetAddress(Data.Models.Server server) =>
+        ServerAddress.Resolve(server.Host, server.Port, GetReportedAddress(server.Id));
+
+    #endregion
+
     #region Routing
 
     public async Task StartAsync(Guid serverId)

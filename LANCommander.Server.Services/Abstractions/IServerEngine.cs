@@ -20,6 +20,12 @@ public interface IServerEngine
     /// </summary>
     public Task<ServerProcessInfo?> GetProcessInfoAsync(Guid serverId) => Task.FromResult<ServerProcessInfo?>(null);
 
+    /// <summary>
+    /// Where the engine last reported players connect to the server, used for whichever of its Host
+    /// and Port the administrator left blank. Null when the engine hasn't reported one.
+    /// </summary>
+    public ReportedServerAddress? GetReportedAddress(Guid serverId) => null;
+
     /// <summary>Whether <see cref="SendInputAsync"/> can currently deliver a line to the server's standard input.</summary>
     public bool CanSendInput(Guid serverId) => false;
 

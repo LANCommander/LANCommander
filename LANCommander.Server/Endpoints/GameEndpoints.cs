@@ -255,6 +255,7 @@ public static class GameEndpoints
         [FromServices] SdkMapper sdkMapper,
         [FromServices] ILogger<Game> logger,
         [FromServices] GameVersionService gameVersionService,
+        [FromServices] ServerManager serverManager,
         ClaimsPrincipal userPrincipal,
         Guid id,
         string? versionIds)
@@ -321,11 +322,13 @@ public static class GameEndpoints
                     // the installed game instead of filtering it out.
                     mappedAction.GameId = game.Id;
 
-                    if (!String.IsNullOrWhiteSpace(server.Host))
-                        mappedAction.Variables["ServerHost"] = server.Host;
+                    var address = serverManager.GetAddress(server);
 
-                    if (server.Port > 0)
-                        mappedAction.Variables["ServerPort"] = server.Port.ToString();
+                    if (!String.IsNullOrWhiteSpace(address.Host))
+                        mappedAction.Variables["ServerHost"] = address.Host;
+
+                    if (address.Port > 0)
+                        mappedAction.Variables["ServerPort"] = address.Port.ToString();
 
                     // Lets the launcher offer this action as the server's Connect button
                     mappedAction.Variables[ActionTypes.ServerIdVariable] = server.Id.ToString();
@@ -422,12 +425,14 @@ public static class GameEndpoints
             if (!isUp && !startsOnPlayerActivity)
                 continue;
 
+            var address = serverManager.GetAddress(server);
+
             results.Add(new SDK.Models.GameServer
             {
                 Id = server.Id,
                 Name = server.Name,
-                Host = server.Host,
-                Port = server.Port,
+                Host = address.Host,
+                Port = address.Port,
                 Status = status,
                 StartsOnPlayerActivity = startsOnPlayerActivity,
             });

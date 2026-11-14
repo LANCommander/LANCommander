@@ -1013,6 +1013,8 @@ How an `IServerEngineExtension` reports what its servers do. Thread safe.
 
 - `void ReportStatus(Guid serverId, ServerEngineStatus status, string error)`
   - Reports that a server's status changed on its own, e.g. it exited, so those watching it see so at once rather than at their next look. Changes made through the engine's own methods needn't be reported.
+- `void ReportAddress(Guid serverId, string host, int? port)`
+  - Reports where players connect to a server, for `Address`. Players are sent it in place of whichever of the server's Host and Port the administrator left blank; those they set override it. It is kept only while the LANCommander server runs, so report it whenever it may have changed and for servers already running when `ServersChangedAsync` is first called. Reporting the same address again does nothing.
 - `void WriteOutput(Guid serverId, string line)`
   - Reports a line of a server's output, for `Output`.
 
@@ -2568,6 +2570,7 @@ What an `IServerEngineExtension` can do beyond starting and stopping a server.
 | `ProcessInfo` = `4` | The engine samples its servers' CPU and memory use and uptime. |
 | `Consoles` = `8` | The engine offers consoles of its own for its servers, e.g. a log or a terminal, listed under their Monitor; see `GetConsoles`. |
 | `Files` = `16` | The engine can list, read, write and delete its servers' files, e.g. their configuration, so administrators can edit and upload them on the server's Files page; see `ListFilesAsync`. |
+| `Address` = `32` | The engine knows where players connect to its servers, e.g. the address and port a container was given, and reports it through `ReportAddress`. Players are sent the reported host and port wherever the administrator left the server's own blank; what they enter there overrides the report. |
 
 ### ServerEngineStatus
 

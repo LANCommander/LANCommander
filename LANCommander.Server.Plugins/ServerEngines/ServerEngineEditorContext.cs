@@ -31,7 +31,9 @@ public sealed class ServerEngineEditorContext
 
     /// <summary>
     /// Sets the address players connect to, e.g. from a port the engine publishes. The administrator
-    /// can still change it.
+    /// can still change it. What is set here overrides what the engine reports with
+    /// <see cref="IServerEngineHost.ReportAddress"/>, so an engine that reports addresses should leave
+    /// the parts it reports unset.
     /// </summary>
     public void SetAddress(string? host, int? port) => _write(server => server with
     {

@@ -324,6 +324,16 @@ commands typed on the Monitor reach `SendInputAsync`; `ProcessInfo` has the Moni
 memory and uptime `GetProcessInfoAsync` samples. RCON consoles work with any engine, since the server
 sends RCON commands itself.
 
+An engine with the `Address` feature knows where players reach its servers, e.g. the address and
+published port a container was given, and reports it with `IServerEngineHost.ReportAddress` whenever
+it may have changed, such as once a server has started. Pass null for a part it doesn't know, and an
+empty host for the LANCommander server's own address. A server's own Host and Port are overrides:
+players, launchers and pages get the reported host where the administrator left Host blank, and the
+reported port where they left Port at 0. Reports aren't saved, so report again for servers already
+running when the engine starts. `ServerEngineServer.Host` and `Port` are the administrator's values,
+not the report, and an editor that calls `ServerEngineEditorContext.SetAddress` sets overrides, so
+leave the parts the engine reports unset.
+
 ### Consoles
 
 An engine with the `Consoles` feature can offer consoles of its own for each server, listed under the

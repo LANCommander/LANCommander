@@ -4,6 +4,7 @@ using LANCommander.SDK.Enums;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Enums;
+using LANCommander.Server.Services.Extensions;
 using LANCommander.Server.Services.Mappers;
 using LANCommander.Server.Services.Models;
 using LANCommander.Server.Services.Utilities;
@@ -100,6 +101,10 @@ internal sealed class PluginServerEngine(
 
     private readonly ConcurrentDictionary<Guid, ServerEngineServer> _servers = new();
 
+    // Where the engine last reported each server can be reached. Kept only in memory: the engine
+    // reports again once it is running, and what the administrator sets is saved with the server
+    private readonly ConcurrentDictionary<Guid, ReportedServerAddress> _reportedAddresses = new();
+
     public IServerEngineExtension Extension => extension;
 
     public event EventHandler<ServerStatusUpdateEventArgs>? OnServerStatusUpdate;
@@ -120,7 +125,10 @@ internal sealed class PluginServerEngine(
             _servers[server.Id] = server;
 
         foreach (var id in _servers.Keys.Except(servers.Select(s => s.Id)).ToList())
+        {
             _servers.TryRemove(id, out _);
+            _reportedAddresses.TryRemove(id, out _);
+        }
 
         await extension.ServersChangedAsync(servers, CancellationToken.None);
     }
@@ -347,6 +355,60 @@ internal sealed class PluginServerEngine(
         }
     }
 
+    public ReportedServerAddress? GetReportedAddress(Guid serverId) =>
+        _reportedAddresses.TryGetValue(serverId, out var address) ? address : null;
+
+    void IServerEngineHost.ReportAddress(Guid serverId, string? host, int? port)
+    {
+        if (!extension.Features.HasFlag(ServerEngineFeatures.Address) || !_servers.TryGetValue(serverId, out var server))
+            return;
+
+        host = host?.Trim();
+
+        if (port is < 1 or > 65535)
+        {
+            logger.LogWarning("The {Engine} engine reported port {Port} for server {ServerId}, which isn't a port", extension.Name, port, serverId);
+
+            port = null;
+        }
+
+        if (host == null && port == null)
+            return;
+
+        ReportedServerAddress? previous = null;
+
+        var address = _reportedAddresses.AddOrUpdate(
+            serverId,
+            new ReportedServerAddress(host, port),
+            (_, last) =>
+            {
+                previous = last;
+
+                return new ReportedServerAddress(host ?? last.Host, port ?? last.Port);
+            });
+
+        if (address == previous)
+            return;
+
+        logger.LogInformation("The {Engine} engine reported server \"{ServerName}\" at host {Host}, port {Port}", extension.Name, server.Name, address.Host, address.Port);
+
+        // Launchers are sent servers' addresses with their games. Off the engine's thread, since it
+        // may report from inside one of its own calls
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                using var scope = scopeFactory.CreateScope();
+
+                await scope.ServiceProvider.GetRequiredService<ZiggyCreatures.Caching.Fusion.IFusionCache>().ExpireGameCacheAsync(server.GameId);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Could not expire the games cached with server {ServerId}'s address", serverId);
+            }
+        });
+    }
+
     private void Emit(ServerEntity server, ServerProcessStatus status, Exception? ex = null)
     {
         try
@@ -382,7 +444,13 @@ internal sealed class PluginServerEngine(
             {
                 var script = powerShellScriptFactory.Create(type);
 
-                script.AddVariable("Server", sdkMapper.ToSdk(server));
+                var sdkServer = sdkMapper.ToSdk(server);
+                var address = ServerAddress.Resolve(server.Host, server.Port, GetReportedAddress(server.Id));
+
+                sdkServer.Host = address.Host;
+                sdkServer.Port = address.Port;
+
+                script.AddVariable("Server", sdkServer);
 
                 if (!string.IsNullOrWhiteSpace(server.WorkingDirectory))
                     script.UseWorkingDirectory(server.WorkingDirectory);

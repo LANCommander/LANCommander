@@ -1,6 +1,7 @@
 @using Microsoft.EntityFrameworkCore
 @using LANCommander.Server.Data
 @inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject ServerManager ServerManager
 @implements IDisposable
 
 @*
@@ -57,10 +58,11 @@
                 <dd class="server-monitor-mono" title="@Server.WorkingDirectory">@Server.WorkingDirectory</dd>
             }
 
-            @if (Server.Port > 0)
+            @{ var address = ServerManager.GetAddress(Server); }
+            @if (address.Port > 0)
             {
                 <dt>Address</dt>
-                <dd class="server-monitor-mono">@(string.IsNullOrWhiteSpace(Server.Host) ? "*" : Server.Host):@Server.Port</dd>
+                <dd class="server-monitor-mono">@(string.IsNullOrWhiteSpace(address.Host) ? "*" : address.Host):@address.Port</dd>
             }
 
             <dt>Autostart</dt>

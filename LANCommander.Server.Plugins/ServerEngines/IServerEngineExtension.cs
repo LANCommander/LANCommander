@@ -9,7 +9,9 @@ namespace LANCommander.Server.Plugins;
 /// <remarks>
 /// <para>
 /// The server keeps everything an engine doesn't: a server's name, game, address, autostart, consoles,
-/// HTTP paths, actions and scripts. It runs the server's Before Start and After Stop scripts around
+/// HTTP paths, actions and scripts. An engine that knows where its servers can be reached may report
+/// their addresses, used where the administrator left a server's blank; see
+/// <see cref="ServerEngineFeatures.Address"/>. It runs the server's Before Start and After Stop scripts around
 /// <see cref="StartAsync"/> and <see cref="StopAsync"/>, and sends RCON commands itself. What the
 /// engine needs to know about each server it keeps in <see cref="ServerEngineServer.Settings"/>,
 /// which its <see cref="EditorComponent"/> edits and the server stores with the server.
@@ -195,6 +197,14 @@ public enum ServerEngineFeatures
     /// <see cref="IServerEngineExtension.ListFilesAsync"/>.
     /// </summary>
     Files = 16,
+
+    /// <summary>
+    /// The engine knows where players connect to its servers, e.g. the address and port a container
+    /// was given, and reports it through <see cref="IServerEngineHost.ReportAddress"/>. Players are
+    /// sent the reported host and port wherever the administrator left the server's own blank; what
+    /// they enter there overrides the report.
+    /// </summary>
+    Address = 32,
 }
 
 /// <summary>Whether a game server is running.</summary>
@@ -240,4 +250,20 @@ public interface IServerEngineHost
 
     /// <summary>Reports a line of a server's output, for <see cref="ServerEngineFeatures.Output"/>.</summary>
     void WriteOutput(Guid serverId, string line);
+
+    /// <summary>
+    /// Reports where players connect to a server, for <see cref="ServerEngineFeatures.Address"/>.
+    /// Players are sent it in place of whichever of the server's Host and Port the administrator
+    /// left blank; those they set override it. It is kept only while the LANCommander server runs, so
+    /// report it whenever it may have changed and for servers already running when
+    /// <see cref="IServerEngineExtension.ServersChangedAsync"/> is first called. Reporting the same
+    /// address again does nothing.
+    /// </summary>
+    /// <param name="serverId">The server.</param>
+    /// <param name="host">
+    /// The host name or IP address players connect to; empty for the LANCommander server's own
+    /// address, or null to keep what was last reported.
+    /// </param>
+    /// <param name="port">The port players connect to, or null to keep what was last reported.</param>
+    void ReportAddress(Guid serverId, string? host, int? port) { }
 }

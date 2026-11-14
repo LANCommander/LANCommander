@@ -20,9 +20,10 @@ public static class ServerEndpoints
     
     public static async Task<IResult> GetAsync(
         [FromServices] ServerService serverService,
+        [FromServices] ServerManager serverManager,
         [FromServices] SdkMapper sdkMapper)
     {
-        var servers = (await serverService.GetAsync()).Select(sdkMapper.ToSdk).ToList();
+        var servers = (await serverService.GetAsync()).Select(server => ToSdk(server, serverManager, sdkMapper)).ToList();
 
         return TypedResults.Ok(servers);
     }
@@ -30,6 +31,7 @@ public static class ServerEndpoints
     public static async Task<IResult> GetByIdAsync(
         Guid id,
         [FromServices] ServerService serverService,
+        [FromServices] ServerManager serverManager,
         [FromServices] SdkMapper sdkMapper)
     {
         var server = await serverService.GetAsync(id);
@@ -37,7 +39,19 @@ public static class ServerEndpoints
         if (server == null)
             return TypedResults.NotFound();
 
-        return TypedResults.Ok(sdkMapper.ToSdk(server));
+        return TypedResults.Ok(ToSdk(server, serverManager, sdkMapper));
+    }
+
+    /// <summary>The server as clients see it, at the address players use.</summary>
+    static SDK.Models.Server ToSdk(Data.Models.Server server, ServerManager serverManager, SdkMapper sdkMapper)
+    {
+        var sdkServer = sdkMapper.ToSdk(server);
+        var address = serverManager.GetAddress(server);
+
+        sdkServer.Host = address.Host;
+        sdkServer.Port = address.Port;
+
+        return sdkServer;
     }
 
     public static async Task<IResult> GetStatusAsync(

@@ -16,6 +16,7 @@
 @inject ServerService ServerService
 @inject GameService GameService
 @inject PluginServerEngines PluginEngines
+@inject ServerManager ServerManager
 @inject RemoteServerEngine RemoteServerEngine
 @inject IOptions<Settings> Settings
 @inject NavigationManager NavigationManager
@@ -105,9 +106,23 @@
 
             <Divider Class="edit-form-divider" />
 
+            @{
+                // Host and Port override what an engine reports; left blank, the report is used
+                var addressEngine = AddressReportingEngine(context);
+                var reported = addressEngine != null && context.Id != Guid.Empty ? ServerManager.GetReportedAddress(context.Id) : null;
+            }
+
             <div class="edit-form-pair">
                 <FormItem Label="Host" Class="edit-form-mono">
-                    <TextInput @bind-Value="context.Host" />
+                    <ChildContent>
+                        <TextInput @bind-Value="context.Host" Placeholder="@(string.IsNullOrWhiteSpace(reported?.Host) ? null : reported.Host)" />
+                    </ChildContent>
+                    <HelpTemplate>
+                        @if (addressEngine != null)
+                        {
+                            <Typography Secondary>Leave blank to use the host @addressEngine.Name reports@(reported?.Host is { Length: > 0 } host ? $" (now {host})" : "").</Typography>
+                        }
+                    </HelpTemplate>
                 </FormItem>
                 <FormItem Label="Port" Class="edit-form-mono">
                     <ChildContent>
@@ -117,6 +132,10 @@
                         @if (PortInUse)
                         {
                             <Typography Warning>Another server may already be bound to this port</Typography>
+                        }
+                        else if (addressEngine != null)
+                        {
+                            <Typography Secondary>Set to 0 to use the port @addressEngine.Name reports@(reported?.Port is { } port ? $" (now {port})" : "").</Typography>
                         }
                     </HelpTemplate>
                 </FormItem>
@@ -220,6 +239,13 @@
 
         return items;
     }
+
+    /// <summary>The server's plugin engine, if it reports where its servers can be reached.</summary>
+    IServerEngineExtension? AddressReportingEngine(Server server) =>
+        server.Engine == ServerEngine.Extension && PluginEngines.Find(server.EngineExtensionId) is { } extension
+            && extension.Features.HasFlag(ServerEngineFeatures.Address)
+            ? extension
+            : null;
 
     static string EngineKey(Server server) => server.Engine == ServerEngine.Extension
         ? ExtensionKeyPrefix + server.EngineExtensionId

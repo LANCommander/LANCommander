@@ -210,6 +210,7 @@ public class VersionConfigTests(ApplicationFixture fixture) : DalTest(fixture)
             GetService<SdkMapper>(),
             NullLogger<Game>.Instance,
             GetService<GameVersionService>(),
+            GetService<ServerManager>(),
             new ClaimsPrincipal(),
             gameId,
             versionIds);

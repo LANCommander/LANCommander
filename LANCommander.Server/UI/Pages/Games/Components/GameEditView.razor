@@ -340,6 +340,8 @@
 
         _versionId = versionId;
 
+        await RefreshCountsAsync();
+
         NavigationManager.NavigateTo(NavigationManager.GetUriWithQueryParameter("version", index > 0 ? versionId : (Guid?)null), replace: true);
     }
 
@@ -438,10 +440,11 @@
             Game = game;
         }
 
-        await RefreshVersionAsync();
-
+        // Versions first: the counts depend on the selected version
         if (Id != Guid.Empty)
             await LoadVersionsAsync();
+
+        await RefreshVersionAsync();
 
         _loading = false;
 
@@ -490,6 +493,9 @@
         {
             await using var context = await DatabaseContextFactory.CreateDbContextAsync();
 
+            // Scripts as the Scripts section lists them: the selected version's, plus unversioned ones
+            var versionId = _versionId;
+
             _counts = await context.Set<Game>()
                 .Where(g => g.Id == Id)
                 .Select(g => new SectionCounts(
@@ -497,7 +503,7 @@
                     g.Archives!.Count(),
                     g.Versions!.Count(),
                     g.Keys!.Count(),
-                    g.Scripts!.Count()))
+                    g.Scripts!.Count(s => s.GameVersionId == null || s.GameVersionId == versionId)))
                 .FirstOrDefaultAsync();
         }
         catch (Exception ex)

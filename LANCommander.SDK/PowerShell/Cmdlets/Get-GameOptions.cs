@@ -4,8 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.Management.Automation;
 using System.Text.Json;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.SDK.PowerShell.Cmdlets
 {
@@ -43,13 +41,7 @@ namespace LANCommander.SDK.PowerShell.Cmdlets
 
             try
             {
-                var deserializer = new DeserializerBuilder()
-                    .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                    .WithTypeConverter(new SDK.Models.OptionChoiceYamlConverter())
-                    .IgnoreUnmatchedProperties()
-                    .Build();
-
-                schema = deserializer.Deserialize<SDK.Models.OptionSchema>(manifest.OptionSchema);
+                schema = GameOptionsHelper.ParseSchema(manifest.OptionSchema);
             }
             catch (Exception ex)
             {

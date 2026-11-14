@@ -259,6 +259,74 @@ if ($options.Proton.PROTONPATH -eq "GE-Proton") {
 }
 ```
 
+## `Get-GameOptions`
+Retrieves the resolved options for a game.
+
+### Syntax
+```powershell
+Get-GameOptions
+    -Path <string>
+    -Id <Guid>
+```
+
+### Description
+The `Get-GameOptions` cmdlet reads the game manifest and returns the game's resolved option values as a nested `PSObject`. Options are resolved in order: schema defaults, then the values the player chose in the launcher. Grouped options are represented as nested properties on the returned object. List options are returned as arrays: scalar lists as typed arrays, composite lists as arrays of `PSObject`s keyed by their fields.
+
+The launcher writes the player's values into the manifest right before the game starts, so this cmdlet is most useful in [Before Start](/Scripting/Script Types/Before Start) scripts.
+
+### Example
+```powershell
+$options = Get-GameOptions -Path $InstallDirectory -Id $GameManifest.Id
+
+Update-IniValue -Section "Video" -Key "Width" -Value $options.Video.Width -FilePath "$InstallDirectory\config.ini"
+Update-IniValue -Section "Video" -Key "Fullscreen" -Value ([int]$options.Fullscreen) -FilePath "$InstallDirectory\config.ini"
+```
+
+## `Update-GameOptions`
+Writes option values for a game back to the game manifest.
+
+### Syntax
+```powershell
+Update-GameOptions
+    -Path <string>
+    -Id <Guid>
+    -Name <string>
+    -Value <object>
+
+Update-GameOptions
+    -Path <string>
+    -Id <Guid>
+    -Options <object>
+```
+
+### Description
+The `Update-GameOptions` cmdlet is the counterpart of `Get-GameOptions`. It stores option values in the game manifest, and once the game exits the launcher copies any values a script changed into the player's options. Use it in an [After Stop](/Scripting/Script Types/After Stop) script to read settings the player changed inside the game, so the launcher shows them and the next launch doesn't overwrite them.
+
+Pass a single option with `-Name` (in dot notation for grouped options, e.g. `Video.Width`) and `-Value`, or several at once with `-Options`. `-Options` accepts a hashtable or the object returned by `Get-GameOptions`, either nested by group or keyed by dot-notation names. Values are converted to the option's type: bools are stored as `true`/`false` and ints as whole numbers. For list options, pass an array: scalars for a scalar list, or hashtables/objects keyed by field for a composite list. A `$null` value clears the stored value so the schema default applies.
+
+Names the game's option schema doesn't define, and values that can't be converted to the option's type, are reported as errors and skipped. A value outside a choice option's choices is stored with a warning.
+
+### Example
+```powershell
+# After Stop: carry in-game changes back to the launcher
+$config = Get-Content "$InstallDirectory\config.ini"
+
+$width = ($config | Select-String '^Width=(\d+)').Matches.Groups[1].Value
+$height = ($config | Select-String '^Height=(\d+)').Matches.Groups[1].Value
+
+Update-GameOptions -Path $InstallDirectory -Id $GameManifest.Id -Options @{
+    Video = @{ Width = $width; Height = $height }
+}
+
+# Or update a single value
+Update-GameOptions -Path $InstallDirectory -Id $GameManifest.Id -Name "Fullscreen" -Value $false
+
+# Or round-trip the object from Get-GameOptions
+$options = Get-GameOptions -Path $InstallDirectory -Id $GameManifest.Id
+$options.Video.Width = 1920
+Update-GameOptions -Path $InstallDirectory -Id $GameManifest.Id -Options $options
+```
+
 ## `Update-UserCustomField`
 Updates the value of a custom field on a users profile.
 

@@ -50,6 +50,8 @@ public class CmdletRegistrationTests
         Assert.Contains("Get-UserCustomField", names);
         Assert.Contains("Update-UserCustomField", names);
         Assert.Contains("Out-PlayerAvatar", names);
+        Assert.Contains("Get-GameOptions", names);
+        Assert.Contains("Update-GameOptions", names);
     }
 
     [Fact]

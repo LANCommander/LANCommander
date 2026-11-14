@@ -6,9 +6,8 @@ using System.Linq;
 using System.Text.Json;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using LANCommander.SDK.Helpers;
 using LANCommander.SDK.Models;
-using YamlDotNet.Serialization;
-using YamlDotNet.Serialization.NamingConventions;
 
 namespace LANCommander.Launcher.ViewModels;
 
@@ -46,13 +45,7 @@ public partial class GameOptionsOverlayViewModel : ViewModelBase
 
         try
         {
-            var deserializer = new DeserializerBuilder()
-                .WithNamingConvention(PascalCaseNamingConvention.Instance)
-                .WithTypeConverter(new OptionChoiceYamlConverter())
-                .IgnoreUnmatchedProperties()
-                .Build();
-
-            schema = deserializer.Deserialize<OptionSchema>(optionSchemaYaml);
+            schema = GameOptionsHelper.ParseSchema(optionSchemaYaml);
         }
         catch
         {

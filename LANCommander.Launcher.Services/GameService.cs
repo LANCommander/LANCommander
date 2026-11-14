@@ -266,9 +266,11 @@ namespace LANCommander.Launcher.Services
 
                 await playSessionService.StartSession(game.Id, userId, serverId, alias);
 
-                await WriteOptionsToManifestAsync(game);
+                var writtenOptions = await WriteOptionsToManifestAsync(game);
 
                 await gameClient.RunAsync(game.InstallDirectory, game.Id, action, latestSession?.End);
+
+                await ReadOptionsFromManifestAsync(game, writtenOptions);
             }
             catch (Exception ex)
             {
@@ -310,12 +312,13 @@ namespace LANCommander.Launcher.Services
         /// options, so before-start scripts can read them via the <c>Get-GameOptions</c> cmdlet, and their
         /// redistributable option values, which the SDK and the Interposer starter apply over the server's.
         /// Both are stored per-game in the launcher database (never on the server), so the manifest must be
-        /// updated immediately before launch.
+        /// updated immediately before launch. Returns the game options it wrote, or null when it left them alone,
+        /// so <see cref="ReadOptionsFromManifestAsync"/> can tell what scripts changed during the run.
         /// </summary>
-        private async Task WriteOptionsToManifestAsync(Game game)
+        private async Task<Dictionary<string, string>?> WriteOptionsToManifestAsync(Game game)
         {
             if (string.IsNullOrWhiteSpace(game.InstallDirectory))
-                return;
+                return null;
 
             var hasOptionSchema = !string.IsNullOrWhiteSpace(GetOptionSchema(game));
             var redistributableOptions = RedistributableOptionValues.Parse(game.RedistributableOptions);
@@ -325,30 +328,101 @@ namespace LANCommander.Launcher.Services
                 var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
 
                 if (manifest == null)
-                    return;
+                    return null;
 
                 // Nothing to write, and nothing stale to clear: leave the file alone
                 if (!hasOptionSchema && redistributableOptions.Count == 0 && (manifest.RedistributableOptions?.Count ?? 0) == 0)
-                    return;
+                    return null;
+
+                Dictionary<string, string>? options = null;
 
                 if (hasOptionSchema)
                 {
-                    var options = new Dictionary<string, string>();
+                    options = ParseOptions(game.Options);
 
-                    if (!string.IsNullOrWhiteSpace(game.Options))
-                        options = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(game.Options) ?? new();
-
-                    manifest.Options = options;
+                    manifest.Options = new Dictionary<string, string>(options);
                 }
 
                 manifest.RedistributableOptions = redistributableOptions;
 
                 await ManifestHelper.WriteAsync(manifest, game.InstallDirectory);
+
+                return options;
             }
             catch (Exception ex)
             {
                 Logger?.LogError(ex, "Could not write game options to manifest for {GameTitle} ({GameId})", game.Title, game.Id);
+
+                return null;
             }
+        }
+
+        /// <summary>
+        /// Copies game option values that scripts changed during the run (via <c>Update-GameOptions</c>, usually
+        /// from an After Stop script that read them out of the game's own config) back into the player's stored
+        /// options. Only the keys that differ from what was written before launch are applied, so a value the
+        /// player changed in the launcher while the game was running survives unless a script set the same key.
+        /// </summary>
+        private async Task ReadOptionsFromManifestAsync(Game game, Dictionary<string, string>? writtenOptions)
+        {
+            // The options weren't written before launch, so there's no baseline to compare against
+            if (writtenOptions == null || string.IsNullOrWhiteSpace(game.InstallDirectory))
+                return;
+
+            try
+            {
+                var manifest = await ManifestHelper.ReadAsync<SDK.Models.Manifest.Game>(game.InstallDirectory, game.Id);
+
+                if (manifest == null || string.IsNullOrWhiteSpace(manifest.OptionSchema))
+                    return;
+
+                var manifestOptions = manifest.Options ?? new Dictionary<string, string>();
+
+                var changed = manifestOptions
+                    .Where(kvp => !writtenOptions.TryGetValue(kvp.Key, out var written) || written != kvp.Value)
+                    .ToList();
+
+                var removed = writtenOptions.Keys
+                    .Where(key => !manifestOptions.ContainsKey(key))
+                    .ToList();
+
+                if (changed.Count == 0 && removed.Count == 0)
+                    return;
+
+                // Start from what's stored now rather than this instance, which may predate an edit the player
+                // saved from the launcher while the game was running
+                var storedOptions = await Context.Set<Game>()
+                    .AsNoTracking()
+                    .Where(g => g.Id == game.Id)
+                    .Select(g => g.Options)
+                    .FirstOrDefaultAsync();
+
+                var options = ParseOptions(storedOptions ?? game.Options);
+
+                foreach (var kvp in changed)
+                    options[kvp.Key] = kvp.Value;
+
+                foreach (var key in removed)
+                    options.Remove(key);
+
+                game.Options = System.Text.Json.JsonSerializer.Serialize(options);
+
+                await UpdateAsync(game);
+
+                Logger?.LogInformation("Updated {Count} game option(s) for {GameTitle} ({GameId}) from scripts", changed.Count + removed.Count, game.Title, game.Id);
+            }
+            catch (Exception ex)
+            {
+                Logger?.LogError(ex, "Could not read game options back from manifest for {GameTitle} ({GameId})", game.Title, game.Id);
+            }
+        }
+
+        private static Dictionary<string, string> ParseOptions(string? optionsJson)
+        {
+            if (string.IsNullOrWhiteSpace(optionsJson))
+                return new Dictionary<string, string>();
+
+            return System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, string>>(optionsJson) ?? new Dictionary<string, string>();
         }
 
         protected void ClearGameState(Game game, bool skipAddons = false)

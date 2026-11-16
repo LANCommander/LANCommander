@@ -107,7 +107,7 @@
             <Icon Type="Fill" Value="Play" />
           </Button>
           <Button Classes="Error" Command="{Binding StopCommand}" IsEnabled="{Binding CanStop}" ToolTip.Tip="Stop (Shift+F5)">
-            <Icon Type="Regular" Value="Stop" />
+            <Icon Type="Fill" Value="Stop" />
           </Button>
 
           <Border Classes="ToolbarDivider" />

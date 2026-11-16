@@ -21,7 +21,7 @@
             <Button Icon="IconType.ArrowsClockwise" Loading="_restarting" Disabled="Status != ServerProcessStatus.Running || _busy">Restart</Button>
         </Popconfirm>
         <Popconfirm OnConfirm="StopAsync" Title="Stop this server?" Description="This kills the server process." OkText="Stop" Danger Disabled="!CanStop">
-            <Button Danger Icon="IconType.Stop" Loading="Status == ServerProcessStatus.Stopping" Disabled="!CanStop">Stop</Button>
+            <Button Danger Icon="IconType.Stop" IconFill Loading="Status == ServerProcessStatus.Stopping" Disabled="!CanStop">Stop</Button>
         </Popconfirm>
     }
 }

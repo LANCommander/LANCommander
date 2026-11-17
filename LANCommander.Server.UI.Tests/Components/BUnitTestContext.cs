@@ -20,6 +20,9 @@ public abstract class BUnitTestContext : BunitContext
 
     protected BUnitServerFixture Fixture { get; }
 
+    /// <summary>The signed-in admin; tests can add claims (a user ID, say) to it</summary>
+    protected BunitAuthorizationContext Authorization { get; }
+
     protected BUnitTestContext(BUnitServerFixture fixture)
     {
         Fixture = fixture;
@@ -38,9 +41,9 @@ public abstract class BUnitTestContext : BunitContext
 
         // Admin pages are gated with [Authorize(Roles = Administrator)]. Provide an authenticated
         // admin so AuthorizeView/cascading auth state behave as in a logged-in session.
-        var authContext = this.AddAuthorization();
-        authContext.SetAuthorized(TestConstants.AdminUserName);
-        authContext.SetRoles(RoleService.AdministratorRoleName);
+        Authorization = this.AddAuthorization();
+        Authorization.SetAuthorized(TestConstants.AdminUserName);
+        Authorization.SetRoles(RoleService.AdministratorRoleName);
 
         // Register the LANCommander.Server.UI services (Radzen dialog/notification/tooltip services,
         // ScriptProvider, UploadTracker) in bUnit's own container so they capture its mock

@@ -48,6 +48,7 @@
             <MenuItem Href="/Pages" Icon="IconType.Eye" Exact>View</MenuItem>
             <MenuItem Href="/Pages/Appearance" Icon="IconType.Palette">Appearance</MenuItem>
         </SubMenu>
+        <MenuItem Href="/Chat" Icon="IconType.ChatsCircle">Chat</MenuItem>
         <MenuItem Href="/Issues" Icon="IconType.Bug" Count="@(_openIssues is > 0 ? _openIssues : null)">Issues</MenuItem>
         <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
         <SubMenu Name="@ServerNavigationSection.Settings" Title="Settings" Icon="IconType.Gear">
@@ -85,6 +86,11 @@
     else
     {
         <MenuItem Href="/Pages" Icon="IconType.BookOpen">Pages</MenuItem>
+
+        @if (_user != null)
+        {
+            <MenuItem Href="/Chat" Icon="IconType.ChatsCircle">Chat</MenuItem>
+        }
     }
 </Menu>
 

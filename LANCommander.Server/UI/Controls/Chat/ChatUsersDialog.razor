@@ -1,7 +1,6 @@
 @namespace LANCommander.Server.UI.Controls
 @using LANCommander.SDK.Services
 @inherits Dialog<IEnumerable<SDK.Models.User>, IEnumerable<SDK.Models.User>>
-@inject ProfileClient ProfileClient
 
 @* Picks who to start a thread with, from the users passed as the options *@
 <Flex Vertical Gap="Gap.Medium">
@@ -12,7 +11,7 @@
         {
             <label class="chat-user" @key="user.Id">
                 <Checkbox Value="_selected.Contains(user)" ValueChanged="selected => Toggle(user, selected)" />
-                <Avatar Small Name="@user.UserName" Src="@ProfileClient.GetAvatarUri(user.UserName).ToString()" />
+                <Avatar Small Name="@user.UserName" Src="@ChatAvatar.Url(user.UserName)" />
                 <span class="chat-user-name">@user.Name</span>
             </label>
         }

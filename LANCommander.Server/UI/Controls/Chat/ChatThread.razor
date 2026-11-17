@@ -1,261 +1,188 @@
-@using System.Collections.ObjectModel
-@using System.Collections.Specialized
-@using LANCommander.SDK.Models
-@using LANCommander.SDK.Services
-@inject IChatClient ChatClient
 @namespace LANCommander.Server.UI.Controls
+@using System.Collections.ObjectModel
+@using LANCommander.SDK.Models
+@using LANCommander.Server.Clients
+@using LANCommander.Server.Hubs
 @using LANCommander.Server.UI.Components
+@inject ServerChatClient ChatClient
+@inject ChatBroadcaster Broadcaster
+@inject NotificationService Notifications
+@implements IDisposable
 
-@* The messages of one thread, loaded as they scroll into view, above the box to write a new one *@
+@* The messages of one thread, loaded as they scroll into view, above the box to write a new one.
+   Its parent keys it by thread, so one instance only ever shows one thread *@
 <div class="chat-thread">
     <div class="chat-thread-messages">
         @if (_thread != null)
         {
-            <InfiniteLoader 
+            <InfiniteLoader
                 @ref="_infiniteLoader"
-                T="SDK.Models.ChatMessageGroup" 
-                KeySelector="g => g.Id.ToString()" 
-                Loader="LoadMessages"
+                T="SDK.Models.ChatMessageGroup"
+                KeySelector="g => g.Id.ToString()"
+                Loader="LoadMessagesAsync"
                 PageSize="10">
-                <ChatMessageGroup 
-                    UserId="context.UserId" 
-                    UserName="@context.UserName" 
+                <ChatMessageGroup
+                    UserId="context.UserId"
+                    UserName="@context.UserName"
                     StartedOn="context.StartedOn.DateTime">
                     @foreach (var message in context.Messages)
                     {
-                        <ChatMessage Id="message.Id" Content="@message.Content" SentOn="message.SentOn" />
+                        <ChatMessage @key="message.Id" Id="message.Id" Content="@message.Content" SentOn="message.SentOn" />
                     }
                 </ChatMessageGroup>
             </InfiniteLoader>
         }
     </div>
 
-    <ChatMessageInput ThreadId="@Id" Placeholder="@($"Message {_thread?.Title}")" />
+    <ChatMessageInput ThreadId="@Id" Placeholder="@_placeholder" />
 </div>
 
 @code {
-    [Parameter] public Guid? Id { get; set; }
-    
+    [Parameter, EditorRequired] public Guid Id { get; set; }
+
+    /// <summary>Raised when a message arrives in this thread while it's open</summary>
+    [Parameter] public EventCallback OnMessageReceived { get; set; }
+
+    // A sender's messages within this long of each other share a group
+    static readonly TimeSpan MaxGroupGap = TimeSpan.FromMinutes(5);
+
     SDK.Models.ChatThread? _thread;
-    private SDK.Models.ChatMessage? _lastCursor;
-    private readonly HashSet<Guid> _loadedMessageIds = new();
-    private InfiniteLoader<SDK.Models.ChatMessageGroup>? _infiniteLoader;
-    private bool _isSubscribed = false;
-    
-    protected override async Task OnParametersSetAsync()
+    string? _placeholder;
+    InfiniteLoader<SDK.Models.ChatMessageGroup>? _infiniteLoader;
+    readonly HashSet<Guid> _loadedMessageIds = new();
+
+    protected override async Task OnInitializedAsync()
     {
-        if ((_thread == null || _thread.Id != Id) && Id.HasValue)
+        Broadcaster.MessageSent += OnMessageSent;
+
+        try
         {
-            // Unsubscribe from previous thread if exists
-            if (_thread != null && _isSubscribed)
-            {
-                _thread.OnMessageReceivedAsync -= OnMessageReceivedAsync;
-                _thread.MessageGroups.CollectionChanged -= MessageGroupsOnCollectionChanged;
-                _isSubscribed = false;
-            }
-            
-            _thread = await ChatClient.GetThreadAsync(Id.Value);
-            
-            _thread.MessageGroups.CollectionChanged += MessageGroupsOnCollectionChanged;
-            
-            // Subscribe to message received events
-            _thread.OnMessageReceivedAsync = OnMessageReceivedAsync;
-            _isSubscribed = true;
-            
-            // Reset loaded message tracking when switching threads
-            _loadedMessageIds.Clear();
-            
-            await ChatClient.GetMessagesAsync(Id.Value, null, 10);
+            _thread = await ChatClient.GetThreadAsync(Id);
+
+            var userId = await ChatClient.GetCurrentUserIdAsync();
+            var others = _thread.Participants.Where(p => p.Id != userId).Select(p => p.Name).ToList();
+
+            _placeholder = $"Message {(string.IsNullOrWhiteSpace(_thread.Name) && others.Count > 0 ? string.Join(", ", others) : _thread.Title)}";
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The thread could not be opened");
         }
     }
 
-    void MessageGroupsOnCollectionChanged(object? sender, NotifyCollectionChangedEventArgs e)
-        => InvokeAsync(StateHasChanged);
-
-    async Task OnMessageReceivedAsync(SDK.Models.ChatMessage message)
+    void OnMessageSent(Guid threadId, SDK.Models.ChatMessage message, IReadOnlyCollection<Guid> participantIds)
     {
-        // When a new message is received via SignalR, add it to the InfiniteLoader
-        if (_thread != null && _infiniteLoader != null)
+        if (threadId != Id)
+            return;
+
+        _ = InvokeAsync(async () =>
         {
-            // Check if message is already loaded
-            if (_loadedMessageIds.Contains(message.Id))
-                return;
-
-            // Track the message
-            _loadedMessageIds.Add(message.Id);
-
-            // Check if we should merge with the last group in InfiniteLoader
-            const int maxGapMinutes = 5;
-            var maxGap = TimeSpan.FromMinutes(maxGapMinutes);
-            var lastGroup = _infiniteLoader.GetLastItem() as SDK.Models.ChatMessageGroup;
-            
-            bool shouldMerge = lastGroup != null && 
-                lastGroup.UserId == message.UserId &&
-                lastGroup.Messages.Count > 0 &&
-                (message.SentOn - lastGroup.Messages.Last().SentOn) <= maxGap;
-
-            if (shouldMerge)
+            try
             {
-                // Merge into existing last group
-                var updatedGroup = new SDK.Models.ChatMessageGroup
-                {
-                    Id = lastGroup.Id, // Keep the same group ID
-                    UserId = lastGroup.UserId,
-                    UserName = lastGroup.UserName,
-                    Messages = new ObservableCollection<SDK.Models.ChatMessage>(lastGroup.Messages) { message }
-                };
-                
-                await _infiniteLoader.UpdateLastItemAsync(updatedGroup);
+                await AppendMessageAsync(message);
+
+                // It's on screen, so it's been read
+                await ChatClient.UpdatedReadStatus(Id);
+
+                await OnMessageReceived.InvokeAsync();
             }
-            else
+            catch (Exception ex)
             {
-                // Create a new group
-                var groups = GroupMessagesBySender([message]);
-                
-                if (groups.Count > 0)
-                {
-                    // Add the new group(s) to the InfiniteLoader
-                    await _infiniteLoader.AddItemsAsync(groups);
-                }
+                Notifications.Error(ex, "A new message could not be shown");
             }
+        });
+    }
+
+    async Task AppendMessageAsync(SDK.Models.ChatMessage message)
+    {
+        if (_infiniteLoader == null || !_loadedMessageIds.Add(message.Id))
+            return;
+
+        var lastGroup = _infiniteLoader.GetLastItem();
+
+        var merge = lastGroup != null
+            && lastGroup.UserId == message.UserId
+            && lastGroup.Messages.Count > 0
+            && message.SentOn - lastGroup.Messages.Last().SentOn <= MaxGroupGap;
+
+        if (merge)
+        {
+            // Keep the group's ID so the loader treats it as the same item
+            await _infiniteLoader.UpdateLastItemAsync(new SDK.Models.ChatMessageGroup
+            {
+                Id = lastGroup!.Id,
+                UserId = lastGroup.UserId,
+                UserName = lastGroup.UserName,
+                Messages = new ObservableCollection<SDK.Models.ChatMessage>(lastGroup.Messages) { message },
+            });
+        }
+        else
+        {
+            await _infiniteLoader.AddItemsAsync(GroupMessagesBySender([message]));
         }
     }
 
-    async Task<InfiniteResponse<SDK.Models.ChatMessageGroup>> LoadMessages(SDK.Models.ChatMessageGroup? cursor, int pageSize)
+    async Task<InfiniteResponse<SDK.Models.ChatMessageGroup>> LoadMessagesAsync(SDK.Models.ChatMessageGroup? cursor, int pageSize)
     {
-        // Use the oldest message from the cursor group, or the last cursor message
-        SDK.Models.ChatMessage? messageCursor = null;
-        if (cursor != null && cursor.Messages.Count > 0)
-        {
-            // Get the oldest message from the cursor group (first message in chronological order)
-            messageCursor = cursor.Messages.OrderBy(m => m.SentOn).First();
-        }
-        else if (_lastCursor != null)
-        {
-            messageCursor = _lastCursor;
-        }
-        
-        var response = await ChatClient.GetMessagesAsync(Id.Value, messageCursor?.Id ?? null, pageSize);
-        
-        // Filter out blank/whitespace messages
-        var validMessages = (response.Items ?? [])
+        // Page backwards from the oldest message shown so far
+        var messageCursor = cursor?.Messages.MinBy(m => m.SentOn);
+
+        var response = await ChatClient.GetMessagesAsync(Id, messageCursor?.Id, pageSize);
+
+        // The service returns newest first; anything already shown (arrived live) is skipped
+        var messages = (response.Items ?? [])
             .Where(m => !string.IsNullOrWhiteSpace(m.Content))
+            .Where(m => _loadedMessageIds.Add(m.Id))
             .ToList();
-        
-        // Build set of already-loaded message IDs from both our tracking and MessageGroups
-        var existingMessageIds = new HashSet<Guid>(_loadedMessageIds);
-        if (_thread != null && _thread.MessageGroups.Count > 0)
-        {
-            foreach (var group in _thread.MessageGroups)
-            {
-                foreach (var message in group.Messages)
-                {
-                    existingMessageIds.Add(message.Id);
-                }
-            }
-        }
-        
-        // Filter out messages that we've already loaded (to avoid duplicates)
-        validMessages = validMessages
-            .Where(m => !existingMessageIds.Contains(m.Id))
-            .ToList();
-        
-        // Track newly loaded message IDs
-        foreach (var message in validMessages)
-        {
-            _loadedMessageIds.Add(message.Id);
-        }
-        
-        // Mark messages as read when they are loaded
-        if (Id.HasValue && validMessages.Count > 0)
-        {
-            await ChatClient.UpdatedReadStatus(Id.Value);
-        }
-        
-        // Group messages by sender (messages are already in chronological order from the service)
-        var groups = GroupMessagesBySender(validMessages);
-        
-        // Track the oldest message for next cursor (from the oldest group)
-        // Groups are in newest-first order (will be reversed by InfiniteLoader)
-        // So the oldest group is the last one
-        if (groups.Count > 0)
-        {
-            var oldestGroup = groups[groups.Count - 1];
-            if (oldestGroup.Messages.Count > 0)
-            {
-                // Get the oldest message from the oldest group
-                _lastCursor = oldestGroup.Messages.OrderBy(m => m.SentOn).First();
-            }
-        }
-        
+
+        if (messages.Count > 0)
+            await ChatClient.UpdatedReadStatus(Id);
+
         return new InfiniteResponse<SDK.Models.ChatMessageGroup>
         {
-            Items = groups,
-            HasMore = response.HasMore
+            Items = GroupMessagesBySender(messages),
+            HasMore = response.HasMore,
         };
     }
-    
-    private List<SDK.Models.ChatMessageGroup> GroupMessagesBySender(IEnumerable<SDK.Models.ChatMessage> messages)
+
+    /// <summary>
+    /// Groups newest-first messages by sender and time, returning the groups newest first
+    /// as the loader expects (it reverses each page so the oldest sits at the top)
+    /// </summary>
+    static List<SDK.Models.ChatMessageGroup> GroupMessagesBySender(IEnumerable<SDK.Models.ChatMessage> messages)
     {
         var groups = new List<SDK.Models.ChatMessageGroup>();
-        SDK.Models.ChatMessageGroup? currentGroup = null;
-        const int maxGapMinutes = 5;
-        var maxGap = TimeSpan.FromMinutes(maxGapMinutes);
-        
-        // Messages come from service in newest-first order (OrderByDescending)
-        // We'll process them in reverse to get oldest-first for grouping
-        var messagesList = messages.ToList();
-        
-        // Reverse to get oldest-first order for proper grouping
-        messagesList.Reverse();
-        
-        foreach (var message in messagesList)
+        SDK.Models.ChatMessageGroup? current = null;
+
+        foreach (var message in messages.OrderBy(m => m.SentOn))
         {
-            // Check if we should start a new group:
-            // 1. No current group
-            // 2. Sender changed
-            // 3. Time gap is more than 5 minutes
-            var shouldStartNewGroup = currentGroup == null || 
-                message.UserId != currentGroup.UserId ||
-                (currentGroup.Messages.Count > 0 && 
-                 (message.SentOn - currentGroup.Messages.Last().SentOn) > maxGap);
-            
-            if (shouldStartNewGroup)
+            var startNew = current == null
+                || message.UserId != current.UserId
+                || message.SentOn - current.Messages.Last().SentOn > MaxGroupGap;
+
+            if (startNew)
             {
-                if (currentGroup != null)
+                // The first message's ID keeps a group's identity stable across renders
+                current = new SDK.Models.ChatMessageGroup
                 {
-                    groups.Add(currentGroup);
-                }
-                
-                // Use the first message ID as a stable group ID to help with duplicate detection
-                // This ensures groups with the same first message get the same ID
-                currentGroup = new SDK.Models.ChatMessageGroup
-                {
-                    Id = message.Id, // Use first message ID as group ID for stability
+                    Id = message.Id,
                     UserId = message.UserId,
                     UserName = message.UserName,
-                    Messages = new System.Collections.ObjectModel.ObservableCollection<SDK.Models.ChatMessage> { message }
+                    Messages = new ObservableCollection<SDK.Models.ChatMessage> { message },
                 };
+
+                groups.Add(current);
             }
             else
             {
-                // Add to current group (messages within group are in chronological order)
-                currentGroup.Messages.Add(message);
+                current!.Messages.Add(message);
             }
         }
-        
-        // Add the last group
-        if (currentGroup != null)
-        {
-            groups.Add(currentGroup);
-        }
-        
-        // Groups are now in oldest-first order (first group is oldest)
-        // InfiniteLoader will reverse them, so we need to reverse again to maintain oldest-first
-        // Actually, wait - InfiniteLoader reverses, so if we return oldest-first, after reversal it's newest-first (wrong)
-        // So we should return newest-first, then InfiniteLoader reverses to oldest-first
+
         groups.Reverse();
-        
+
         return groups;
     }
+
+    public void Dispose() => Broadcaster.MessageSent -= OnMessageSent;
 }

@@ -1,7 +1,8 @@
-using LANCommander.Server.Data.Models;
+using System.Security.Claims;
+using LANCommander.Server.Hubs;
 using LANCommander.Server.Services;
+using LANCommander.Server.Services.Mappers;
 using Microsoft.AspNetCore.Mvc;
-using ZiggyCreatures.Caching.Fusion;
 
 namespace LANCommander.Server.Endpoints;
 
@@ -9,36 +10,59 @@ public static class ChatEndpoints
 {
     public static void MapChatEndpoints(this IEndpointRouteBuilder routes)
     {
-        var group = routes.MapGroup("/api/Chat");
-        
+        var group = routes.MapGroup("/api/Chat").RequireAuthorization();
+
         group.MapPost("/Thread", StartThreadAsync);
         group.MapGet("/Thread/{id:guid}", GetByThreadIdAsync);
         group.MapPost("/Thread/{id:guid}/Message", SendMessageAsync);
     }
 
+    static Guid? GetUserId(ClaimsPrincipal user)
+        => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out var userId) ? userId : null;
+
     public static async Task<IResult> StartThreadAsync(
-        string content,
-        [FromServices] ChatThreadService chatThreadService)
+        ClaimsPrincipal user,
+        [FromServices] ChatService chatService)
     {
-        return TypedResults.Ok(await chatThreadService.AddAsync(new ChatThread()));
+        if (GetUserId(user) is not { } userId)
+            return TypedResults.Unauthorized();
+
+        var thread = await chatService.StartThreadAsync();
+
+        await chatService.AddParticipantAsync(thread.Id, userId);
+
+        return TypedResults.Ok(thread.Id);
     }
 
     public static async Task<IResult> GetByThreadIdAsync(
-        Guid threadId,
+        Guid id,
+        ClaimsPrincipal user,
         [FromServices] ChatService chatService)
     {
-        var messages = (await chatService.GetMessagesAsync(threadId, 10)).Items;
+        if (GetUserId(user) is not { } userId || !await chatService.IsParticipantAsync(id, userId))
+            return TypedResults.Forbid();
+
+        var messages = (await chatService.GetMessagesAsync(id, 10)).Items;
 
         return TypedResults.Ok(messages);
     }
 
     public static async Task<IResult> SendMessageAsync(
-        Guid threadId,
+        Guid id,
         string content,
-        [FromServices] ChatService chatService)
+        ClaimsPrincipal user,
+        [FromServices] ChatService chatService,
+        [FromServices] ChatBroadcaster broadcaster,
+        [FromServices] SdkMapper sdkMapper)
     {
-        await chatService.SendMessageAsync(threadId, content);
-        
+        if (GetUserId(user) is not { } userId || !await chatService.IsParticipantAsync(id, userId))
+            return TypedResults.Forbid();
+
+        var message = await chatService.SendMessageAsync(id, userId, content);
+        var participants = await chatService.GetParticipantIdsAsync(id);
+
+        await broadcaster.MessageSentAsync(id, sdkMapper.ToSdk(message), participants);
+
         return TypedResults.Ok();
     }
 }

@@ -13,6 +13,7 @@ public static class SignalR
         });
 
         builder.Services.AddSingleton<IPresenceBroadcaster, RpcPresenceBroadcaster>();
+        builder.Services.AddSingleton<ChatBroadcaster>();
     }
 
     public static WebApplication UseSignalR(this WebApplication app)

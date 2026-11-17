@@ -1,15 +1,13 @@
 @namespace LANCommander.Server.UI.Controls
-@using LANCommander.SDK.Services
-@inject ProfileClient ProfileClient
 
 @* A run of messages from one person, under their name and when they started *@
 <div class="chat-message-group">
-    <Avatar Square Name="@UserName" Src="@(String.IsNullOrWhiteSpace(UserName) ? null : ProfileClient.GetAvatarUri(UserName).ToString())" />
+    <Avatar Square Name="@UserName" Src="@ChatAvatar.Url(UserName)" />
 
     <div class="chat-message-group-body">
         <Flex Gap="Gap.Small" Align="Align.Center">
             <span class="chat-message-author">@UserName</span>
-            <LocalTime Value="StartedOn" Class="chat-message-timestamp" />
+            <span class="chat-message-timestamp"><LocalTime Value="StartedOn" /></span>
         </Flex>
 
         @ChildContent

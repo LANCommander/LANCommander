@@ -23,7 +23,8 @@ public static class Services
     {
         builder.Services.AddSingleton<IServerAddressProvider, ServerAddressProvider>();
         builder.Services.AddSingleton<IVersionProvider, VersionProvider>();
-        builder.Services.AddScoped<IChatClient, ServerChatClient>();
+        builder.Services.AddScoped<ServerChatClient>();
+        builder.Services.AddScoped<IChatClient>(provider => provider.GetRequiredService<ServerChatClient>());
         builder.Services.AddScoped<LANCommander.Server.Endpoints.DownloadThrottle>();
         
         builder.Services.AddLANCommanderClient<Settings.Settings>();

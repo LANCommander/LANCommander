@@ -21,10 +21,6 @@ namespace LANCommander.Server.Services
         ChatThreadReadStatusService chatThreadReadStatusService,
         UserService userService) : BaseService(logger, settingsProvider)
     {
-        private readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
-        private readonly int _maxCachedMessages = 200;
-        
-        private static string ThreadCacheKey(Guid threadId) => $"Chat/Thread/{threadId}";
         private static string UserThreadCacheKey(Guid userId) => $"Chat/User/{userId}/Threads";
 
         public async Task<ChatThread> StartThreadAsync()
@@ -56,33 +52,34 @@ namespace LANCommander.Server.Services
             }
         }
         
-        public async Task<ChatMessage> SendMessageAsync(Guid threadId, string content)
+        /// <summary>
+        /// Stores a message from one of the thread's participants
+        /// </summary>
+        /// <exception cref="UnauthorizedAccessException">The sender isn't in the thread</exception>
+        public async Task<ChatMessage> SendMessageAsync(Guid threadId, Guid senderId, string content)
         {
-            var message = await chatMessageService.AddAsync(new ChatMessage
-            {
-                ThreadId = threadId,
-                Content = content,
-            });
-            
-            var cacheKey = ThreadCacheKey(threadId);
-            var gate = _locks.GetOrAdd(cacheKey, _ => new SemaphoreSlim(1, 1));
+            var participantIds = await GetParticipantIdsAsync(threadId);
 
-            await gate.WaitAsync();
+            if (!participantIds.Contains(senderId))
+                throw new UnauthorizedAccessException("Only the thread's participants can send messages to it");
 
-            try
-            {
-                var current = await cache.GetChatThreadAsync(threadId);
+            var message = await chatMessageService.AddAsync(threadId, senderId, content);
 
-                if (current != null)
-                    await current.MessageReceivedAsync(sdkMapper.ToSdk(message));
-            }
-            finally
-            {
-                gate.Release();
-            }
+            // The sender has read their own message
+            await UpdateReadStatus(threadId, senderId);
+
+            // Thread lists are ordered by latest activity
+            foreach (var participantId in participantIds)
+                await cache.RemoveAsync(UserThreadCacheKey(participantId));
 
             return message;
         }
+
+        public Task<List<Guid>> GetParticipantIdsAsync(Guid threadId)
+            => chatThreadService.GetParticipantIdsAsync(threadId);
+
+        public async Task<bool> IsParticipantAsync(Guid threadId, Guid userId)
+            => (await GetParticipantIdsAsync(threadId)).Contains(userId);
 
         public async Task<InfiniteResponse<SDK.Models.ChatMessage>> GetMessagesAsync(Guid threadId, int? count = 10, Guid? cursor = null)
         {

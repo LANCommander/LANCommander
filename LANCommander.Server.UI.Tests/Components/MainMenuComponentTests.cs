@@ -23,7 +23,7 @@ public class MainMenuComponentTests : BUnitTestContext
         var cut = Render<MainMenu>();
 
         Assert.Equal(
-            ["Dashboards", "-", "Games", "Metadata", "Redistributables", "Tools", "Servers", "Scripting", "-", "Pages", "Issues", "Files", "Settings"],
+            ["Dashboards", "-", "Games", "Metadata", "Redistributables", "Tools", "Servers", "Scripting", "-", "Pages", "Chat", "Issues", "Files", "Settings"],
             Labels(cut.Find(".lc-menu-list")));
     }
 

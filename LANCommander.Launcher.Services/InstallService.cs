@@ -111,13 +111,35 @@ namespace LANCommander.Launcher.Services
                 OnProgress?.Invoke(e);
             };
 
-            // Note: RedistributableClient progress is intentionally NOT forwarded here.
-            // Its InstallProgress never carries a Game, so it can't be matched to a queue
-            // item, and redistributables are also installed/verified during game launch —
-            // forwarding those events would drive the queue footer and taskbar with
-            // out-of-band progress when nothing is actually queued. The game-level
-            // "Installing Redistributables" status (raised by GameClient with the owning
-            // game attached) still surfaces the redist phase of a queued install.
+            // Tool installs report byte progress the same way, keyed by the tool instead of a game
+            _toolClient.OnInstallProgressUpdate += (e) =>
+            {
+                UpdateQueueItemFromProgress(e);
+                OnProgress?.Invoke(e);
+            };
+
+            // Redistributables are also installed/verified during game launch, outside the
+            // queue. Only forward progress that belongs to a redistributable queue item that is
+            // actively installing, so launch-time installs can't drive the queue footer and
+            // taskbar with out-of-band progress.
+            _redistributableClient.OnInstallProgressUpdate += (e) =>
+            {
+                var redistributableId = e.Redistributable?.Id;
+
+                if (redistributableId == null)
+                    return;
+
+                var queueItem = Queue.FirstOrDefault(i =>
+                    i.Id == redistributableId &&
+                    i.ItemType == InstallPlanItemType.Redistributable &&
+                    i.State);
+
+                if (queueItem == null)
+                    return;
+
+                UpdateQueueItemFromProgress(e);
+                OnProgress?.Invoke(e);
+            };
 
             // New task-level progress forwarding
             _gameClient.OnTaskProgress += OnSdkTaskProgress;
@@ -126,10 +148,12 @@ namespace LANCommander.Launcher.Services
 
         private void UpdateQueueItemFromProgress(InstallProgress progress)
         {
-            if (progress.Game == null)
+            var entityId = progress.Game?.Id ?? progress.Tool?.Id ?? progress.Redistributable?.Id;
+
+            if (entityId == null)
                 return;
 
-            var queueItem = Queue.FirstOrDefault(i => i.Id == progress.Game.Id);
+            var queueItem = Queue.FirstOrDefault(i => i.Id == entityId);
 
             if (queueItem != null)
             {
@@ -1286,6 +1310,7 @@ namespace LANCommander.Launcher.Services
             currentItem.CompletedOn = DateTime.Now;
             currentItem.Status = InstallStatus.Complete;
             currentItem.Progress = 1;
+            currentItem.BytesDownloaded = currentItem.TotalBytes;
 
             OnQueueChanged?.Invoke();
 
@@ -1362,6 +1387,7 @@ namespace LANCommander.Launcher.Services
             currentItem.CompletedOn = DateTime.Now;
             currentItem.Status = InstallStatus.Complete;
             currentItem.Progress = 1;
+            currentItem.BytesDownloaded = currentItem.TotalBytes;
 
             OnQueueChanged?.Invoke();
 

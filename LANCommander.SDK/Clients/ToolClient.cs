@@ -180,11 +180,15 @@ namespace LANCommander.SDK.Services
             var tool = await GetAsync(planItem.EntityId);
             var installResult = new InstallResult();
 
+            _installProgress.Tool = tool;
             _installProgress.Status = InstallStatus.Downloading;
             _installProgress.Title = tool?.Name ?? planItem.Title;
             _installProgress.TransferSpeed = 0;
             _installProgress.TotalBytes = 0;
             _installProgress.BytesTransferred = 0;
+
+            // Reset listeners so they don't keep showing the previous queue item's figures
+            OnInstallProgressUpdate?.Invoke(_installProgress);
 
             foreach (var taskDef in planItem.Tasks.OrderBy(t => t.Order))
             {
@@ -320,7 +324,8 @@ namespace LANCommander.SDK.Services
         public async Task<InstallResult> InstallAsync(Tool tool, string installDirectory, int maxAttempts = 10)
         {
             var installResult = new InstallResult();
-            
+
+            _installProgress.Tool = tool;
             _installProgress.Status = InstallStatus.Downloading;
             _installProgress.Title = tool.Name;
             _installProgress.TransferSpeed = 0;

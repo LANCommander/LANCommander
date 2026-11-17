@@ -27,6 +27,13 @@ namespace LANCommander.SDK.Services
     public class InstallProgress
     {
         public Game Game { get; set; }
+        /// <summary>Set instead of <see cref="Game"/> when the progress belongs to a tool install.</summary>
+        public Tool Tool { get; set; }
+        /// <summary>
+        /// Set when the progress belongs to a redistributable install. <see cref="Game"/> stays null so
+        /// the redistributable's progress isn't mistaken for the owning game's.
+        /// </summary>
+        public Redistributable Redistributable { get; set; }
         public string Title { get; set; }
         public Guid IconId { get; set; }
         public InstallStatus Status { get; set; }

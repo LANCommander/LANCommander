@@ -173,7 +173,8 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         Dispatcher.UIThread.Post(() =>
         {
-            var item = QueueItems.FirstOrDefault(i => i.Id == progress.Game?.Id);
+            var entityId = progress.Game?.Id ?? progress.Tool?.Id ?? progress.Redistributable?.Id;
+            var item = entityId == null ? null : QueueItems.FirstOrDefault(i => i.Id == entityId);
 
             // Progress can arrive out-of-band when nothing is queued (e.g. a game-launch
             // sub-operation). Treat the event as a real install only if it maps to a queue

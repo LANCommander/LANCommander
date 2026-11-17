@@ -135,7 +135,8 @@ namespace LANCommander.SDK.Services
         public async Task InstallAsync(Redistributable redistributable, Game game, int maxAttempts = 10)
         {
             _installProgress = new InstallProgress();
-            
+
+            _installProgress.Redistributable = redistributable;
             _installProgress.Status = InstallStatus.Downloading;
             _installProgress.Title = redistributable.Name;
             _installProgress.Progress = 0;
@@ -217,6 +218,7 @@ namespace LANCommander.SDK.Services
         public async Task<bool> ApplyUpdateArchiveAsync(Guid archiveId, Guid redistributableId, Game game, CancellationToken cancellationToken = default)
         {
             _installProgress = new InstallProgress();
+            _installProgress.Redistributable = new Redistributable { Id = redistributableId };
             _installProgress.Status = InstallStatus.Downloading;
             _installProgress.Title = game.Title;
             _installProgress.Progress = 0;

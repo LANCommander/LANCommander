@@ -1174,6 +1174,8 @@ Reads the server's user accounts, for example to let users sign in to something 
   - The account with the given id, or null.
 - `Task<UserAccount> FindAsync(string userName, CancellationToken cancellationToken)`
   - The account with the given user name, compared case-insensitively, or null.
+- `Task<PasswordCheckResult> CheckPasswordAsync(string userName, string password, CancellationToken cancellationToken)`
+  - Checks a user's LANCommander password, for plugins that use the server as their authentication store. Only a `Succeeded` result means the user is authenticated; the result then carries their account.
 
 ### ActionInfo
 
@@ -1774,6 +1776,21 @@ A child record a package would carry.
   - Bytes of file the package would carry for it, such as an archive's; 0 for none.
 - `DateTime? UpdatedOn { get; init; }`
   - When it was last changed, or null for records that don't track it.
+
+### PasswordCheckResult
+
+`record` — `LANCommander.Server.Plugins.PasswordCheckResult`
+
+The outcome of `CheckPasswordAsync`.
+
+**Properties**
+
+- `PasswordCheckStatus Status { get; init; }`
+- `UserAccount Account { get; init; }`
+  - The authenticated account. Set only when the check succeeded.
+- `TimeSpan? RetryAfter { get; init; }`
+  - When rate limited, how long until the user name may be tried again.
+- `bool Succeeded { get; }`
 
 ### PlaySessionEndedEvent
 
@@ -2520,6 +2537,19 @@ The kinds of record a game is linked to, other than its engine.
 | `Tags` = `6` | `Tag` records. |
 | `Redistributables` = `7` | Redistributables, which the game's latest version installs alongside it. |
 | `Tools` = `8` | Tools. |
+
+### PasswordCheckStatus
+
+`enum` — `LANCommander.Server.Plugins.PasswordCheckStatus`
+
+| Value | Description |
+| --- | --- |
+| `Succeeded` = `0` | The password is correct and the account may sign in. |
+| `Failed` = `1` | The user name or password is wrong. Deliberately does not say which, so the result cannot be used to find out whether a user exists. |
+| `LockedOut` = `2` | The account is locked out. Its password was not checked. |
+| `NotApproved` = `3` | The account is waiting for an administrator's approval. Its password was not checked. |
+| `RateLimited` = `4` | Too many recent failures for this user name. Nothing was checked; see `RetryAfter`. |
+| `Disabled` = `5` | The server has password sign-in turned off. |
 
 ### PluginAccessLevel
 

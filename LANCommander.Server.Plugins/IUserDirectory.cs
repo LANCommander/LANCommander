@@ -7,7 +7,9 @@ namespace LANCommander.Server.Plugins;
 /// </summary>
 /// <remarks>
 /// The directory is read-only and never exposes passwords or password hashes. A plugin that
-/// authenticates users must do so with a credential of its own, and should refuse any account whose
+/// authenticates users can either keep a credential of its own or check the user's LANCommander
+/// password with <see cref="CheckPasswordAsync"/>, which applies the server's sign-in rules itself.
+/// A plugin with a credential of its own should refuse any account whose
 /// <see cref="UserAccount.CanSignIn"/> is false.
 /// </remarks>
 public interface IUserDirectory
@@ -20,6 +22,21 @@ public interface IUserDirectory
 
     /// <summary>The account with the given user name, compared case-insensitively, or null.</summary>
     Task<UserAccount?> FindAsync(string userName, CancellationToken cancellationToken = default);
+
+    /// <summary>
+    /// Checks a user's LANCommander password, for plugins that use the server as their
+    /// authentication store. Only a <see cref="PasswordCheckStatus.Succeeded"/> result means the
+    /// user is authenticated; the result then carries their account.
+    /// </summary>
+    /// <remarks>
+    /// The server's sign-in rules apply: locked-out accounts are refused without their password being
+    /// checked, as are unapproved ones where the server requires approval, and nothing succeeds while
+    /// password sign-in is turned off. Repeated failures for a user name are rate limited, whether or
+    /// not the user exists; a successful check clears them.
+    /// </remarks>
+    /// <param name="userName">The user name, compared case-insensitively.</param>
+    /// <param name="password">The password to check.</param>
+    Task<PasswordCheckResult> CheckPasswordAsync(string userName, string password, CancellationToken cancellationToken = default);
 }
 
 /// <summary>A user account on the server.</summary>
@@ -48,4 +65,42 @@ public sealed record UserAccount
     public bool CanSignIn { get; init; }
 
     public DateTime CreatedOn { get; init; }
+}
+
+/// <summary>The outcome of <see cref="IUserDirectory.CheckPasswordAsync"/>.</summary>
+public sealed record PasswordCheckResult
+{
+    public required PasswordCheckStatus Status { get; init; }
+
+    /// <summary>The authenticated account. Set only when the check succeeded.</summary>
+    public UserAccount? Account { get; init; }
+
+    /// <summary>When rate limited, how long until the user name may be tried again.</summary>
+    public TimeSpan? RetryAfter { get; init; }
+
+    public bool Succeeded => Status == PasswordCheckStatus.Succeeded;
+}
+
+public enum PasswordCheckStatus
+{
+    /// <summary>The password is correct and the account may sign in.</summary>
+    Succeeded,
+
+    /// <summary>
+    /// The user name or password is wrong. Deliberately does not say which, so the result cannot be
+    /// used to find out whether a user exists.
+    /// </summary>
+    Failed,
+
+    /// <summary>The account is locked out. Its password was not checked.</summary>
+    LockedOut,
+
+    /// <summary>The account is waiting for an administrator's approval. Its password was not checked.</summary>
+    NotApproved,
+
+    /// <summary>Too many recent failures for this user name. Nothing was checked; see <see cref="PasswordCheckResult.RetryAfter"/>.</summary>
+    RateLimited,
+
+    /// <summary>The server has password sign-in turned off.</summary>
+    Disabled,
 }

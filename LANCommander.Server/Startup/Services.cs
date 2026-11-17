@@ -39,6 +39,7 @@ public static class Services
         builder.Services.AddTransient<PluginRecurringJobRunner>();
         builder.Services.AddScoped<IStorageLocationProvider, StorageLocationProvider>();
         builder.Services.AddScoped<IMetadataLookup, MetadataLookup>();
+        builder.Services.AddSingleton(_ => new PasswordCheckRateLimiter(TimeProvider.System));
         builder.Services.AddScoped<IUserDirectory, UserDirectory>();
         builder.Services.AddScoped<IRedistributableProvider, RedistributableProvider>();
         builder.Services.AddScoped<IGameProvider, GameProvider>();

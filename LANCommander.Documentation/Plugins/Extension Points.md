@@ -445,6 +445,34 @@ if (account is { CanSignIn: true })
 The directory is read-only and never exposes passwords. `CanSignIn` applies the server's own sign-in
 rules, lockout and approval, so a plugin that honours it refuses the same accounts the server does.
 
+A plugin that uses LANCommander as its authentication store can check the user's LANCommander password
+instead of keeping a credential of its own:
+
+```csharp
+var result = await Users.CheckPasswordAsync(userName, password, cancellationToken);
+
+if (result.Succeeded)
+{
+    // Signed in as result.Account
+}
+else if (result.Status == PasswordCheckStatus.RateLimited)
+{
+    // Ask the user to try again after result.RetryAfter
+}
+```
+
+Only a `Succeeded` result authenticates the user. The server's sign-in rules are applied for you:
+locked-out accounts are refused (`LockedOut`) without their password being checked, unapproved ones are
+refused (`NotApproved`) where the server requires approval, and nothing succeeds while password sign-in
+is turned off (`Disabled`). A wrong user name and a wrong password both give `Failed`, so the result
+does not reveal whether a user exists.
+
+Failed attempts are rate limited per user name, whether or not the user exists: after five failures in
+five minutes, further checks for that name return `RateLimited` without checking anything until the
+oldest failure is five minutes old. A successful check clears the count. The limit is shared by every
+plugin and kept in memory, so it resets when the server restarts. It does not count towards the
+account's own lockout.
+
 ## Plugin settings
 
 A plugin keeps its settings in a YAML file of its own, `Data/Settings.yaml` in the plugin's folder

@@ -6,7 +6,8 @@ namespace LANCommander.Server.Plugins;
 /// <summary>Gives plugins the server's accounts without exposing the database model or password hashes.</summary>
 internal sealed class UserDirectory(
     UserService userService,
-    SettingsProvider<Settings.Settings> settingsProvider) : IUserDirectory
+    SettingsProvider<Settings.Settings> settingsProvider,
+    PasswordCheckRateLimiter rateLimiter) : IUserDirectory
 {
     public async Task<IReadOnlyList<UserAccount>> GetAsync(CancellationToken cancellationToken = default)
     {
@@ -41,6 +42,48 @@ internal sealed class UserDirectory(
         return row == null ? null : ToAccount(row);
     }
 
+    public async Task<PasswordCheckResult> CheckPasswordAsync(string userName, string password, CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        // The server's own password sign-in refuses everyone when password authentication is off
+        if (!settingsProvider.CurrentValue.Server.Authentication.AllowPassword)
+            return new PasswordCheckResult { Status = PasswordCheckStatus.Disabled };
+
+        if (string.IsNullOrWhiteSpace(userName) || string.IsNullOrEmpty(password))
+            return new PasswordCheckResult { Status = PasswordCheckStatus.Failed };
+
+        // Counted before the user is looked up, so unknown names are limited the same as real ones
+        var retryAfter = rateLimiter.TryStart(userName);
+
+        if (retryAfter != null)
+            return new PasswordCheckResult { Status = PasswordCheckStatus.RateLimited, RetryAfter = retryAfter };
+
+        var row = await userService.GetAsync(userName, Project);
+
+        if (row == null)
+            return new PasswordCheckResult { Status = PasswordCheckStatus.Failed };
+
+        var account = ToAccount(row);
+
+        // Refused before the password is checked, as the server's own sign-in does, so a locked-out
+        // account cannot be used to test passwords
+        if (IsLockedOut(row))
+            return new PasswordCheckResult { Status = PasswordCheckStatus.LockedOut };
+
+        if (!account.CanSignIn)
+            return new PasswordCheckResult { Status = PasswordCheckStatus.NotApproved };
+
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (!await userService.CheckPassword(row.UserName, password))
+            return new PasswordCheckResult { Status = PasswordCheckStatus.Failed };
+
+        rateLimiter.Succeeded(userName);
+
+        return new PasswordCheckResult { Status = PasswordCheckStatus.Succeeded, Account = account };
+    }
+
     static IQueryable<UserRow> Project(IQueryable<User> users) =>
         users.Select(user => new UserRow(
             user.Id,
@@ -58,7 +101,6 @@ internal sealed class UserDirectory(
     UserAccount ToAccount(UserRow row)
     {
         var isAdministrator = row.Roles.Any(role => string.Equals(role, RoleService.AdministratorRoleName, StringComparison.OrdinalIgnoreCase));
-        var lockedOut = row.LockoutEnabled && row.LockoutEnd > DateTimeOffset.UtcNow;
         var approved = row.Approved || isAdministrator || !settingsProvider.CurrentValue.Server.Authentication.RequireApproval;
 
         return new UserAccount
@@ -69,10 +111,12 @@ internal sealed class UserDirectory(
             Email = row.Email,
             Roles = row.Roles.Order(StringComparer.OrdinalIgnoreCase).ToList(),
             IsAdministrator = isAdministrator,
-            CanSignIn = approved && !lockedOut,
+            CanSignIn = approved && !IsLockedOut(row),
             CreatedOn = row.CreatedOn,
         };
     }
+
+    static bool IsLockedOut(UserRow row) => row.LockoutEnabled && row.LockoutEnd > DateTimeOffset.UtcNow;
 
     sealed record UserRow(
         Guid Id,

@@ -1,0 +1,54 @@
+---
+title: 2.2.0-rc.2
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.2.0 Release Candidate 2 Release Notes
+
+This is the second release candidate for LANCommander 2.2.0. It adds chat to the server UI, lets scripts write game options back to the launcher, and gives plugins two new hooks: server engines can report their own address, and plugins can check LANCommander passwords. It also fixes several issues reported against rc.1. For the full list of changes in 2.2.0, see the [2.2.0-rc.1 release notes](/Releases/2.2.0-rc.1).
+
+## Server
+
+### Chat
+Chat is now available in the server UI under **Chat** in the main menu, for administrators and signed-in users alike. Conversations are shared with the launcher, so messages sent from either one show up in the other as they arrive.
+
+### Server Engine Addresses
+Plugin-provided server engines can now report where players can reach their servers, such as the address and published port a Docker container was given. A server's **Host** and **Port** fields are now overrides: leave Host blank or Port at 0 and the server uses what the engine reports. The server editor shows the reported values next to these fields. Plugin authors can find details under [Extension Points](/Plugins/Extension%20Points).
+
+### Plugin Links
+Each plugin under **Settings > Plugins** has a new menu that links to the plugin's project website and code repository ([#487](https://github.com/LANCommander/LANCommander/issues/487)).
+
+### Password Checks for Plugins
+Plugins that use LANCommander as their authentication store, such as a directory service, can now check a user's LANCommander password through `IUserDirectory.CheckPasswordAsync`. The server's sign-in rules still apply. Locked-out and unapproved accounts are refused, nothing succeeds while password sign-in is turned off, and the result doesn't reveal whether a user exists. Failed attempts are rate limited per user name, with five failures allowed in five minutes.
+
+## Launcher
+
+### Updating Game Options from Scripts
+The new `Update-GameOptions` cmdlet writes option values back to the game manifest. When the game exits, the launcher copies any values a script changed into the player's options. Use it in an **After Stop** script to pick up settings the player changed in game, so the launcher shows them and the next launch doesn't overwrite them. See [Cmdlets](/Scripting/Cmdlets#update-gameoptions) for syntax and examples.
+
+## Changelog
+
+**Launcher**
+- Added: `Update-GameOptions` cmdlet
+- Changed: Filled stop icons in the game action bar and script debugger
+- Fixed: Download progress not shown when installing tools and redistributables ([#463](https://github.com/LANCommander/LANCommander/issues/463))
+- Fixed: Clearing the depot filter now also clears the selected collection, genre, and tag ([#486](https://github.com/LANCommander/LANCommander/issues/486))
+
+**Server**
+- Added: Chat in the server UI
+- Added: Server engines can report their own host and port, with the entered values used as overrides
+- Added: Plugin menu with links to each plugin's website and code repository ([#487](https://github.com/LANCommander/LANCommander/issues/487))
+- Added: `IUserDirectory.CheckPasswordAsync` for plugins, with per-user-name rate limiting
+- Added: The download URL is logged when an HQ redistributable can't be downloaded
+- Changed: Filled stop icons on server controls and in the script editor
+- Fixed: The script count on the game editor only counts scripts for the selected version
+
+## Downloads
+
+<ReleaseDownloads release="v2.2.0-rc.2" />
+
+## Contributors
+
+<ContributorGrid from="v2.2.0-rc.1" to="v2.2.0-rc.2" />

@@ -72,7 +72,15 @@ public class GitHubService(ILogger<GitHubService> logger, IVersionProvider versi
 
     public async Task<Release?> GetReleaseAsync(string tag)
     {
-        return await _client.Repository.Release.Get(_owner, _repository, tag);
+        try
+        {
+            return await _client.Repository.Release.Get(_owner, _repository, tag);
+        }
+        catch (NotFoundException)
+        {
+            // Development and unpublished builds have no release with their tag
+            return null;
+        }
     }
 
     public async Task<IEnumerable<Release>> GetReleasesAsync(int count)

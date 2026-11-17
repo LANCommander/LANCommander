@@ -137,7 +137,11 @@ public sealed class HqRegistry : IDisposable
         using var response = await _http.GetAsync(url, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
 
         if (response.StatusCode == HttpStatusCode.NotFound)
+        {
+            _logger.LogWarning("The {Source} package registry has no package at {Url}", SourceName, url);
+
             throw new HqRegistryException($"{id} {version} was not found on {SourceName}.");
+        }
 
         EnsureSuccess(response);
 

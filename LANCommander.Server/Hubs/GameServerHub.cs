@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.SignalR;
 
 namespace LANCommander.Server.Hubs
@@ -10,6 +11,12 @@ namespace LANCommander.Server.Hubs
     /// <see cref="GetStatus"/>) to join a server's group, which receives "LogLine" and, every two
     /// seconds, "ProcessInfo" pushes from <c>ServerEngineStatusService</c>.
     /// </summary>
+    /// <remarks>
+    /// For administrators only: it starts and stops servers and streams their output. The server's own
+    /// pages don't connect to it; they push through <c>IHubContext</c> and call
+    /// <see cref="ServerManager"/> directly.
+    /// </remarks>
+    [Authorize(Roles = RoleService.AdministratorRoleName)]
     public class GameServerHub : Hub
     {
         readonly ServerManager _serverManager;
@@ -85,9 +92,7 @@ namespace LANCommander.Server.Hubs
             _ = Task.Run(() => _serverManager.StopAsync(serverId));
         }
 
-        // Sending commands and restarting are deliberately not exposed here: this hub is mapped
-        // without authorization (the Blazor pages connect to it server-side without credentials).
-        // Pages call ServerManager.SendCommandAsync / RestartAsync directly instead.
+        // Sending commands and restarting aren't exposed here; pages call ServerManager directly
 
         public Task<ServerProcessInfo?> GetProcessInfo(Guid serverId) => _serverManager.GetProcessInfoAsync(serverId);
 

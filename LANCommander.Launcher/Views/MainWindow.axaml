@@ -125,6 +125,12 @@
                                           ToggleType="Radio" GroupName="PresenceVisibility"
                                           IsChecked="{Binding ShellViewModel.Profile.SharesNothing, Mode=TwoWay}" />
                             </MenuItem>
+                            <!-- Launcher-wide: whether LAN games join the server's network relay.
+                                 Also connects or disconnects games already running on it. -->
+                            <MenuItem Header="Network Relay"
+                                      ToggleType="CheckBox"
+                                      IsChecked="{Binding ShellViewModel.IsNetworkRelayEnabled, Mode=TwoWay}"
+                                      IsVisible="{Binding ShellViewModel.IsNetworkRelayAvailable}" />
                             <MenuItem Header="Settings"
                                       Command="{Binding ShellViewModel.ShowSettingsCommand}" />
                             <MenuItem Header="Big Screen Mode"

@@ -17,6 +17,9 @@ public sealed class InterposerSessionService(ILogger<InterposerSessionService> l
     /// <summary>The game's session, or null when it is not running under the Interposer.</summary>
     public InterposerSession? Get(Guid gameId) => _sessions.TryGetValue(gameId, out var session) ? session : null;
 
+    /// <summary>Every game running under the Interposer right now.</summary>
+    public IReadOnlyCollection<InterposerSession> All => _sessions.Values.ToList();
+
     /// <summary>Records a game the Interposer started. Dispose the result when the game has exited.</summary>
     /// <param name="gameId">The game.</param>
     /// <param name="interposer">The service that started it, which holds its control pipe.</param>

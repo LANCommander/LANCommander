@@ -13,6 +13,9 @@ using LANCommander.Launcher.Data.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Import;
 using LANCommander.Launcher.Services.Plugins;
+using LANCommander.Interposer;
+using LANCommander.Launcher.Services.Interposer;
+using LANCommander.SDK.Providers;
 using LANCommander.Launcher.Settings.Enums;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -178,6 +181,29 @@ public partial class ShellViewModel : ViewModelBase
     [ObservableProperty]
     private bool _areUserLibrariesEnabled = true;
 
+    /// <summary>The network relay runs through the Interposer, which is Windows only.</summary>
+    public bool IsNetworkRelayAvailable => OperatingSystem.IsWindows();
+
+    private bool _isNetworkRelayEnabled;
+
+    /// <summary>
+    /// Whether LAN games join the server's network relay, launcher-wide. Changing it saves the setting
+    /// and takes running games off the relay, or puts back the ones that were started on it.
+    /// </summary>
+    public bool IsNetworkRelayEnabled
+    {
+        get => _isNetworkRelayEnabled;
+        set
+        {
+            if (!SetProperty(ref _isNetworkRelayEnabled, value))
+                return;
+
+            SaveNetworkRelaySetting(value);
+
+            _ = ApplyNetworkRelayToRunningGamesAsync(value);
+        }
+    }
+
     // Child view models
     public DepotViewModel           DepotViewModel           { get; private set; } = null!;
     public DepotBrowseViewModel     DepotBrowseViewModel     { get; private set; } = null!;
@@ -236,6 +262,73 @@ public partial class ShellViewModel : ViewModelBase
 
         // Initialize Profile early so titlebar bindings never hit null
         Profile = new ProfileViewModel(serviceProvider);
+
+        _isNetworkRelayEnabled = ReadNetworkRelaySetting();
+    }
+
+    private bool ReadNetworkRelaySetting()
+    {
+        using var scope = _serviceProvider.CreateScope();
+
+        return scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>().CurrentValue.NetworkRelay.Enabled;
+    }
+
+    private void SaveNetworkRelaySetting(bool enabled)
+    {
+        try
+        {
+            using var scope = _serviceProvider.CreateScope();
+
+            scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>()
+                .Update(s => s.NetworkRelay.Enabled = enabled);
+
+            // The Settings page may be open behind the menu; keep its checkbox from saving the old value back
+            if (SettingsViewModel != null)
+                SettingsViewModel.JoinNetworkRelay = enabled;
+
+            _logger.LogInformation("Network relay turned {State} launcher-wide", enabled ? "on" : "off");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not save the network relay setting");
+        }
+    }
+
+    /// <summary>
+    /// Takes every running game off the relay, or puts back the ones that were started on it. Games
+    /// started without a relay session have nothing to join and are left alone.
+    /// </summary>
+    private async Task ApplyNetworkRelayToRunningGamesAsync(bool enabled)
+    {
+        var sessions = _serviceProvider.GetService<InterposerSessionService>();
+
+        if (sessions == null)
+            return;
+
+        foreach (var session in sessions.All.Where(s => s.JoinsRelay))
+        {
+            var state = session.Relay.State;
+
+            try
+            {
+                if (!enabled && state is RelayState.Connected or RelayState.Connecting or RelayState.Reconnecting)
+                    await session.DisconnectRelayAsync();
+                else if (enabled && state is RelayState.Disabled or RelayState.Failed)
+                    await session.ReconnectRelayAsync();
+            }
+            catch (Exception ex)
+            {
+                // The game may have exited or stopped answering; its page shows where it stands
+                _logger.LogWarning(ex, "Could not turn the relay {State} for running game {GameId}", enabled ? "on" : "off", session.GameId);
+            }
+        }
+    }
+
+    private void OnSettingsSaved(object? sender, EventArgs e)
+    {
+        // Saved from the Settings page; reflect it without re-saving or touching running games
+        if (SetProperty(ref _isNetworkRelayEnabled, ReadNetworkRelaySetting(), nameof(IsNetworkRelayEnabled)))
+            _logger.LogInformation("Network relay setting changed from Settings: {Enabled}", _isNetworkRelayEnabled);
     }
 
     private void OnNavigationPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -266,6 +359,8 @@ public partial class ShellViewModel : ViewModelBase
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
         PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
+
+        SettingsViewModel.SettingsSaved += OnSettingsSaved;
 
         var authenticationService = _serviceProvider.GetRequiredService<AuthenticationService>();
 

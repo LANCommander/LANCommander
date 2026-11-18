@@ -862,6 +862,17 @@ Imports LCX packages through the server's own import pipeline, the same one the 
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
 
+### IPluginSettingsExtension
+
+`interface` — `LANCommander.Server.Plugins.IPluginSettingsExtension`
+
+Links a plugin's settings page from its row on Settings → Plugins, under the row's menu. Use it for settings too small to deserve an entry in the server's navigation; a plugin with pages of its own registers an `IServerNavigationExtension` instead. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Href { get; }`
+  - Plugin application route of the settings page, beginning with `/Plugins/`.
+
 ### IRecurringJobHandler
 
 `interface` — `LANCommander.Server.Plugins.IRecurringJobHandler`
@@ -1103,6 +1114,75 @@ Contributes an assembly containing routable Razor components to the server. Regi
 - `Assembly Assembly { get; }`
   - The assembly containing the plugin's routable components.
 
+### IServerSectionExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerSectionExtension`
+
+Adds pages, and a summary at the top of the General page, to game servers added on the server, whatever runs them, e.g. a page of a game's live players or its mod configuration. Register an implementation in `IPlugin.ConfigureServices`; any number of plugins may.
+
+**Properties**
+
+- `string Id { get; }`
+  - Identifies the extension. Part of its pages' addresses, so keep it stable: letters, digits, `.`, `-` and `_`, e.g. `com.mycompany.myplugin.servers`.
+- `string Name { get; }`
+  - The name its pages are listed under in a server's menu.
+
+**Methods**
+
+- `IReadOnlyList<ServerSection> GetSections(ServerInfo server)`
+  - The pages to add to a server, e.g. only to the servers of games the plugin knows. None by default.
+- `Type GetOverview(ServerInfo server)`
+  - A Razor component shown at the top of a server's General page, above the server's settings, e.g. a summary of its state. Null shows nothing. Overviews of several plugins are shown in the order of their names.
+
+### IServerSourceExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerSourceExtension`
+
+Lists game servers that live somewhere other than the server's database, e.g. those another system already manages, so they appear on the Servers page beside the ones administrators add. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Id { get; }`
+  - Identifies the source. Part of every one of its servers' ids, so it must never change, e.g. `com.mycompany.myplugin.servers`.
+- `string Name { get; }`
+  - The source's name, shown beside its servers on the Servers page.
+- `TimeSpan RefreshInterval { get; }`
+  - How often `GetServersAsync` is called. Ask for a refresh sooner with `Refresh`. At least a second.
+
+**Methods**
+
+- `Task InitializeAsync(IServerSourceHost host, CancellationToken cancellationToken)`
+  - Called once, when the server starts, before any other call. `host` is how the source reports changes between refreshes; keep it.
+- `Task<IReadOnlyList<ExternalServer>> GetServersAsync(CancellationToken cancellationToken)`
+  - Lists the source's servers as they are now, status included. Called every `RefreshInterval`, so it should be reasonably cheap. Throw when the list can't be read, e.g. a host is unreachable: the servers last listed are kept, marked as errored, until a list is read again. Servers with no key, or one another server already has, are left out.
+- `Task StartAsync(ExternalServer server, CancellationToken cancellationToken)`
+  - Starts a server whose `CanStart` is set, returning once it has been asked to rather than when it stops. Throw to report that it could not be started; the server shows the message. The list is refreshed soon after.
+- `Task StopAsync(ExternalServer server, CancellationToken cancellationToken)`
+  - Stops a server whose `CanStop` is set. Throw to report that it could not be stopped. The list is refreshed soon after.
+- `IReadOnlyList<ExternalServerSection> GetSections(ExternalServer server)`
+  - Pages of the source's own for a server, listed under the source's name in the server's menu beside its General and Monitor pages, e.g. its players or its configuration on the system it comes from. Called whenever the server's pages are drawn, so it should be cheap and shouldn't reach out to anything; work it out from the server as listed. Register the components' assembly with `IServerRouteAssemblyExtension` only if they are also pages of their own.
+- `Type GetOverview(ExternalServer server)`
+  - A Razor component of the source's own shown at the top of a server's General page, above what the server shows of every listed server, e.g. a summary from the system it comes from. It takes the `ExternalServer` as its `Server` parameter, refreshed as the source lists it again, and the id the server knows it by as its `ServerId` parameter. Called whenever the page is drawn, so it should be cheap. Null shows nothing.
+- `IAsyncEnumerable<ServerEngineLogLine> ReadLogAsync(ExternalServer server, ServerEngineLogRequest request, CancellationToken cancellationToken)`
+  - Reads the output of a server with `Log`, oldest line first, for its Monitor page: the latest `Tail` lines, then, when `Follow` is set, lines as they are written until the reader cancels. Throw to report that it can't be read; the page shows the message.
+- `Task<ServerEngineProcessInfo> GetProcessInfoAsync(ExternalServer server, CancellationToken cancellationToken)`
+  - Samples a running server with `ProcessInfo`, every couple of seconds while its Monitor page is open. Null when it can't be sampled.
+- `Task<string> SendCommandAsync(ExternalServer server, string command, CancellationToken cancellationToken)`
+  - Sends a command to a running server with `Commands`, from its Monitor page, e.g. a line to its console. Returns what the server answered where it answers directly (as over RCON), or null where its answer appears in its output. Throw to report that the command couldn't be sent; the page shows the message.
+
+### IServerSourceHost
+
+`interface` — `LANCommander.Server.Plugins.IServerSourceHost`
+
+How an `IServerSourceExtension` reports changes between refreshes. Thread safe.
+
+**Methods**
+
+- `void Refresh()`
+  - Asks for the source's servers to be listed again now, e.g. because one was added.
+- `void ReportStatus(string key, ServerEngineStatus status, string error)`
+  - Reports that a listed server's status changed, so those watching it see so at once rather than at the next refresh. Does nothing for a key that wasn't listed.
+
 ### IStorageLocationProvider
 
 `interface` — `LANCommander.Server.Plugins.IStorageLocationProvider`
@@ -1236,6 +1316,63 @@ Raised after an uploaded archive is stored and linked to what it belongs to, and
 - `Guid? RedistributableId { get; init; }`
 - `Guid? ToolId { get; init; }`
 - `string Version { get; init; }`
+
+### ExternalServer
+
+`record` — `LANCommander.Server.Plugins.ExternalServer`
+
+A game server listed by an `IServerSourceExtension`.
+
+**Properties**
+
+- `string Key { get; init; }`
+  - Identifies the server among the source's, and must stay the same for as long as it is the same server, e.g. its id where the source got it from. Case sensitive.
+- `string Name { get; init; }`
+- `Guid? GameId { get; init; }`
+  - The game the server is for, when it is one of this server's games; a game that doesn't exist here is ignored.
+- `string Host { get; init; }`
+  - The host name or IP address players connect to; empty for the LANCommander server's own address.
+- `int Port { get; init; }`
+  - The port players connect to; 0 when there isn't one.
+- `ServerEngineStatus Status { get; init; }`
+- `string StatusMessage { get; init; }`
+  - Why the server is in `Error`, where the source knows.
+- `string Location { get; init; }`
+  - Where the server runs, shown beside it, e.g. the host it is on. Optional.
+- `string ManageUrl { get; init; }`
+  - Where an administrator manages the server, such as a page of the plugin's or another system's page for it: an absolute URL, or a path on this server. The server's Edit button opens it; null leaves the server without one.
+- `bool CanStart { get; init; }`
+  - Whether administrators may start the server through `StartAsync`.
+- `bool CanStop { get; init; }`
+  - Whether administrators may stop the server through `StopAsync`.
+- `ExternalServerFeatures Features { get; init; }`
+  - What its Monitor page can show and do beyond its status.
+
+### ExternalServerIds
+
+`class` — `LANCommander.Server.Plugins.ExternalServerIds`
+
+Works out the ids of servers listed by an `IServerSourceExtension`.
+
+**Methods**
+
+- `Guid Create(string sourceId, string key)`
+  - The id the server knows a listed server by: the same for the same source id (ignoring case) and key, and different for any other.
+
+### ExternalServerSection
+
+`record` — `LANCommander.Server.Plugins.ExternalServerSection`
+
+A page an `IServerSourceExtension` adds to one of its servers.
+
+**Properties**
+
+- `string Slug { get; init; }`
+  - The page's address under the server, `/Servers/External/{id}/Source/{Slug}`: letters, digits and `-`, unique among the server's pages.
+- `string Title { get; init; }`
+  - The page's name in the menu and its title.
+- `Type Component { get; init; }`
+  - A Razor component rendered as the page, taking the `ExternalServer` as its `Server` parameter, refreshed as the source lists it again, and the id the server knows it by as its `ServerId` parameter.
 
 ### GameCreatedEvent
 
@@ -2300,6 +2437,21 @@ Special values for `After`. Any other value is the route of a built-in link, or 
 
 Identifiers of the server navigation sections a plugin entry can be placed in through `Section`. A group's identifier is also the `After` anchor that places an entry after the group.
 
+### ServerSection
+
+`record` — `LANCommander.Server.Plugins.ServerSection`
+
+A page an `IServerSectionExtension` adds to a game server.
+
+**Properties**
+
+- `string Slug { get; init; }`
+  - The page's address under the extension, `/Servers/{id}/Plugin/{extension}/{Slug}`: letters, digits and `-`, unique among the pages the extension adds to the server.
+- `string Title { get; init; }`
+  - The page's name in the menu and its title.
+- `Type Component { get; init; }`
+  - A Razor component rendered as the page, taking the `ServerInfo` as its `Server` parameter and the server's id as its `ServerId` parameter.
+
 ### ServerStatusChangedEvent
 
 `record` — `LANCommander.Server.Plugins.ServerStatusChangedEvent`
@@ -2519,6 +2671,19 @@ A terminal's size, in characters.
 
 - `int Columns { get; init; }`
 - `int Rows { get; init; }`
+
+### ExternalServerFeatures
+
+`enum` — `LANCommander.Server.Plugins.ExternalServerFeatures`
+
+What can be done with a `ExternalServer` beyond seeing its status.
+
+| Value | Description |
+| --- | --- |
+| `None` = `0` |  |
+| `Log` = `1` | Its output can be read; see `ReadLogAsync`. |
+| `Commands` = `2` | Commands can be sent to it while it runs; see `SendCommandAsync`. |
+| `ProcessInfo` = `4` | Its CPU, memory and uptime can be sampled; see `GetProcessInfoAsync`. |
 
 ### GameLinkKind
 

@@ -1,15 +1,14 @@
 ﻿@using LANCommander.Server.Logging
-@using Microsoft.AspNetCore.SignalR.Client
 @using XtermBlazor
 @inject NotificationService Notifications
-@inject NavigationManager NavigationManager
-@implements IAsyncDisposable
+@inject LogStream LogStream
+@implements IDisposable
 
 <Terminal @ref="_terminal" Options="_options" OnFirstRender="@OnFirstRender" />
 
 @code {
     Terminal? _terminal;
-    HubConnection? _hubConnection;
+    bool _subscribed;
 
     TerminalOptions _options = ConsolePalette.CreateOptions();
 
@@ -30,30 +29,47 @@
 
     async Task Connect()
     {
-        _hubConnection = new HubConnectionBuilder()
-            .WithUrl(NavigationManager.ToAbsoluteUri("/logging"))
-            .Build();
+        foreach (var entry in await LogStream.ReadHistoryAsync())
+            await Write(entry);
 
-        _hubConnection.On<string, Microsoft.Extensions.Logging.LogLevel, DateTime>("Log", (message, level, timestamp) =>
+        await Write(new LogEntry("Connected to server logging provider!", Microsoft.Extensions.Logging.LogLevel.Information, DateTime.Now));
+
+        LogStream.Logged += OnLogged;
+        _subscribed = true;
+    }
+
+    void OnLogged(LogEntry entry)
+    {
+        _ = InvokeAsync(() => Write(entry));
+    }
+
+    async Task Write(LogEntry entry)
+    {
+        if (_terminal is null)
+            return;
+
+        string[] parts =
+        [
+            TerminalColor.BrightBlack,
+            "[",
+            TerminalColor.White,
+            entry.Timestamp.ToString("HH:mm:ss"),
+            TerminalColor.BrightBlack,
+            "]",
+            GetColorCode(entry.Level),
+            " ",
+            entry.Message,
+            TerminalColor.Default
+        ];
+
+        try
         {
-            string[] parts =
-            [
-                TerminalColor.BrightBlack,
-                "[",
-                TerminalColor.White,
-                timestamp.ToString("HH:mm:ss"),
-                TerminalColor.BrightBlack,
-                "]",
-                GetColorCode(level),
-                " ",
-                message,
-                TerminalColor.Default
-            ];
-            
-            _terminal?.WriteLine(String.Join("", parts));
-        });
-
-        await _hubConnection.StartAsync();
+            await _terminal.WriteLine(String.Join("", parts));
+        }
+        catch
+        {
+            // The circuit may have gone away mid-write
+        }
     }
 
     string GetColorCode(Microsoft.Extensions.Logging.LogLevel level)
@@ -70,9 +86,9 @@
         };
     }
 
-    public async ValueTask DisposeAsync()
+    public void Dispose()
     {
-        if (_hubConnection is not null)
-            await _hubConnection.DisposeAsync();
+        if (_subscribed)
+            LogStream.Logged -= OnLogged;
     }
 }

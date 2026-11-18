@@ -34,15 +34,19 @@ public class SignalRLoggerProvider(IServiceProvider serviceProvider, LogLevel mi
             if (exception != null)
                 message += Environment.NewLine + exception;
 
+            var timestamp = DateTime.Now;
+
             // Use a background task to avoid blocking
             _ = Task.Run(async () =>
             {
                 try
                 {
+                    _serviceProvider.GetService<LogStream>()?.Publish(new LogEntry(message, logLevel, timestamp));
+
                     var hubContext = _serviceProvider.GetService<IHubContext<LoggingHub>>();
                     if (hubContext != null)
                     {
-                        await hubContext.Clients.All.SendAsync("Log", message, logLevel, DateTime.Now);
+                        await hubContext.Clients.All.SendAsync("Log", message, logLevel, timestamp);
                     }
                 }
                 catch

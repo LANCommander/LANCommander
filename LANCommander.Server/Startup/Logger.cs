@@ -12,6 +12,8 @@ public static class Logger
     {
         builder.Logging.ClearProviders();
 
+        builder.Services.AddSingleton<LogStream>();
+
         var logSettings = builder.Configuration.GetSection("Server:Logs").Get<LogSettings>() ?? new LogSettings();
 
         var providers = (logSettings.Providers ?? [])

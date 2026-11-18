@@ -1,3 +1,4 @@
+using LANCommander.Server.Services;
 using LANCommander.Server.Settings.Enums;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Options;
@@ -10,7 +11,7 @@ public static class LogEndpoints
     public static void MapLogEndpoints(this IEndpointRouteBuilder routes)
     {
         var group = routes.MapGroup("/api/Logs")
-            .RequireAuthorization();
+            .RequireAuthorization(RoleService.AdministratorRoleName);
 
         group.MapGet("/Download/{fileName}", DownloadAsync);
     }

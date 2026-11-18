@@ -1,0 +1,48 @@
+@page "/Servers/External/{id:guid}/Monitor"
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Services.ServerSources
+@using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ServerSourceRegistry ServerSources
+
+@*
+    A listed server's output, read through its source, with a bar for sending it commands, beside what
+    it is using and who is playing its game here.
+*@
+<ExternalServerView Id="Id" Title="Monitor">
+    <div class="server-monitor">
+        <div class="server-monitor-console">
+            @if (ServerSources.EngineFor(context.Id) is { } engine && engine.CanReadLog(context.Id))
+            {
+                <Console @key="context.Id" ServerId="context.Id" ReadLog="(request, cancellationToken) => engine.ReadLogAsync(context.Id, request, cancellationToken)" />
+            }
+            else
+            {
+                <Empty Description="@($"{context.SourceName} doesn't share this server's output.")" />
+            }
+        </div>
+
+        <ServerMonitorRail @key="context.Id" Server="AsServer(context)" EngineName="@context.SourceName" />
+    </div>
+</ExternalServerView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Server? _server;
+
+    // The rail shows a server added here; this is the listed one as such a server, kept for the page
+    // so the rail isn't handed a new one, and reloaded, every time the header samples it
+    Server AsServer(ExternalServerListing listing)
+    {
+        if (_server?.Id == listing.Id)
+            return _server;
+
+        return _server = new Server
+        {
+            Id = listing.Id,
+            Name = listing.Server.Name,
+            GameId = listing.Server.GameId,
+        };
+    }
+}

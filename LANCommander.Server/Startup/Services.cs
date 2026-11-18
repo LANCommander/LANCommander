@@ -69,6 +69,9 @@ public static class Services
         builder.Services.AddSingleton<PluginServerEngines>();
         builder.Services.AddSingleton<IServerEngineProvider>(provider => provider.GetRequiredService<PluginServerEngines>());
 
+        // their pages join every server's own
+        builder.Services.AddSingleton<PluginServerSections>();
+
         // Each plugin's own settings, in PluginData/{PluginId}/Settings.yaml
         builder.Services.AddSingleton(typeof(IPluginSettings<>), typeof(PluginSettings<>));
 

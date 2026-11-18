@@ -61,16 +61,17 @@ namespace LANCommander.Server.Controllers
             if (httpPath == null)
                 return Forbid();
 
-            var relativePath = path.Substring(httpPath.Path.TrimStart('/').Length).Replace('/', Path.DirectorySeparatorChar).TrimStart('\\');
+            var root = Path.GetFullPath(httpPath.LocalPath);
+            var relativePath = path.Substring(httpPath.Path.TrimStart('/').Length).Replace('/', Path.DirectorySeparatorChar).TrimStart('\\', '/');
+            var localPath = Path.GetFullPath(Path.Combine(root, relativePath)).TrimEnd(Path.DirectorySeparatorChar);
 
-            var localPath = Path.Combine(httpPath.LocalPath, relativePath).TrimEnd('\\');
-            var attrs = System.IO.File.GetAttributes(localPath);
+            // Only what is inside the folder: "..", a backslash or a rooted path in the request mustn't
+            // reach anything else on the machine
+            if (!IsWithin(root, localPath))
+                return NotFound();
 
-            if ((attrs & FileAttributes.Directory) == FileAttributes.Directory)
+            if (System.IO.Directory.Exists(localPath))
             {
-                if (!System.IO.Directory.Exists(localPath))
-                    return NotFound();
-
                 return Json(Directory.GetFileSystemEntries(localPath).Select(fse => fse.Substring(localPath.Length)));
             }
             else
@@ -80,6 +81,16 @@ namespace LANCommander.Server.Controllers
 
                 return File(new FileStream(localPath, FileMode.Open, FileAccess.Read, FileShare.Read), "application/octet-stream", Path.GetFileName(localPath));
             }
+        }
+
+        /// <summary>Whether <paramref name="path"/> is <paramref name="root"/> or inside it; both full paths.</summary>
+        internal static bool IsWithin(string root, string path)
+        {
+            var comparison = OperatingSystem.IsWindows() ? StringComparison.OrdinalIgnoreCase : StringComparison.Ordinal;
+            var trimmedRoot = root.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+            return String.Equals(path, trimmedRoot, comparison)
+                || path.StartsWith(trimmedRoot + Path.DirectorySeparatorChar, comparison);
         }
     }
 }

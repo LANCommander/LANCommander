@@ -23,6 +23,8 @@ Use the version of the server the plugin targets.
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IPackageExporter`, `PackageContents` | Describes and writes LCX packages of games, redistributables, servers and tools through the server's export pipeline. Provided by the server |
 | `IServerEngineExtension`, `IServerEngineTerminal` | Runs game servers somewhere other than as a local process, e.g. in containers, with editor pages, Monitor consoles (logs, terminals) and server files of its own |
+| `IServerSectionExtension`, `ServerSection` | Adds pages, and a summary at the top of the General page, to any game server added on the server, whatever runs it |
+| `IServerSourceExtension`, `ExternalServer`, `ExternalServerFeatures`, `ExternalServerSection`, `ExternalServerIds` | Lists game servers that aren't stored in the server's database, e.g. ones another system runs, on the Servers page with their status, address and game; optionally starts and stops them, shares their output, process samples and commands on their Monitor page, and adds pages and a General-page overview of its own to them |
 | `IRecurringJobScheduler`, `IRecurringJobHandler` | Runs plugin work on cron schedules through the server's background jobs, on its dashboard. Provided by the server |
 | `IStorageLocationProvider` | Lists the server's storage locations. Provided by the server |
 | `IMetadataProviderExtension`, `MetadataSubProviderInfo` | Adds a source of game metadata alongside HQ, IGDB and PCGamingWiki |

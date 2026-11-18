@@ -1,0 +1,38 @@
+@page "/Servers/External/{id:guid}/Source/{slug}"
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Services.ServerSources
+@using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject ServerSourceRegistry ServerSources
+
+@* A page a plugin's server source adds to one of the servers it lists *@
+<ExternalServerView Id="Id" Title="@(_section?.Title ?? "Server")">
+    @if (FindSection() is not { } section)
+    {
+        <Empty Description="@($"{context.SourceName} has no such page for this server")" />
+    }
+    else
+    {
+        <ErrorHandler Inline Title="@($"{context.SourceName}'s page could not be displayed")">
+            <DynamicComponent @key="(context.Id, section.Slug)" Type="section.Component" Parameters="Parameters(context)" />
+        </ErrorHandler>
+    }
+</ExternalServerView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Slug { get; set; } = "";
+
+    ExternalServerSection? _section;
+
+    protected override void OnParametersSet() => _section = FindSection();
+
+    ExternalServerSection? FindSection() => ServerSources.EngineFor(Id)?.GetSections(Id)
+        .FirstOrDefault(s => string.Equals(s.Slug, Slug, StringComparison.OrdinalIgnoreCase));
+
+    static Dictionary<string, object?> Parameters(ExternalServerListing server) => new()
+    {
+        ["Server"] = server.Server,
+        ["ServerId"] = server.Id,
+    };
+}

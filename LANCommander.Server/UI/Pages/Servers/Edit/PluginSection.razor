@@ -1,0 +1,31 @@
+@page "/Servers/{id:guid}/Plugin/{extensionId}/{slug}"
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.UI.Pages.Servers.Components
+@inject PluginServerSections PluginSections
+
+@* A page a plugin adds to a server through an IServerSectionExtension, whatever runs the server *@
+<ServerEditView Id="Id">
+    @if (PluginSections.Find(context, ExtensionId, Slug) is not { } found)
+    {
+        <Empty Description="No plugin offers such a page for this server" />
+    }
+    else
+    {
+        <ErrorHandler Inline Title="@($"{found.Extension.Name}'s page could not be displayed")">
+            <DynamicComponent @key="(context.Id, found.Extension.Id, found.Section.Slug)" Type="found.Section.Component" Parameters="Parameters(context)" />
+        </ErrorHandler>
+    }
+</ServerEditView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string ExtensionId { get; set; } = "";
+    [Parameter] public string Slug { get; set; } = "";
+
+    static Dictionary<string, object?> Parameters(Server server) => new()
+    {
+        ["Server"] = PluginServerSections.ToInfo(server),
+        ["ServerId"] = server.Id,
+    };
+}

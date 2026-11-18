@@ -309,7 +309,8 @@ internal sealed class ServerProvider(
         entity.Path = info.Path;
     }
 
-    static ServerInfo Info(ServerEntity entity) => new()
+    /// <summary>A server as plugins see it.</summary>
+    internal static ServerInfo Info(ServerEntity entity) => new()
     {
         Id = entity.Id,
         Name = entity.Name,

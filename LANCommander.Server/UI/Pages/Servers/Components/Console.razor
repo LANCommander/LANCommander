@@ -72,6 +72,12 @@
     /// <summary>A log console of the server's engine to follow instead; see <c>IServerEngineExtension.GetConsoles</c>.</summary>
     [Parameter] public string? EngineConsoleId { get; set; }
 
+    /// <summary>
+    /// Reads the output to follow instead, e.g. through the source that lists the server; read like an
+    /// engine's log console.
+    /// </summary>
+    [Parameter] public Func<LANCommander.Server.Plugins.ServerEngineLogRequest, CancellationToken, IAsyncEnumerable<LANCommander.Server.Plugins.ServerEngineLogLine>>? ReadLog { get; set; }
+
     /// <summary>The server, with its consoles, when the page already has it; saves a lookup.</summary>
     [Parameter] public Server? Server { get; set; }
 
@@ -107,7 +113,7 @@
 
     bool IsRcon => _serverConsole?.Type == ServerConsoleType.RCON;
 
-    bool IsEngineLog => !String.IsNullOrEmpty(EngineConsoleId);
+    bool IsEngineLog => !String.IsNullOrEmpty(EngineConsoleId) || ReadLog != null;
 
     protected override async Task OnInitializedAsync()
     {
@@ -190,7 +196,12 @@
     {
         try
         {
-            await foreach (var line in PluginEngines.ReadLogAsync(ServerId, EngineConsoleId!, new LANCommander.Server.Plugins.ServerEngineLogRequest(MaxLines), cancellationToken))
+            var request = new LANCommander.Server.Plugins.ServerEngineLogRequest(MaxLines);
+            var lines = ReadLog != null
+                ? ReadLog(request, cancellationToken)
+                : PluginEngines.ReadLogAsync(ServerId, EngineConsoleId!, request, cancellationToken);
+
+            await foreach (var line in lines)
             {
                 if (line == null)
                     continue;

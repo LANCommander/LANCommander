@@ -24,6 +24,11 @@
                     <Console @key="_engineConsole.Id" ServerId="@context.Id" EngineConsoleId="@_engineConsole.Id" Server="context" />
                 }
             }
+            else if ((LogId == null || LogId == "Console") && context.Engine == LANCommander.Server.Settings.Enums.ServerEngine.Remote)
+            {
+                @* A remote server's output is on its host, read from there *@
+                <Console @key="context.Id" ServerId="@context.Id" Server="context" ReadLog="(request, cancellationToken) => RemoteEngine.ReadLogAsync(context.Id, request, cancellationToken)" />
+            }
             else if (LogId == null || LogId == "Console")
             {
                 <Console ServerId="@context.Id" Server="context" />
@@ -38,7 +43,7 @@
             }
         </div>
 
-        <ServerMonitorRail Server="context" />
+        <ServerMonitorRail Server="context" EngineName="@EngineName(context)" />
     </div>
 </ServerEditView>
 
@@ -54,6 +59,13 @@
 
     [Inject] ServerConsoleService ServerConsoleService { get; set; } = default!;
     [Inject] PluginServerEngines PluginEngines { get; set; } = default!;
+    [Inject] LANCommander.Server.Services.ServerEngines.RemoteServerEngine RemoteEngine { get; set; } = default!;
+
+    // "Remote · Server Room" for a remote server, so it says which host
+    string? EngineName(Server server) =>
+        server.Engine == LANCommander.Server.Settings.Enums.ServerEngine.Remote && RemoteEngine.GetHostName(server.Id) is { } host
+            ? $"Remote · {host}"
+            : null;
 
     protected override async Task OnParametersSetAsync()
     {

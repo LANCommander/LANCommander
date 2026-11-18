@@ -16,6 +16,7 @@
 @inject ServerService ServerService
 @inject GameService GameService
 @inject PluginServerEngines PluginEngines
+@inject PluginServerSections PluginSections
 @inject ServerManager ServerManager
 @inject RemoteServerEngine RemoteServerEngine
 @inject IOptions<Settings> Settings
@@ -46,6 +47,21 @@
     </TitleExtraTemplate>
 
     <ChildContent>
+        @* Plugins' summaries of the server, above its settings; only once it has been saved *@
+        @if (context.Id != Guid.Empty && PluginSections.GetOverviews(context) is { Count: > 0 } overviews)
+        {
+            @foreach (var overview in overviews)
+            {
+                <div class="server-plugin-overview" data-extension="@overview.Extension.Id">
+                    <ErrorHandler Inline Title="@($"{overview.Extension.Name}'s overview could not be displayed")">
+                        <DynamicComponent @key="(context.Id, overview.Extension.Id)" Type="overview.Component" Parameters="OverviewParameters(context)" />
+                    </ErrorHandler>
+                </div>
+            }
+
+            <Divider Class="edit-form-divider" />
+        }
+
         @* As drawn: identity, then the engine and where it runs, then the network and how the process is managed *@
         <Form @ref="_form" Model="context" OnSubmit="() => SaveAsync(context)" Class="edit-form">
             <div class="edit-form-pair">
@@ -85,6 +101,11 @@
                         <Select TValue="Guid?" Items="RemoteServerItems" Disabled="!RemoteServerItems.Any()" @bind-Value="context.RemoteServerId" />
                     </FormItem>
                 </div>
+
+                @if (RemoteServerEngine.GetProblem(context.Id) is { } problem)
+                {
+                    <Alert Warning>@problem</Alert>
+                }
             }
 
             @if (context.Engine == ServerEngine.Local)
@@ -199,6 +220,7 @@
     void OnServerLoaded(Server server)
     {
         _saved = ServerEditSnapshot.Of(server);
+        _savedInfo = server.Id == Guid.Empty ? null : PluginServerSections.ToInfo(server);
         _form?.MarkAsUnmodified();
     }
 
@@ -211,6 +233,15 @@
         if (_view != null)
             await _view.ReloadAsync();
     }
+
+    // As last saved, not with the page's unsaved edits
+    Dictionary<string, object?> OverviewParameters(Server server) => new()
+    {
+        ["Server"] = _savedInfo ?? PluginServerSections.ToInfo(server),
+        ["ServerId"] = server.Id,
+    };
+
+    ServerInfo? _savedInfo;
 
     static string? GetIcon(Game game)
     {
@@ -333,6 +364,7 @@
                 await ServerService.UpdateAsync(server);
 
                 _saved = ServerEditSnapshot.Of(server);
+                _savedInfo = PluginServerSections.ToInfo(server);
                 _form?.MarkAsUnmodified();
 
                 Notifications.Success("Server updated!");

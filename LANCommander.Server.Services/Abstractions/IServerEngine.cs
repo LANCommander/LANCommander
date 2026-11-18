@@ -32,6 +32,16 @@ public interface IServerEngine
     /// <summary>Writes a line to the server's standard input. Returns false if that isn't possible.</summary>
     public Task<bool> SendInputAsync(Guid serverId, string line) => Task.FromResult(false);
 
+    /// <summary>
+    /// Sends a command typed on the server's Monitor page. By default a line written to its input,
+    /// whose effects appear in its output; an engine that gets an answer back, e.g. from another
+    /// LANCommander server sending it over RCON, returns it.
+    /// </summary>
+    public async Task<ServerCommandResult> SendCommandAsync(Guid serverId, string command, CancellationToken cancellationToken = default) =>
+        await SendInputAsync(serverId, command)
+            ? new ServerCommandResult(true)
+            : ServerCommandResult.Failed("The command could not be written to the server's input");
+
     // The server's files. Paths come normalized by ServerFilePath: relative, "/"-separated, "" for the top.
 
     /// <summary>Whether the engine can manage the server's files.</summary>

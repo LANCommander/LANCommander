@@ -34,6 +34,10 @@
                                 <TextInput @bind-Value="serverEngine.Address" Placeholder="http://other-server:1337" />
                             </FormItem>
 
+                            <FormItem Label="Add Servers" Help="Adds this host's servers here as they appear on it, named and linked to their game as the host has them, so they can be started with player activity, given actions and monitored here. A server you delete here isn't added again.">
+                                <Switch @bind-Value="serverEngine.AddServers" />
+                            </FormItem>
+
                             <FormItem Label="Status">
                                 @if (!string.IsNullOrWhiteSpace(serverEngine.AccessToken) && serverEngine.TokenExpiration > DateTime.UtcNow)
                                 {
@@ -47,7 +51,7 @@
 
                             @if (string.IsNullOrWhiteSpace(serverEngine.AccessToken) || serverEngine.TokenExpiration > DateTime.UtcNow)
                             {
-                                <FormItem Label="Username">
+                                <FormItem Label="Username" Help="An administrator account on that server: managing its servers is for administrators only.">
                                     <TextInput @bind-Value="state.Username" />
                                 </FormItem>
 

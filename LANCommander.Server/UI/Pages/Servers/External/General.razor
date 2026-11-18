@@ -1,0 +1,78 @@
+@page "/Servers/External/{id:guid}"
+@using LANCommander.SDK.Enums
+@using LANCommander.Server.Services.ServerSources
+@using LANCommander.Server.UI.Pages.Servers.Components
+@attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
+@inject GameService GameService
+@inject ServerSourceRegistry ServerSources
+
+@*
+    A server a plugin lists: what its source says about it, under the source's own overview where it
+    has one. Nothing is kept about it here; the source decides its game and whether it starts on its
+    own.
+*@
+<ExternalServerView Id="Id" Title="General" ContentClass="edit-form-content">
+    @if (ServerSources.EngineFor(context.Id)?.GetOverview(context.Id) is { } overview)
+    {
+        <div class="external-server-overview">
+            <ErrorHandler Inline Title="@($"{context.SourceName}'s overview could not be displayed")">
+                <DynamicComponent @key="(context.Id, overview)" Type="overview" Parameters="OverviewParameters(context)" />
+            </ErrorHandler>
+        </div>
+
+        <Divider Class="edit-form-divider" />
+    }
+
+    <Form Model="context" Class="edit-form">
+        <div class="edit-form-pair">
+            <FormItem Label="Source">
+                <TextInput Value="@context.SourceName" Disabled />
+            </FormItem>
+            <FormItem Label="Location">
+                <TextInput Value="@context.Server.Location" Disabled />
+            </FormItem>
+        </div>
+
+        <FormItem Label="Game">
+            <TextInput Value="@GameTitle(context)" Disabled />
+        </FormItem>
+
+        <FormItem Label="Address" Help="Where players connect, as the source reports it.">
+            <TextInput Value="@Address(context)" Disabled />
+        </FormItem>
+
+        @if (!String.IsNullOrWhiteSpace(context.StatusMessage))
+        {
+            <Alert Danger>@context.StatusMessage</Alert>
+        }
+    </Form>
+</ExternalServerView>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+
+    Dictionary<Guid, string> _gameTitles = new();
+
+    protected override async Task OnParametersSetAsync()
+    {
+        _gameTitles = (await GameService.AsNoTracking().GetAsync()).ToDictionary(g => g.Id, g => g.Title);
+    }
+
+    string GameTitle(ExternalServerListing server) => server.Server.GameId switch
+    {
+        null => "",
+        { } id when _gameTitles.TryGetValue(id, out var title) => title,
+        _ => "A game that isn't on this server",
+    };
+
+    static Dictionary<string, object?> OverviewParameters(ExternalServerListing server) => new()
+    {
+        ["Server"] = server.Server,
+        ["ServerId"] = server.Id,
+    };
+
+    static string Address(ExternalServerListing server) =>
+        String.IsNullOrWhiteSpace(server.Server.Host)
+            ? server.Server.Port > 0 ? $"(this server):{server.Server.Port}" : ""
+            : server.Server.Port > 0 ? $"{server.Server.Host}:{server.Server.Port}" : server.Server.Host;
+}

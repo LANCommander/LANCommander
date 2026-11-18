@@ -38,7 +38,7 @@
 
         <dl class="server-monitor-facts">
             <dt>Engine</dt>
-            <dd>@Server.Engine.GetDisplayName()</dd>
+            <dd>@(EngineName ?? Server.Engine.GetDisplayName())</dd>
 
             @if (!string.IsNullOrWhiteSpace(Server.Path))
             {
@@ -93,6 +93,9 @@
 
 @code {
     [Parameter, EditorRequired] public Server Server { get; set; } = default!;
+
+    /// <summary>What runs the server, in place of its engine's name, e.g. the source that lists it.</summary>
+    [Parameter] public string? EngineName { get; set; }
 
     /// <summary>The header's samples of the process, every two seconds.</summary>
     [CascadingParameter(Name = "ServerLiveFeed")] public ServerLiveFeed? Feed { get; set; }

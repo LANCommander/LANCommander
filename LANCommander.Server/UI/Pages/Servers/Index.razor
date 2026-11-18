@@ -1,13 +1,18 @@
 @page "/Servers"
 @using LANCommander.Server.Models
 @using LANCommander.Server.UI.Pages.Servers.Components
+@using LANCommander.Server.Services.ServerSources
 @using ManifestType = LANCommander.SDK.Enums.ManifestType
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
 @inject ServerManager ServerManager
+@inject ServerSourceRegistry ServerSources
+@inject GameService GameService
 @inject NavigationManager NavigationManager
 @inject DialogService Dialogs
 @inject NotificationService Notifications
+@inject ILogger<Index> Logger
+@implements IDisposable
 
 <PageHeader Title="Servers" Subtitle="@Total.ToString()" />
 
@@ -62,6 +67,59 @@
             </ActionsColumn>
         </Columns>
     </DataTable>
+
+    @* Servers plugins list rather than ones added here *@
+    @if (_external.Count > 0)
+    {
+        <Divider>External Servers</Divider>
+
+        <Table TItem="ExternalServerListing" Items="_external" Key="s => s.Id" Small NoPaging Searchable SearchText="s => s.Server.Name" SettingsKey="servers-external" EmptyText="No servers"
+               OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/External/{server.Id}"))">
+            <RightToolbar>
+                <Button Icon="IconType.ArrowsClockwise" Loading="_refreshing" OnClick="RefreshExternalAsync">Refresh</Button>
+            </RightToolbar>
+            <Columns>
+                <TemplateColumn TItem="ExternalServerListing" Title="Game">
+                    @if (context.Server.GameId is { } gameId && _games.TryGetValue(gameId, out var game))
+                    {
+                        <Flex Align="Align.Center" Gap="Gap.Small">
+                            <Image Src="@GetIcon(game)" Width="32" Height="32" />
+                            <span>@game.Title</span>
+                        </Flex>
+                    }
+                </TemplateColumn>
+                <TemplateColumn TItem="ExternalServerListing" Title="Name">
+                    @context.Server.Name
+                </TemplateColumn>
+                <TemplateColumn TItem="ExternalServerListing" Title="Source">
+                    <Flex Align="Align.Center" Gap="Gap.Small">
+                        <Tag>@context.SourceName</Tag>
+                        @if (!String.IsNullOrWhiteSpace(context.Server.Location))
+                        {
+                            <span>@context.Server.Location</span>
+                        }
+                    </Flex>
+                </TemplateColumn>
+                <TemplateColumn TItem="ExternalServerListing" Title="Address">
+                    @FormatAddress(context.Server)
+                </TemplateColumn>
+                <ActionsColumn TItem="ExternalServerListing" Width="300px">
+                    @if (!String.IsNullOrWhiteSpace(context.StatusMessage))
+                    {
+                        <Tooltip Title="@context.StatusMessage">
+                            <Icon Type="IconType.Warning" />
+                        </Tooltip>
+                    }
+                    <ServerControl @key="context.Id" ServerId="context.Id" AllowStart="context.Server.CanStart" AllowStop="context.Server.CanStop" />
+                    <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/External/{context.Id}")" title="Edit" />
+                    @if (!String.IsNullOrWhiteSpace(context.Server.ManageUrl))
+                    {
+                        <Button Text Icon="IconType.ArrowSquareOut" Href="@context.Server.ManageUrl" NewTab="IsExternal(context.Server.ManageUrl)" title="Manage" />
+                    }
+                </ActionsColumn>
+            </Columns>
+        </Table>
+    }
 </PageContent>
 
 @code {
@@ -70,6 +128,85 @@
     int Total;
 
     IList<Server> SelectedServers = new List<Server>();
+
+    IReadOnlyList<ExternalServerListing> _external = [];
+    Dictionary<Guid, Game> _games = new();
+    Timer? _externalPoll;
+    bool _refreshing;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadExternalAsync();
+
+        // Sources are listed in the background; follow them so servers come and go without a reload
+        _externalPoll = new Timer(_ => InvokeAsync(async () =>
+        {
+            try
+            {
+                await LoadExternalAsync();
+
+                StateHasChanged();
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not reload the servers listed by sources");
+            }
+        }), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    async Task LoadExternalAsync()
+    {
+        var external = ServerSources.GetServers();
+
+        var gameIds = external
+            .Where(s => s.Server.GameId.HasValue)
+            .Select(s => s.Server.GameId!.Value)
+            .Distinct()
+            .ToList();
+
+        if (gameIds.Except(_games.Keys).Any())
+        {
+            var games = await GameService
+                .Include(g => g.Media)
+                .AsNoTracking()
+                .GetAsync(g => gameIds.Contains(g.Id));
+
+            _games = games.ToDictionary(g => g.Id);
+        }
+
+        _external = external;
+    }
+
+    async Task RefreshExternalAsync()
+    {
+        _refreshing = true;
+
+        try
+        {
+            await ServerSources.RefreshAsync();
+            await LoadExternalAsync();
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The servers could not be refreshed");
+        }
+        finally
+        {
+            _refreshing = false;
+        }
+    }
+
+    static string FormatAddress(LANCommander.Server.Plugins.ExternalServer server)
+    {
+        if (String.IsNullOrWhiteSpace(server.Host))
+            return server.Port > 0 ? $":{server.Port}" : String.Empty;
+
+        return server.Port > 0 ? $"{server.Host}:{server.Port}" : server.Host;
+    }
+
+    static bool IsExternal(string url) => Uri.TryCreate(url, UriKind.Absolute, out _);
+
+    public void Dispose() => _externalPoll?.Dispose();
 
     async Task DeleteAsync(Server server)
     {

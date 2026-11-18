@@ -13,13 +13,19 @@
 {
     @if (Status is ServerProcessStatus.Stopped or ServerProcessStatus.Error)
     {
-        <Button Icon="IconType.Play" IconFill Loading="_busy" OnClick="StartAsync">Start</Button>
+        @if (AllowStart)
+        {
+            <Button Icon="IconType.Play" IconFill Loading="_busy" OnClick="StartAsync">Start</Button>
+        }
     }
-    else
+    else if (AllowStop)
     {
-        <Popconfirm OnConfirm="RestartAsync" Title="Restart this server?" Description="Anyone playing on it is disconnected." OkText="Restart" Disabled="Status != ServerProcessStatus.Running || _busy">
-            <Button Icon="IconType.ArrowsClockwise" Loading="_restarting" Disabled="Status != ServerProcessStatus.Running || _busy">Restart</Button>
-        </Popconfirm>
+        @if (AllowStart)
+        {
+            <Popconfirm OnConfirm="RestartAsync" Title="Restart this server?" Description="Anyone playing on it is disconnected." OkText="Restart" Disabled="Status != ServerProcessStatus.Running || _busy">
+                <Button Icon="IconType.ArrowsClockwise" Loading="_restarting" Disabled="Status != ServerProcessStatus.Running || _busy">Restart</Button>
+            </Popconfirm>
+        }
         <Popconfirm OnConfirm="StopAsync" Title="Stop this server?" Description="This kills the server process." OkText="Stop" Danger Disabled="!CanStop">
             <Button Danger Icon="IconType.Stop" IconFill Loading="Status == ServerProcessStatus.Stopping" Disabled="!CanStop">Stop</Button>
         </Popconfirm>
@@ -58,9 +64,12 @@ else
         @if (Status != ServerProcessStatus.Running)
         {
             @* Icon-only text buttons, like the row's other actions *@
-            <Button Text Success Icon="IconType.Play" IconFill OnClick="StartAsync" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error" title="Start" aria-label="Start" />
+            @if (AllowStart)
+            {
+                <Button Text Success Icon="IconType.Play" IconFill OnClick="StartAsync" Disabled="Status != ServerProcessStatus.Stopped && Status != ServerProcessStatus.Error" title="Start" aria-label="Start" />
+            }
         }
-        else
+        else if (AllowStop)
         {
             <Popconfirm OnConfirm="StopAsync" Title="Are you sure you want to kill this server process?" OkText="Stop" Danger>
                 <Button Text Danger Icon="IconType.Stop" IconFill title="Stop" aria-label="Stop" />
@@ -71,6 +80,12 @@ else
 
 @code {
     [Parameter] public Guid ServerId { get; set; }
+
+    /// <summary>Whether the row offers Start; false for servers whose source doesn't allow it.</summary>
+    [Parameter] public bool AllowStart { get; set; } = true;
+
+    /// <summary>Whether the row offers Stop; false for servers whose source doesn't allow it.</summary>
+    [Parameter] public bool AllowStop { get; set; } = true;
 
     /// <summary>The header's Restart/Stop (or Start) buttons, without the status badge.</summary>
     [Parameter] public bool Header { get; set; }

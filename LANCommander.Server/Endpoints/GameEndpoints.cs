@@ -8,6 +8,7 @@ using LANCommander.Server.ImportExport.Services;
 using LANCommander.Server.Services;
 using LANCommander.Server.Services.Extensions;
 using LANCommander.Server.Services.Mappers;
+using LANCommander.Server.Services.ServerSources;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
@@ -390,6 +391,7 @@ public static class GameEndpoints
     internal static async Task<IResult> GetServersByIdAsync(
         [FromServices] ServerService serverService,
         [FromServices] ServerManager serverManager,
+        [FromServices] ServerSourceRegistry serverSources,
         Guid id)
     {
         var servers = await serverService
@@ -437,6 +439,31 @@ public static class GameEndpoints
                 StartsOnPlayerActivity = startsOnPlayerActivity,
             });
         }
+
+        // Servers plugins list for the game that are up
+        foreach (var external in serverSources.GetServers().Where(s => s.Server.GameId == id))
+        {
+            var status = external.Status switch
+            {
+                Services.Enums.ServerProcessStatus.Running => SDK.Models.GameServerStatus.Running,
+                Services.Enums.ServerProcessStatus.Starting => SDK.Models.GameServerStatus.Starting,
+                _ => (SDK.Models.GameServerStatus?)null,
+            };
+
+            if (status == null)
+                continue;
+
+            results.Add(new SDK.Models.GameServer
+            {
+                Id = external.Id,
+                Name = external.Server.Name,
+                Host = external.Server.Host,
+                Port = external.Server.Port,
+                Status = status.Value,
+            });
+        }
+
+        results = results.OrderBy(s => s.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
 
         return TypedResults.Ok(results);
     }

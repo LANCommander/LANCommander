@@ -17,6 +17,8 @@ using LANCommander.Server.Services.HQ;
 using LANCommander.Server.Services.HQ.Registry;
 using LANCommander.Server.Services.Providers.Metadata;
 using LANCommander.Server.Services.ServerEngines;
+using LANCommander.Server.Services.ServerSources;
+using LANCommander.Server.Plugins;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace LANCommander.Server.Services.Extensions;
@@ -145,8 +147,13 @@ public static class IServiceCollectionExtensions
         // Register server engines
         services.AddSingleton<IServerEngine, LocalServerEngine>();
 
+        services.AddSingleton<RemoteHostClient>();
         services.AddSingleton<RemoteServerEngine>();
         services.AddSingleton<IServerEngine>(provider => provider.GetService<RemoteServerEngine>());
+
+        // Servers plugins list rather than ones added here
+        services.AddSingleton<ServerSourceRegistry>();
+        services.AddSingleton<IServerEngineProvider>(provider => provider.GetRequiredService<ServerSourceRegistry>());
 
         services.AddSingleton<RconService>();
         services.AddSingleton<IRconCommandSender>(provider => provider.GetRequiredService<RconService>());

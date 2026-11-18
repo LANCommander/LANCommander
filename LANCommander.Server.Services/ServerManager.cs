@@ -302,9 +302,7 @@ public sealed class ServerManager(
         if (!engine.CanSendInput(serverId))
             return ServerCommandResult.Failed("The server isn't running, or wasn't started with redirected input (shell execute)");
 
-        return await engine.SendInputAsync(serverId, text)
-            ? new ServerCommandResult(true)
-            : ServerCommandResult.Failed("The command could not be written to the server's input");
+        return await engine.SendCommandAsync(serverId, text, cancellationToken);
     }
 
     private async Task<Data.Models.ServerConsole?> GetConsoleAsync(Guid consoleId)
@@ -380,7 +378,15 @@ public sealed class ServerManager(
 
     #region Output
 
-    private readonly ConcurrentDictionary<Guid, Queue<ServerLogLine>> _recentLogs = new();
+    // Each server's recent lines, numbered so a reader elsewhere (another LANCommander server) can ask
+    // for those after the last it saw
+    private sealed class LogBuffer
+    {
+        public readonly Queue<SequencedServerLogLine> Lines = new();
+        public long Last;
+    }
+
+    private readonly ConcurrentDictionary<Guid, LogBuffer> _recentLogs = new();
     private int _logsSubscribed;
 
     /// <summary>
@@ -400,7 +406,31 @@ public sealed class ServerManager(
             return [];
 
         lock (buffer)
-            return buffer.Where(l => l.ConsoleId == consoleId).ToList();
+            return buffer.Lines.Where(l => l.Line.ConsoleId == consoleId).Select(l => l.Line).ToList();
+    }
+
+    /// <summary>
+    /// The process's own output lines numbered after <paramref name="after"/>, oldest first and at most
+    /// <paramref name="max"/> of the latest, with the number of the last line written. Numbers only grow
+    /// while this server runs, so a reader that is ahead of <see cref="ServerLogPage.Last"/> was reading
+    /// before a restart and should start again from 0.
+    /// </summary>
+    public ServerLogPage GetRecentLogAfter(Guid serverId, long after, int max = RecentLogCapacity)
+    {
+        if (!_recentLogs.TryGetValue(serverId, out var buffer))
+            return new ServerLogPage([], 0);
+
+        lock (buffer)
+        {
+            var lines = buffer.Lines
+                .Where(l => l.Line.ConsoleId == null && l.Sequence > after)
+                .ToList();
+
+            if (lines.Count > max)
+                lines = lines.GetRange(lines.Count - max, max);
+
+            return new ServerLogPage(lines, buffer.Last);
+        }
     }
 
     /// <summary>Forgets the buffered output for a server (the console's Clear button).</summary>
@@ -408,7 +438,7 @@ public sealed class ServerManager(
     {
         if (_recentLogs.TryGetValue(serverId, out var buffer))
             lock (buffer)
-                buffer.Clear();
+                buffer.Lines.Clear();
     }
 
     private void SubscribeToEngineLogs()
@@ -422,14 +452,14 @@ public sealed class ServerManager(
 
     private void HandleServerLog(object? sender, ServerLogEventArgs args)
     {
-        var buffer = _recentLogs.GetOrAdd(args.ServerId, _ => new Queue<ServerLogLine>());
+        var buffer = _recentLogs.GetOrAdd(args.ServerId, _ => new LogBuffer());
 
         lock (buffer)
         {
-            buffer.Enqueue(args.ToLogLine());
+            buffer.Lines.Enqueue(new SequencedServerLogLine(++buffer.Last, args.ToLogLine()));
 
-            while (buffer.Count > RecentLogCapacity)
-                buffer.Dequeue();
+            while (buffer.Lines.Count > RecentLogCapacity)
+                buffer.Lines.Dequeue();
         }
 
         try

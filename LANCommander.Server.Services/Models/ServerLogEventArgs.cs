@@ -45,3 +45,9 @@ public class ServerLogEventArgs : EventArgs
 /// <param name="Level">Inferred severity.</param>
 /// <param name="Message">The line text.</param>
 public sealed record ServerLogLine(Guid ServerId, Guid? ConsoleId, DateTime Timestamp, ServerLogLevel Level, string Message);
+
+/// <summary>A buffered line of a server's output, numbered in the order it was written.</summary>
+public sealed record SequencedServerLogLine(long Sequence, ServerLogLine Line);
+
+/// <summary>Lines read from a server's buffered output, and the number of the last line written.</summary>
+public sealed record ServerLogPage(IReadOnlyList<SequencedServerLogLine> Lines, long Last);

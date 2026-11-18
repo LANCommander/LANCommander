@@ -1,0 +1,197 @@
+@using LANCommander.Server.Services.Enums
+@using LANCommander.Server.Services.ServerSources
+@inject ServerSourceRegistry ServerSources
+@inject ServerManager ServerManager
+@inject ILogger<ExternalServerView> Logger
+@implements IDisposable
+
+@*
+    The pages of a server a plugin lists rather than one added here: the same menu, header and live
+    status as ServerEditView, without what such a server doesn't have here (files, consoles, actions,
+    scripts), and with the pages its source adds of its own.
+*@
+<SideLayout>
+    <Side>
+        <Menu Variant="MenuVariant.Section">
+            <MenuGroup Title="Server">
+                <MenuItem Href="@($"/Servers/External/{Id}")" Exact>General</MenuItem>
+            </MenuGroup>
+
+            @if (_server is { } server && server.Server.Features != LANCommander.Server.Plugins.ExternalServerFeatures.None)
+            {
+                <MenuGroup Title="Console">
+                    <MenuItem Href="@($"/Servers/External/{Id}/Monitor")">Monitor</MenuItem>
+                </MenuGroup>
+            }
+
+            @if (_server != null && Sections is { Count: > 0 } sections)
+            {
+                <MenuGroup Title="@_server.SourceName">
+                    @foreach (var section in sections)
+                    {
+                        <MenuItem Href="@($"/Servers/External/{Id}/Source/{section.Slug}")">@section.Title</MenuItem>
+                    }
+                </MenuGroup>
+            }
+        </Menu>
+    </Side>
+
+    <ChildContent>
+        <PageHeader Class="server-header">
+            <Breadcrumb>
+                <Breadcrumb>
+                    <BreadcrumbItem Href="/Servers">Servers</BreadcrumbItem>
+                    <BreadcrumbItem>@(_server?.Server.Name ?? "Server")</BreadcrumbItem>
+                </Breadcrumb>
+            </Breadcrumb>
+            <TitleTemplate>
+                @(_server?.Server.Name ?? Title)
+            </TitleTemplate>
+            <Tags>
+                @if (_server != null)
+                {
+                    @StatusTag
+                    <span class="server-header-meta">@Meta</span>
+                }
+            </Tags>
+            <Extra>
+                @if (_server != null)
+                {
+                    <ServerControl @key="_server.Id" ServerId="_server.Id" Header CurrentStatus="_live.Status" CurrentStatusChanged="SetStatus"
+                                   AllowStart="_server.Server.CanStart" AllowStop="_server.Server.CanStop" />
+
+                    @if (!String.IsNullOrWhiteSpace(_server.Server.ManageUrl))
+                    {
+                        <Button Icon="IconType.ArrowSquareOut" Href="@_server.Server.ManageUrl" NewTab="Uri.TryCreate(_server.Server.ManageUrl, UriKind.Absolute, out _)">Manage</Button>
+                    }
+                }
+                @Extra?.Invoke(_server!)
+            </Extra>
+        </PageHeader>
+
+        <PageContent Class="@ContentClass">
+            @if (_server == null)
+            {
+                <NotFound SubTitle="No source lists this server right now. If its source can't be reached, it is listed again once it can." />
+            }
+            else
+            {
+                <CascadingValue Value="_feed" Name="ServerLiveFeed" IsFixed="true">
+                    @ChildContent?.Invoke(_server)
+                </CascadingValue>
+            }
+        </PageContent>
+    </ChildContent>
+</SideLayout>
+
+@code {
+    [Parameter] public Guid Id { get; set; }
+    [Parameter] public string Title { get; set; } = "Server";
+    [Parameter] public RenderFragment<ExternalServerListing>? ChildContent { get; set; }
+
+    /// <summary>More of the header's buttons, e.g. a section's Save.</summary>
+    [Parameter] public RenderFragment<ExternalServerListing>? Extra { get; set; }
+
+    [Parameter] public string? ContentClass { get; set; }
+
+    ExternalServerListing? _server;
+
+    /// <summary>The pages the server's source adds of its own.</summary>
+    IReadOnlyList<LANCommander.Server.Plugins.ExternalServerSection> Sections => ServerSources.EngineFor(Id)?.GetSections(Id) ?? [];
+    Guid? _id;
+
+    readonly ServerLiveFeed _feed = new();
+    ServerLiveState _live = ServerLiveState.Unknown;
+    string? _shown;
+    Timer? _poll;
+
+    /// <summary>"Linked LANCommander · Server Room · pid 4812 · up 2h 41m"</summary>
+    string Meta
+    {
+        get
+        {
+            if (_server == null)
+                return "";
+
+            var parts = new List<string> { _server.SourceName };
+
+            if (!String.IsNullOrWhiteSpace(_server.Server.Location))
+                parts.Add(_server.Server.Location);
+
+            if (_live.Process?.Pid is { } pid)
+                parts.Add($"pid {pid}");
+
+            if (_live.Status == ServerProcessStatus.Running && _live.Uptime(DateTime.UtcNow) is { } uptime)
+                parts.Add($"up {uptime}");
+
+            return String.Join(" · ", parts);
+        }
+    }
+
+    RenderFragment StatusTag => _live.Status switch
+    {
+        ServerProcessStatus.Running => @<Tag Success Class="server-status-tag server-status-running"><span class="server-status-dot" aria-hidden="true"></span>Running</Tag>,
+        ServerProcessStatus.Starting => @<Tag Info Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Starting</Tag>,
+        ServerProcessStatus.Stopping => @<Tag Warning Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Stopping</Tag>,
+        ServerProcessStatus.Error => @<Tag Danger Class="server-status-tag" title="@_server?.StatusMessage"><span class="server-status-dot" aria-hidden="true"></span>Error</Tag>,
+        ServerProcessStatus.Stopped => @<Tag Class="server-status-tag"><span class="server-status-dot" aria-hidden="true"></span>Stopped</Tag>,
+        _ => @<text></text>,
+    };
+
+    protected override void OnInitialized()
+    {
+        _poll = new Timer(_ => InvokeAsync(RefreshLiveAsync), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
+    }
+
+    protected override async Task OnParametersSetAsync()
+    {
+        if (_id == Id)
+            return;
+
+        _id = Id;
+        _live = ServerLiveState.Unknown;
+        _shown = null;
+        _feed.Publish(_live);
+        _server = ServerSources.Find(Id);
+
+        await RefreshLiveAsync();
+    }
+
+    async Task RefreshLiveAsync()
+    {
+        try
+        {
+            var server = ServerSources.Find(Id);
+            var status = await ServerManager.GetStatusAsync(Id);
+            var process = server != null && status is ServerProcessStatus.Running or ServerProcessStatus.Starting
+                ? await ServerManager.GetProcessInfoAsync(Id)
+                : null;
+
+            var changed = !Equals(server, _server);
+
+            _server = server;
+            _live = new ServerLiveState(server == null ? ServerProcessStatus.Retrieving : status, process);
+            _feed.Publish(_live);
+
+            var shown = $"{_live.Status}|{Meta}";
+
+            if (changed || shown != _shown)
+            {
+                _shown = shown;
+                StateHasChanged();
+            }
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not sample listed server {ServerId}", Id);
+        }
+    }
+
+    void SetStatus(ServerProcessStatus status)
+    {
+        _live = _live with { Status = status };
+        _feed.Publish(_live);
+    }
+
+    public void Dispose() => _poll?.Dispose();
+}

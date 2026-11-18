@@ -1,4 +1,5 @@
 ﻿using LANCommander.SDK.Enums;
+using System;
 using System.Collections.Generic;
 
 namespace LANCommander.SDK.Models
@@ -21,6 +22,9 @@ namespace LANCommander.SDK.Models
         public bool Autostart { get; set; }
         public ServerAutostartMethod AutostartMethod { get; set; }
         public int AutostartDelay { get; set; }
+
+        /// <summary>The game the server is for, if any.</summary>
+        public Guid? GameId { get; set; }
 
         public virtual Game Game { get; set; }
         public virtual IEnumerable<ServerConsole> ServerConsoles { get; set; }

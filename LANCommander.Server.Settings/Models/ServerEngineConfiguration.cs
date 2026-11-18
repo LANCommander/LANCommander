@@ -12,6 +12,18 @@ public class ServerEngineConfiguration
     public string RefreshToken { get; set; } = String.Empty;
     public DateTime TokenExpiration { get; set; }
 
+    /// <summary>
+    /// For <see cref="ServerEngine.Remote"/>: whether the host's servers are added here as Remote servers
+    /// as they appear on it, filled in with what the host says about them, rather than one by one.
+    /// </summary>
+    public bool AddServers { get; set; } = true;
+
+    /// <summary>
+    /// For <see cref="ServerEngine.Remote"/>: the host's servers that have been added here, so one an
+    /// administrator deletes isn't added again.
+    /// </summary>
+    public List<Guid> AddedServerIds { get; set; } = [];
+
     public ServerEngineConfiguration()
     {
         

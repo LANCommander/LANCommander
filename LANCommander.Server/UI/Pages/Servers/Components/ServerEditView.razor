@@ -4,6 +4,8 @@
 @inject ServerService ServerService
 @inject ServerManager ServerManager
 @inject LANCommander.Server.Plugins.PluginServerEngines PluginEngines
+@inject LANCommander.Server.Plugins.PluginServerSections PluginSections
+@inject LANCommander.Server.Services.ServerEngines.RemoteServerEngine RemoteEngine
 @inject NavigationManager NavigationManager
 @inject AlertService Alerts
 @inject NotificationService Notifications
@@ -66,6 +68,17 @@
                     </MenuGroup>
                 }
 
+                @* Pages plugins add to every server they choose, whatever runs it *@
+                @foreach (var group in PluginSections.GetSections(Server))
+                {
+                    <MenuGroup Title="@group.Extension.Name">
+                        @foreach (var section in group.Sections)
+                        {
+                            <MenuItem Href="@($"/Servers/{Id}/Plugin/{Uri.EscapeDataString(group.Extension.Id)}/{section.Slug}")">@section.Title</MenuItem>
+                        }
+                    </MenuGroup>
+                }
+
                 <MenuGroup Title="Behaviour">
                     <MenuItem Href="@($"/Servers/{Id}/Actions")">Actions</MenuItem>
                     <MenuItem Href="@($"/Servers/{Id}/Scripts")" Count="@(Server.Scripts?.Count)">Scripts</MenuItem>
@@ -114,6 +127,11 @@
                     @if (ShowControl)
                     {
                         <ServerControl ServerId="Server.Id" Header CurrentStatus="_live.Status" CurrentStatusChanged="SetStatus" />
+                    }
+
+                    @if (Server.Engine == LANCommander.Server.Settings.Enums.ServerEngine.Remote && RemoteEngine.GetManageUrl(Server.Id) is { } manageUrl)
+                    {
+                        <Button Icon="IconType.ArrowSquareOut" Href="@manageUrl" NewTab title="Open this server on its host">Open on host</Button>
                     }
 
                     <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>

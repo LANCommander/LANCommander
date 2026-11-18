@@ -379,7 +379,133 @@ public class SavePackerTests : IDisposable
         Assert.Contains(keys, k => k.EndsWith("save.dat"));
     }
 
+    // ── File handles ──────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task PackAsync_ReleasesSaveFiles_WhilePackerIsStillAlive()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("SaveGame/slot1.sav");
+        packer.AddPath(MakeSavePath(SavePathType.File, "SaveGame"));
+
+        var stream = await packer.PackAsync();
+
+        // The packed stream is still in use (e.g. being uploaded), but the files it was built from
+        // must not be held open, or the game can't be uninstalled until the upload finishes
+        var path = Path.Combine(_tempDir, "SaveGame", "slot1.sav");
+        var ex = Record.Exception(() =>
+        {
+            using (new FileStream(path, FileMode.Open, FileAccess.ReadWrite, FileShare.None)) { }
+            File.Delete(path);
+        });
+
+        Assert.Null(ex);
+        Assert.Contains("Files/", string.Join(",", EntryKeys(stream)));
+    }
+
+    [Fact]
+    public async Task EntryCount_AfterPacking_StillReportsPackedEntries()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("a.sav");
+        WriteFile("b.sav");
+        packer.AddPath(MakeSavePath(SavePathType.File, "a.sav"));
+        packer.AddPath(MakeSavePath(SavePathType.File, "b.sav"));
+
+        await packer.PackAsync();
+
+        Assert.Equal(2, packer.EntryCount);
+        Assert.True(packer.HasEntries());
+    }
+
+    [Fact]
+    public async Task AddPath_AfterPacking_Throws()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("a.sav");
+
+        await packer.PackAsync();
+
+        Assert.Throws<InvalidOperationException>(() => packer.AddPath(MakeSavePath(SavePathType.File, "a.sav")));
+    }
+
+    [Fact]
+    public async Task PackAsync_CalledTwice_ReturnsSameStreamAtStart()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("a.sav");
+        packer.AddPath(MakeSavePath(SavePathType.File, "a.sav"));
+
+        var first = await packer.PackAsync();
+        first.Position = first.Length;
+        var second = await packer.PackAsync();
+
+        Assert.Same(first, second);
+        Assert.Equal(0, second.Position);
+    }
+
+    // ── Install directory / metadata guards ───────────────────────────────────
+
+    [Fact]
+    public async Task AddPath_InstallDirectory_SkipsMetadataAndIsReported()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("game.exe");
+        WriteFile("SaveGame/slot1.sav");
+        WriteFile($".lancommander/{Guid.NewGuid()}/FileList.txt");
+
+        var savePath = MakeSavePath(SavePathType.File, "");
+        packer.AddPath(savePath);
+
+        var keys = EntryKeys(await packer.PackAsync());
+
+        Assert.DoesNotContain(keys, k => k.Contains(".lancommander"));
+        Assert.Contains(keys, k => k.EndsWith("SaveGame/slot1.sav"));
+        Assert.Contains(savePath, packer.InstallDirectorySavePaths);
+    }
+
+    [Fact]
+    public void AddPath_RegexMatchingEverything_IsReported()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("game.exe");
+        WriteFile("SaveGame/slot1.sav");
+        WriteFile($".lancommander/{Guid.NewGuid()}/FileList.txt");
+
+        var savePath = MakeSavePath(SavePathType.File, ".*", isRegex: true);
+        packer.AddPath(savePath);
+
+        Assert.Equal(2, packer.EntryCount);
+        Assert.Contains(savePath, packer.InstallDirectorySavePaths);
+    }
+
+    [Fact]
+    public void AddPath_SaveDirectoryOrNarrowRegex_IsNotReported()
+    {
+        using var packer = new SavePacker(_tempDir);
+        WriteFile("game.exe");
+        WriteFile("SaveGame/slot1.sav");
+
+        packer.AddPath(MakeSavePath(SavePathType.File, "SaveGame"));
+        packer.AddPath(MakeSavePath(SavePathType.File, @"^SaveGame/.*\.sav$", isRegex: true));
+
+        Assert.Empty(packer.InstallDirectorySavePaths);
+    }
+
     // ── Dispose ───────────────────────────────────────────────────────────────
+
+    [Fact]
+    public async Task Dispose_AfterPacking_DoesNotThrow()
+    {
+        var packer = new SavePacker(_tempDir);
+        WriteFile("a.sav");
+        packer.AddPath(MakeSavePath(SavePathType.File, "a.sav"));
+        await packer.PackAsync();
+
+        var ex = Record.Exception(() => packer.Dispose());
+
+        Assert.Null(ex);
+    }
 
     [Fact]
     public void Dispose_DoesNotThrow()

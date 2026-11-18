@@ -2009,7 +2009,15 @@ namespace LANCommander.SDK.Services
             }
         }
 
-        public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)
+        public Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId)
+            => UninstallAsync(installDirectory, gameId, failIfFilesRemain: false);
+
+        /// <param name="failIfFilesRemain">
+        /// When true, throws if any of the game's files couldn't be deleted (e.g. they're in use) and leaves
+        /// its metadata in place, so the game stays installed and the uninstall can be retried. Otherwise
+        /// files that can't be deleted are logged and left behind.
+        /// </param>
+        public async Task<InstallResult> UninstallAsync(string installDirectory, Guid gameId, bool failIfFilesRemain)
         {
             var installResult = new InstallResult(installDirectory, gameId);
             var gameFileList = installResult.FileList;
@@ -2084,6 +2092,8 @@ namespace LANCommander.SDK.Services
 
                 logger?.LogDebug("Attempting to delete the install files");
 
+                var undeletedFiles = new List<(string Path, Exception Exception)>();
+
                 foreach (var file in files.Where(f => f != null && !f.EndsWith("/")))
                 {
                     var localPath = Path.Combine(installDirectory, file);
@@ -2103,7 +2113,17 @@ namespace LANCommander.SDK.Services
                     catch (Exception ex)
                     {
                         logger?.LogWarning(ex, "Could not remove file {LocalPath}", localPath);
+                        undeletedFiles.Add((localPath, ex));
                     }
+                }
+
+                if (failIfFilesRemain && undeletedFiles.Count > 0)
+                {
+                    var (firstPath, firstException) = undeletedFiles[0];
+
+                    throw new IOException(
+                        $"{undeletedFiles.Count} file(s) of {manifest.Title} could not be removed, e.g. {firstPath}. Close anything using the game's files and try again.",
+                        firstException);
                 }
 
                 logger?.LogDebug("Attempting to delete any empty directories");

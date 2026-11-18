@@ -312,13 +312,22 @@ namespace LANCommander.SDK.Services
                 if (manifest?.SavePaths?.Any() ?? false)
                     savePacker.AddPaths(manifest.SavePaths.Where(sp => EnvironmentHelper.SupportsCurrentRuntime(sp.Platforms)));
 
+                foreach (var savePath in savePacker.InstallDirectorySavePaths)
+                    logger?.LogWarning(
+                        "Save path {SavePathId} ({SavePath}) for {GameTitle} ({GameId}) matches the entire install directory, so the whole game is being packed as a save. Check the game's save paths on the server.",
+                        savePath.Id, savePath.Path, manifest.Title, gameId);
+
                 if (savePacker.HasEntries())
                 {
                     logger?.LogDebug("Packing {EntryCount} save entries for game {GameId}", savePacker.EntryCount, gameId);
 
                     await savePacker.AddManifestAsync(manifest);
 
+                    // Packing releases the save files, so they aren't held open during the upload
                     var stream = await savePacker.PackAsync();
+
+                    logger?.LogInformation("Uploading save for game {GameId}: {EntryCount} entries, {Size} bytes",
+                        gameId, savePacker.EntryCount, stream.Length);
 
                     await UploadAsync(stream, manifest);
 

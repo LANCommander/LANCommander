@@ -183,7 +183,9 @@ namespace LANCommander.Launcher.Services
                     var installService = serviceProvider.GetService<InstallService>();
                     installService?.ClearCompleted(game.Id);
 
-                    await gameClient.UninstallAsync(game.InstallDirectory, game.Id);
+                    // Fail rather than mark the game uninstalled when its files are in use, so the
+                    // user sees why and can retry once they're released
+                    await gameClient.UninstallAsync(game.InstallDirectory, game.Id, failIfFilesRemain: true);
 
                     // Only addons that are extracted into the base game's install directory and
                     // aren't shown in the library may clean up orphaned base game files. Addons
@@ -235,6 +237,8 @@ namespace LANCommander.Launcher.Services
                 catch (Exception ex)
                 {
                     Logger?.LogError(ex, "Game {GameTitle} ({GameId}) could not be uninstalled", game.Title, game.Id);
+
+                    throw;
                 }
             }
         }

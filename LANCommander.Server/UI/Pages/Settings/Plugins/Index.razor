@@ -10,10 +10,14 @@
 @inject PluginPackageService PluginPackages
 @inject LauncherPluginCache LauncherPlugins
 @inject LANCommander.Server.Plugins.Data.PluginDataManager PluginData
+@inject LANCommander.SDK.Plugins.PluginLoaderService PluginLoader
+@inject IEnumerable<LANCommander.Server.Plugins.IPluginSettingsExtension> PluginSettingsExtensions
 @inject IOptions<Settings> Settings
 @inject SettingsProvider<Settings> SettingsProvider
 @inject NotificationService Notifications
 @inject DialogService Dialogs
+@inject AlertService Alerts
+@inject ILogger<Index> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
 <PageHeader Title="Plugins">
@@ -120,14 +124,11 @@
                                     </Tooltip>
                                 }
 
-                                @if (context.State is not (PluginInstallState.RemovalPending or PluginInstallState.InstallPending))
-                                {
-                                    <Popconfirm OnConfirm="() => UninstallAsync(context)" Title="@($"Uninstall {context.Name}? It is removed when the server restarts.")" OkText="Uninstall" Danger>
-                                        <Button Text Danger Icon="IconType.Trash" title="Uninstall" />
-                                    </Popconfirm>
-                                }
-
-                                <PluginLinksMenu Name="@context.Name" RepositoryUrl="@context.EffectivePackage?.RepositoryUrl" ProjectUrl="@context.EffectivePackage?.ProjectUrl" />
+                                <PluginActionsMenu Name="@context.Name"
+                                                   RepositoryUrl="@context.EffectivePackage?.RepositoryUrl"
+                                                   ProjectUrl="@context.EffectivePackage?.ProjectUrl"
+                                                   SettingsHref="@SettingsHrefFor(context)"
+                                                   OnUninstall="@(CanUninstall(context) ? EventCallback.Factory.Create(this, () => UninstallAsync(context)) : default)" />
                             </ActionsColumn>
                         </Columns>
                     </Table>
@@ -206,7 +207,7 @@
                                             break;
                                     }
 
-                                    <PluginLinksMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
+                                    <PluginActionsMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
                                 </ActionsColumn>
                             </Columns>
                         </Table>
@@ -267,7 +268,7 @@
                                     <Button Text Danger Icon="IconType.Trash" title="Remove" />
                                 </Popconfirm>
 
-                                <PluginLinksMenu Name="@context.Name" RepositoryUrl="@context.Package.RepositoryUrl" ProjectUrl="@context.Package.ProjectUrl" />
+                                <PluginActionsMenu Name="@context.Name" RepositoryUrl="@context.Package.RepositoryUrl" ProjectUrl="@context.Package.ProjectUrl" />
                             </ActionsColumn>
                         </Columns>
                     </Table>
@@ -332,7 +333,7 @@
                                             break;
                                     }
 
-                                    <PluginLinksMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
+                                    <PluginActionsMenu Name="@context.DisplayName" ProjectUrl="@context.ProjectUrl" />
                                 </ActionsColumn>
                             </Columns>
                         </Table>
@@ -431,6 +432,7 @@
     int _tab;
 
     IReadOnlyList<InstalledPlugin> _installed = [];
+    IReadOnlyDictionary<string, string> _settingsLinks = new Dictionary<string, string>();
     IReadOnlyList<PluginUpdate> _updates = [];
     bool _restartRequired;
     bool _checkingForUpdates;
@@ -473,6 +475,12 @@
             Username = s.Username,
             Password = s.Password,
         }).ToList();
+
+        // Plugins are loaded once at startup, so their settings pages never change while the page is open
+        _settingsLinks = PluginSettingsLinks.Resolve(
+            PluginSettingsExtensions,
+            extension => PluginLoader.FindByAssembly(extension.GetType().Assembly)?.Manifest.Id,
+            Logger);
 
         Refresh();
         RefreshLauncherPlugins();
@@ -578,8 +586,20 @@
         }
     }
 
+    /// <summary>A running plugin's settings page; a stopped one's page could not do its work.</summary>
+    string? SettingsHrefFor(InstalledPlugin plugin) =>
+        plugin.State == PluginInstallState.Loaded && plugin.PluginId != null && _settingsLinks.TryGetValue(plugin.PluginId, out var href)
+            ? href
+            : null;
+
+    static bool CanUninstall(InstalledPlugin plugin) =>
+        plugin.State is not (PluginInstallState.RemovalPending or PluginInstallState.InstallPending);
+
     async Task UninstallAsync(InstalledPlugin plugin)
     {
+        if (!await Alerts.ConfirmAsync($"Uninstall {plugin.Name}? It is removed when the server restarts.", "Uninstall Plugin", "Uninstall", danger: true))
+            return;
+
         try
         {
             await PluginPackages.UninstallAsync(plugin.Folder);

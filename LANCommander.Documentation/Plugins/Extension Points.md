@@ -706,6 +706,29 @@ placed in a section the user cannot see is not shown to them. Place entries mean
 `Main`, `Dashboards`, or the plugin area. An entry whose section is not recognized is shown in the
 plugin area, and a warning is logged.
 
+### Plugin settings pages
+
+A plugin whose only page is a handful of settings doesn't need a navigation entry. Register an
+`IPluginSettingsExtension` instead, and **Settings → Plugins** offers the page as **Settings** in the
+plugin's row menu, alongside its source code and project website:
+
+```csharp
+public sealed class MySettingsExtension : IPluginSettingsExtension
+{
+    public string Href => "/Plugins/MyPlugin/Settings";
+}
+```
+
+```csharp
+services.AddSingleton<IPluginSettingsExtension, MySettingsExtension>();
+```
+
+The link belongs to the plugin whose assembly holds the implementation, so there is no id to declare.
+It is offered only while the plugin is running, not while it is turned off or waiting for a restart.
+`Href` must be a plugin route under `/Plugins/`. A plugin registers at most one: if it registers more,
+none are shown and a warning is logged. The page itself is protected like any other plugin page, and
+with no `[PluginAccess]` only administrators can open it.
+
 ### Page access
 
 Plugin routes are authorized by the server, not by the plugin. A routable plugin component with no

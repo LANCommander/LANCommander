@@ -1,12 +1,22 @@
-@* A plugin row's links off the site: its source code and its project website. Nothing shows when it has neither. *@
-@if (_sourceCode != null || _website != null)
+@* A plugin row's menu: its settings page, its links off the site, and uninstalling it. Nothing shows when there is none of these. *@
+@if (_hasSettings || _hasLinks || _canUninstall)
 {
-    <Dropdown>
+    <Dropdown @ref="_dropdown">
         <ChildContent>
-            <Button Text Icon="IconType.DotsThreeVertical" aria-label="@($"Links for {Name}")" title="Links" />
+            <Button Text Icon="IconType.DotsThreeVertical" aria-label="@($"More actions for {Name}")" title="More actions" />
         </ChildContent>
         <Overlay>
             <Menu>
+                @if (_hasSettings)
+                {
+                    <MenuItem Icon="IconType.Gear" Href="@SettingsHref">Settings</MenuItem>
+                }
+
+                @if (_hasSettings && _hasLinks)
+                {
+                    <MenuDivider />
+                }
+
                 @if (_sourceCode != null)
                 {
                     <MenuItem Icon="IconType.Code" Href="@_sourceCode" NewTab>Source code</MenuItem>
@@ -14,6 +24,16 @@
                 @if (_website != null)
                 {
                     <MenuItem Icon="IconType.Globe" Href="@_website" NewTab>Project website</MenuItem>
+                }
+
+                @if (_canUninstall)
+                {
+                    @if (_hasSettings || _hasLinks)
+                    {
+                        <MenuDivider />
+                    }
+
+                    <MenuItem Icon="IconType.Trash" Danger OnClick="UninstallAsync">Uninstall</MenuItem>
                 }
             </Menu>
         </Overlay>
@@ -30,8 +50,18 @@
     /// <summary>The package's project URL.</summary>
     [Parameter] public string? ProjectUrl { get; set; }
 
+    /// <summary>The plugin's settings page, when it has one and is running.</summary>
+    [Parameter] public string? SettingsHref { get; set; }
+
+    /// <summary>Removes the plugin; the item is offered only when this is set. The handler confirms first.</summary>
+    [Parameter] public EventCallback OnUninstall { get; set; }
+
+    Dropdown? _dropdown;
     string? _sourceCode;
     string? _website;
+    bool _hasSettings;
+    bool _hasLinks;
+    bool _canUninstall;
 
     protected override void OnParametersSet()
     {
@@ -41,6 +71,19 @@
         // Many packages, the official ones among them, give the repository as their project URL too
         if (_website != null && _sourceCode != null && string.Equals(Normalize(_website), Normalize(_sourceCode), StringComparison.OrdinalIgnoreCase))
             _website = null;
+
+        _hasSettings = SettingsHref != null;
+        _hasLinks = _sourceCode != null || _website != null;
+        _canUninstall = OnUninstall.HasDelegate;
+    }
+
+    // The menu closes only after an item's handler returns, so close it before the handler's confirmation opens
+    async Task UninstallAsync()
+    {
+        if (_dropdown != null)
+            await _dropdown.CloseAsync();
+
+        await OnUninstall.InvokeAsync();
     }
 
     /// <summary>A repository URL without the trailing slash or ".git" that often differs from the project URL.</summary>

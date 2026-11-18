@@ -17,6 +17,7 @@ Use the version of the server the plugin targets.
 | `IServerRouteAssemblyExtension` | Registers the assembly holding the plugin's `@page` components |
 | `IServerNavigationExtension` | Adds an entry to the server's navigation |
 | `ServerNavigationSection`, `ServerNavigationAnchor` | Where in the navigation an entry is placed |
+| `IPluginSettingsExtension` | Links the plugin's settings page from its row on Settings → Plugins, instead of the navigation |
 | `PluginAccessAttribute`, `PluginAccessPolicy` | Who may open a plugin page or see its entry |
 | `IServerEndpointExtension` | Adds HTTP endpoints under `/api/Plugins/{RoutePrefix}` |
 | `IMediaGrabberExtension`, `MediaGrabberItem` | Adds a source to the server's media search |

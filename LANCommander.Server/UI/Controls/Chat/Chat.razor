@@ -3,37 +3,84 @@
 @using LANCommander.Server.Hubs
 @inject ServerChatClient ChatClient
 @inject ChatBroadcaster Broadcaster
-@inject DialogService Dialogs
 @inject NotificationService Notifications
-@implements IDisposable
+@inject ChatUnreadState UnreadState
+@inject IJSRuntime JS
+@implements IAsyncDisposable
 
-@* Chat threads down the side, the selected thread's conversation beside them *@
+@* Laid out as the launcher's chat window: the conversations down a canvas-black side column,
+   the open one beside it on the surface, its message box pinned to the bottom *@
 <div class="chat">
-    <div class="chat-list">
-        <Button Primary Block Icon="IconType.ChatCircleDots" OnClick="StartThreadAsync">New Thread</Button>
+    <aside class="chat-sidebar">
+        @if (_creatingThread)
+        {
+            <ChatNewThread Users="_users" OnStart="StartThreadAsync" OnCancel="CancelNewThread" />
+        }
+        else
+        {
+            <div class="chat-sidebar-header">
+                <span class="chat-kicker">Chats</span>
 
-        <Divider />
+                @* Browsers only ask from a click, so the offer stays until it's been answered *@
+                @if (_notificationPermission == "default")
+                {
+                    <Button Text Small Icon="IconType.BellRinging" OnClick="EnableNotificationsAsync" title="Enable notifications" aria-label="Enable notifications" />
+                }
 
-        <ChatList Threads="_threads" CurrentUserId="_userId" @bind-SelectedThread="_thread" />
-    </div>
+                <Button Text Small Icon="IconType.PencilSimpleLine" OnClick="OpenNewThreadAsync" title="New Chat" aria-label="New Chat" />
+            </div>
 
-    @if (_thread != null)
+            @if (_threads.Any())
+            {
+                <ChatList Threads="_threads" CurrentUserId="_userId" @bind-SelectedThread="SelectedThread" />
+            }
+            else
+            {
+                <div class="chat-sidebar-empty">
+                    <Icon Type="IconType.ChatCircleDots" />
+                    <span class="chat-sidebar-empty-title">No conversations yet</span>
+                    <span class="chat-sidebar-empty-hint">Start a new chat using the button above</span>
+                </div>
+            }
+        }
+    </aside>
+
+    @if (SelectedThread != null)
     {
         @* Keyed so switching threads starts a fresh view rather than reusing the last one's messages *@
-        <ChatThread @key="_thread.Id" Id="_thread.Id" />
+        <ChatThread @key="SelectedThread.Id" Id="SelectedThread.Id" />
     }
     else
     {
-        <div class="chat-thread chat-thread-empty">
-            <Empty Description="Pick a thread, or start a new one" Icon="IconType.ChatsCircle" />
-        </div>
+        <section class="chat-thread chat-thread-empty">
+            <Icon Type="IconType.ChatCircle" />
+            <span>Select a conversation</span>
+        </section>
     }
 </div>
 
 @code {
     IEnumerable<SDK.Models.ChatThread> _threads = [];
-    SDK.Models.ChatThread? _thread;
+    IEnumerable<SDK.Models.User> _users = [];
+    SDK.Models.ChatThread? _selectedThread;
+    IJSObjectReference? _module;
+    string? _notificationPermission;
+
+    /// <summary>The conversation to open first, rather than the most recent</summary>
+    [Parameter] public Guid? InitialThreadId { get; set; }
+
+    // Shared with the notifier, so a message in the open conversation isn't announced
+    SDK.Models.ChatThread? SelectedThread
+    {
+        get => _selectedThread;
+        set
+        {
+            _selectedThread = value;
+            UnreadState.OpenThreadId = value?.Id;
+        }
+    }
     Guid? _userId;
+    bool _creatingThread;
 
     protected override async Task OnInitializedAsync()
     {
@@ -43,6 +90,33 @@
         _userId = await ChatClient.GetCurrentUserIdAsync();
 
         await LoadThreadsAsync();
+
+        // Threads come most recently active first, so opening chat lands on the latest conversation
+        SelectedThread ??= _threads.FirstOrDefault(t => t.Id == InitialThreadId) ?? _threads.FirstOrDefault();
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/chat-notifications.js");
+            if (_module != null)
+                _notificationPermission = await _module.InvokeAsync<string>("permission");
+
+            StateHasChanged();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException)
+        {
+        }
+    }
+
+    async Task EnableNotificationsAsync()
+    {
+        if (_module != null)
+            _notificationPermission = await _module.InvokeAsync<string>("requestPermission");
     }
 
     async Task LoadThreadsAsync()
@@ -73,20 +147,32 @@
     void RefreshThreads() => _ = InvokeAsync(async () =>
     {
         await LoadThreadsAsync();
+
+        // A thread started elsewhere (e.g. from a launcher) is opened if nothing else is
+        SelectedThread ??= _threads.FirstOrDefault();
+
         StateHasChanged();
     });
 
-    async Task StartThreadAsync()
+    async Task OpenNewThreadAsync()
     {
-        // Whoever starts a thread is added to it regardless, so they aren't offered themselves
-        var users = (await ChatClient.GetUsersAsync()).Where(u => u.Id != _userId);
-
-        var participants = await Dialogs.OpenAsync<ChatUsersDialog, IEnumerable<SDK.Models.User>, IEnumerable<SDK.Models.User>>("New Thread", users, new DialogSettings
+        try
         {
-            OkText = "Start",
-        });
+            // Whoever starts a thread is added to it regardless, so they aren't offered themselves
+            _users = (await ChatClient.GetUsersAsync()).Where(u => u.Id != _userId).ToList();
+            _creatingThread = true;
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The users could not be loaded");
+        }
+    }
 
-        if (participants == null || !participants.Any())
+    void CancelNewThread() => _creatingThread = false;
+
+    async Task StartThreadAsync(IEnumerable<SDK.Models.User> participants)
+    {
+        if (!participants.Any())
             return;
 
         try
@@ -95,7 +181,8 @@
 
             await LoadThreadsAsync();
 
-            _thread = _threads.FirstOrDefault(t => t.Id == threadId) ?? await ChatClient.GetThreadAsync(threadId);
+            SelectedThread = _threads.FirstOrDefault(t => t.Id == threadId) ?? await ChatClient.GetThreadAsync(threadId);
+            _creatingThread = false;
         }
         catch (Exception ex)
         {
@@ -103,9 +190,20 @@
         }
     }
 
-    public void Dispose()
+    public async ValueTask DisposeAsync()
     {
         Broadcaster.MessageSent -= OnMessageSent;
         Broadcaster.ParticipantAdded -= OnParticipantAdded;
+
+        UnreadState.OpenThreadId = null;
+
+        try
+        {
+            if (_module != null)
+                await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
     }
 }

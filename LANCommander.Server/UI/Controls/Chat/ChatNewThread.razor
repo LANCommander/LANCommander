@@ -1,0 +1,65 @@
+@namespace LANCommander.Server.UI.Controls
+
+@* Picks who to start a thread with, in place of the thread list as the launcher does *@
+<div class="chat-new-thread">
+    <div class="chat-sidebar-header">
+        <span class="chat-new-thread-title">New Chat</span>
+        <Button Text Small Icon="IconType.X" OnClick="OnCancel" title="Cancel" aria-label="Cancel" />
+    </div>
+
+    <div class="chat-new-thread-search">
+        <TextInput @bind-Value="_search" Immediate Icon="IconType.MagnifyingGlass" Placeholder="Search users…" AutoFocus />
+    </div>
+
+    <div class="chat-users">
+        @foreach (var user in Filtered)
+        {
+            <label class="chat-user" @key="user.Id">
+                <Checkbox Value="_selected.Contains(user)" ValueChanged="selected => Toggle(user, selected)" />
+                <Avatar Small Square Name="@user.Name" ColorKey="@user.Id.ToString()" Src="@ChatAvatar.Url(user.UserName)" />
+                <span class="chat-user-name">@user.Name</span>
+            </label>
+        }
+    </div>
+
+    <div class="chat-new-thread-footer">
+        <Button Primary Block Icon="IconType.ChatCircleDots" Disabled="!_selected.Any()" Loading="_starting" OnClick="StartAsync">Start Chat</Button>
+    </div>
+</div>
+
+@code {
+    /// <summary>Who can be added, without the viewer, who joins every thread they start</summary>
+    [Parameter, EditorRequired] public IEnumerable<SDK.Models.User> Users { get; set; } = [];
+
+    [Parameter] public EventCallback<IEnumerable<SDK.Models.User>> OnStart { get; set; }
+    [Parameter] public EventCallback OnCancel { get; set; }
+
+    string? _search = "";
+    bool _starting;
+    readonly HashSet<SDK.Models.User> _selected = new();
+
+    IEnumerable<SDK.Models.User> Filtered =>
+        Users.Where(u => string.IsNullOrWhiteSpace(_search) || u.Name?.Contains(_search, StringComparison.OrdinalIgnoreCase) == true);
+
+    void Toggle(SDK.Models.User user, bool selected)
+    {
+        if (selected)
+            _selected.Add(user);
+        else
+            _selected.Remove(user);
+    }
+
+    async Task StartAsync()
+    {
+        _starting = true;
+
+        try
+        {
+            await OnStart.InvokeAsync(_selected.ToList());
+        }
+        finally
+        {
+            _starting = false;
+        }
+    }
+}

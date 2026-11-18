@@ -1,10 +1,14 @@
 ﻿@page "/Chat"
 @attribute [Authorize]
 
-<PageHeader Title="Chat" />
+@* The conversation fills the window under the header, so the message box never scrolls away *@
+<div class="chat-page">
+    <PageHeader Title="Chat" />
 
-<Chat />
+    <Chat InitialThreadId="Thread" />
+</div>
 
 @code {
-
+    /// <summary>The conversation to open, e.g. from a clicked notification</summary>
+    [SupplyParameterFromQuery] public Guid? Thread { get; set; }
 }

@@ -20,6 +20,9 @@ public class ServerChatClient(
     SdkMapper sdkMapper,
     ILogger<ServerChatClient> logger) : IChatClient
 {
+    // The server UI hears about new threads through ChatBroadcaster.ParticipantAdded instead
+    public event Action<ChatThread>? ThreadAdded { add { } remove { } }
+
     /// <summary>The signed-in user's ID, or null for an anonymous circuit</summary>
     public async Task<Guid?> GetCurrentUserIdAsync()
     {

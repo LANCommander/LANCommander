@@ -4,29 +4,19 @@
 
 @* One thread in the list: who is in it, its title and how many messages are unread.
    The list reloads its threads whenever a message arrives, which refreshes the count *@
-<button type="button" class="@_class" role="listitem" aria-current="@(Active ? "true" : null)" @onclick="SelectAsync">
-    @if (_others.Count == 1)
-    {
-        var participant = _others[0];
-
-        <Avatar Square Large Name="@participant.Name" Src="@ChatAvatar.Url(participant.UserName)" />
-    }
-    else
-    {
-        <AvatarGroup Overflow="@Math.Max(0, _others.Count - 3)">
-            @foreach (var participant in _others.Take(3))
-            {
-                <Avatar Name="@participant.Name" Src="@ChatAvatar.Url(participant.UserName)" />
-            }
-        </AvatarGroup>
-    }
+<button type="button" class="@CssClass" role="listitem" aria-current="@(Active ? "true" : null)" @onclick="SelectAsync">
+    <AvatarGroup Class="chat-list-thread-avatars" Overflow="@Math.Max(0, _others.Count - 3)">
+        @foreach (var participant in _others.Take(3))
+        {
+            <Avatar Small Square Name="@participant.Name" ColorKey="@participant.Id.ToString()" Src="@ChatAvatar.Url(participant.UserName)" />
+        }
+    </AvatarGroup>
 
     <span class="chat-list-thread-title">@_title</span>
 
-    @* The open thread is being read, so it has nothing unread to point out *@
-    @if (_unreadCount > 0 && !Active)
+    @if (HasUnread)
     {
-        <Tag Primary Class="chat-list-thread-unread">@(_unreadCount > 99 ? "99+" : _unreadCount.ToString())</Tag>
+        <span class="chat-unread">@(_unreadCount > 99 ? "99+" : _unreadCount.ToString())</span>
     }
 </button>
 
@@ -39,17 +29,21 @@
     [Parameter] public Guid? CurrentUserId { get; set; }
 
     int _unreadCount;
-    string? _class;
     List<SDK.Models.User> _others = [];
     string? _title;
 
+    // The open thread is being read, so it has nothing unread to point out
+    bool HasUnread => _unreadCount > 0 && !Active;
+
+    // Built at render, after the unread count has come back
+    string? CssClass => new ClassBuilder()
+        .Add("chat-list-thread")
+        .If(Active, "chat-list-thread-active")
+        .If(HasUnread, "chat-list-thread-unread")
+        .Build();
+
     protected override async Task OnParametersSetAsync()
     {
-        _class = new ClassBuilder()
-            .Add("chat-list-thread")
-            .If(Active, "chat-list-thread-active")
-            .Build();
-
         _others = Thread.Participants.Where(p => p.Id != CurrentUserId).ToList();
 
         // A thread with only the viewer in it still shows them rather than nothing

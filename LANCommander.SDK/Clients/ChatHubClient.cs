@@ -117,9 +117,16 @@ public class ChatHubClient : IChatClient, IChatHubClient, IDisposable
         return threadId;
     }
 
+    public event Action<ChatThread>? ThreadAdded;
+
     public async Task AddedToThreadAsync(ChatThread thread)
     {
+        var isNew = !_threads.ContainsKey(thread.Id);
+
         _threads[thread.Id] = thread;
+
+        if (isNew)
+            ThreadAdded?.Invoke(thread);
     }
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()

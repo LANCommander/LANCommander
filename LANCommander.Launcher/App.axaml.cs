@@ -399,6 +399,9 @@ public partial class App : Application
         });
         services.AddSingleton<NotificationService>();
         services.AddSingleton<TaskbarProgressService>();
+        services.AddSingleton<TaskbarAttentionService>();
+        services.AddSingleton<NotificationSoundPlayer>();
+        services.AddSingleton<ChatAvatarCache>();
         services.AddSingleton<SingleInstanceService>();
         services.AddSingleton<ProtocolRequestHandler>();
         services.AddSingleton<INavigationService, NavigationService>();

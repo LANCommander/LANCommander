@@ -217,6 +217,10 @@ public partial class ShellViewModel : ViewModelBase
 
     public bool HasUnreadChat => ChatUnreadCount > 0;
 
+    // Mirrored on the taskbar button, as Discord does
+    partial void OnChatUnreadCountChanged(int value) =>
+        _serviceProvider.GetService<TaskbarAttentionService>()?.SetBadge(value);
+
     [ObservableProperty]
     private bool _isNavigating;
 
@@ -280,6 +284,14 @@ public partial class ShellViewModel : ViewModelBase
             if (e.PropertyName == nameof(ChatWindowViewModel.TotalUnreadCount))
                 ChatUnreadCount = Chat.TotalUnreadCount;
         };
+
+        Chat.OpenRequested += (_, _) => OpenChatRequested?.Invoke(this, EventArgs.Empty);
+        Chat.MessageReceivedWhileInactive += (_, _) => ChatMessageReceivedWhileInactive?.Invoke(this, EventArgs.Empty);
+
+        // Listened to from the start, not just once the window is opened, so messages are
+        // counted and notified while the user is elsewhere in the launcher
+        if (!IsOfflineMode)
+            _ = Chat.LoadThreadsAsync();
 
         DepotViewModel.IsOfflineMode           = IsOfflineMode;
         DepotBrowseViewModel.IsOfflineMode     = IsOfflineMode;
@@ -836,14 +848,19 @@ public partial class ShellViewModel : ViewModelBase
         if (Chat == null)
             return;
 
-        // Lazy-load threads on first open
+        // Loaded at startup; this catches a launcher that started offline
         await Chat.LoadThreadsAsync();
+
+        Chat.SelectMostRecentThread();
 
         // Raise event so the view layer can show the window
         OpenChatRequested?.Invoke(this, EventArgs.Empty);
     }
 
     public event EventHandler? OpenChatRequested;
+
+    /// <summary>Someone else's message arrived while the chat window wasn't focused</summary>
+    public event EventHandler? ChatMessageReceivedWhileInactive;
 }
 
 /// <summary>The left rail shown beside the shell's content.</summary>

@@ -1,37 +1,87 @@
-// Chat (UI/Controls/Chat)
+// Chat (UI/Controls/Chat), laid out as the launcher's chat window (ChatWindow.axaml):
+// a canvas-black column of conversations with a hairline down its edge, and the open
+// conversation on the #141414 surface with its message box pinned to the bottom.
+
+$chat-mobile-breakpoint: 767px;
+$chat-mobile-header-height: 53px; // .lc-mobile-header: 28px logo + 2 * 12px padding + its hairline
+
+// The page fills the window, so the conversation scrolls inside it rather than the page growing
+.chat-page {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    height: 100dvh;
+
+    @media (max-width: $chat-mobile-breakpoint) {
+        height: calc(100dvh - #{$chat-mobile-header-height});
+    }
+}
+
 .chat {
     display: flex;
-    height: 100%;
+    flex: 1 1 0;
     min-height: 0;
 }
 
-.chat-list {
+// ── Conversations ────────────────────────────────────────────────────────
+
+.chat-sidebar {
     display: flex;
+    flex: 0 0 260px;
     flex-direction: column;
-    flex: 0 0 280px;
-    padding: 0 1em 1em;
     min-height: 0;
+    background: var(--lc-canvas);
+    border-inline-end: 1px solid var(--lc-border-color);
+
+    @media (max-width: $chat-mobile-breakpoint) {
+        flex-basis: 200px;
+    }
+}
+
+.chat-sidebar-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    height: 45px;
+    padding: 0 8px 0 14px;
+    border-bottom: 1px solid var(--lc-border-color);
+}
+
+.chat-kicker {
+    color: var(--lc-text-tertiary-color);
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    letter-spacing: var(--lc-kicker-tracking);
+    text-transform: uppercase;
 }
 
 .chat-list-threads {
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
     gap: 2px;
+    min-height: 0;
+    padding: 4px;
     overflow-y: auto;
 }
 
 .chat-list-thread {
+    position: relative;
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 8px;
     width: 100%;
-    padding: 8px;
+    padding: 7px 10px;
     border: none;
-    border-radius: var(--lc-border-radius);
+    border-radius: var(--lc-radius-md);
     background: none;
     color: var(--lc-text-color);
     font: inherit;
-    text-align: left;
+    font-size: 13px;
+    text-align: start;
     cursor: pointer;
 
     &:hover {
@@ -39,103 +89,135 @@
     }
 
     &:focus-visible {
-        outline: 2px solid var(--lc-primary);
+        outline: 2px solid var(--lc-accent-text-color);
         outline-offset: -2px;
+    }
+
+    // Stacked avatars sit on the canvas, so their separating ring is canvas too
+    .lc-avatar-group > .lc-avatar {
+        box-shadow: 0 0 0 2px var(--lc-canvas);
     }
 }
 
+// Selected: raised, with the 2px accent rail the launcher's lists carry
 .chat-list-thread-active {
-    background: var(--lc-hover-background);
+    background: var(--lc-raised);
     color: var(--lc-text-title-color);
+
+    &:hover {
+        background: var(--lc-raised);
+    }
+
+    &::before {
+        content: "";
+        position: absolute;
+        top: 6px;
+        bottom: 6px;
+        left: 0;
+        width: var(--lc-selection-rail);
+        border-radius: 1px;
+        background: var(--lc-selection-rail-color);
+    }
+
+    .lc-avatar-group > .lc-avatar {
+        box-shadow: 0 0 0 2px var(--lc-raised);
+    }
+}
+
+.chat-list-thread-unread .chat-list-thread-title {
+    color: var(--lc-text-title-color);
+    font-weight: 600;
+}
+
+.chat-list-thread-avatars {
+    flex-shrink: 0;
 }
 
 .chat-list-thread-title {
-    flex-grow: 1;
+    flex: 1;
+    min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
-.chat-thread {
-    display: flex;
-    flex-direction: column;
-    flex-grow: 1;
-    height: 100%;
-    min-height: 0;
-    background: var(--lc-body-background);
+.chat-unread {
+    flex-shrink: 0;
+    padding: 1px 6px;
+    border-radius: 8px;
+    background: var(--lc-primary);
+    color: #FFFFFF;
+    font-size: var(--lc-kicker-size);
+    font-weight: 600;
+    line-height: 16px;
 }
 
-.chat-thread-empty {
+.chat-sidebar-empty {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-}
+    gap: 8px;
+    padding: 12px;
+    text-align: center;
 
-.chat-thread-messages {
-    display: flex;
-    flex-direction: column;
-    flex: 1 1 0;
-    min-height: 0;
-    padding: 1em;
-    overflow: hidden;
-
-    .infinite-scroll {
-        flex: 1 1 0;
-        min-height: 0;
-        overflow-x: hidden;
-        overflow-y: auto;
+    .lc-icon {
+        font-size: 32px;
+        opacity: .25;
     }
 }
 
-.chat-message-group {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 8px;
+.chat-sidebar-empty-title {
+    color: var(--lc-text-tertiary-color);
+    font-size: 13px;
 }
 
-.chat-message-group-body {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-}
-
-.chat-message-author {
-    font-weight: 600;
-    color: var(--lc-text-title-color);
-}
-
-.chat-message-timestamp {
+.chat-sidebar-empty-hint {
+    color: var(--lc-text-disabled-color);
     font-size: 12px;
-    color: var(--lc-text-secondary-color);
 }
 
-.chat-message p {
-    margin-bottom: .25em;
+// New chat: the user picker takes the list's place
+.chat-new-thread {
+    display: flex;
+    flex: 1;
+    flex-direction: column;
+    min-height: 0;
 }
 
-.chat-message-input {
-    flex: 0 0 auto;
+.chat-new-thread-title {
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+    font-weight: 600;
+}
 
-    .EasyMDEContainer .CodeMirror {
-        margin: .5em;
-        border: none;
-        border-radius: 0;
-        background: var(--lc-panel-background);
+.chat-new-thread-search {
+    flex-shrink: 0;
+    padding: 8px;
+
+    > * {
+        width: 100%;
     }
 }
 
 .chat-users {
     display: flex;
+    flex: 1 1 0;
     flex-direction: column;
-    max-height: 400px;
+    min-height: 0;
+    padding: 0 4px;
     overflow-y: auto;
 }
 
 .chat-user {
     display: flex;
+    flex-shrink: 0;
     align-items: center;
     gap: 8px;
     padding: 6px 8px;
-    border-radius: var(--lc-border-radius);
+    border-radius: var(--lc-radius-md);
+    font-size: 13px;
     cursor: pointer;
 
     &:hover {
@@ -144,5 +226,171 @@
 }
 
 .chat-user-name {
-    flex-grow: 1;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-new-thread-footer {
+    flex-shrink: 0;
+    padding: 8px;
+    border-top: 1px solid var(--lc-border-color);
+}
+
+// ── The open conversation ────────────────────────────────────────────────
+
+.chat-thread {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-width: 0;
+    min-height: 0;
+    background: var(--lc-well);
+}
+
+.chat-thread-empty {
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--lc-text-tertiary-color);
+
+    .lc-icon {
+        font-size: 44px;
+        opacity: .25;
+    }
+}
+
+.chat-thread-header {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    gap: 8px;
+    height: 45px;
+    padding: 0 14px;
+    border-bottom: 1px solid var(--lc-border-color);
+
+    .lc-avatar-group > .lc-avatar {
+        box-shadow: 0 0 0 2px var(--lc-well);
+    }
+}
+
+.chat-thread-title {
+    min-width: 0;
+    overflow: hidden;
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+    font-weight: 600;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.chat-thread-messages {
+    display: flex;
+    flex: 1 1 0;
+    flex-direction: column;
+    min-height: 0;
+    overflow: hidden;
+
+    .infinite-scroll {
+        flex: 1 1 0;
+        min-height: 0;
+        padding: 8px 0 4px;
+        overflow-x: hidden;
+        overflow-y: auto;
+    }
+}
+
+.chat-message-group {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 4px 14px 8px;
+}
+
+.chat-message-group-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.chat-message-avatar {
+    --lc-avatar-size: 28px;
+}
+
+.chat-message-author {
+    color: var(--lc-text-title-color);
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.chat-message-timestamp {
+    color: var(--lc-text-tertiary-color);
+    font-family: var(--lc-font-mono);
+    font-size: 11px;
+}
+
+// Messages line up under the author's name, clear of the avatar
+.chat-message-group-body {
+    min-width: 0;
+    padding-inline-start: 36px;
+}
+
+.chat-message {
+    color: var(--lc-text-secondary-color);
+    font-size: 13px;
+    overflow-wrap: anywhere;
+
+    p {
+        margin: 1px 0;
+    }
+}
+
+// Always on screen: a hairline above, the editor styled as an input, the send button beside it
+.chat-message-input {
+    display: flex;
+    flex-shrink: 0;
+    align-items: flex-end;
+    gap: 8px;
+    padding: 8px 10px;
+    border-top: 1px solid var(--lc-border-color);
+    background: var(--lc-well);
+
+    > .lc-button,
+    > .rz-button {
+        flex-shrink: 0;
+    }
+
+    // The editor's wrapper (or the container itself) takes the width beside the button
+    .chat-message-input-editor,
+    .EasyMDEContainer {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .EasyMDEContainer .CodeMirror {
+        min-height: 0;
+        max-height: 120px;
+        padding: 6px 10px;
+        border: 1px solid var(--lc-border-overlay-color);
+        border-radius: var(--lc-radius-md);
+        background: var(--lc-canvas);
+        color: var(--lc-text-color);
+        font-family: var(--lc-font-family);
+        font-size: 13px;
+    }
+
+    .EasyMDEContainer .CodeMirror-placeholder {
+        color: var(--lc-text-tertiary-color) !important;
+    }
+
+    .EasyMDEContainer .CodeMirror-focused {
+        border-color: var(--lc-accent-text-color);
+    }
+
+    .EasyMDEContainer .CodeMirror-scroll {
+        min-height: 0 !important;
+        max-height: 106px;
+    }
 }

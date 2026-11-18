@@ -7,11 +7,27 @@
 @inject ServerChatClient ChatClient
 @inject ChatBroadcaster Broadcaster
 @inject NotificationService Notifications
+@inject ChatUnreadState UnreadState
 @implements IDisposable
 
-@* The messages of one thread, loaded as they scroll into view, above the box to write a new one.
+@* One thread, as the launcher shows it: who is in it across the top, the messages (loaded as they
+   scroll into view) in the middle and the box to write a new one pinned to the bottom.
    Its parent keys it by thread, so one instance only ever shows one thread *@
-<div class="chat-thread">
+<section class="chat-thread">
+    <header class="chat-thread-header">
+        @if (_thread != null)
+        {
+            <AvatarGroup Class="chat-thread-header-avatars" Overflow="@Math.Max(0, _others.Count - 3)">
+                @foreach (var participant in _others.Take(3))
+                {
+                    <Avatar Small Square Name="@participant.Name" ColorKey="@participant.Id.ToString()" Src="@ChatAvatar.Url(participant.UserName)" />
+                }
+            </AvatarGroup>
+
+            <span class="chat-thread-title">@_title</span>
+        }
+    </header>
+
     <div class="chat-thread-messages">
         @if (_thread != null)
         {
@@ -34,8 +50,12 @@
         }
     </div>
 
-    <ChatMessageInput ThreadId="@Id" Placeholder="@_placeholder" />
-</div>
+    @* Created once the thread is known: the editor only takes its placeholder when it starts *@
+    @if (_thread != null)
+    {
+        <ChatMessageInput ThreadId="@Id" Placeholder="@_placeholder" />
+    }
+</section>
 
 @code {
     [Parameter, EditorRequired] public Guid Id { get; set; }
@@ -47,6 +67,8 @@
     static readonly TimeSpan MaxGroupGap = TimeSpan.FromMinutes(5);
 
     SDK.Models.ChatThread? _thread;
+    List<SDK.Models.User> _others = [];
+    string? _title;
     string? _placeholder;
     InfiniteLoader<SDK.Models.ChatMessageGroup>? _infiniteLoader;
     readonly HashSet<Guid> _loadedMessageIds = new();
@@ -60,9 +82,18 @@
             _thread = await ChatClient.GetThreadAsync(Id);
 
             var userId = await ChatClient.GetCurrentUserIdAsync();
-            var others = _thread.Participants.Where(p => p.Id != userId).Select(p => p.Name).ToList();
 
-            _placeholder = $"Message {(string.IsNullOrWhiteSpace(_thread.Name) && others.Count > 0 ? string.Join(", ", others) : _thread.Title)}";
+            _others = _thread.Participants.Where(p => p.Id != userId).ToList();
+
+            // A thread with only the viewer in it still shows them rather than nothing
+            if (_others.Count == 0)
+                _others = _thread.Participants.ToList();
+
+            _title = string.IsNullOrWhiteSpace(_thread.Name)
+                ? string.Join(", ", _others.Select(p => p.Name))
+                : _thread.Name;
+
+            _placeholder = $"Message {_title}";
         }
         catch (Exception ex)
         {
@@ -83,6 +114,7 @@
 
                 // It's on screen, so it's been read
                 await ChatClient.UpdatedReadStatus(Id);
+                await UnreadState.RefreshAsync();
 
                 await OnMessageReceived.InvokeAsync();
             }
@@ -136,7 +168,10 @@
             .ToList();
 
         if (messages.Count > 0)
+        {
             await ChatClient.UpdatedReadStatus(Id);
+            await UnreadState.RefreshAsync();
+        }
 
         return new InfiniteResponse<SDK.Models.ChatMessageGroup>
         {

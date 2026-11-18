@@ -4,14 +4,17 @@
 @inject IChatClient ChatClient
 @inject NotificationService Notifications
 
-@* Writes a message in Markdown; Enter sends it, Ctrl+Enter starts a new line *@
-<EasyMdeEditor @bind-Value="_message"
-               Class="chat-message-input"
-               InterceptKeys="_keys"
-               OnKey="HandleKeyAsync"
-               ReadOnly="_sending"
-               Placeholder="@Placeholder"
-               Options="_options" />
+@* Writes a message in Markdown beside a send button; Enter sends it, Ctrl+Enter starts a new line *@
+<div class="chat-message-input">
+    <EasyMdeEditor @bind-Value="_message"
+                   Class="chat-message-input-editor"
+                   InterceptKeys="_keys"
+                   OnKey="HandleKeyAsync"
+                   ReadOnly="_sending"
+                   Options="_options" />
+
+    <Button Primary Icon="IconType.PaperPlaneTilt" OnClick="SendAsync" Disabled="ThreadId == null" title="Send" aria-label="Send" />
+</div>
 
 @code {
     [Parameter] public Guid? ThreadId { get; set; }
@@ -20,11 +23,15 @@
     string _message = string.Empty;
     bool _sending;
 
-    readonly EasyMdeOptions _options = new()
+    EasyMdeOptions _options = new();
+
+    // The editor reads its placeholder from the options, once, when it starts
+    protected override void OnInitialized() => _options = new()
     {
         MinHeight = "0px",
         Toolbar = EasyMdeToolbar.Disabled,
         Status = EasyMdeStatus.Disabled,
+        Placeholder = Placeholder,
     };
 
     readonly EasyMdeKeyRegistration[] _keys =

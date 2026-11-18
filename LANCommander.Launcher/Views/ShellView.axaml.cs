@@ -18,7 +18,6 @@ public partial class ShellView : UserControl
     private ChatWindow? _chatWindow;
     private ShellViewModel? _previousVm;
     private System.ComponentModel.PropertyChangedEventHandler? _chatPropertyChangedHandler;
-    private EventHandler<(string threadTitle, string senderName)>? _chatMessageReceivedHandler;
 
     public ShellView()
     {
@@ -40,11 +39,15 @@ public partial class ShellView : UserControl
         DataContextChanged += (_, _) =>
         {
             if (_previousVm != null)
+            {
                 _previousVm.OpenChatRequested -= OnOpenChatRequested;
+                _previousVm.ChatMessageReceivedWhileInactive -= OnChatMessageReceivedWhileInactive;
+            }
 
             if (DataContext is ShellViewModel vm)
             {
                 vm.OpenChatRequested += OnOpenChatRequested;
+                vm.ChatMessageReceivedWhileInactive += OnChatMessageReceivedWhileInactive;
                 _previousVm = vm;
             }
         };
@@ -166,30 +169,31 @@ public partial class ShellView : UserControl
             };
             vm.Chat.PropertyChanged += _chatPropertyChangedHandler;
 
-            // When a message arrives while the window is inactive, activate it
-            _chatMessageReceivedHandler = (_, _) =>
-            {
-                if (!_chatWindow.IsVisible)
-                    return; // only activate, don't show — the notification handles that
-                Dispatcher.UIThread.InvokeAsync(_chatWindow.Activate);
-            };
-            vm.Chat.MessageReceivedWhileInactive += _chatMessageReceivedHandler;
-
             _chatWindow.Closed += (_, _) =>
             {
                 if (_chatPropertyChangedHandler != null)
                     vm.Chat.PropertyChanged -= _chatPropertyChangedHandler;
-                if (_chatMessageReceivedHandler != null)
-                    vm.Chat.MessageReceivedWhileInactive -= _chatMessageReceivedHandler;
                 _chatPropertyChangedHandler = null;
-                _chatMessageReceivedHandler = null;
                 _chatWindow = null;
             };
         }
 
         if (_chatWindow.IsVisible)
+        {
+            // Restored first: Activate alone leaves a minimized window on the taskbar
+            if (_chatWindow.WindowState == WindowState.Minimized)
+                _chatWindow.WindowState = WindowState.Normal;
+
             _chatWindow.Activate();
+        }
         else
             _chatWindow.Show();
     }
+
+    /// <summary>
+    /// Flashes the taskbar button of the chat window when it's open, otherwise the launcher's,
+    /// rather than pulling either in front of whatever the user is doing
+    /// </summary>
+    private void OnChatMessageReceivedWhileInactive(object? sender, EventArgs e) =>
+        App.Services?.GetService<TaskbarAttentionService>()?.Flash(_chatWindow is { IsVisible: true } ? _chatWindow : null);
 }

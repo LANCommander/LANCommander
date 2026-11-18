@@ -1,0 +1,135 @@
+@namespace LANCommander.Server.UI.Controls
+@using LANCommander.Server.Clients
+@using LANCommander.Server.Hubs
+@inject ServerChatClient ChatClient
+@inject ChatBroadcaster Broadcaster
+@inject ChatUnreadState UnreadState
+@inject IJSRuntime JS
+@inject ILogger<ChatNotifier> Logger
+@implements IAsyncDisposable
+
+@* Announces chat messages wherever the user is in the server UI, as the launcher does: a chime,
+   a desktop notification with the sender's avatar while the tab isn't focused, and the unread
+   count on the tab. Renders nothing *@
+
+@code {
+    Guid? _userId;
+    IJSObjectReference? _module;
+
+    protected override async Task OnInitializedAsync()
+    {
+        _userId = await ChatClient.GetCurrentUserIdAsync();
+
+        if (_userId == null)
+            return;
+
+        Broadcaster.MessageSent += OnMessageSent;
+        Broadcaster.ParticipantAdded += OnParticipantAdded;
+        UnreadState.Changed += OnUnreadChanged;
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _userId == null)
+            return;
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/chat-notifications.js");
+
+            await UnreadState.RefreshAsync();
+            await _module.InvokeVoidAsync("setUnread", UnreadState.UnreadCount);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException)
+        {
+            // The tab closed while starting up
+        }
+    }
+
+    void OnMessageSent(Guid threadId, SDK.Models.ChatMessage message, IReadOnlyCollection<Guid> participantIds)
+    {
+        if (_userId is not { } userId || !participantIds.Contains(userId) || message.UserId == userId)
+            return;
+
+        _ = InvokeAsync(() => AnnounceAsync(threadId, message));
+    }
+
+    void OnParticipantAdded(SDK.Models.ChatThread thread, Guid userId)
+    {
+        if (userId == _userId)
+            _ = InvokeAsync(UnreadState.RefreshAsync);
+    }
+
+    async Task AnnounceAsync(Guid threadId, SDK.Models.ChatMessage message)
+    {
+        if (_module == null)
+            return;
+
+        try
+        {
+            var focused = await _module.InvokeAsync<bool>("isFocused");
+
+            // On screen, so it's being read rather than arriving
+            if (focused && UnreadState.OpenThreadId == threadId)
+                return;
+
+            await _module.InvokeVoidAsync("playSound");
+
+            if (!focused)
+            {
+                var thread = await ChatClient.GetThreadAsync(threadId);
+
+                // Shown by alias where they have one; avatars are keyed by username
+                var senderName = thread.Participants.FirstOrDefault(p => p.Id == message.UserId)?.Name ?? message.UserName;
+                var others = thread.Participants.Where(p => p.Id != _userId).Select(p => p.Name).ToList();
+                var threadTitle = string.IsNullOrWhiteSpace(thread.Name) ? string.Join(", ", others) : thread.Name;
+
+                var title = string.Equals(threadTitle, senderName, StringComparison.OrdinalIgnoreCase)
+                    ? senderName
+                    : $"{senderName} in {threadTitle}";
+
+                var body = message.Content.Length > 120 ? message.Content[..117] + "…" : message.Content;
+
+                await _module.InvokeVoidAsync("notify", title, body, ChatAvatar.Url(message.UserName), $"/Chat?thread={threadId}", threadId.ToString());
+            }
+
+            await UnreadState.RefreshAsync();
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException)
+        {
+            // The tab has gone
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not announce a chat message");
+        }
+    }
+
+    void OnUnreadChanged() => _ = InvokeAsync(async () =>
+    {
+        try
+        {
+            if (_module != null)
+                await _module.InvokeVoidAsync("setUnread", UnreadState.UnreadCount);
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException)
+        {
+        }
+    });
+
+    public async ValueTask DisposeAsync()
+    {
+        Broadcaster.MessageSent -= OnMessageSent;
+        Broadcaster.ParticipantAdded -= OnParticipantAdded;
+        UnreadState.Changed -= OnUnreadChanged;
+
+        try
+        {
+            if (_module != null)
+                await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

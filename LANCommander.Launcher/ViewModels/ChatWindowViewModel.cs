@@ -7,7 +7,6 @@ using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
-using LANCommander.Launcher.Services;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -22,6 +21,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     private IChatClient? _chatClient;
     private AuthenticationService? _authenticationService;
     private NotificationService? _notificationService;
+    private ChatAvatarCache? _avatarCache;
     private bool _initialized;
 
     // ── Thread list ──────────────────────────────────────────────────────────
@@ -72,8 +72,11 @@ public partial class ChatWindowViewModel : ViewModelBase
     /// <summary>Set by the window code-behind when it gains/loses activation.</summary>
     public bool IsWindowActive { get; set; }
 
-    /// <summary>Fired when a message arrives while the chat window is inactive.</summary>
+    /// <summary>Fired when someone else's message arrives while the chat window is inactive.</summary>
     public event EventHandler<(string threadTitle, string senderName)>? MessageReceivedWhileInactive;
+
+    /// <summary>Asks for the chat window to be shown, e.g. from a clicked notification.</summary>
+    public event EventHandler? OpenRequested;
 
     public ChatWindowViewModel(IServiceProvider serviceProvider)
     {
@@ -88,12 +91,36 @@ public partial class ChatWindowViewModel : ViewModelBase
             _chatClient = _serviceProvider.GetRequiredService<IChatClient>();
             _authenticationService = _serviceProvider.GetRequiredService<AuthenticationService>();
             _notificationService = _serviceProvider.GetService<NotificationService>();
+            _avatarCache = _serviceProvider.GetService<ChatAvatarCache>();
+
+            _chatClient.ThreadAdded += OnThreadAdded;
         }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Failed to resolve ChatClient");
         }
     }
+
+    /// <summary>
+    /// Opens the most recently active conversation if none is open yet. Done when the window opens
+    /// rather than when threads load, since opening one marks it read.
+    /// </summary>
+    public void SelectMostRecentThread()
+    {
+        if (SelectedThread == null && Threads.Count > 0)
+            SelectedThread = Threads[0];
+    }
+
+    /// <summary>Someone started a thread with this user; listen to it like the rest</summary>
+    private void OnThreadAdded(ChatThread thread) => Dispatcher.UIThread.Post(() =>
+    {
+        if (Threads.Any(t => t.Thread.Id == thread.Id))
+            return;
+
+        Threads.Insert(0, WrapThread(thread));
+
+        OnPropertyChanged(nameof(HasThreads));
+    });
 
     public async Task LoadThreadsAsync(bool force = false)
     {
@@ -119,12 +146,11 @@ public partial class ChatWindowViewModel : ViewModelBase
                     Threads.Add(WrapThread(thread));
 
                 OnPropertyChanged(nameof(HasThreads));
-
-                if (SelectedThread == null && Threads.Count > 0)
-                    SelectedThread = Threads[0];
             });
 
             _initialized = true;
+
+            await LoadUnreadCountsAsync();
         }
         catch (Exception ex)
         {
@@ -134,6 +160,33 @@ public partial class ChatWindowViewModel : ViewModelBase
         {
             IsLoading = false;
         }
+    }
+
+    /// <summary>What arrived while the launcher was closed, so the badges start out right</summary>
+    private async Task LoadUnreadCountsAsync()
+    {
+        if (_chatClient == null)
+            return;
+
+        foreach (var threadVm in Threads.ToList())
+        {
+            // The open thread is being read
+            if (threadVm == SelectedThread)
+                continue;
+
+            try
+            {
+                var count = await _chatClient.GetUnreadMessageCountAsync(threadVm.Thread.Id);
+
+                await Dispatcher.UIThread.InvokeAsync(() => threadVm.UnreadCount = count);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogDebug(ex, "Could not count the unread messages in thread {ThreadId}", threadVm.Thread.Id);
+            }
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(UpdateTotalUnreadCount);
     }
 
     private Guid GetCurrentUserId() => _authenticationService?.GetUserId() ?? Guid.Empty;
@@ -146,11 +199,19 @@ public partial class ChatWindowViewModel : ViewModelBase
 
         thread.OnMessageReceivedAsync = async message =>
         {
-            var isActiveThread = SelectedThread?.Thread.Id == thread.Id;
+            // The server echoes this user's own messages back to them, from here or elsewhere
+            var isOwnMessage = message.UserId == GetCurrentUserId();
+            var isWindowActive = false;
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
-                if (!IsWindowActive || !isActiveThread)
+                isWindowActive = IsWindowActive;
+
+                var isBeingRead = isWindowActive && SelectedThread?.Thread.Id == thread.Id;
+
+                if (isBeingRead)
+                    _ = MarkThreadReadAsync(vm);
+                else if (!isOwnMessage)
                 {
                     vm.UnreadCount++;
                     UpdateTotalUnreadCount();
@@ -159,18 +220,36 @@ public partial class ChatWindowViewModel : ViewModelBase
                 MoveThreadToTop(vm);
             });
 
-            if (!IsWindowActive)
-            {
-                MessageReceivedWhileInactive?.Invoke(this, (thread.Title, message.UserName));
+            if (isOwnMessage || isWindowActive)
+                return;
 
-                _notificationService?.NotifyChatMessage(
-                    thread.Title,
-                    message.UserName,
-                    message.Content);
-            }
+            MessageReceivedWhileInactive?.Invoke(this, (thread.Title, message.UserName));
+
+            // Avatars are keyed by username; people are shown by their alias where they have one
+            var avatarPath = _avatarCache == null ? null : await _avatarCache.GetPathAsync(message.UserName);
+            var senderName = thread.Participants.FirstOrDefault(p => p.Id == message.UserId)?.Name ?? message.UserName;
+            var threadTitle = string.IsNullOrWhiteSpace(thread.Name) ? vm.OtherParticipantNames : thread.Name;
+
+            _notificationService?.NotifyChatMessage(
+                threadTitle,
+                senderName,
+                message.Content,
+                avatarPath,
+                () => OpenThread(vm));
         };
 
         return vm;
+    }
+
+    /// <summary>Shows the chat window on the given conversation</summary>
+    private void OpenThread(ChatThreadViewModel threadVm)
+    {
+        IsCreatingThread = false;
+
+        // It may have been replaced by a reload since the notification went out
+        SelectedThread = Threads.FirstOrDefault(t => t.Thread.Id == threadVm.Thread.Id) ?? threadVm;
+
+        OpenRequested?.Invoke(this, EventArgs.Empty);
     }
 
     partial void OnSelectedThreadChanged(ChatThreadViewModel? oldValue, ChatThreadViewModel? newValue)

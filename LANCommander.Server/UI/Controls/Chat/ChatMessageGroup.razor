@@ -2,14 +2,13 @@
 
 @* A run of messages from one person, under their name and when they started *@
 <div class="chat-message-group">
-    <Avatar Square Name="@UserName" Src="@ChatAvatar.Url(UserName)" />
+    <div class="chat-message-group-header">
+        <Avatar Square Class="chat-message-avatar" Name="@UserName" ColorKey="@UserId.ToString()" Src="@ChatAvatar.Url(UserName)" />
+        <span class="chat-message-author">@UserName</span>
+        <span class="chat-message-timestamp"><LocalTime Value="StartedOn" /></span>
+    </div>
 
     <div class="chat-message-group-body">
-        <Flex Gap="Gap.Small" Align="Align.Center">
-            <span class="chat-message-author">@UserName</span>
-            <span class="chat-message-timestamp"><LocalTime Value="StartedOn" /></span>
-        </Flex>
-
         @ChildContent
     </div>
 </div>

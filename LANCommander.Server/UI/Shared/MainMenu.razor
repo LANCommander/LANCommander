@@ -12,6 +12,7 @@
 @inject ILogger<MainMenu> Logger
 @inject IEnumerable<IServerNavigationExtension> PluginNavigationExtensions
 @inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
+@inject ChatUnreadState ChatUnread
 @implements IDisposable
 @implements IMenuInsertions
 
@@ -20,6 +21,10 @@
     <SubMenu Name="@ServerNavigationSection.Dashboards" Title="Dashboards" Icon="IconType.Gauge">
         <MenuItem Href="/" Icon="IconType.SquaresFour" Exact>Overview</MenuItem>
         <MenuItem Href="/Dashboard/SessionPlaytime" Icon="IconType.Timer">Average Session Playtime</MenuItem>
+        @if (_user != null)
+        {
+            <MenuItem Href="/Chat" Icon="IconType.ChatsCircle" Count="@(ChatUnread.UnreadCount is > 0 ? ChatUnread.UnreadCount : null)">Chat</MenuItem>
+        }
     </SubMenu>
     <MenuDivider />
 
@@ -48,7 +53,6 @@
             <MenuItem Href="/Pages" Icon="IconType.Eye" Exact>View</MenuItem>
             <MenuItem Href="/Pages/Appearance" Icon="IconType.Palette">Appearance</MenuItem>
         </SubMenu>
-        <MenuItem Href="/Chat" Icon="IconType.ChatsCircle">Chat</MenuItem>
         <MenuItem Href="/Issues" Icon="IconType.Bug" Count="@(_openIssues is > 0 ? _openIssues : null)">Issues</MenuItem>
         <MenuItem Href="/Files" Icon="IconType.Folder">Files</MenuItem>
         <SubMenu Name="@ServerNavigationSection.Settings" Title="Settings" Icon="IconType.Gear">
@@ -86,11 +90,6 @@
     else
     {
         <MenuItem Href="/Pages" Icon="IconType.BookOpen">Pages</MenuItem>
-
-        @if (_user != null)
-        {
-            <MenuItem Href="/Chat" Icon="IconType.ChatsCircle">Chat</MenuItem>
-        }
     }
 </Menu>
 
@@ -115,6 +114,7 @@
             .Where(extension => PluginNavigationVisibility.IsVisible(extension, _user, pluginAssemblies)));
 
         NavigationManager.LocationChanged += RefreshOnNavigation;
+        ChatUnread.Changed += RefreshChatUnread;
 
         await RefreshCountsAsync();
     }
@@ -191,5 +191,11 @@
         }
     }
 
-    public void Dispose() => NavigationManager.LocationChanged -= RefreshOnNavigation;
+    void RefreshChatUnread() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        NavigationManager.LocationChanged -= RefreshOnNavigation;
+        ChatUnread.Changed -= RefreshChatUnread;
+    }
 }

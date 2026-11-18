@@ -100,13 +100,22 @@ public class NotificationService(
         }
     }
 
-    public void NotifyChatMessage(string threadTitle, string senderName, string messageContent, Action? onActivated = null)
+    /// <summary>
+    /// A chat message arrived while the user was elsewhere: the sender's avatar, their message, and
+    /// clicking it opens the conversation. The toast itself is silent; the launcher plays its own
+    /// chime, which a toast can't carry from an unpackaged app.
+    /// </summary>
+    public void NotifyChatMessage(string threadTitle, string senderName, string messageContent, string? avatarPath, Action? onActivated = null)
     {
-        if (!notificationService.IsSupported)
+        var settings = GetNotificationSettings();
+
+        if (!settings.NotifyOnChatMessage)
             return;
 
-        var settings = GetNotificationSettings();
-        if (!settings.NotifyOnChatMessage)
+        if (settings.SoundTheme != NotificationSoundTheme.Silent)
+            serviceProvider.GetService<NotificationSoundPlayer>()?.PlayChatMessage();
+
+        if (!notificationService.IsSupported)
             return;
 
         try
@@ -116,13 +125,24 @@ public class NotificationService(
                 ? messageContent[..117] + "…"
                 : messageContent;
 
-            var builder = NotificationBuilder.Create($"{senderName} in {threadTitle}")
-                .WithBody(body);
+            // A one-to-one conversation is titled with the sender already
+            var title = string.Equals(threadTitle, senderName, StringComparison.OrdinalIgnoreCase)
+                ? senderName
+                : $"{senderName} in {threadTitle}";
+
+            var builder = NotificationBuilder.Create(title)
+                .WithBody(body)
+                .WithAudio(NotificationAudio.Silent);
+
+            if (avatarPath != null)
+                builder = builder
+                    .WithImage(avatarPath)
+                    .WithImageCropHint(NotificationImageCropHint.Circle);
 
             if (onActivated != null)
-                builder = builder.AddButton(Localize("OpenChat"), _ => Dispatcher.UIThread.InvokeAsync(onActivated));
-
-            builder = ApplySoundTheme(builder, settings.SoundTheme);
+                builder = builder
+                    .OnActivated(_ => Dispatcher.UIThread.InvokeAsync(onActivated))
+                    .AddButton(Localize("OpenChat"), _ => Dispatcher.UIThread.InvokeAsync(onActivated));
 
             notificationService.ShowAsync(builder.Build());
         }

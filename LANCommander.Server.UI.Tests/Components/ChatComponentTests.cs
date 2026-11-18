@@ -33,6 +33,9 @@ public class ChatComponentTests : BUnitTestContext
             Services.GetRequiredService<SdkMapper>(),
             NullLogger<ServerChatClient>.Instance));
         Services.AddScoped<IChatClient>(provider => provider.GetRequiredService<ServerChatClient>());
+        Services.AddScoped(provider => new ChatUnreadState(
+            provider.GetRequiredService<ServerChatClient>(),
+            NullLogger<ChatUnreadState>.Instance));
     }
 
     [Fact]
@@ -112,6 +115,74 @@ public class ChatComponentTests : BUnitTestContext
             Assert.Contains("In the second thread", cut.Markup);
             Assert.DoesNotContain("In the first thread", cut.Markup);
         }, Timeout);
+    }
+
+    [Fact]
+    public async Task Chat_OpensTheMostRecentThreadWithoutBeingAsked()
+    {
+        var adminId = await SignInAsync();
+        var older = await AddUserAsync();
+        var newer = await AddUserAsync();
+
+        await SendAsLauncherAsync(await StartThreadAsync(adminId, older.Id), older.Id, "In the older thread");
+        await SendAsLauncherAsync(await StartThreadAsync(adminId, newer.Id), newer.Id, "In the newer thread");
+
+        var cut = Render<Chat>();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("In the newer thread", cut.Markup);
+            Assert.DoesNotContain("In the older thread", cut.Markup);
+            Assert.Contains(newer.UserName!, cut.Find(".chat-list-thread-active").TextContent);
+        }, Timeout);
+    }
+
+    [Fact]
+    public async Task Chat_OpensTheThreadItWasAskedFor()
+    {
+        var adminId = await SignInAsync();
+        var older = await AddUserAsync();
+        var newer = await AddUserAsync();
+
+        var olderThreadId = await StartThreadAsync(adminId, older.Id);
+
+        await SendAsLauncherAsync(olderThreadId, older.Id, "In the older thread");
+        await SendAsLauncherAsync(await StartThreadAsync(adminId, newer.Id), newer.Id, "In the newer thread");
+
+        // As a clicked notification links to it
+        var cut = Render<Chat>(parameters => parameters.Add(c => c.InitialThreadId, olderThreadId));
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("In the older thread", cut.Markup);
+            Assert.DoesNotContain("In the newer thread", cut.Markup);
+        }, Timeout);
+
+        Assert.Equal(olderThreadId, Services.GetRequiredService<ChatUnreadState>().OpenThreadId);
+    }
+
+    [Fact]
+    public async Task ChatUnreadState_CountsMessagesUntilTheThreadIsRead()
+    {
+        var adminId = await SignInAsync();
+        var friend = await AddUserAsync();
+        var threadId = await StartThreadAsync(adminId, friend.Id);
+        var state = Services.GetRequiredService<ChatUnreadState>();
+
+        // The admin is shared with the other tests, whose threads may have unread messages of their own
+        await state.RefreshAsync();
+        var before = state.UnreadCount;
+
+        await SendAsLauncherAsync(threadId, friend.Id, "First");
+        await SendAsLauncherAsync(threadId, friend.Id, "Second");
+
+        await state.RefreshAsync();
+        Assert.Equal(before + 2, state.UnreadCount);
+
+        // Opening the thread (the most recent) reads it
+        var cut = Render<Chat>();
+
+        cut.WaitForAssertion(() => Assert.Equal(before, state.UnreadCount), Timeout);
     }
 
     [Fact]

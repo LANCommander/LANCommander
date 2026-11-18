@@ -21,6 +21,10 @@
         <converters:StringToInitialsConverter x:Key="InitialsConverter" />
         <converters:BoolToFontWeightConverter x:Key="BoldIfTrue" />
         <converters:DateTimeOffsetToTimeStringConverter x:Key="TimeString" />
+
+        <!-- Messages sit close like lines of one conversation, not paragraphs of a document -->
+        <Thickness x:Key="MarkdownParagraphMargin">0,1,0,1</Thickness>
+        <x:Double x:Key="MarkdownLineHeightScale">1.4</x:Double>
     </Window.Resources>
 
     <Window.Styles>
@@ -397,48 +401,46 @@
                                           x:DataType="vm:ChatWindowViewModel">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate DataType="models:ChatMessageGroup">
-                                        <StackPanel Margin="12,4,12,8" Spacing="2">
+                                        <!-- The avatar in its own column, so the messages start right under the
+                                             name rather than below the avatar's height -->
+                                        <Grid ColumnDefinitions="28,*" Margin="12,4,12,8">
+                                            <Border Grid.Column="0"
+                                                    Width="28" Height="28"
+                                                    CornerRadius="4"
+                                                    Background="{DynamicResource AccentFillBrush}"
+                                                    VerticalAlignment="Top">
+                                                <TextBlock Text="{Binding UserName, Converter={StaticResource InitialsConverter}}"
+                                                           FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold"
+                                                           Foreground="White"
+                                                           HorizontalAlignment="Center"
+                                                           VerticalAlignment="Center" />
+                                            </Border>
 
-                                            <Grid ColumnDefinitions="32,*">
-                                                <Border Grid.Column="0"
-                                                        Width="28" Height="28"
-                                                        CornerRadius="4"
-                                                        Background="{DynamicResource AccentFillBrush}"
-                                                        VerticalAlignment="Top">
-                                                    <TextBlock Text="{Binding UserName, Converter={StaticResource InitialsConverter}}"
-                                                               FontSize="{DynamicResource FontSizeCaption}" FontWeight="SemiBold"
-                                                               Foreground="White"
-                                                               HorizontalAlignment="Center"
-                                                               VerticalAlignment="Center" />
-                                                </Border>
-                                                <StackPanel Grid.Column="1"
-                                                            Orientation="Horizontal" Spacing="8"
-                                                            Margin="8,0,0,2"
-                                                            VerticalAlignment="Center">
+                                            <StackPanel Grid.Column="1" Margin="8,0,0,0">
+                                                <StackPanel Orientation="Horizontal" Spacing="8">
                                                     <TextBlock Text="{Binding UserName}"
                                                                controls:Presence.UserId="{Binding UserId}"
-                                                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold" />
+                                                               FontSize="{DynamicResource FontSizeLabel}" FontWeight="SemiBold"
+                                                               VerticalAlignment="Center" />
                                                     <TextBlock Text="{Binding StartedOn, Converter={StaticResource TimeString}}"
                                                                Classes="Mono"
                                                                FontSize="{DynamicResource FontSizeKicker}"
                                                                Foreground="{DynamicResource TextTertiaryBrush}"
                                                                VerticalAlignment="Center" />
                                                 </StackPanel>
-                                            </Grid>
 
-                                            <ItemsControl ItemsSource="{Binding Messages}"
-                                                          Margin="36,0,0,0">
-                                                <ItemsControl.ItemTemplate>
-                                                    <DataTemplate DataType="models:ChatMessage">
-                                                        <MarkdownTextBlock Text="{Binding Content}"
-                                                                                    FontSize="{DynamicResource FontSizeLabel}"
-                                                                                    TextElement.Foreground="{DynamicResource TextSecondaryBrush}"
-                                                                                    Margin="0,1" />
-                                                    </DataTemplate>
-                                                </ItemsControl.ItemTemplate>
-                                            </ItemsControl>
-
-                                        </StackPanel>
+                                                <ItemsControl ItemsSource="{Binding Messages}">
+                                                    <ItemsControl.ItemTemplate>
+                                                        <DataTemplate DataType="models:ChatMessage">
+                                                            <MarkdownTextBlock
+                                                                               Text="{Binding Content}"
+                                                                               FontSize="{DynamicResource FontSizeLabel}"
+                                                                               TextElement.Foreground="{DynamicResource TextSecondaryBrush}" />
+                                                        </DataTemplate>
+                                                    </ItemsControl.ItemTemplate>
+                                                </ItemsControl>
+                                            </StackPanel>
+                                        </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>

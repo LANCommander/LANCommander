@@ -223,21 +223,23 @@
                     <!-- Plugin footer items, ordered in code-behind -->
                     <StackPanel x:Name="FooterPluginItems" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center" />
 
-                    <!-- Chat button: icon-only, unread count as a badge on the corner -->
+                    <!-- Chat button: icon-only, unread count as a badge on the corner. The badge stays
+                         inside the button, which clips what spills past its edge -->
                     <Button Command="{Binding OpenChatCommand}"
                             Classes="Text"
                             Width="36" Height="36"
                             Padding="0"
-                            HorizontalContentAlignment="Center"
-                            VerticalContentAlignment="Center"
+                            HorizontalContentAlignment="Stretch"
+                            VerticalContentAlignment="Stretch"
                             ToolTip.Tip="Chat">
                         <Panel>
-                            <Icon Type="Regular" Value="ChatCircle" Width="18" Height="18" />
+                            <Icon Type="Regular" Value="ChatCircle" Width="18" Height="18"
+                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
                             <Border Background="{DynamicResource AccentFillBrush}"
                                     CornerRadius="{DynamicResource RadiusFull}"
                                     MinWidth="15" Height="15"
                                     Padding="4,0"
-                                    Margin="0,-9,-11,0"
+                                    Margin="0,2,2,0"
                                     HorizontalAlignment="Right"
                                     VerticalAlignment="Top"
                                     IsVisible="{Binding HasUnreadChat}">

@@ -22,6 +22,10 @@ public partial class ChatWindow : Window
             // Hide instead of closing so the window (and its unread counts) survive
             e.Cancel = true;
             Hide();
+
+            // Hiding doesn't reliably raise Deactivated, and a hidden window isn't being read
+            if (ViewModel != null)
+                ViewModel.IsWindowActive = false;
         };
     }
 

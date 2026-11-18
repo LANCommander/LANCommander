@@ -31,6 +31,7 @@ body {
     height: 100vh;
     background: var(--lc-canvas);
     border-inline-end: 1px solid var(--lc-border-color);
+    z-index: 100;
 }
 
 // The brand row: the cut logo, full-bleed, with its rainbow hover (see _logo.scss).

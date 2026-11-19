@@ -940,6 +940,25 @@ Manages the save paths of games, per version. Provided by the server; inject it 
 
 Manages the scripts of games (per version), redistributables, tools and servers. Provided by the server; inject it into a scoped plugin service or page.
 
+### IServerDockExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerDockExtension`
+
+Docks a bar along the top or bottom edge of the server's interface, on every page that has the navigation, e.g. an alert banner or a status bar. Register an implementation in `IPlugin.ConfigureServices`; any number of plugins may.
+
+**Properties**
+
+- `string Id { get; }`
+  - Identifies the bar, and orders bars with the same `Order`: letters, digits, `.`, `-` and `_`, e.g. `com.mycompany.myplugin.player`. Bars that share an id with another aren't shown.
+- `ServerDockPosition Position { get; }`
+  - The edge the bar is docked to.
+- `Type Component { get; }`
+  - The Razor component rendered as the bar. It takes no parameters.
+- `int Order { get; }`
+  - Orders bars on the same edge; lower values sit nearer the edge.
+- `PluginAccessPolicy Access { get; }`
+  - Who sees the bar. Defaults to administrators only; use `AuthenticatedUser` for a bar every signed-in user gets.
+
 ### IServerEndpointExtension
 
 `interface` — `LANCommander.Server.Plugins.IServerEndpointExtension`
@@ -2740,6 +2759,17 @@ The kinds of record that own actions, scripts and the other child records.
 | `Redistributable` = `1` |  |
 | `Tool` = `2` |  |
 | `Server` = `3` |  |
+
+### ServerDockPosition
+
+`enum` — `LANCommander.Server.Plugins.ServerDockPosition`
+
+The edge an `IServerDockExtension`'s bar is docked to.
+
+| Value | Description |
+| --- | --- |
+| `Top` = `0` | Along the top of the window, above the navigation and the page. |
+| `Bottom` = `1` | Along the bottom of the window, below the navigation and the page. |
 
 ### ServerEngineConsoleKind
 

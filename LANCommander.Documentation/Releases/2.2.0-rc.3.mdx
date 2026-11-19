@@ -1,0 +1,94 @@
+---
+title: 2.2.0-rc.3
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.2.0 Release Candidate 3 Release Notes
+
+This is the third release candidate for LANCommander 2.2.0. It reworks Remote servers so a linked LANCommander server's... servers are added automatically, gives plugins new ways to list and extend game servers, and tightens access to logs and server management. In the launcher, chat gets a round of fixes, the network relay can be switched from the profile menu, and games launched through a separate loader now count as running until the loader's child process exits. For the full list of changes in 2.2.0, see the [2.2.0-rc.1 release notes](/Releases/2.2.0-rc.1).
+
+## Server
+
+### Remote Servers
+Remote hosts under **Settings > Servers** have a new **Add Servers** option, on by default. The host's servers are added as Remote servers as they appear, named and linked to their game the way the host has them, so they can be started with player activity, given actions, and monitored without setting each one up by hand. A server you delete isn't added again. If a host can't be reached or no longer has a server, the server's General page says so.
+
+### Plugin Server Extensions
+Two new extension points let plugins work with game servers:
+
+- `IServerSectionExtension` adds pages to any game server, along with a summary at the top of its General page, whatever engine runs it.
+- `IServerSourceExtension` lists game servers that aren't stored in LANCommander's database, such as ones another system runs. They appear in their own table on the **Servers** page with their status, address, and game. A source can also let administrators start and stop them, send commands, follow their output on the Monitor page, and add pages of its own. Running servers from a source are returned to the launcher alongside the game's other servers.
+
+See [Extension Points](/Plugins/Extension%20Points) for details.
+
+### Plugin Settings Pages
+The links and actions for each plugin under **Settings > Plugins** have moved into a single menu on the plugin's row. Plugins can register an `IPluginSettingsExtension` to add a **Settings** entry to that menu, linking to their own settings page without needing a navigation entry.
+
+### Chat
+Chat in the server UI now matches the launcher more closely, and new message notifications work again. Your own messages are no longer counted as unread.
+
+### Security
+- A security hole has been patched and downloading logs and the live log stream are now limited to administrators.
+- A server's HTTP paths no longer can serve files outside their configured folder.
+
+## Launcher
+
+### Chat
+Chat in the launcher now shows avatars, plays its own sound for new messages, and badges the taskbar button with the unread count (Windows only). The taskbar button also flashes when a message arrives while the launcher isn't in front. The unread badge in the footer is no longer cut off, and messages in threads are spaced properly.
+
+### Network Relay Toggle
+The profile menu has a **Network Relay** toggle on Windows. Switching it saves the setting and takes running games off the relay, or puts back the ones that were started on it.
+
+### Process Tracking
+The launcher now follows every process a game spawns. Games that use a separate loader stay marked as running until the last of their processes exits, and stopping the game stops all of them. On Windows this uses a job object; on Linux the tree is followed by parent process ID.
+
+### Save and Uninstall Fixes
+- Uploading a save no longer keeps the save files locked, which could stop the game from being uninstalled afterward.
+- A warning is logged when a save path matches the game's entire install directory, which would pack the whole game as its save. LANCommander's own metadata is never included in a save.
+- If a game's files can't be deleted during uninstall, for example because they're in use, the uninstall now fails with an error and the game stays installed so you can try again. Previously it was marked as uninstalled.
+- Uninstalling no longer freezes the UI.
+
+### Install Queue
+A game waiting in the install queue now shows **Queued** on its install button. Installs now run in their own short-lived scope, which fixes problems that came up when installing and uninstalling the same game more than once in a session.
+
+## Changelog
+
+**Launcher**
+- Added: **Network Relay** toggle in the profile menu
+- Added: Avatars in chat
+- Added: Notification sound for new chat messages
+- Added: Unread chat count badge and flash on the taskbar button (Windows)
+- Added: **Queued** state on the install button
+- Added: Warning when a save path covers the whole install directory
+- Changed: Games are tracked by their whole process tree, so loader-launched games stay running until their last process exits
+- Changed: Installs use short-lived service scopes
+- Fixed: Save uploads locking save files
+- Fixed: Failed uninstalls being shown as uninstalled
+- Fixed: Uninstalling blocking the UI
+- Fixed: Repeated installs and uninstalls of the same game in one session
+- Fixed: Own chat messages counted as unread
+- Fixed: Chat badge cut off in the footer
+- Fixed: Chat message spacing in threads
+- Fixed: Paragraph and list spacing in Markdown text
+- Fixed: Tray icon menu collapsing or extending off-screen on monitors with different scaling
+
+**Server**
+- Added: **Add Servers** option for Remote hosts, adding their servers automatically
+- Added: `IServerSectionExtension` for plugin pages and summaries on game servers
+- Added: `IServerSourceExtension` for plugin-listed external game servers
+- Added: `IPluginSettingsExtension` for plugin settings pages
+- Changed: Plugin links and actions moved into a single row menu under **Settings > Plugins**
+- Changed: Chat UI restyled to match the launcher
+- Changed: Logs, the game server hub, and `/api/Server` require an administrator
+- Fixed: Chat message notifications
+- Fixed: Server HTTP paths serving files outside their folder
+- Fixed: Logo clipped on the games page
+
+## Downloads
+
+<ReleaseDownloads release="v2.2.0-rc.3" />
+
+## Contributors
+
+<ContributorGrid from="v2.2.0-rc.2" to="v2.2.0-rc.3" />

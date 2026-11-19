@@ -536,21 +536,43 @@ public sealed class ServerManager(
             var servers = await GetServersAsync(s =>
                 s.GameId == gameId && s.Autostart && s.AutostartMethod == method);
 
-            foreach (var engine in serverEngines)
+            foreach (var server in servers)
             {
-                foreach (var server in servers)
-                {
-                    try
-                    {
-                        var status = await engine.GetStatusAsync(server.Id);
+                var engine = GetEngine(server.Id);
 
-                        if (engine.IsManaging(server.Id) && status == ServerProcessStatus.Stopped)
-                            _ = engine.StartAsync(server.Id);
-                    }
-                    catch (Exception ex)
+                if (engine == null)
+                {
+                    logger.LogWarning("Server {ServerName} ({ServerId}) is set to autostart but no engine manages it", server.Name, server.Id);
+                    continue;
+                }
+
+                try
+                {
+                    var status = await engine.GetStatusAsync(server.Id);
+
+                    if (status is not (ServerProcessStatus.Stopped or ServerProcessStatus.Error))
+                        continue;
+
+                    logger.LogInformation("Autostarting server {ServerName} ({ServerId}) on {AutostartMethod}", server.Name, server.Id, method);
+
+                    var serverName = server.Name;
+                    var serverId = server.Id;
+
+                    _ = Task.Run(async () =>
                     {
-                        logger.LogError(ex, "Failed to start server {ServerName} ({ServerId})", server.Name, server.Id);
-                    }
+                        try
+                        {
+                            await engine.StartAsync(serverId);
+                        }
+                        catch (Exception ex)
+                        {
+                            logger.LogError(ex, "Failed to autostart server {ServerName} ({ServerId})", serverName, serverId);
+                        }
+                    });
+                }
+                catch (Exception ex)
+                {
+                    logger.LogError(ex, "Failed to start server {ServerName} ({ServerId})", server.Name, server.Id);
                 }
             }
         }

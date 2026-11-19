@@ -521,6 +521,40 @@ public class PluginServerEngineTests(ApplicationFixture fixture) : DalTest(fixtu
         statuses.ShouldBe([ServerProcessStatus.Starting, ServerProcessStatus.Error]);
     }
 
+    [Theory]
+    [InlineData(ServerEngineStatus.Stopped, true)]
+    [InlineData(ServerEngineStatus.Error, true)]
+    [InlineData(ServerEngineStatus.Running, false)]
+    [InlineData(ServerEngineStatus.Starting, false)]
+    public async Task PlayerActivityStartsAServerThatIsNotRunning(ServerEngineStatus status, bool started)
+    {
+        var game = await AddGameAsync();
+        var extension = new FakeExtension(NewEngineId());
+        var server = await AddServerAsync(extension.Id, """{"containerId":"abc"}""");
+
+        server.GameId = game.Id;
+        server.Autostart = true;
+        server.AutostartMethod = SDK.Enums.ServerAutostartMethod.OnPlayerActivity;
+        await GetService<ServerService>().UpdateAsync(server);
+
+        // A container that exited with an unclean code after the last autostop reports Error
+        extension.Status[server.Id] = status;
+
+        var manager = await CreateManagerAsync(CreateEngines(extension));
+
+        await manager.AutostartAsync(game.Id, SDK.Enums.ServerAutostartMethod.OnPlayerActivity);
+
+        var deadline = DateTime.UtcNow.AddSeconds(5);
+
+        while (started && extension.Started.Count == 0 && DateTime.UtcNow < deadline)
+            await Task.Delay(50);
+
+        if (!started)
+            await Task.Delay(200);
+
+        extension.Started.Count.ShouldBe(started ? 1 : 0);
+    }
+
     [Fact]
     public async Task AnEngineThatCannotTellItsStatusShowsAnError()
     {

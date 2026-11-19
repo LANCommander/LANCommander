@@ -49,6 +49,22 @@ public class LauncherDiCompositionTests
     }
 
     /// <summary>
+    /// The launcher registers the install queue as a singleton so its queue survives the whole session. A
+    /// singleton that takes scoped services keeps their database context for the session too, which then keeps
+    /// serving games as installed after another scope uninstalled them. Scope validation rejects that capture.
+    /// </summary>
+    [Fact]
+    public void Install_queue_resolves_as_a_singleton_without_capturing_scoped_services()
+    {
+        var services = BuildLauncherServices();
+        services.AddSingleton<InstallService>();
+
+        using var sp = services.BuildServiceProvider(new ServiceProviderOptions { ValidateScopes = true });
+
+        sp.GetRequiredService<InstallService>().ShouldNotBeNull();
+    }
+
+    /// <summary>
     /// Replicates the Avalonia launcher's <c>App.axaml.cs.ConfigureServices</c> with two swaps:
     /// EF InMemory in place of file-backed SQLite, and a no-op <see cref="IServerConfigurationRefresher"/>
     /// so no HTTP calls fire during construction.

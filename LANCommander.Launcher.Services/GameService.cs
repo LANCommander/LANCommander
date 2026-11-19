@@ -31,6 +31,18 @@ namespace LANCommander.Launcher.Services
     {
         public Dictionary<Guid, Process> RunningProcesses = new Dictionary<Guid, Process>();
 
+        /// <summary>
+        /// Loads a game's addons into <see cref="Game.DependentGames"/> so their install state can be changed and saved
+        /// with it. <see cref="BaseDatabaseService{T}.GetAsync(Guid)"/> doesn't include them.
+        /// </summary>
+        public async Task LoadDependentGamesAsync(Game game)
+        {
+            var dependentGames = Context.Entry(game).Collection(g => g.DependentGames);
+
+            if (!dependentGames.IsLoaded)
+                await dependentGames.LoadAsync();
+        }
+
         public async Task<Dictionary<Guid, DateTime>> GetImportedOnMapAsync(IEnumerable<Guid> ids)
         {
             var idSet = ids.ToHashSet();

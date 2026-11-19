@@ -12,6 +12,7 @@ using LANCommander.SDK.Plugins;
 using LANCommander.SDK.Plugins.Events;
 using LANCommander.SDK.Services;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.DependencyInjection;
 using Game = LANCommander.Launcher.Data.Models.Game;
 using Tool = LANCommander.Launcher.Data.Models.Tool;
 
@@ -19,9 +20,7 @@ namespace LANCommander.Launcher.Services
 {
     public class InstallService : BaseService
     {
-        private readonly GameService _gameService;
-        private readonly ToolService _toolService;
-        private readonly ImportService _importService;
+        private readonly IServiceScopeFactory _scopeFactory;
         private readonly GameClient _gameClient;
         private readonly RedistributableClient _redistributableClient;
         private readonly ToolClient _toolClient;
@@ -59,20 +58,37 @@ namespace LANCommander.Launcher.Services
         // installs and to fire a single notification once a whole group settles.
         private readonly HashSet<Guid> _pendingNotificationRoots = new();
 
+        /// <summary>
+        /// The database services for one queue operation. The queue lives for the whole session while games are
+        /// uninstalled and edited in other scopes, so a context held for the session keeps serving what it saw
+        /// earlier and writes those values back on save. Each operation gets its own scope instead, disposed
+        /// before the queue moves to its next item.
+        /// </summary>
+        private sealed class QueueScope(IServiceScope scope) : IDisposable
+        {
+            private GameService? _games;
+            private ToolService? _tools;
+            private ImportService? _imports;
+
+            public GameService Games => _games ??= scope.ServiceProvider.GetRequiredService<GameService>();
+            public ToolService Tools => _tools ??= scope.ServiceProvider.GetRequiredService<ToolService>();
+            public ImportService Imports => _imports ??= scope.ServiceProvider.GetRequiredService<ImportService>();
+
+            public void Dispose() => scope.Dispose();
+        }
+
+        private QueueScope CreateQueueScope() => new(_scopeFactory.CreateScope());
+
         public InstallService(
             ILogger<InstallService> logger,
-            GameService gameService,
-            ToolService toolService,
-            ImportService importService,
+            IServiceScopeFactory scopeFactory,
             GameClient gameClient,
             RedistributableClient redistributableClient,
             ToolClient toolClient,
             MediaClient mediaClient,
             IPluginEventBus pluginEventBus) : base(logger)
         {
-            _gameService = gameService;
-            _toolService = toolService;
-            _importService = importService;
+            _scopeFactory = scopeFactory;
             _gameClient = gameClient;
             _redistributableClient = redistributableClient;
             _toolClient = toolClient;
@@ -212,7 +228,10 @@ namespace LANCommander.Launcher.Services
             if (gameInfo.BaseGameId != Guid.Empty)
             {
                 Logger?.LogInformation("[InstallQueue] Add: Game {GameTitle} has BaseGameId={BaseGameId}, checking if base game needs install", gameInfo.Title, gameInfo.BaseGameId);
-                var baseGame = await _gameService.GetAsync(gameInfo.BaseGameId);
+                Game? baseGame;
+
+                using (var scope = CreateQueueScope())
+                    baseGame = await scope.Games.GetAsync(gameInfo.BaseGameId);
 
                 if (baseGame != null && !baseGame.Installed)
                 {
@@ -262,6 +281,22 @@ namespace LANCommander.Launcher.Services
                 plan.Items.Count,
                 string.Join(", ", plan.Items.OrderBy(i => i.Order).Select(i => $"[{i.Order}] {i.Type}:{i.Title} (id={i.EntityId}, depends={i.DependsOnId})")));
 
+            // A plan can cover more games than the one being added: an addon's plan carries its base game
+            // when that isn't installed yet. Each item has to be built from the game it belongs to, or the
+            // base game's install is queued under the addon's id and the addon itself is dropped as a duplicate.
+            var planGames = new Dictionary<Guid, SDK.Models.Game> { [gameInfo.Id] = gameInfo };
+
+            async Task<SDK.Models.Game?> GetPlanGameAsync(Guid id)
+            {
+                if (!planGames.TryGetValue(id, out var planGame))
+                {
+                    planGame = await _gameClient.GetAsync(id);
+                    planGames[id] = planGame;
+                }
+
+                return planGame;
+            }
+
             // Add each plan item to the queue
             foreach (var planItem in plan.Items.OrderBy(i => i.Order))
             {
@@ -278,10 +313,22 @@ namespace LANCommander.Launcher.Services
                 {
                     case InstallPlanItemType.Game:
                     case InstallPlanItemType.Addon:
-                        var addonGame = planItem.Type == InstallPlanItemType.Addon
-                            ? await _gameClient.GetAsync(planItem.EntityId)
-                            : gameInfo;
-                        queueItem = new InstallQueueGame(planItem, addonGame);
+                        var itemGame = await GetPlanGameAsync(planItem.EntityId);
+
+                        if (itemGame == null)
+                        {
+                            Logger?.LogWarning("[InstallQueue] Add: Game {Title} ({EntityId}) could not be retrieved from the server, skipping", planItem.Title, planItem.EntityId);
+                            continue;
+                        }
+
+                        queueItem = new InstallQueueGame(planItem, itemGame);
+
+                        // A base game pulled into the plan only needs installing; the addon, tool and
+                        // update choices were made for the game being added
+                        var isPrerequisiteGame = planItem.Type == InstallPlanItemType.Game && planItem.EntityId != game.Id;
+
+                        if (isPrerequisiteGame)
+                            break;
 
                         if (addons != null && planItem.Type == InstallPlanItemType.Game)
                         {
@@ -304,7 +351,9 @@ namespace LANCommander.Launcher.Services
                         break;
 
                     case InstallPlanItemType.Redistributable:
-                        var redist = gameInfo.Redistributables?.FirstOrDefault(r => r.Id == planItem.EntityId);
+                        // Redistributables depend on the game that declares them, which may be a base game in the plan
+                        var redistOwner = planItem.DependsOnId is Guid ownerId ? await GetPlanGameAsync(ownerId) : gameInfo;
+                        var redist = redistOwner?.Redistributables?.FirstOrDefault(r => r.Id == planItem.EntityId);
                         if (redist == null)
                         {
                             Logger?.LogInformation("[InstallQueue] Add: Redistributable {EntityId} not found in game redistributables, skipping", planItem.EntityId);
@@ -567,7 +616,10 @@ namespace LANCommander.Launcher.Services
 
                 _pendingNotificationRoots.Remove(rootId);
 
-                var rootGame = await _gameService.GetAsync(rootId);
+                Game? rootGame;
+
+                using (var scope = CreateQueueScope())
+                    rootGame = await scope.Games.GetAsync(rootId);
 
                 if (rootGame != null)
                 {
@@ -579,6 +631,19 @@ namespace LANCommander.Launcher.Services
 
         private async Task Next(InstallQueueGame queueItem)
         {
+            bool continueQueue;
+
+            // The item's scope ends before the queue moves on, so no context outlives the item it served
+            using (var scope = CreateQueueScope())
+                continueQueue = await ProcessAsync(queueItem, scope);
+
+            if (continueQueue)
+                await Next();
+        }
+
+        /// <returns>Whether the queue should move on to its next item.</returns>
+        private async Task<bool> ProcessAsync(InstallQueueGame queueItem, QueueScope scope)
+        {
             Logger?.LogInformation("[InstallQueue] Next(Game): Processing game queue item {Title} ({Id}), itemType={ItemType}, installDir={InstallDir}, taskCount={TaskCount}",
                 queueItem.Title, queueItem.Id, queueItem.ItemType, queueItem.InstallDirectory, queueItem.Tasks?.Count ?? 0);
 
@@ -587,7 +652,7 @@ namespace LANCommander.Launcher.Services
 
             try
             {
-                localGame = await _gameService.GetAsync(queueItem.Id);
+                localGame = await scope.Games.GetAsync(queueItem.Id);
                 remoteGame = await _gameClient.GetAsync(queueItem.Id);
 
                 Logger?.LogInformation("[InstallQueue] Next(Game): localGame={LocalFound}, remoteGame={RemoteFound}, localInstalled={Installed}",
@@ -597,15 +662,15 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogInformation("[InstallQueue] Next(Game): Game {Id} does not exist in local database, importing", queueItem.Id);
 
-                    await _importService.ImportGameAsync(queueItem.Id);
-                    localGame = await _gameService.GetAsync(queueItem.Id);
+                    await scope.Imports.ImportGameAsync(queueItem.Id);
+                    localGame = await scope.Games.GetAsync(queueItem.Id);
 
                     if (localGame == null)
                     {
                         Logger?.LogError("[InstallQueue] Next(Game): Game {Id} could not be imported, skipping", queueItem.Id);
                         Remove(queueItem);
                         OnQueueChanged?.Invoke();
-                        return;
+                        return false;
                     }
                 }
 
@@ -615,14 +680,13 @@ namespace LANCommander.Launcher.Services
 
                     queueItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
-                    return;
+                    return false;
                 }
 
                 if (queueItem.TargetVersion != null)
                 {
-                    await SwitchToVersion(queueItem, localGame, remoteGame);
-                    await Next();
-                    return;
+                    await SwitchToVersion(queueItem, localGame, remoteGame, scope);
+                    return true;
                 }
 
                 if (localGame.Installed && !queueItem.DependsOnId.HasValue
@@ -640,7 +704,7 @@ namespace LANCommander.Launcher.Services
 
                     if (isUpdate)
                     {
-                        await Update(queueItem, localGame, remoteGame);
+                        await Update(queueItem, localGame, remoteGame, scope);
                     }
                     else
                     {
@@ -674,7 +738,7 @@ namespace LANCommander.Launcher.Services
                             // via their own queue items, so we only handle removal here. Tool install
                             // state is tracked per game, so this only affects this game's copy.
                             var selectedToolIds = queueItem.ToolIds ?? [];
-                            var installedTools = await _toolService.GetInstalledToolsForGameAsync(localGame.Id);
+                            var installedTools = await scope.Tools.GetInstalledToolsForGameAsync(localGame.Id);
 
                             foreach (var gameTool in installedTools.Where(gt => !selectedToolIds.Contains(gt.ToolId)))
                             {
@@ -682,7 +746,7 @@ namespace LANCommander.Launcher.Services
                                 {
                                     await _toolClient.UninstallAsync(localGame.InstallDirectory, gameTool.ToolId);
 
-                                    await _toolService.SetToolUninstalledAsync(localGame.Id, gameTool.ToolId);
+                                    await scope.Tools.SetToolUninstalledAsync(localGame.Id, gameTool.ToolId);
                                 }
                                 catch (Exception ex)
                                 {
@@ -690,9 +754,12 @@ namespace LANCommander.Launcher.Services
                                 }
                             }
 
+                            // A fresh scope hasn't loaded the addons, and their install state is set here
+                            await scope.Games.LoadDependentGamesAsync(localGame);
+
                             UpdateGameState(queueItem, localGame, localGame.InstallDirectory);
                             UpdateAddonStates(queueItem, localGame);
-                            await _gameService.UpdateAsync(localGame);
+                            await scope.Games.UpdateAsync(localGame);
 
                             queueItem.Status = InstallStatus.Complete;
                             OnQueueChanged?.Invoke();
@@ -700,16 +767,14 @@ namespace LANCommander.Launcher.Services
                         }
                         else
                         {
-                            await Move(queueItem, localGame, remoteGame);
+                            await Move(queueItem, localGame, remoteGame, scope);
                         }
                     }
 
-                    await Next();
+                    return true;
                 }
-                else
-                {
-                    await Install(queueItem, localGame, remoteGame);
-                }
+
+                return await Install(queueItem, localGame, remoteGame, scope);
             }
             catch (Exception ex)
             {
@@ -718,18 +783,30 @@ namespace LANCommander.Launcher.Services
                 queueItem.Status = InstallStatus.Failed;
                 OnQueueChanged?.Invoke();
 
-                await Next();
+                return true;
             }
         }
 
         private async Task Next(InstallQueueTool queueItem)
+        {
+            bool continueQueue;
+
+            using (var scope = CreateQueueScope())
+                continueQueue = await ProcessAsync(queueItem, scope);
+
+            if (continueQueue)
+                await Next();
+        }
+
+        /// <returns>Whether the queue should move on to its next item.</returns>
+        private async Task<bool> ProcessAsync(InstallQueueTool queueItem, QueueScope scope)
         {
             Tool localTool = null;
             SDK.Models.Tool remoteTool = null;
 
             try
             {
-                localTool = await _toolService.GetAsync(queueItem.Id);
+                localTool = await scope.Tools.GetAsync(queueItem.Id);
                 remoteTool = await _toolClient.GetAsync(queueItem.Id);
 
                 if (remoteTool == null)
@@ -738,34 +815,38 @@ namespace LANCommander.Launcher.Services
 
                     queueItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
-                    return;
+                    return false;
                 }
 
                 if (localTool == null)
                 {
                     Logger?.LogError("Tool does not exist in local database, importing");
 
-                    await _importService.ImportToolAsync(queueItem.Id);
+                    await scope.Imports.ImportToolAsync(queueItem.Id);
 
-                    await Next(queueItem);
+                    localTool = await scope.Tools.GetAsync(queueItem.Id);
 
-                    return;
+                    if (localTool == null)
+                    {
+                        Logger?.LogError("Tool {Id} could not be imported, skipping", queueItem.Id);
+                        return false;
+                    }
                 }
 
                 var alreadyInstalled = queueItem.DependsOnId.HasValue
-                    && await _toolService.IsToolInstalledForGameAsync(queueItem.DependsOnId.Value, localTool.Id);
+                    && await scope.Tools.IsToolInstalledForGameAsync(queueItem.DependsOnId.Value, localTool.Id);
 
                 if (alreadyInstalled)
                 {
                     // Modify — currently no-op
+                    return false;
                 }
-                else
-                {
-                    await Install(queueItem, localTool, remoteTool);
-                }
+
+                return await Install(queueItem, localTool, remoteTool, scope);
             }
             catch
             {
+                return false;
             }
         }
 
@@ -784,7 +865,8 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Install(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
+        /// <returns>Whether the queue should move on to its next item; a canceled install was already removed.</returns>
+        private async Task<bool> Install(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame, QueueScope scope)
         {
             using (var operation = Logger.BeginOperation("Installing game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
             {
@@ -822,7 +904,7 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogError("Install canceled, removing from queue");
                     Queue.Remove(currentItem);
-                    return;
+                    return false;
                 }
                 catch (InstallException ex)
                 {
@@ -830,8 +912,7 @@ namespace LANCommander.Launcher.Services
                     currentItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
                     OnInstallFail?.Invoke(localGame);
-                    await Next();
-                    return;
+                    return true;
                 }
                 catch (Exception ex)
                 {
@@ -839,8 +920,7 @@ namespace LANCommander.Launcher.Services
                     currentItem.Status = InstallStatus.Failed;
                     OnQueueChanged?.Invoke();
                     OnInstallFail?.Invoke(localGame);
-                    await Next();
-                    return;
+                    return true;
                 }
 
                 #region Download Manuals
@@ -876,7 +956,7 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    await _gameService.UpdateAsync(localGame);
+                    await scope.Games.UpdateAsync(localGame);
                 }
                 catch (Exception ex)
                 {
@@ -892,10 +972,10 @@ namespace LANCommander.Launcher.Services
                 operation.Complete();
             }
 
-            await Next();
+            return true;
         }
 
-        public async Task Update(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
+        private async Task Update(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame, QueueScope scope)
         {
             using (var operation = Logger.BeginOperation("Updating game {GameTitle} ({GameId})", localGame.Title, localGame.Id))
             {
@@ -938,15 +1018,15 @@ namespace LANCommander.Launcher.Services
                             // Update version in local DB after each archive
                             localGame.InstalledVersion = archiveVersion?.Version ?? archive.Version;
                             localGame.InstalledVersionId = archiveVersion?.Id;
-                            await _gameService.UpdateAsync(localGame);
+                            await scope.Games.UpdateAsync(localGame);
 
                             Logger?.LogInformation("[InstallQueue] Update(Game): Applied version {Version}, updated InstalledVersion in DB", archive.Version);
                         }
 
                         // Re-import game metadata (scripts, metadata changes)
                         Logger?.LogInformation("[InstallQueue] Update(Game): Re-importing game metadata for {Title} ({Id})", currentItem.Title, currentItem.Id);
-                        await _importService.ImportGameAsync(localGame.Id);
-                        localGame = await _gameService.GetAsync(localGame.Id);
+                        await scope.Imports.ImportGameAsync(localGame.Id);
+                        localGame = await scope.Games.GetAsync(localGame.Id);
 
                         // Move the install's config (manifest, scripts, redistributables) to the latest
                         // version. A newer version without an archive is a config-only update.
@@ -968,7 +1048,7 @@ namespace LANCommander.Launcher.Services
                                 ? latestVersion.Version
                                 : localGame.LatestVersion;
                             localGame.InstalledVersionId = latestVersion?.Id ?? localGame.InstalledVersionId;
-                            await _gameService.UpdateAsync(localGame);
+                            await scope.Games.UpdateAsync(localGame);
 
                             Logger?.LogInformation("[InstallQueue] Update(Game): Converged InstalledVersion to latest version {LatestVersion} for {Title}",
                                 localGame.InstalledVersion, currentItem.Title);
@@ -1015,7 +1095,7 @@ namespace LANCommander.Launcher.Services
 
                 try
                 {
-                    await _gameService.UpdateAsync(localGame);
+                    await scope.Games.UpdateAsync(localGame);
                 }
                 catch (Exception ex)
                 {
@@ -1103,7 +1183,7 @@ namespace LANCommander.Launcher.Services
         /// and scripts so on-disk config matches the chosen version. Updates the local
         /// InstalledVersion. Cancellable via the queue item's cancellation token.
         /// </summary>
-        private async Task SwitchToVersion(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame)
+        private async Task SwitchToVersion(InstallQueueGame currentItem, Game localGame, SDK.Models.Game remoteGame, QueueScope scope)
         {
             var version = currentItem.TargetVersion;
 
@@ -1142,7 +1222,7 @@ namespace LANCommander.Launcher.Services
                     if (isRollback)
                         localGame.AutoUpdate = false;
 
-                    await _gameService.UpdateAsync(localGame);
+                    await scope.Games.UpdateAsync(localGame);
                 }
                 catch (InstallCanceledException)
                 {
@@ -1183,7 +1263,8 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Install(InstallQueueTool currentItem, Tool localTool, SDK.Models.Tool remoteTool)
+        /// <returns>Whether the queue should move on to its next item.</returns>
+        private async Task<bool> Install(InstallQueueTool currentItem, Tool localTool, SDK.Models.Tool remoteTool, QueueScope scope)
         {
             using (var operation = Logger.BeginOperation("Installing tool {ToolName} ({ToolId})", localTool.Name, localTool.Id))
             {
@@ -1211,19 +1292,19 @@ namespace LANCommander.Launcher.Services
                 {
                     Logger?.LogError("Install canceled, removing from queue");
                     Queue.Remove(currentItem);
-                    return;
+                    return false;
                 }
                 catch (InstallException ex)
                 {
                     Logger?.LogError(ex, "An error occurred during install, removing from queue");
                     Queue.Remove(currentItem);
-                    return;
+                    return false;
                 }
                 catch (Exception ex)
                 {
                     Logger.LogError(ex, "An unknown error occurred during install, removing from queue");
                     Queue.Remove(currentItem);
-                    return;
+                    return false;
                 }
 
                 currentItem.CompletedOn = DateTime.Now;
@@ -1236,7 +1317,7 @@ namespace LANCommander.Launcher.Services
                     // Install state is tracked per game because a tool can be shared by several
                     // games and is installed into each game's own directory.
                     if (currentItem.DependsOnId.HasValue)
-                        await _toolService.SetToolInstalledAsync(currentItem.DependsOnId.Value, localTool.Id, toolInstallDirectory, currentItem.Version);
+                        await scope.Tools.SetToolInstalledAsync(currentItem.DependsOnId.Value, localTool.Id, toolInstallDirectory, currentItem.Version);
                     else
                         Logger?.LogWarning("Tool {ToolName} ({ToolId}) was installed without an associated game; install state not recorded", localTool.Name, localTool.Id);
                 }
@@ -1254,7 +1335,7 @@ namespace LANCommander.Launcher.Services
                 {
                     try
                     {
-                        var dependentGame = await _gameService.GetAsync(currentItem.DependsOnId.Value);
+                        var dependentGame = await scope.Games.GetAsync(currentItem.DependsOnId.Value);
 
                         if (dependentGame != null)
                             OnToolInstallComplete?.Invoke(dependentGame);
@@ -1268,7 +1349,7 @@ namespace LANCommander.Launcher.Services
                 operation.Complete();
             }
 
-            await Next();
+            return true;
         }
 
         private async Task InstallRedistributable(DownloadQueueRedistributable currentItem)
@@ -1568,7 +1649,7 @@ namespace LANCommander.Launcher.Services
             }
         }
 
-        public async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame)
+        private async Task Move(IInstallQueueItem currentItem, Game localGame, SDK.Models.Game remoteGame, QueueScope scope)
         {
             using (var operation = Logger.BeginOperation("Moving game {GameTitle} ({GameId}) to {Destination}", localGame.Title, localGame.Id, currentItem.InstallDirectory))
             {
@@ -1582,7 +1663,7 @@ namespace LANCommander.Launcher.Services
 
                 localGame.InstallDirectory = newInstallDirectory;
 
-                await _gameService.UpdateAsync(localGame);
+                await scope.Games.UpdateAsync(localGame);
 
                 currentItem.Status = InstallStatus.Complete;
 

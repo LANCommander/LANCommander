@@ -130,10 +130,11 @@ public class DownloadQueueViewModelTests
                 null!, null!, null!, null!, null!, eventBus, []);
 
             var toolClient = new ToolClient(NullLogger<ToolClient>.Instance, settingsProvider, requests, null!);
+            var redistributableClient = new RedistributableClient(NullLogger<RedistributableClient>.Instance, settingsProvider, requests, null!, null!);
 
             InstallService = new InstallService(
-                NullLogger<InstallService>.Instance, null!, null!, null!, gameClient,
-                null!, toolClient, mediaClient, eventBus);
+                NullLogger<InstallService>.Instance, null!, gameClient,
+                redistributableClient, toolClient, mediaClient, eventBus);
 
             var services = new ServiceCollection();
             services.AddLogging();

@@ -155,10 +155,24 @@ public partial class MainWindowViewModel : ViewModelBase
         if (settings.Authentication?.ServerAddress != null)
         {
             SplashViewModel.UpdateStatus("Connecting to server...");
-            await _connectionClient.UpdateServerAddressAsync(settings.Authentication.ServerAddress.ToString());
+            // Probe the saved address before discovery or RPC connection attempts.
+            var serverOnline = await _connectionClient.PingAsync(settings.Authentication.ServerAddress);
 
-            // Check if server is reachable
-            var serverOnline = await _connectionClient.PingAsync();
+            if (serverOnline)
+            {
+                try
+                {
+                    await _connectionClient.UpdateServerAddressAsync(settings.Authentication.ServerAddress.ToString());
+                }
+                catch (InvalidAddressException ex)
+                {
+                    _logger.LogWarning(ex, "Saved server became unreachable during connection");
+                    serverOnline = false;
+                }
+            }
+
+            if (!serverOnline)
+                await _connectionClient.EnableOfflineModeAsync();
             
             if (_authenticationService.HasStoredCredentials())
             {
@@ -198,7 +212,6 @@ public partial class MainWindowViewModel : ViewModelBase
                     // Server offline but we have stored credentials - go to shell in offline mode
                     _logger.LogInformation("Server unreachable, starting in offline mode with stored credentials");
                     SplashViewModel.UpdateStatus("Server offline, starting in offline mode...");
-                    await _connectionClient.EnableOfflineModeAsync();
                     ShellViewModel.SetOfflineMode(true);
                     await ShellViewModel.InitializeAsync();
                     CurrentView = ShellViewModel;

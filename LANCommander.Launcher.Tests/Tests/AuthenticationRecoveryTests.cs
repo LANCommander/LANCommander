@@ -9,28 +9,82 @@ using System.Threading;
 using System.Threading.Tasks;
 using Avalonia.Headless.XUnit;
 using Avalonia.Threading;
+using LANCommander.Launcher.Fixtures;
 using LANCommander.Launcher.Services;
+using LANCommander.Launcher.Services.Extensions;
 using LANCommander.Launcher.Services.Platform;
 using LANCommander.Launcher.ViewModels;
 using LANCommander.SDK.Abstractions;
 using LANCommander.SDK.Exceptions;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Factories;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Providers;
 using LANCommander.SDK.Services;
+using Microsoft.Data.Sqlite;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Logging.Abstractions;
-using Microsoft.Extensions.Options;
+using Notify.NET.Abstractions;
 using Xunit;
 
 namespace LANCommander.Launcher.Tests.Tests;
 
 public class AuthenticationRecoveryTests
 {
+    [AvaloniaTheory]
+    [InlineData(false, false)]
+    [InlineData(true, true)]
+    public async Task Unreachable_saved_server_opens_the_cached_library_without_authenticating(
+        bool respondsToPing, bool failsDiscovery)
+    {
+        await using var fixture = new RecoveryFixture();
+        fixture.Connection.ServerOnline = respondsToPing;
+        fixture.Connection.FailDiscovery = failsDiscovery;
+
+        await fixture.ViewModel.InitializeAsync();
+
+        Assert.Same(fixture.ViewModel.ShellViewModel, fixture.ViewModel.CurrentView);
+        Assert.True(fixture.ViewModel.ShellViewModel.IsOfflineMode);
+        Assert.True(fixture.ViewModel.ShellViewModel.LibraryViewModel.IsOfflineMode);
+        Assert.True(fixture.Connection.IsOfflineMode());
+        Assert.True(fixture.Connection.Disconnected);
+        Assert.Equal(respondsToPing ? 1 : 0, fixture.Connection.DiscoveryAttempts);
+        Assert.Equal(0, fixture.Handler.RequestCount);
+    }
+
+    [AvaloniaFact]
+    public async Task Unreachable_saved_server_without_credentials_shows_offline_login()
+    {
+        await using var fixture = new RecoveryFixture(hasCredentials: false);
+        fixture.Connection.ServerOnline = false;
+
+        await fixture.ViewModel.InitializeAsync();
+
+        Assert.Same(fixture.ViewModel.LoginViewModel, fixture.ViewModel.CurrentView);
+        Assert.True(fixture.ViewModel.LoginViewModel.IsServerOffline);
+        Assert.Equal(fixture.Connection.GetServerAddress().ToString(), fixture.ViewModel.LoginViewModel.ServerAddress);
+        Assert.Equal(0, fixture.Connection.DiscoveryAttempts);
+        Assert.Equal(0, fixture.Handler.RequestCount);
+    }
+
+    [AvaloniaFact]
+    public async Task Missing_saved_server_shows_server_selection_without_a_connection_attempt()
+    {
+        await using var fixture = new RecoveryFixture(hasServer: false);
+
+        await fixture.ViewModel.InitializeAsync();
+
+        Assert.Same(fixture.ViewModel.ServerSelectionViewModel, fixture.ViewModel.CurrentView);
+        Assert.Equal(0, fixture.Connection.PingAttempts);
+        Assert.Equal(0, fixture.Connection.DiscoveryAttempts);
+    }
+
     [AvaloniaFact]
     public async Task Startup_does_not_enter_the_shell_when_the_rpc_connection_has_an_expired_session()
     {
-        using var fixture = new RecoveryFixture();
+        await using var fixture = new RecoveryFixture();
         Assert.True(fixture.Connection.IsConnected());
 
         await fixture.ViewModel.InitializeAsync();
@@ -45,7 +99,7 @@ public class AuthenticationRecoveryTests
     [AvaloniaFact]
     public async Task Expiry_returns_to_sign_in_and_keeps_the_external_provider_button_available()
     {
-        using var fixture = new RecoveryFixture();
+        await using var fixture = new RecoveryFixture();
         fixture.ViewModel.CurrentView = fixture.ViewModel.ShellViewModel;
         fixture.ViewModel.LoginViewModel.Password = "old-password";
         fixture.ViewModel.LoginViewModel.AutoRedirectToProvider = true;
@@ -65,26 +119,29 @@ public class AuthenticationRecoveryTests
         Assert.True(fixture.Connection.Disconnected);
     }
 
-    private sealed class RecoveryFixture : IDisposable
+    private sealed class RecoveryFixture : IAsyncDisposable
     {
-        private readonly HttpClient _httpClient = new(new RecoveryHandler());
+        private readonly HttpClient _httpClient;
+        private readonly SqliteConnection _database = new("Data Source=:memory:");
         private readonly ServiceProvider _services;
         private readonly AuthenticationSession _session;
+        public RecoveryHandler Handler { get; } = new();
         public ConnectedClient Connection { get; } = new();
         public MainWindowViewModel ViewModel { get; }
         public ApiRequestFactory Requests { get; }
 
-        public RecoveryFixture()
+        public RecoveryFixture(bool hasCredentials = true, bool hasServer = true)
         {
+            _httpClient = new HttpClient(Handler);
             var settings = new Launcher.Settings.Settings();
-            settings.Authentication.ServerAddress = Connection.GetServerAddress();
-            settings.Authentication.Token = new AuthToken
+            settings.Authentication.ServerAddress = hasServer ? Connection.GetServerAddress() : null!;
+            settings.Authentication.Token = hasCredentials ? new AuthToken
             {
                 AccessToken = new JwtSecurityTokenHandler().WriteToken(
                     new JwtSecurityToken(expires: DateTime.UtcNow.AddMinutes(-10))),
                 RefreshToken = "expired-refresh-token",
                 Expiration = DateTime.UtcNow.AddMinutes(-10),
-            };
+            } : new AuthToken();
             var inMemorySettings = new InMemorySettings(settings);
             var tokens = new TokenProvider(inMemorySettings);
             _session = new AuthenticationSession(
@@ -99,6 +156,15 @@ public class AuthenticationRecoveryTests
                 NullLogger<AuthenticationService>.Instance);
             var services = new ServiceCollection();
             services.AddLogging();
+            services.AddHttpClient();
+            services.AddSingleton<IServerConfigurationRefresher, NoopRefresher>();
+            services.AddLANCommanderClient<Launcher.Settings.Settings>();
+            services.AddLANCommanderLauncher();
+            _database.Open();
+            services.RemoveAll<DbContextOptions<Launcher.Data.DatabaseContext>>();
+            services.RemoveAll<DbContextOptions>();
+            services.AddDbContext<Microsoft.EntityFrameworkCore.DbContext, Launcher.Data.DatabaseContext>(
+                options => options.UseSqlite(_database));
             services.AddOptions<Launcher.Settings.Settings>().Configure(options =>
             {
                 options.Authentication = settings.Authentication;
@@ -106,23 +172,40 @@ public class AuthenticationRecoveryTests
             services.AddSingleton<INavigationService, NavigationService>();
             services.AddSingleton<IBatteryService, NullBatteryService>();
             services.AddSingleton<IVolumeService, NullVolumeService>();
+            services.AddSingleton<IDeviceCatalog, NullDeviceCatalog>();
+            services.AddSingleton<INotificationService, FixtureNotificationService>();
+            services.AddSingleton<ITaskbarProgressService, FixtureTaskbarProgressService>();
+            services.AddSingleton<NotificationService>();
+            services.AddSingleton<TaskbarProgressService>();
+            services.AddSingleton<InstallService>();
+            services.AddSingleton<IConnectionClient>(Connection);
+            services.AddSingleton<ISettingsProvider>(inMemorySettings);
+            services.AddSingleton<ITokenProvider>(tokens);
+            services.AddSingleton(Requests);
+            services.AddSingleton(authentication);
             services.AddSingleton(authenticationClient);
             services.AddSingleton(_session);
             services.AddSingleton(new BeaconClient(
                 NullLogger<BeaconClient>.Instance, new NoNetworkInterfaces()));
             _services = services.BuildServiceProvider();
-            var settingsProvider = new SettingsProvider<Launcher.Settings.Settings>(
-                _services.GetRequiredService<IOptionsMonitor<Launcher.Settings.Settings>>());
+            _services.GetRequiredService<Launcher.Data.DatabaseContext>().Database.EnsureCreated();
+            var settingsProvider = _services.GetRequiredService<SettingsProvider<Launcher.Settings.Settings>>();
             ViewModel = new MainWindowViewModel(_services, Connection, authentication, settingsProvider);
         }
 
-        public void Dispose()
+        public async ValueTask DisposeAsync()
         {
             ViewModel.ServerSelectionViewModel.Dispose();
-            _services.Dispose();
+            await _services.DisposeAsync();
             _session.Dispose();
             _httpClient.Dispose();
+            await _database.DisposeAsync();
         }
+    }
+
+    private sealed class NoopRefresher : IServerConfigurationRefresher
+    {
+        public Task RefreshAsync(CancellationToken cancellationToken = default) => Task.CompletedTask;
     }
 
     private sealed class InMemorySettings(Launcher.Settings.Settings settings) : ISettingsProvider
@@ -133,9 +216,12 @@ public class AuthenticationRecoveryTests
 
     private sealed class RecoveryHandler : HttpMessageHandler
     {
+        public int RequestCount { get; private set; }
+
         protected override Task<HttpResponseMessage> SendAsync(
             HttpRequestMessage request, CancellationToken cancellationToken)
         {
+            RequestCount++;
             if (request.RequestUri!.AbsolutePath == "/api/Auth/Refresh")
                 return Task.FromResult(new HttpResponseMessage(HttpStatusCode.Unauthorized));
 
@@ -173,20 +259,39 @@ public class AuthenticationRecoveryTests
         public event EventHandler? OnServerAddressChanged;
         public event EventHandler? OnOfflineModeEnabled;
         public bool Disconnected { get; private set; }
+        public bool ServerOnline { get; set; } = true;
+        public bool FailDiscovery { get; set; }
+        public int DiscoveryAttempts { get; private set; }
+        public int PingAttempts { get; private set; }
+        private bool _offline;
         public bool IsConnected() => !Disconnected;
         public bool IsConfigured() => true;
-        public bool IsOfflineMode() => false;
+        public bool IsOfflineMode() => _offline;
         public bool HasServerAddress() => true;
         public Uri GetServerAddress() => new("https://server.test");
-        public Task UpdateServerAddressAsync(string address) => Task.CompletedTask;
-        public Task UpdateServerAddressAsync(Uri address) => Task.CompletedTask;
+        public Task UpdateServerAddressAsync(string address)
+        {
+            DiscoveryAttempts++;
+            return FailDiscovery
+                ? Task.FromException(new InvalidAddressException("Server unreachable"))
+                : Task.CompletedTask;
+        }
+        public Task UpdateServerAddressAsync(Uri address) => UpdateServerAddressAsync(address.ToString());
         public Task<bool> ConnectAsync() => Task.FromResult(true);
         public Task<bool> DisconnectAsync()
         {
             Disconnected = true;
             return Task.FromResult(true);
         }
-        public Task EnableOfflineModeAsync() => Task.CompletedTask;
-        public Task<bool> PingAsync(Uri? serverAddress = null) => Task.FromResult(true);
+        public async Task EnableOfflineModeAsync()
+        {
+            await DisconnectAsync();
+            _offline = true;
+        }
+        public Task<bool> PingAsync(Uri? serverAddress = null)
+        {
+            PingAttempts++;
+            return Task.FromResult(ServerOnline);
+        }
     }
 }

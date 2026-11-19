@@ -231,6 +231,7 @@ namespace LANCommander.SDK
             logger?.LogTrace("Working Directory: {WorkingDirectory}", Process.StartInfo.WorkingDirectory);
             logger?.LogTrace("Manifest Path: {ManifestPath}", ManifestHelper.GetPath(installDirectory, gameId));
 
+            var launchedAt = DateTime.UtcNow;
             var started = await StartWithStarterAsync(installDirectory, gameId, manifest, action, cancellationToken);
 
             try
@@ -240,7 +241,11 @@ namespace LANCommander.SDK
                 else
                     Process.Start();
 
-                await Process.WaitForAllExitAsync(cancellationToken);
+                // The game runs until its last process exits: launchers such as Goldberg's ColdClientLoader
+                // start the real game as a child, and stopping it has to stop that child too
+                using var tree = new ProcessTree(Process, launchedAt, logger);
+
+                await tree.WaitForExitAsync(cancellationToken);
             }
             finally
             {

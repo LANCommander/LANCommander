@@ -1724,18 +1724,22 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
         try
         {
-            using var scope = _serviceProvider.CreateScope();
-            var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
+            var gameId = GameId;
 
-            var localGame = await gameService.GetAsync(GameId);
-            if (localGame == null)
+            _logger.LogInformation("Uninstalling game {GameId} ({Title})", gameId, Title);
+
+            // Uninstalling deletes files synchronously and runs scripts; continuations would
+            // otherwise resume on the dispatcher and freeze the UI for the whole operation
+            await Task.Run(async () =>
             {
-                throw new InvalidOperationException("Game not found in local database");
-            }
+                using var scope = _serviceProvider.CreateScope();
+                var gameService = scope.ServiceProvider.GetRequiredService<GameService>();
 
-            _logger.LogInformation("Uninstalling game {GameId} ({Title})", GameId, Title);
+                var localGame = await gameService.GetAsync(gameId)
+                    ?? throw new InvalidOperationException("Game not found in local database");
 
-            await gameService.UninstallAsync(localGame);
+                await gameService.UninstallAsync(localGame);
+            });
 
             IsInstalled = false;
             InstallDirectory = null;

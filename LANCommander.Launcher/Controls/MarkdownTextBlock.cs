@@ -51,9 +51,22 @@ public class MarkdownTextBlock : StackPanel
             Rebuild();
     }
 
+    // Spacing and scale values come from theme resources, which can't be resolved until the control is
+    // in the logical tree. Text set before then (a template, a fixture) would otherwise keep the fallbacks.
+    protected override void OnAttachedToLogicalTree(Avalonia.LogicalTree.LogicalTreeAttachmentEventArgs e)
+    {
+        base.OnAttachedToLogicalTree(e);
+
+        Rebuild();
+    }
+
     private void Rebuild()
     {
         Children.Clear();
+
+        // Blocks are separated by the panel's spacing rather than per-block margins, so the gap between
+        // two paragraphs is one value instead of two margins stacked together.
+        Spacing = Number("MarkdownBlockSpacing", 10);
 
         var markdown = Text;
         
@@ -114,8 +127,8 @@ public class MarkdownTextBlock : StackPanel
         {
             TextWrapping = TextWrapping.Wrap,
             FontSize = FontSize,
-            LineHeight = FontSize * Scale("MarkdownLineHeightScale", 1.4),
-            Margin = Space("MarkdownParagraphMargin", new Thickness(0, 1, 0, 1)),
+            LineHeight = LineHeight,
+            Margin = Space("MarkdownParagraphMargin", new Thickness(0)),
         };
 
         if (para.Inline != null)
@@ -151,7 +164,7 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderList(ListBlock list)
     {
-        var panel = new StackPanel { Spacing = 2, Margin = new Thickness(0, 2, 0, 2) };
+        var panel = new StackPanel { Spacing = Number("MarkdownListItemSpacing", 4) };
         var index = 1;
 
         foreach (var item in list)
@@ -166,15 +179,18 @@ public class MarkdownTextBlock : StackPanel
                 ColumnDefinitions = new ColumnDefinitions("Auto,*"),
             };
 
+            // Same font size and line height as the item's first paragraph, so the marker shares its baseline
             row.Children.Add(new TextBlock
             {
                 Text = bullet,
                 FontSize = FontSize,
-                Margin = new Thickness(8, 0, 6, 0),
+                LineHeight = LineHeight,
+                MinWidth = list.IsOrdered ? FontSize * 1.2 : 0,
+                Margin = Space("MarkdownListMarkerMargin", new Thickness(4, 0, 8, 0)),
                 VerticalAlignment = VerticalAlignment.Top,
             });
 
-            var content = new StackPanel { Spacing = 2 };
+            var content = new StackPanel { Spacing = Number("MarkdownBlockSpacing", 10) };
             Grid.SetColumn(content, 1);
 
             foreach (var block in listItem)
@@ -207,7 +223,7 @@ public class MarkdownTextBlock : StackPanel
 
     private Control RenderQuote(QuoteBlock quote)
     {
-        var inner = new StackPanel { Spacing = 2 };
+        var inner = new StackPanel { Spacing = Number("MarkdownBlockSpacing", 10) };
         foreach (var block in quote)
         {
             var element = RenderBlock(block);
@@ -305,8 +321,12 @@ public class MarkdownTextBlock : StackPanel
         }
     }
 
+    private double LineHeight => FontSize * Scale("MarkdownLineHeightScale", 1.5);
+
     private double Scale(string key, double fallback)
         => this.TryFindResource(key, out var v) && v is double d ? d : fallback;
+
+    private double Number(string key, double fallback) => Scale(key, fallback);
 
     private Thickness Space(string key, Thickness fallback)
         => this.TryFindResource(key, out var v) && v is Thickness t ? t : fallback;

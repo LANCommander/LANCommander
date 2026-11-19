@@ -23,7 +23,9 @@
         <converters:DateTimeOffsetToTimeStringConverter x:Key="TimeString" />
 
         <!-- Messages sit close like lines of one conversation, not paragraphs of a document -->
-        <Thickness x:Key="MarkdownParagraphMargin">0,1,0,1</Thickness>
+        <Thickness x:Key="MarkdownParagraphMargin">0</Thickness>
+        <x:Double x:Key="MarkdownBlockSpacing">2</x:Double>
+        <x:Double x:Key="MarkdownListItemSpacing">2</x:Double>
         <x:Double x:Key="MarkdownLineHeightScale">1.4</x:Double>
     </Window.Resources>
 

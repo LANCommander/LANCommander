@@ -11,9 +11,19 @@ body {
     font-size: var(--lc-font-size);
 }
 
+// The heights of the plugin bars docked to the window's top and bottom edges (UI/Shared/PluginDock),
+// set by js/docks.js while there are any. Anything sized or placed against the window subtracts them
+:root {
+    --lc-dock-top: 0px;
+    --lc-dock-bottom: 0px;
+}
+
+// The shell's padding keeps the page clear of the docked bars
 .lc-layout {
     display: flex;
+    box-sizing: border-box;
     min-height: 100vh;
+    padding-block: var(--lc-dock-top) var(--lc-dock-bottom);
     background: var(--lc-body-background);
     color: var(--lc-text-color);
     font-family: var(--lc-font-family);
@@ -23,12 +33,12 @@ body {
 // Canvas black, one hairline down its right edge (0.10, as drawn)
 .lc-sidebar {
     position: sticky;
-    top: 0;
+    top: var(--lc-dock-top);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     width: var(--lc-layout-sidebar-width);
-    height: 100vh;
+    height: calc(100vh - var(--lc-dock-top) - var(--lc-dock-bottom));
     background: var(--lc-canvas);
     border-inline-end: 1px solid var(--lc-border-color);
     z-index: 100;
@@ -214,6 +224,46 @@ body {
     text-align: center;
 }
 
+// Plugin bars (IServerDockExtension) span the window's width over the canvas, with a hairline toward
+// the page; several on one edge are stacked, each set apart by a subtler hairline
+.lc-dock {
+    position: fixed;
+    inset-inline: 0;
+    z-index: 200; // over the sidebar (100) and the page, under popups and dialogs
+    display: flex;
+    flex-direction: column;
+    background: var(--lc-canvas);
+    color: var(--lc-text-color);
+}
+
+.lc-dock-top {
+    top: 0;
+    border-bottom: 1px solid var(--lc-border-color);
+}
+
+.lc-dock-bottom {
+    bottom: 0;
+    border-top: 1px solid var(--lc-border-color);
+}
+
+.lc-dock-item {
+    min-width: 0;
+
+    // A bar with nothing to show, e.g. an alert banner with no alerts, takes no space
+    &:not(:has(*)) {
+        display: none;
+    }
+
+    &:has(*) ~ &:has(*) {
+        border-top: 1px solid var(--lc-border-subtle-color);
+    }
+}
+
+// Nor does an edge whose bars all have nothing to show, hairline included
+.lc-dock:not(:has(.lc-dock-item *)) {
+    display: none;
+}
+
 .lc-mobile-header {
     display: none;
 }
@@ -225,7 +275,7 @@ body {
 
     .lc-mobile-header {
         position: sticky;
-        top: 0;
+        top: var(--lc-dock-top);
         z-index: 1000;
         display: flex;
         align-items: center;

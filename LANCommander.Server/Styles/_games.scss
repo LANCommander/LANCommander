@@ -33,7 +33,7 @@ $games-mobile-breakpoint: 767px;
 // shell gives other pages, so the list scrolls within it and the header and rail stay put.
 .games-page {
     position: fixed;
-    inset: 0 0 0 var(--lc-layout-sidebar-width);
+    inset: var(--lc-dock-top) 0 var(--lc-dock-bottom) var(--lc-layout-sidebar-width);
     display: grid;
     grid-template-columns: $games-rail-width minmax(0, 1fr);
     background: var(--lc-canvas);
@@ -922,7 +922,7 @@ $games-mobile-breakpoint: 767px;
 
     .games-bulkbar {
         position: fixed;
-        bottom: 12px;
+        bottom: calc(12px + var(--lc-dock-bottom));
         max-width: calc(100vw - 24px);
         flex-wrap: wrap;
         height: auto;

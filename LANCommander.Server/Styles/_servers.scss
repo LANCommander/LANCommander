@@ -207,7 +207,7 @@
 .server-monitor {
     display: flex;
     gap: 18px;
-    height: calc(100vh - 146px);
+    height: calc(100vh - 146px - var(--lc-dock-top) - var(--lc-dock-bottom));
     min-height: 420px;
 }
 
@@ -609,7 +609,7 @@
 
 // Files: the manager fills the page below the intro, the editor most of its dialog
 .server-files {
-    height: calc(100vh - 300px);
+    height: calc(100vh - 300px - var(--lc-dock-top) - var(--lc-dock-bottom));
     min-height: 360px;
 }
 

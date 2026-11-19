@@ -9,11 +9,11 @@ $chat-mobile-header-height: 53px; // .lc-mobile-header: 28px logo + 2 * 12px pad
 .chat-page {
     display: flex;
     flex-direction: column;
-    height: 100vh;
-    height: 100dvh;
+    height: calc(100vh - var(--lc-dock-top) - var(--lc-dock-bottom));
+    height: calc(100dvh - var(--lc-dock-top) - var(--lc-dock-bottom));
 
     @media (max-width: $chat-mobile-breakpoint) {
-        height: calc(100dvh - #{$chat-mobile-header-height});
+        height: calc(100dvh - #{$chat-mobile-header-height} - var(--lc-dock-top) - var(--lc-dock-bottom));
     }
 }
 

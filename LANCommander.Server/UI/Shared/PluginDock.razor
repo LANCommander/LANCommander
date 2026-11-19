@@ -1,0 +1,79 @@
+@using Microsoft.AspNetCore.Components.Authorization
+@using LANCommander.Server.Plugins
+@inject IEnumerable<IServerDockExtension> Extensions
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject IJSRuntime JS
+@inject ILogger<PluginDock> Logger
+@implements IAsyncDisposable
+
+@* The plugin bars docked to one edge of the shell (IServerDockExtension). It lives in MainLayout, so
+   the bars outlive navigation; its height is published as --lc-dock-top/--lc-dock-bottom for the
+   shell and the pages that fill the window to make room *@
+@if (_docks.Count > 0)
+{
+    <div class="@($"lc-dock lc-dock-{Edge}")" role="region" aria-label="@($"{Position} bar")" @ref="_element">
+        @foreach (var dock in Ordered)
+        {
+            <div class="lc-dock-item" data-dock="@dock.Id" @key="dock.Id">
+                <ErrorHandler Inline Title="@($"{dock.Id} could not be displayed")">
+                    <DynamicComponent Type="dock.Component" />
+                </ErrorHandler>
+            </div>
+        }
+    </div>
+}
+
+@code {
+    [Parameter, EditorRequired] public ServerDockPosition Position { get; set; }
+
+    IReadOnlyList<IServerDockExtension> _docks = [];
+    ElementReference _element;
+    IJSObjectReference? _module;
+    IJSObjectReference? _observer;
+
+    string Edge => Position == ServerDockPosition.Top ? "top" : "bottom";
+
+    // The first bar sits against the window's edge, so the bottom edge stacks upwards
+    IEnumerable<IServerDockExtension> Ordered => Position == ServerDockPosition.Bottom ? _docks.Reverse() : _docks;
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+
+        _docks = PluginDocks.Resolve(Extensions, Position, authState.User, Logger);
+    }
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender || _docks.Count == 0)
+            return;
+
+        try
+        {
+            _module = await JS.InvokeAsync<IJSObjectReference>("import", "/js/docks.js");
+            _observer = await _module.InvokeAsync<IJSObjectReference>("observe", _element, $"--lc-dock-{Edge}");
+        }
+        catch (Exception ex) when (ex is JSDisconnectedException or TaskCanceledException)
+        {
+            // The tab closed while starting up
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        try
+        {
+            if (_observer != null)
+            {
+                await _observer.InvokeVoidAsync("dispose");
+                await _observer.DisposeAsync();
+            }
+
+            if (_module != null)
+                await _module.DisposeAsync();
+        }
+        catch (JSDisconnectedException)
+        {
+        }
+    }
+}

@@ -95,7 +95,7 @@ $lc-breakpoints: (
 .lc-side-layout-side {
     flex: 0 0 var(--lc-side-layout-width, 188px);
     position: sticky;
-    top: 0;
+    top: var(--lc-dock-top, 0px); // below any bar a host docks to the window's top
     box-sizing: border-box;
     padding: 16px 8px;
     border-inline-end: 1px solid var(--lc-border-subtle-color);

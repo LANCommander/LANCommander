@@ -505,7 +505,7 @@ $script-editor-rail-width: 288px;
 // content's padding (20 + 28), with the status bar along its foot instead of in a dialog footer
 .script-editor-framed {
     flex: none;
-    height: calc(100vh - 146px);
+    height: calc(100vh - 146px - var(--lc-dock-top) - var(--lc-dock-bottom));
     min-height: 520px;
     overflow: hidden;
     border: 1px solid var(--lc-border-card-color);

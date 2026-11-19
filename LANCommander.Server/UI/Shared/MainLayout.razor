@@ -1,4 +1,5 @@
 @inherits LayoutComponentBase
+@using LANCommander.Server.Plugins
 @inject UploadTracker UploadTracker
 @inject NavigationManager NavigationManager
 @implements IDisposable
@@ -22,6 +23,10 @@
             </ErrorHandler>
         </main>
     </div>
+
+    @* Plugin bars, fixed to the window's edges; here so they outlive navigation *@
+    <PluginDock Position="ServerDockPosition.Top" />
+    <PluginDock Position="ServerDockPosition.Bottom" />
 </div>
 
 @code {

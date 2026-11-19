@@ -729,6 +729,66 @@ It is offered only while the plugin is running, not while it is turned off or wa
 none are shown and a warning is logged. The page itself is protected like any other plugin page, and
 with no `[PluginAccess]` only administrators can open it.
 
+### Docked bars
+
+Something that should be visible from every page, such as an application alert or a status bar, can
+be docked along the top or bottom edge of the window with an `IServerDockExtension`:
+
+```csharp
+public sealed class SyncStatusDockExtension : IServerDockExtension
+{
+    public string Id => "com.mycompany.sync.status";
+    public ServerDockPosition Position => ServerDockPosition.Bottom;
+    public Type Component => typeof(SyncStatusBar);
+}
+```
+
+```csharp
+services.AddSingleton<IServerDockExtension, SyncStatusDockExtension>();
+```
+
+```razor
+@* SyncStatusBar.razor: the bar's markup, sized to its content *@
+@inject SyncStatus Status
+@implements IDisposable
+
+<div class="sync-status-bar">
+    <span>@Status.Message</span>
+    @if (Status.LastRun is { } lastRun)
+    {
+        <span>Last synced @lastRun.ToLocalTime()</span>
+    }
+</div>
+
+@code {
+    protected override void OnInitialized() => Status.Changed += OnChanged;
+
+    void OnChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose() => Status.Changed -= OnChanged;
+}
+```
+
+The bar spans the width of the window, and the navigation and the page shrink to make room for it.
+It is created once when the interface loads and stays alive as the user moves between pages, so
+what it holds, such as an alert the user has dismissed or its subscriptions to the plugin's
+services, carries across navigation; a reload, or signing in again, starts it afresh. The component
+receives no parameters, so inject the services it needs. A bar that renders no elements while it has
+nothing to say, e.g. an alert banner with no active alerts, takes no space, and neither does an edge
+whose bars are all empty.
+
+Bars on the same edge are stacked by `Order`, then by `Id`, with the first against the window's
+edge. Ids follow the same rules as other extension ids: letters, digits, `.`, `-` and `_`. Bars that
+share an id are not shown, and neither is a bar whose `Component` isn't a Razor component; a warning
+is logged for each. A bar that throws while rendering is replaced by an error in place, leaving the
+other bars and the page working. With no `Access` the bar is shown only to administrators.
+`Access` only decides whether the bar is drawn, so anything it reaches, such as the plugin's
+endpoints, needs its own protection.
+
+Pages that fill the window can make room for bars too: the heights of the top and bottom edges are
+available as the CSS custom properties `--lc-dock-top` and `--lc-dock-bottom`, `0px` while nothing
+is docked there.
+
 ### Page access
 
 Plugin routes are authorized by the server, not by the plugin. A routable plugin component with no

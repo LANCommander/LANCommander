@@ -58,6 +58,10 @@ namespace LANCommander.Launcher.Services
         // installs and to fire a single notification once a whole group settles.
         private readonly HashSet<Guid> _pendingNotificationRoots = new();
 
+        // Games whose own install finished while redistributables queued for them were still
+        // outstanding. Their GameInstalled event is held until those redistributables settle.
+        private readonly Dictionary<Guid, Game> _pendingInstalledAnnouncements = new();
+
         /// <summary>
         /// The database services for one queue operation. The queue lives for the whole session while games are
         /// uninstalled and edited in other scopes, so a context held for the session keeps serving what it saw
@@ -96,12 +100,9 @@ namespace LANCommander.Launcher.Services
             _pluginEventBus = pluginEventBus;
 
             // Bridge existing lifecycle events to the plugin event bus so plugins can react without
-            // touching every internal call site.
-            OnInstallComplete += async game =>
-            {
-                await _pluginEventBus.PublishAsync(new GameInstalledEvent(game.Id, game.InstallDirectory ?? string.Empty));
-                await _gameClient.ReportLifecycleAsync(SDK.Models.LauncherEventType.GameInstalled, game.Id);
-            };
+            // touching every internal call site. A game isn't announced as installed until the
+            // redistributables queued for it have finished too.
+            OnInstallComplete += AnnounceInstalledWhenRedistributablesSettleAsync;
             OnInstallFail += async game =>
             {
                 await _pluginEventBus.PublishAsync(new GameInstallFailedEvent(game.Id, game.InstallDirectory));
@@ -510,6 +511,9 @@ namespace LANCommander.Launcher.Services
 
         public async Task Next()
         {
+            // Every finished item passes through here, so announce any game whose redistributables just settled
+            await AnnounceSettledInstallsAsync();
+
             Logger?.LogInformation("[InstallQueue] Next: Evaluating queue. Total items: {Count}, statuses: {Statuses}",
                 Queue.Count,
                 string.Join(", ", Queue.Select(i => $"{i.Title}({i.Status}, type={i.ItemType}, depends={i.DependsOnId})")));
@@ -567,6 +571,50 @@ namespace LANCommander.Launcher.Services
             // batch-complete notification for any tracked root whose entire group has
             // finished.
             await NotifySettledGroups();
+        }
+
+        private bool HasOutstandingRedistributables(Guid gameId)
+            => Queue.Any(i => i.ItemType == InstallPlanItemType.Redistributable
+                && i.DependsOnId == gameId
+                && !i.Status.ValueIsIn(InstallStatus.Complete, InstallStatus.Failed, InstallStatus.Canceled));
+
+        private Task AnnounceInstalledWhenRedistributablesSettleAsync(Game game)
+        {
+            if (HasOutstandingRedistributables(game.Id))
+            {
+                Logger?.LogInformation("[InstallQueue] Holding installed event for {Title} ({Id}) until its redistributables finish", game.Title, game.Id);
+                _pendingInstalledAnnouncements[game.Id] = game;
+
+                return Task.CompletedTask;
+            }
+
+            return AnnounceInstalledAsync(game);
+        }
+
+        private async Task AnnounceSettledInstallsAsync()
+        {
+            foreach (var (gameId, game) in _pendingInstalledAnnouncements.ToList())
+            {
+                if (HasOutstandingRedistributables(gameId))
+                    continue;
+
+                _pendingInstalledAnnouncements.Remove(gameId);
+
+                try
+                {
+                    await AnnounceInstalledAsync(game);
+                }
+                catch (Exception ex)
+                {
+                    Logger?.LogWarning(ex, "Could not announce install of {Title} ({Id})", game.Title, game.Id);
+                }
+            }
+        }
+
+        private async Task AnnounceInstalledAsync(Game game)
+        {
+            await _pluginEventBus.PublishAsync(new GameInstalledEvent(game.Id, game.InstallDirectory ?? string.Empty));
+            await _gameClient.ReportLifecycleAsync(SDK.Models.LauncherEventType.GameInstalled, game.Id);
         }
 
         // Walks the DependsOnId chain up to the root install item (the base game with no

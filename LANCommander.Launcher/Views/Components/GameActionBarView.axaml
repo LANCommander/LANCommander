@@ -95,8 +95,9 @@
                                  IsEnabled="{Binding CanInstall}"
                                  Classes="Primary Large Hero">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding !IsInstalling}" />
-                            <TextBlock Text="Installing..." IsVisible="{Binding IsInstalling}" />
+                            <TextBlock Text="Install" FontWeight="SemiBold" IsVisible="{Binding ShowInstallLabel}" />
+                            <TextBlock Text="Queued" IsVisible="{Binding IsQueued}" />
+                            <TextBlock Text="Installing..." IsVisible="{Binding ShowInstallingLabel}" />
                         </StackPanel>
                     </SplitButton>
 

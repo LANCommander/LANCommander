@@ -15,6 +15,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Views;
 using LANCommander.SDK.Clients;
 using LANCommander.Launcher.Data.Models;
+using LANCommander.Launcher.Models;
 using LANCommander.Launcher.Services;
 using LANCommander.Launcher.Services.Interposer;
 using LANCommander.SDK.Abstractions;
@@ -67,10 +68,37 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     [NotifyPropertyChangedFor(nameof(InstallStateDetail))]
     private bool _isInstalled;
 
+    /// <summary>Set while this bar is preparing an install: options, the dialog, and adding it to the queue.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(CanInstall))]
     [NotifyPropertyChangedFor(nameof(InstallStateText))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallingLabel))]
     private bool _isInstalling;
+
+    /// <summary>The game is in the install queue, waiting for the items ahead of it.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallingLabel))]
+    private bool _isQueued;
+
+    /// <summary>The install queue is downloading or installing the game.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(CanInstall))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowInstallingLabel))]
+    private bool _isInstallInProgress;
+
+    /// <summary>
+    /// Adding a game to an idle queue runs the install inside that call, so <see cref="IsInstalling"/> covers it;
+    /// one added behind another download returns at once and only the queue knows it's still coming.
+    /// </summary>
+    public bool ShowInstallingLabel => !IsQueued && (IsInstalling || IsInstallInProgress);
+
+    public bool ShowInstallLabel => !IsQueued && !ShowInstallingLabel;
 
     [ObservableProperty]
     private bool _isUninstalling;
@@ -249,14 +277,15 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     /// <summary>
     /// Can install only when online and not already installed
     /// </summary>
-    public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling;
+    public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling && !IsQueued && !IsInstallInProgress;
 
     public bool PlayButtonIsEnabled => !IsStopping && !IsStarting;
 
     /// <summary>First half of the status line under the title: what state the install is in.</summary>
     public string InstallStateText =>
         IsRunning ? Localize("GameStateRunning")
-        : IsInstalling ? Localize("GameStateInstalling")
+        : IsQueued ? Localize("InstallStatusQueued")
+        : IsInstalling || IsInstallInProgress ? Localize("GameStateInstalling")
         : IsInstalled ? Localize("GameStateInstalled")
         : Localize("GameStateNotInstalled");
 
@@ -313,6 +342,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         LoadManuals(game);
         await LoadActionsAsync();
         StartRunningCheck();
+        FollowInstallQueue();
 
         // The server's versioning decides whether an update is really available
         if (game.Installed)
@@ -557,6 +587,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
             TimeSpan.FromMinutes(1));
     }
 
+    /// <summary>Stops the page's background tracking: running-state polling and following the install queue.</summary>
     public void StopRunningCheck()
     {
         _runningCheckTimer?.Dispose();
@@ -564,6 +595,66 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
         _lastPlayedTimer?.Dispose();
         _lastPlayedTimer = null;
+
+        StopFollowingInstallQueue();
+    }
+
+    private InstallService? _followedInstallService;
+
+    /// <summary>
+    /// Mirrors this game's place in the install queue onto the install button. The queue is a session-wide singleton,
+    /// so the subscription is dropped in <see cref="StopRunningCheck"/> to let the page be collected.
+    /// </summary>
+    internal void FollowInstallQueue()
+    {
+        StopFollowingInstallQueue();
+
+        _followedInstallService = _serviceProvider.GetService<InstallService>();
+
+        if (_followedInstallService == null)
+            return;
+
+        _followedInstallService.OnQueueChanged += OnInstallQueueChanged;
+        UpdateQueueState();
+    }
+
+    private void StopFollowingInstallQueue()
+    {
+        if (_followedInstallService != null)
+            _followedInstallService.OnQueueChanged -= OnInstallQueueChanged;
+
+        _followedInstallService = null;
+    }
+
+    private Task OnInstallQueueChanged()
+    {
+        // Raised from install threads as well as the UI thread; the queue is read where it's changed most
+        Dispatcher.UIThread.Post(UpdateQueueState);
+
+        return Task.CompletedTask;
+    }
+
+    private void UpdateQueueState()
+    {
+        if (_followedInstallService is not { } installService || GameId == Guid.Empty)
+            return;
+
+        IInstallQueueItem? item;
+
+        try
+        {
+            item = installService.Queue
+                .ToList()
+                .LastOrDefault(i => i.Id == GameId && i.ItemType is InstallPlanItemType.Game or InstallPlanItemType.Addon);
+        }
+        catch (InvalidOperationException)
+        {
+            // Changed underneath the snapshot; the change raises another notification
+            return;
+        }
+
+        IsQueued = item?.Status == InstallStatus.Queued;
+        IsInstallInProgress = item != null && (item.State || item.Status == InstallStatus.Starting);
     }
 
     /// <summary>
@@ -1244,6 +1335,9 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 optionsVm.SelectedInstallDirectory,
                 optionsVm.SelectedAddons.Length > 0 ? optionsVm.SelectedAddons : null,
                 optionsVm.SelectedTools.Length > 0 ? optionsVm.SelectedTools : null);
+
+            // Settle the button now rather than on the queue's posted notification, so it doesn't flash "Install"
+            UpdateQueueState();
 
             StatusMessage = "Added to download queue";
             InstallRequested?.Invoke(this, EventArgs.Empty);

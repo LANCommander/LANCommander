@@ -627,6 +627,13 @@ public partial class InstallQueueItemViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isUpdate;
 
+    /// <summary>
+    /// Phosphor icon name shown in place of art when the item has no icon or cover,
+    /// chosen by what is being installed (game, addon, tool, redistributable).
+    /// </summary>
+    [ObservableProperty]
+    private string _fallbackIconValue = "GameController";
+
     [ObservableProperty]
     private ObservableCollection<InstallTaskItemViewModel> _tasks = new();
 
@@ -741,6 +748,7 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         CoverId = item.CoverId;
         IconId = item.IconId;
         IsUpdate = item.IsUpdate;
+        FallbackIconValue = GetFallbackIconValue(item);
 
         // Resolve cover and icon media from the underlying game/redist model
         if (item is InstallQueueGame gameItem)
@@ -767,6 +775,30 @@ public partial class InstallQueueItemViewModel : ViewModelBase
         }
 
         ApplyMetrics(item);
+    }
+
+    private static string GetFallbackIconValue(IInstallQueueItem item)
+    {
+        // Addons are queued as games, so the game type decides between game, expansion and mod
+        if (item is InstallQueueGame { Game: { } game })
+        {
+#pragma warning disable CS0618 // legacy standalone types still arrive from older servers
+            return game.Type switch
+            {
+                GameType.Expansion or GameType.StandaloneExpansion => "PuzzlePiece",
+                GameType.Mod or GameType.StandaloneMod => "Wrench",
+                _ => "GameController",
+            };
+#pragma warning restore CS0618
+        }
+
+        return item.ItemType switch
+        {
+            InstallPlanItemType.Addon => "PuzzlePiece",
+            InstallPlanItemType.Tool => "Toolbox",
+            InstallPlanItemType.Redistributable => "Package",
+            _ => "GameController",
+        };
     }
 
     /// <summary>

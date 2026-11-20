@@ -37,8 +37,18 @@
                     <Border Grid.Column="0" Width="48" Height="72"
                             CornerRadius="{DynamicResource RadiusMedium}" ClipToBounds="True"
                             VerticalAlignment="Center">
-                        <local:Cover Source="{Binding CoverPath}"
-                                     Title="{Binding Title}" />
+                        <Panel>
+                            <Border Background="{DynamicResource SurfaceRaisedBrush}"
+                                    IsVisible="{Binding !HasCover}">
+                                <Icon Type="Regular" Value="{Binding FallbackIconValue}"
+                                      Width="20" Height="20"
+                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                      Foreground="{DynamicResource TextTertiaryBrush}" />
+                            </Border>
+                            <local:Cover Source="{Binding CoverPath}"
+                                         Title="{Binding Title}"
+                                         IsVisible="{Binding HasCover}" />
+                        </Panel>
                     </Border>
 
                     <!-- Info -->

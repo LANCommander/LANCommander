@@ -149,10 +149,17 @@
                                                         ClipToBounds="True"
                                                         Background="{DynamicResource SurfaceRaisedBrush}"
                                                         Margin="0,0,14,0">
-                                                    <Image controls:AsyncImage.Source="{Binding IconPath}"
-                                                           controls:AsyncImage.DecodeWidth="32"
-                                                           Stretch="UniformToFill"
-                                                           IsVisible="{Binding HasIcon}" />
+                                                    <Panel>
+                                                        <Icon Type="Regular" Value="{Binding FallbackIconValue}"
+                                                              Width="16" Height="16"
+                                                              HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                              Foreground="{DynamicResource TextTertiaryBrush}"
+                                                              IsVisible="{Binding !HasIcon}" />
+                                                        <Image controls:AsyncImage.Source="{Binding IconPath}"
+                                                               controls:AsyncImage.DecodeWidth="32"
+                                                               Stretch="UniformToFill"
+                                                               IsVisible="{Binding HasIcon}" />
+                                                    </Panel>
                                                 </Border>
                                                 <StackPanel Orientation="Horizontal" Spacing="10" VerticalAlignment="Center">
                                                     <TextBlock Text="{Binding Title}"

@@ -86,7 +86,7 @@
                                                 <Panel>
                                                     <Border Background="{DynamicResource SurfaceBrush}"
                                                             IsVisible="{Binding !HasCover}">
-                                                        <Icon Type="Regular" Value="GameController"
+                                                        <Icon Type="Regular" Value="{Binding FallbackIconValue}"
                                                               Width="16" Height="16"
                                                               HorizontalAlignment="Center"
                                                               VerticalAlignment="Center" />

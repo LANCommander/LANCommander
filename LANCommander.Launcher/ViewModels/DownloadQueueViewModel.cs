@@ -169,8 +169,13 @@ public partial class DownloadQueueViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
-    private Task OnProgress(InstallProgress progress)
+    private Task OnProgress(InstallProgress liveProgress)
     {
+        // The SDK clients reuse one InstallProgress instance and keep mutating it on the install
+        // thread. Copy it now, so the posted update shows this event's values rather than
+        // whatever the shared instance holds by the time the UI thread gets to it.
+        var progress = Snapshot(liveProgress);
+
         Dispatcher.UIThread.Post(() =>
         {
             var entityId = progress.Game?.Id ?? progress.Tool?.Id ?? progress.Redistributable?.Id;
@@ -260,14 +265,30 @@ public partial class DownloadQueueViewModel : ViewModelBase
         return Task.CompletedTask;
     }
 
+    private static InstallProgress Snapshot(InstallProgress progress) => new()
+    {
+        Game = progress.Game,
+        Tool = progress.Tool,
+        Redistributable = progress.Redistributable,
+        Title = progress.Title,
+        IconId = progress.IconId,
+        Status = progress.Status,
+        Indeterminate = progress.Indeterminate,
+        TransferSpeed = progress.TransferSpeed,
+        BytesTransferred = progress.BytesTransferred,
+        TotalBytes = progress.TotalBytes,
+        TimeRemaining = progress.TimeRemaining,
+    };
+
     private Task OnInstallComplete(Data.Models.Game game)
     {
         _logger.LogInformation("Install complete for game {GameTitle}", game.Title);
 
-        _taskbarProgressService.ClearProgress();
-
+        // Clear on the UI thread, behind any progress updates already posted for this install;
+        // clearing here directly let those land afterwards and put the finished bar back
         Dispatcher.UIThread.Post(() =>
         {
+            _taskbarProgressService.ClearProgress();
             RefreshQueue();
             InstallCompleted?.Invoke(this, game.Id);
         });
@@ -322,10 +343,14 @@ public partial class DownloadQueueViewModel : ViewModelBase
     {
         _logger.LogError("Install failed for game {GameTitle}", game.Title);
 
-        _taskbarProgressService.SetError();
         _notificationService.NotifyInstallFailed(game.Title ?? "Game", game.Id);
 
-        Dispatcher.UIThread.Post(RefreshQueue);
+        // Same ordering as OnInstallComplete: queued progress must not overwrite the error state
+        Dispatcher.UIThread.Post(() =>
+        {
+            _taskbarProgressService.SetError();
+            RefreshQueue();
+        });
         
         return Task.CompletedTask;
     }
@@ -403,11 +428,19 @@ public partial class DownloadQueueViewModel : ViewModelBase
         ActiveCount = QueueItems.Count(i => i.IsActive || i.Status == InstallStatus.Queued);
         HasPendingItems = ActiveCount > 0;
 
+        var previousItemId = CurrentItem?.Id;
+
         CurrentItem = QueueItems.FirstOrDefault(i => i.IsActive);
 
-        // Don't let the last download's figures linger into the next one
-        if (!HasActiveDownload)
+        // Don't let the last download's figures linger into the next one. Back-to-back items
+        // usually never pass through "no active download" between refreshes, so also reset when
+        // the active item changes; the new item's own progress events fill these in again.
+        if (!HasActiveDownload || CurrentItem?.Id != previousItemId)
         {
+            if (HasActiveDownload)
+                _taskbarProgressService.ClearProgress();
+
+            CurrentStatus = string.Empty;
             CurrentProgress = 0;
             CurrentTransferSpeed = 0;
             CurrentProgressText = string.Empty;

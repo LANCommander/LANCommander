@@ -1686,9 +1686,19 @@ namespace LANCommander.SDK.Services
                 throw new InstallException($"Could not fetch game info for {planItem.Title}");
             }
 
-            // Set the progress context so OnInstallProgressUpdate events carry the game reference
+            // Set the progress context so OnInstallProgressUpdate events carry the game reference.
+            // The instance is shared across installs, so also drop the previous item's figures;
+            // otherwise its status and byte counts ride along until this item's download starts.
             _installProgress.Game = game;
             _installProgress.Title = game.Title;
+            _installProgress.Tool = null;
+            _installProgress.Redistributable = null;
+            _installProgress.Status = InstallStatus.Starting;
+            _installProgress.Indeterminate = false;
+            _installProgress.BytesTransferred = 0;
+            _installProgress.TotalBytes = 0;
+            _installProgress.TransferSpeed = 0;
+            _installProgress.TimeRemaining = TimeSpan.Zero;
 
             var gameFileList = installResult.FileList;
             SDK.Models.Manifest.Game manifest = null;
@@ -2695,6 +2705,21 @@ namespace LANCommander.SDK.Services
 
                         // Skip to next entry
                         await using var es = await _reader.OpenEntryStreamAsync(cancellationToken);
+                    }
+                }
+
+                // Progress reports are rate limited, so the last one usually lands short of the end.
+                // Report the finished extraction so the bar doesn't sit there for the remaining tasks.
+                if (!_reader.Cancelled)
+                {
+                    lock (monitorLock)
+                    {
+                        _installProgress.BytesTransferred = stream.Length;
+                        _installProgress.TotalBytes = stream.Length;
+                        _installProgress.TransferSpeed = 0;
+                        _installProgress.TimeRemaining = TimeSpan.Zero;
+
+                        OnInstallProgressUpdate?.Invoke(_installProgress);
                     }
                 }
 

@@ -2,7 +2,9 @@ namespace LANCommander.Server.Plugins;
 
 /// <summary>
 /// Contributes a link to the server's primary navigation.
-/// Register an implementation in <c>IPlugin.ConfigureServices</c>.
+/// Register an implementation in <c>IPlugin.ConfigureServices</c>, once per link; a plugin may register
+/// any number, and <see cref="ServerNavigationLink"/> saves writing a class for each. Links can be
+/// gathered under an expandable <see cref="IServerNavigationGroupExtension"/>.
 /// </summary>
 public interface IServerNavigationExtension
 {
@@ -19,8 +21,9 @@ public interface IServerNavigationExtension
     string? Icon => null;
 
     /// <summary>
-    /// The section the entry is placed in, one of <see cref="ServerNavigationSection"/>. Null places
-    /// it in the plugin area at the end of the navigation.
+    /// The section the entry is placed in: one of <see cref="ServerNavigationSection"/>, or the
+    /// <see cref="IServerNavigationGroupExtension.Id"/> of a plugin group. Null places it in the
+    /// plugin area at the end of the navigation.
     /// </summary>
     string? Section => null;
 

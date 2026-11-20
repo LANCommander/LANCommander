@@ -11,6 +11,7 @@
 @inject NavigationManager NavigationManager
 @inject ILogger<MainMenu> Logger
 @inject IEnumerable<IServerNavigationExtension> PluginNavigationExtensions
+@inject IEnumerable<IServerNavigationGroupExtension> PluginNavigationGroups
 @inject IEnumerable<IServerRouteAssemblyExtension> PluginRouteAssemblies
 @inject ChatUnreadState ChatUnread
 @implements IDisposable
@@ -110,8 +111,7 @@
 
         var pluginAssemblies = UIRouteAssembly.ResolvePluginAssemblies(PluginRouteAssemblies);
 
-        _plugins = new(PluginNavigation.Resolve(PluginNavigationExtensions, Logger)
-            .Where(extension => PluginNavigationVisibility.IsVisible(extension, _user, pluginAssemblies)));
+        _plugins = PluginNavigation.Build(PluginNavigationExtensions, PluginNavigationGroups, _user, pluginAssemblies, Logger);
 
         NavigationManager.LocationChanged += RefreshOnNavigation;
         ChatUnread.Changed += RefreshChatUnread;
@@ -138,10 +138,18 @@
         </text>;
     }
 
-    RenderFragment? PluginItems(IReadOnlyList<IServerNavigationExtension> entries) => entries.Count == 0 ? null : @<text>
+    RenderFragment? PluginItems(IReadOnlyList<PluginNavigationEntry> entries) => entries.Count == 0 ? null : @<text>
         @foreach (var entry in entries)
         {
-            <MenuItem Href="@entry.Href" Icon="@ParseIcon(entry.Icon)">@entry.Label</MenuItem>
+            @* A plugin group's entries are placed in it through the insertions, like a built-in group's *@
+            if (entry.IsGroup)
+            {
+                <SubMenu Name="@entry.Id" Title="@entry.Label" Icon="@ParseIcon(entry.Icon)" />
+            }
+            else
+            {
+                <MenuItem Href="@entry.Href" Icon="@ParseIcon(entry.Icon)">@entry.Label</MenuItem>
+            }
         }
     </text>;
 

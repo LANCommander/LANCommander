@@ -15,7 +15,8 @@ Use the version of the server the plugin targets.
 | Type | Use |
 | --- | --- |
 | `IServerRouteAssemblyExtension` | Registers the assembly holding the plugin's `@page` components |
-| `IServerNavigationExtension` | Adds an entry to the server's navigation |
+| `IServerNavigationExtension`, `ServerNavigationLink` | Adds an entry to the server's navigation; register one per entry, as many as needed |
+| `IServerNavigationGroupExtension`, `ServerNavigationGroup` | Adds an expandable group, like Dashboards or Settings, that entries and nested groups are placed in by naming its id as their section |
 | `ServerNavigationSection`, `ServerNavigationAnchor` | Where in the navigation an entry is placed |
 | `IServerDockExtension`, `ServerDockPosition` | Docks a bar, e.g. an alert banner or a status bar, along the top or bottom of the server's interface, kept alive across navigation |
 | `IPluginSettingsExtension` | Links the plugin's settings page from its row on Settings → Plugins, instead of the navigation |

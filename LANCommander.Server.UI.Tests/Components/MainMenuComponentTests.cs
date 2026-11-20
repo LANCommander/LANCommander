@@ -51,6 +51,31 @@ public class MainMenuComponentTests : BUnitTestContext
         Assert.Equal(["HQ", "IGDB", "MobyGames", "PCGamingWiki"], Labels(Group(cut, "Integrations"))[..4]);
     }
 
+    [Fact]
+    public void MainMenu_RendersPluginGroupsAsSubMenus()
+    {
+        Services.AddSingleton<IServerNavigationGroupExtension>(new ServerNavigationGroup
+        {
+            Id = "tools",
+            Label = "Plugin Tools",
+            Section = ServerNavigationSection.Main,
+            After = ServerNavigationSection.Metadata,
+        });
+        Services.AddSingleton<IServerNavigationGroupExtension>(new ServerNavigationGroup { Id = "nested", Label = "Nested", Section = "tools" });
+        Services.AddSingleton<IServerNavigationGroupExtension>(new ServerNavigationGroup { Id = "empty", Label = "Empty" });
+        Add(new Entry("catalog", "Catalog", "tools"));
+        Add(new Entry("reports", "Reports", "tools"));
+        Add(new Entry("deep", "Deep", "nested"));
+
+        var cut = Render<MainMenu>();
+        var root = Labels(cut.Find(".lc-menu-list"));
+
+        Assert.Equal(["Games", "Metadata", "Plugin Tools", "Redistributables"], root[3..7]);
+        Assert.DoesNotContain("Empty", root);
+        Assert.Equal(["Catalog", "Nested", "Reports"], Labels(Group(cut, "Plugin Tools")));
+        Assert.Equal(["Deep"], Labels(Group(cut, "Nested")));
+    }
+
     void Add(IServerNavigationExtension entry) => Services.AddSingleton(entry);
 
     static IElement Group(IRenderedComponent<MainMenu> cut, string title) =>

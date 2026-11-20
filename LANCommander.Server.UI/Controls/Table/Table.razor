@@ -98,7 +98,7 @@
                 <div class="@(_view == TableView.Tiles ? "lc-table-rows lc-table-rows-hidden" : "lc-table-rows")">
                 <RadzenDataGrid @ref="_grid"
                                 TItem="TItem"
-                                Data="_rows"
+                                Data="_gridRows"
                                 LoadData="LoadDataAsync"
                                 IsLoading="_loading"
                                 AllowSorting="true"
@@ -336,8 +336,12 @@
 
     RadzenDataGrid<TItem>? _grid;
     readonly List<TableColumnInfo> _columns = [];
-    // Null until the first load: Radzen only calls LoadData while it has no data
+    // The page's own rows. Null until the first load: Radzen only calls LoadData while it has no data
     List<TItem>? _rows;
+    // What the grid draws: the page's rows, each followed by its children while expanded inline
+    List<TItem>? _gridRows;
+    // Rows expanded by an inline expander, by key, so they stay expanded when the page reloads
+    readonly HashSet<object?> _expandedKeys = [];
     IReadOnlyDictionary<TItem, IReadOnlyList<TItem>> _children = new Dictionary<TItem, IReadOnlyList<TItem>>();
     IList<TItem> _selected = new List<TItem>();
     int _total;
@@ -511,6 +515,7 @@
             _rows = result.Items.ToList();
             _topLevelKeys = _rows.Select(_keyOf).ToHashSet();
             _children = result.Children ?? new Dictionary<TItem, IReadOnlyList<TItem>>();
+            _gridRows = WithExpandedChildren(_rows);
             _groupCounts = result.GroupCounts;
             _total = result.Total;
 
@@ -535,6 +540,7 @@
             Logger.LogError(ex, "Failed to load table rows");
             _error = ex;
             _rows = [];
+            _gridRows = [];
             _total = 0;
         }
         finally
@@ -713,7 +719,8 @@
 
     void RowRender(RowRenderEventArgs<TItem> args)
     {
-        args.Expandable = _children.TryGetValue(args.Data, out var children) && children.Count > 0;
+        // An inline expander splices children into the rows itself; the grid's own toggle is for the rest
+        args.Expandable = !InlineExpander && _children.TryGetValue(args.Data, out var children) && children.Count > 0;
 
         if (RowMark?.Invoke(args.Data) is { } mark)
             args.Attributes["data-lc-mark"] = mark;
@@ -736,13 +743,13 @@
         if (!_children.TryGetValue(row, out var children) || children.Count == 0)
             return content;
 
-        var expanded = _grid?.IsRowExpanded(row) ?? false;
+        var expanded = _expandedKeys.Contains(_keyOf(row));
         var summary = ChildSummary?.Invoke(children);
 
         return @<span class="lc-table-expandable">
             <button type="button" class="@(expanded ? "lc-table-expander lc-table-expander-open" : "lc-table-expander")"
                     aria-expanded="@(expanded ? "true" : "false")" aria-label="@(expanded ? "Collapse" : "Expand")"
-                    @onclick="() => ToggleRowAsync(row)" @onclick:stopPropagation>
+                    @onclick="() => ToggleRow(row)" @onclick:stopPropagation>
                 <Icon Type="IconType.CaretRight" />
             </button>
             <span class="lc-table-expandable-content">@content</span>
@@ -753,21 +760,39 @@
         </span>;
     }
 
-    async Task ToggleRowAsync(TItem row)
+    /// <summary>
+    /// Expands a collapsed row and collapses an expanded one, by splicing its children into the rows
+    /// the grid draws. Not through the grid's own child rows: once any row has them, Radzen sorts the
+    /// page again in memory, which reorders a page the database sorted differently (SQLite puts
+    /// "BZFlag" before "Baba Is You"; .NET puts it after "Blood").
+    /// </summary>
+    void ToggleRow(TItem row)
     {
-        if (_grid == null)
-            return;
+        var key = _keyOf(row);
 
-        // Expands a collapsed row and collapses an expanded one
-        await _grid.ExpandRow(row);
+        if (!_expandedKeys.Remove(key))
+            _expandedKeys.Add(key);
 
-        // Radzen drops its cached view when a row's children load but not its cached grouped view, so
-        // a grouped table would keep drawing the rows without them. Replacing the group with itself
-        // is the only public way to clear that cache.
-        if (_groups.Count > 0)
-            _groups[0] = _groups[0];
+        // A new list, so the grid drops its cached (and grouped) views of the old one
+        _gridRows = WithExpandedChildren(_rows);
+    }
 
-        StateHasChanged();
+    List<TItem>? WithExpandedChildren(List<TItem>? rows)
+    {
+        if (rows == null || _expandedKeys.Count == 0)
+            return rows == null ? null : [.. rows];
+
+        var withChildren = new List<TItem>(rows.Count);
+
+        foreach (var row in rows)
+        {
+            withChildren.Add(row);
+
+            if (_expandedKeys.Contains(_keyOf(row)) && _children.TryGetValue(row, out var children))
+                withChildren.AddRange(children);
+        }
+
+        return withChildren;
     }
 
     void LoadChildData(DataGridLoadChildDataEventArgs<TItem> args)

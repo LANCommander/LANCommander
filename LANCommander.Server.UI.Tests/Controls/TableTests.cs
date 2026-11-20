@@ -409,4 +409,47 @@ public class TableTests : ControlsTestContext
 
         host.WaitForAssertion(() => Assert.Empty(host.FindAll("tbody tr[data-lc-child]")));
     }
+
+    [Fact]
+    public void Expanding_KeepsTheProvidersOrder()
+    {
+        // In the database's order: SQLite compares ordinally, so "BZFlag" comes before "Baba Is You",
+        // where .NET's string order would put it last
+        var page = new List<Row>
+        {
+            new(Guid.NewGuid(), "BZFlag", 8),
+            new(Guid.NewGuid(), "Baba Is You", 1),
+            new(Guid.NewGuid(), "Battlefield 1942", 64),
+            new(Guid.NewGuid(), "Blood", 8),
+        };
+        IReadOnlyList<Row> addons =
+        [
+            new(Guid.NewGuid(), "Battlefield 1942: The Road to Rome", 64),
+            new(Guid.NewGuid(), "Battlefield 1942: Secret Weapons of WWII", 64),
+        ];
+
+        var host = Render<Host>(p => p
+            .Add(x => x.Provider, _ => Task.FromResult(new TableResult<Row>(page, page.Count)
+            {
+                Children = new Dictionary<Row, IReadOnlyList<Row>> { [page[2]] = addons },
+            }))
+            .Add(x => x.TitleExpander, true)
+            .Add(x => x.GroupByInitial, true));
+
+        host.WaitForAssertion(() => Assert.Equal(["BZFlag", "Baba Is You", "Battlefield 1942", "Blood"], ShownTitles(host)));
+
+        host.WaitForElement(".lc-table-expander").Click();
+
+        host.WaitForAssertion(() => Assert.Equal(
+            ["BZFlag", "Baba Is You", "Battlefield 1942", "Battlefield 1942: The Road to Rome", "Battlefield 1942: Secret Weapons of WWII", "Blood"],
+            ShownTitles(host)));
+
+        host.Find(".lc-table-expander").Click();
+
+        host.WaitForAssertion(() => Assert.Equal(["BZFlag", "Baba Is You", "Battlefield 1942", "Blood"], ShownTitles(host)));
+    }
+
+    /// <summary>The title cells' text without the expander's summary.</summary>
+    private static List<string> ShownTitles(IRenderedComponent<Host> host) =>
+        host.FindAll("tbody tr.rz-data-row td:first-child").Select(td => (td.QuerySelector(".lc-table-expandable-content") ?? td).TextContent.Trim()).ToList();
 }

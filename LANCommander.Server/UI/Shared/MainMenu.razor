@@ -21,11 +21,11 @@
     <SubMenu Name="@ServerNavigationSection.Dashboards" Title="Dashboards" Icon="IconType.Gauge">
         <MenuItem Href="/" Icon="IconType.SquaresFour" Exact>Overview</MenuItem>
         <MenuItem Href="/Dashboard/SessionPlaytime" Icon="IconType.Timer">Average Session Playtime</MenuItem>
-        @if (_user != null)
-        {
-            <MenuItem Href="/Chat" Icon="IconType.ChatsCircle" Count="@(ChatUnread.UnreadCount is > 0 ? ChatUnread.UnreadCount : null)">Chat</MenuItem>
-        }
     </SubMenu>
+    @if (_user != null)
+    {
+        <MenuItem Href="/Chat" Icon="IconType.ChatsCircle" Count="@(ChatUnread.UnreadCount is > 0 ? ChatUnread.UnreadCount : null)">Chat</MenuItem>
+    }
     <MenuDivider />
 
     @if (_user != null && _user.IsInRole(RoleService.AdministratorRoleName))

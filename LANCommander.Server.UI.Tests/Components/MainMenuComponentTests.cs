@@ -23,10 +23,10 @@ public class MainMenuComponentTests : BUnitTestContext
         var cut = Render<MainMenu>();
 
         Assert.Equal(
-            ["Dashboards", "-", "Games", "Metadata", "Redistributables", "Tools", "Servers", "Scripting", "-", "Pages", "Issues", "Files", "Settings"],
+            ["Dashboards", "Chat", "-", "Games", "Metadata", "Redistributables", "Tools", "Servers", "Scripting", "-", "Pages", "Issues", "Files", "Settings"],
             Labels(cut.Find(".lc-menu-list")));
 
-        Assert.Equal(["Overview", "Average Session Playtime", "Chat"], Labels(Group(cut, "Dashboards")));
+        Assert.Equal(["Overview", "Average Session Playtime"], Labels(Group(cut, "Dashboards")));
     }
 
     [Fact]
@@ -44,7 +44,7 @@ public class MainMenuComponentTests : BUnitTestContext
         var root = Labels(cut.Find(".lc-menu-list"));
         var settings = Labels(Group(cut, "Settings"));
 
-        Assert.Equal(["Games", "Metadata", "Catalog", "Redistributables"], root[2..6]);
+        Assert.Equal(["Games", "Metadata", "Catalog", "Redistributables"], root[3..7]);
         Assert.Equal(["Settings", "-", "Loose"], root[^3..]);
         Assert.Equal(["First Setting", "General", "Database", "Users", "Role Sync", "Roles"], settings[..6]);
         Assert.Equal(["API", "Lost Anchor", "Webhooks"], settings[^3..]);

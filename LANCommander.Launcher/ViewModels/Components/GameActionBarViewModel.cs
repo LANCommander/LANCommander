@@ -101,6 +101,10 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     public bool ShowInstallLabel => !IsQueued && !ShowInstallingLabel;
 
     [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(ShowUpdateLabel))]
+    [NotifyPropertyChangedFor(nameof(ShowPlayLabel))]
+    [NotifyPropertyChangedFor(nameof(PlayButtonIsEnabled))]
+    [NotifyPropertyChangedFor(nameof(InstallStateText))]
     private bool _isUninstalling;
 
     [ObservableProperty]
@@ -267,23 +271,24 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         PlayingNow = directory.ForGame(gameId, self);
     }
 
-    public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting;
+    public bool ShowUpdateLabel => IsUpdateAvailable && !IsRunning && !IsStarting && !IsUninstalling;
 
     /// <summary>
     /// Shows "Play" label when no update available and game is idle (not running/starting)
     /// </summary>
-    public bool ShowPlayLabel => !IsRunning && (!IsUpdateAvailable || IsStarting);
+    public bool ShowPlayLabel => !IsRunning && !IsUninstalling && (!IsUpdateAvailable || IsStarting);
 
     /// <summary>
     /// Can install only when online and not already installed
     /// </summary>
     public bool CanInstall => !IsOfflineMode && !IsInstalled && !IsInstalling && !IsQueued && !IsInstallInProgress;
 
-    public bool PlayButtonIsEnabled => !IsStopping && !IsStarting;
+    public bool PlayButtonIsEnabled => !IsStopping && !IsStarting && !IsUninstalling;
 
     /// <summary>First half of the status line under the title: what state the install is in.</summary>
     public string InstallStateText =>
-        IsRunning ? Localize("GameStateRunning")
+        IsUninstalling ? Localize("GameStateUninstalling")
+        : IsRunning ? Localize("GameStateRunning")
         : IsQueued ? Localize("InstallStatusQueued")
         : IsInstalling || IsInstallInProgress ? Localize("GameStateInstalling")
         : IsInstalled ? Localize("GameStateInstalled")
@@ -361,6 +366,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         IsInstalled = item.IsInstalled;
         IsInLibrary = item.InLibrary;
         IsUpdateAvailable = item.IsUpdateAvailable;
+        IsUninstalling = UninstallTracker.IsUninstalling(item.Id);
 
         using var scope = _serviceProvider.CreateScope();
         
@@ -572,6 +578,8 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
     public void StartRunningCheck()
     {
+        FollowUninstalls();
+
         _runningCheckTimer?.Dispose();
         _runningCheckTimer = new System.Threading.Timer(
             _ => CheckRunningState(),
@@ -597,6 +605,49 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         _lastPlayedTimer = null;
 
         StopFollowingInstallQueue();
+        StopFollowingUninstalls();
+    }
+
+    /// <summary>
+    /// Mirrors uninstalls of this game onto the play button, wherever they were started from (a library
+    /// context menu uses its own action bar). Static events, so dropped in <see cref="StopRunningCheck"/>.
+    /// </summary>
+    private void FollowUninstalls()
+    {
+        StopFollowingUninstalls();
+
+        UninstallTracker.Changed += OnUninstallChanged;
+        UninstallTracker.Uninstalled += OnGameUninstalled;
+
+        IsUninstalling = UninstallTracker.IsUninstalling(GameId);
+    }
+
+    private void StopFollowingUninstalls()
+    {
+        UninstallTracker.Changed -= OnUninstallChanged;
+        UninstallTracker.Uninstalled -= OnGameUninstalled;
+    }
+
+    private void OnUninstallChanged(Guid gameId, bool uninstalling)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (gameId == GameId)
+                IsUninstalling = uninstalling;
+        });
+    }
+
+    private void OnGameUninstalled(Guid gameId)
+    {
+        Dispatcher.UIThread.Post(() =>
+        {
+            if (gameId != GameId)
+                return;
+
+            IsInstalled = false;
+            InstallDirectory = null;
+            InstalledVersion = null;
+        });
     }
 
     private InstallService? _followedInstallService;
@@ -1813,12 +1864,19 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     {
         if (!IsInstalled || IsUninstalling) return;
 
+        var gameId = GameId;
+
+        // Another bar (the detail page, or a context menu over the same game) already started it
+        if (!UninstallTracker.TryBegin(gameId))
+            return;
+
+        var succeeded = false;
+
         IsUninstalling = true;
         StatusMessage = "Uninstalling...";
 
         try
         {
-            var gameId = GameId;
 
             _logger.LogInformation("Uninstalling game {GameId} ({Title})", gameId, Title);
 
@@ -1835,6 +1893,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
                 await gameService.UninstallAsync(localGame);
             });
 
+            succeeded = true;
             IsInstalled = false;
             InstallDirectory = null;
             InstalledVersion = null;
@@ -1852,6 +1911,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
         finally
         {
             IsUninstalling = false;
+            UninstallTracker.End(gameId, succeeded);
         }
     }
 

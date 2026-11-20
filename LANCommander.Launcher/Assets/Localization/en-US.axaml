@@ -147,6 +147,7 @@
     <sys:String x:Key="GameStateInstalled">Installed</sys:String>
     <sys:String x:Key="GameStateNotInstalled">Not installed</sys:String>
     <sys:String x:Key="GameStateInstalling">Installing</sys:String>
+    <sys:String x:Key="GameStateUninstalling">Uninstalling</sys:String>
     <sys:String x:Key="GameStateRunning">Running</sys:String>
     <sys:String x:Key="GameStateUpToDate">Up to date</sys:String>
     <sys:String x:Key="GameStateUpdateAvailable">Update available</sys:String>

@@ -113,6 +113,8 @@
                                  Classes.Primary="{Binding !ShowPlayLabel}"
                                  Classes="Large Hero">
                         <Panel>
+                            <TextBlock Text="{DynamicResource GameStateUninstalling}" IsVisible="{Binding IsUninstalling}" />
+
                             <!-- Idle + update available: Update -->
                             <StackPanel Orientation="Horizontal" Spacing="8"
                                         IsVisible="{Binding ShowUpdateLabel}">

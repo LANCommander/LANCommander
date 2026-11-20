@@ -11,7 +11,8 @@
     scripts when none is. AllowedTypes limits which kinds can be added.
 *@
 <Flex Vertical Gap="Gap.Large">
-    <DataTable @ref="_table" TItem="Script" NoPaging Small SettingsKey="script-editor" Query="GetQueryExpression()">
+    <DataTable @ref="_table" TItem="Script" NoPaging Small SettingsKey="script-editor" Query="GetQueryExpression()"
+               OnRowDoubleClick="script => EditAsync(script.Id)">
         <Columns>
             <BoundColumn Property="s => s.Name" Sortable />
             <BoundColumn Property="s => s.Type" Sortable>

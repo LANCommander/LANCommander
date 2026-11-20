@@ -131,9 +131,9 @@ internal sealed class PluginNavigation
     }
 
     /// <summary>
-    /// The plugin links and groups that can be rendered: invalid ones, every one sharing an id with
-    /// another, every link sharing a route with another, and groups nested in a cycle are dropped with
-    /// a warning.
+    /// The plugin links and groups that can be rendered. Declarations of the same group are merged
+    /// into one; invalid links and groups, every link sharing an id or route with another, links and
+    /// groups sharing an id, and groups nested in a cycle are dropped with a warning.
     /// </summary>
     internal static (IReadOnlyList<IServerNavigationExtension> Links, IReadOnlyList<IServerNavigationGroupExtension> Groups) Resolve(
         IEnumerable<IServerNavigationExtension> links,
@@ -177,6 +177,9 @@ internal sealed class PluginNavigation
 
                 return true;
             })
+            // Plugins that declare the same group mean to share it, so their declarations become one
+            .GroupBy(group => group.Id, StringComparer.OrdinalIgnoreCase)
+            .Select(declarations => Merge(declarations.ToList(), logger))
             .ToList();
 
         var duplicateIds = validLinks.Select(link => link.Id)
@@ -226,6 +229,68 @@ internal sealed class PluginNavigation
                 section);
 
         return (validLinks, validGroups);
+    }
+
+    /// <summary>
+    /// One group from every declaration of the same id. Its title and placement come from the
+    /// declaration with the lowest <see cref="IServerNavigationGroupExtension.Order"/>, ties broken by
+    /// the declarations' values so the result doesn't depend on the order plugins load in. Its access
+    /// is the most permissive declared, since every entry inside is still checked against its own.
+    /// </summary>
+    static IServerNavigationGroupExtension Merge(IReadOnlyList<IServerNavigationGroupExtension> declarations, ILogger logger)
+    {
+        if (declarations.Count == 1)
+            return declarations[0];
+
+        var primary = declarations
+            .OrderBy(group => group.Order)
+            .ThenBy(group => group.Label, StringComparer.Ordinal)
+            .ThenBy(group => group.Icon, StringComparer.Ordinal)
+            .ThenBy(group => group.Section, StringComparer.Ordinal)
+            .ThenBy(group => group.After, StringComparer.Ordinal)
+            .First();
+
+        var disagree = declarations.Any(group =>
+            !string.Equals(group.Label, primary.Label, StringComparison.Ordinal)
+            || !string.Equals(group.Icon, primary.Icon, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(group.Section, primary.Section, StringComparison.OrdinalIgnoreCase)
+            || !string.Equals(group.After, primary.After, StringComparison.OrdinalIgnoreCase)
+            || group.Order != primary.Order);
+
+        if (disagree)
+            logger.LogWarning(
+                "Server navigation group {GroupId} is declared {Count} times with different titles or placements; using {Label}",
+                primary.Id,
+                declarations.Count,
+                primary.Label);
+
+        return new ServerNavigationGroup
+        {
+            Id = primary.Id,
+            Label = primary.Label,
+            Icon = primary.Icon,
+            Section = primary.Section,
+            After = primary.After,
+            Order = primary.Order,
+            Access = MostPermissive(declarations.Select(group => group.Access)),
+        };
+    }
+
+    /// <summary>A policy satisfied by anyone who satisfies any of <paramref name="policies"/>.</summary>
+    internal static PluginAccessPolicy MostPermissive(IEnumerable<PluginAccessPolicy> policies)
+    {
+        var list = policies.ToList();
+
+        if (list.Any(policy => policy.Level == PluginAccessLevel.AuthenticatedUser))
+            return PluginAccessPolicy.AuthenticatedUser;
+
+        var roles = list
+            .Where(policy => policy.Level == PluginAccessLevel.Role)
+            .SelectMany(policy => policy.RequiredRoles)
+            .ToArray();
+
+        // Administrators satisfy every policy, so the role policy alone covers them too
+        return roles.Length > 0 ? PluginAccessPolicy.RequireRoles(roles) : PluginAccessPolicy.Administrator;
     }
 
     /// <summary>The ids of groups whose chain of sections leads back to themselves.</summary>

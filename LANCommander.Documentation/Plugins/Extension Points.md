@@ -744,8 +744,16 @@ services.AddSingleton<IServerNavigationExtension>(new ServerNavigationLink
 ```
 
 Inside a group, entries and nested groups are ordered by `Order`, then by label, and
-`ServerNavigationAnchor.Start` places one first. A group's `Id` shares the namespace of entry ids, so
-it must not match another entry or group, nor a `ServerNavigationSection` value.
+`ServerNavigationAnchor.Start` places one first. A group's `Id` must not match an entry's id or a
+`ServerNavigationSection` value.
+
+Any plugin can place entries in any group. Plugins that each declare a group with the same `Id`
+share a single group holding all of their entries, so each of them works with or without the others
+installed. Choose an id neither plugin owns, such as `community.reports`. The shared group takes
+its label, icon and placement from the declaration with the lowest `Order`, with ties settled by the
+declarations' values rather than by load order, and logs a warning if the declarations disagree. It
+is shown to anyone who satisfies any of the declarations' `Access`, and each entry inside it is still
+checked against its own.
 
 A group is shown only while it holds an entry the user may see. Its `Access` hides it, and everything
 in it, from users who don't satisfy it; each entry inside is also checked against its own `Access`.

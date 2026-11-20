@@ -143,6 +143,63 @@ public class PluginNavigationTests
     }
 
     [Fact]
+    public void DeclarationsOfTheSameGroupAreMerged()
+    {
+        var navigation = Build(
+        [
+            new Entry("first-report", "First Plugin's Report", "reports"),
+            new Entry("second-report", "Second Plugin's Report", "REPORTS"),
+        ],
+        [
+            Group("reports", "Second Title", ServerNavigationSection.Settings, order: 5),
+            Group("Reports", "Reports", ServerNavigationSection.Main, order: 1),
+        ]);
+
+        var group = Assert.Single(navigation.End(null, Anchors()));
+        Assert.Equal("Reports", group.Label);
+        Assert.Equal(["First Plugin's Report", "Second Plugin's Report"], Labels(navigation.End(group.Id, Anchors())));
+        Assert.Empty(navigation.End(ServerNavigationSection.Settings, Anchors()));
+    }
+
+    [Fact]
+    public void MergedGroupsChooseTheirTitleRegardlessOfLoadOrder()
+    {
+        IServerNavigationGroupExtension alpha = Group("reports", "Alpha"), beta = Group("reports", "Beta");
+
+        var (_, forwards) = PluginNavigation.Resolve([], [alpha, beta], NullLogger.Instance);
+        var (_, backwards) = PluginNavigation.Resolve([], [beta, alpha], NullLogger.Instance);
+
+        Assert.Equal("Alpha", Assert.Single(forwards).Label);
+        Assert.Equal("Alpha", Assert.Single(backwards).Label);
+    }
+
+    [Fact]
+    public void MergedGroupsAreShownToAnyoneAnyDeclarationAllows()
+    {
+        var player = new ClaimsPrincipal(new ClaimsIdentity([new Claim(ClaimTypes.Name, "player")], "Test"));
+
+        var navigation = Build(
+            [new Entry("report", "Report", "reports", access: PluginAccessPolicy.AuthenticatedUser)],
+            [Group("reports", "Reports"), Group("reports", "Reports", access: PluginAccessPolicy.AuthenticatedUser)],
+            player);
+
+        Assert.Equal(["Reports"], Labels(navigation.PluginArea));
+        Assert.Equal(["Report"], Labels(navigation.End("reports", Anchors())));
+    }
+
+    [Fact]
+    public void MostPermissiveAccessCombinesRoles()
+    {
+        Assert.Equal(PluginAccessPolicy.Administrator, PluginNavigation.MostPermissive([PluginAccessPolicy.Administrator]));
+        Assert.Equal(
+            PluginAccessPolicy.RequireRoles("Moderators", "Hosts"),
+            PluginNavigation.MostPermissive([PluginAccessPolicy.Administrator, PluginAccessPolicy.RequireRoles("Moderators"), PluginAccessPolicy.RequireRoles("Hosts", "moderators")]));
+        Assert.Equal(
+            PluginAccessPolicy.AuthenticatedUser,
+            PluginNavigation.MostPermissive([PluginAccessPolicy.RequireRoles("Hosts"), PluginAccessPolicy.AuthenticatedUser]));
+    }
+
+    [Fact]
     public void GroupsHoldTheEntriesThatNameThem()
     {
         var navigation = Build(
@@ -220,8 +277,9 @@ public class PluginNavigationTests
         string label,
         string? section = null,
         string? after = null,
-        PluginAccessPolicy? access = null) =>
-        new() { Id = id, Label = label, Section = section, After = after, Access = access ?? PluginAccessPolicy.Administrator };
+        PluginAccessPolicy? access = null,
+        int order = 0) =>
+        new() { Id = id, Label = label, Section = section, After = after, Order = order, Access = access ?? PluginAccessPolicy.Administrator };
 
     static List<string> Labels(IEnumerable<PluginNavigationEntry> entries) =>
         entries.Select(entry => entry.Label).ToList();

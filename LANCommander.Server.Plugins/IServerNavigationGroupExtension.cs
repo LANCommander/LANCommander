@@ -13,10 +13,18 @@ namespace LANCommander.Server.Plugins;
 public interface IServerNavigationGroupExtension
 {
     /// <summary>
-    /// Stable identifier, unique among navigation entries and groups. Entries placed in the group name
-    /// it as their <see cref="IServerNavigationExtension.Section"/>, and nested groups as their
-    /// <see cref="Section"/>. It cannot be one of the <see cref="ServerNavigationSection"/> values.
+    /// Stable identifier. Entries placed in the group name it as their
+    /// <see cref="IServerNavigationExtension.Section"/>, and nested groups as their
+    /// <see cref="Section"/>. It cannot be one of the <see cref="ServerNavigationSection"/> values, nor
+    /// the id of a navigation entry.
     /// </summary>
+    /// <remarks>
+    /// Plugins that declare a group with the same id share one group, holding all of their entries.
+    /// Its label, icon and placement come from the declaration with the lowest <see cref="Order"/>
+    /// (ties are settled by the declarations' values, not by load order), and it is shown to anyone
+    /// who satisfies any declaration's <see cref="Access"/>. To share a group, agree on an id that
+    /// isn't tied to either plugin.
+    /// </remarks>
     string Id { get; }
 
     /// <summary>Text displayed as the group's title.</summary>

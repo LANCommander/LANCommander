@@ -61,16 +61,21 @@
     display: inline-flex;
     min-width: 150px;
 
+    // Sized through Radzen's input variables, so the label is one 30px line inside the 1px edges
+    // rather than a body line squeezed between the default block padding
     > .lc-select {
-        height: 32px;
+        --rz-input-height: 32px;
+        --rz-input-padding-block: 0;
+        --rz-input-line-height: 30px;
     }
 }
 
+// The label starts where the search's text does, clear of the glyph
 .media-grabber-select-icon {
     width: 240px;
 
     > .lc-select {
-        padding-inline-start: 22px;
+        padding-inline-start: 32px;
     }
 }
 

@@ -62,10 +62,11 @@ namespace LANCommander.Migrations
                 table: "GameExternalIds",
                 column: "UpdatedById");
 
-            // Migrate existing IGDBId data
+            // Migrate existing IGDBId data. Ids must be uppercase: EF Core's SQLite provider stores and
+            // compares Guids as uppercase text, so a lowercase id never matches an UPDATE/DELETE.
             migrationBuilder.Sql(@"
                 INSERT INTO GameExternalIds (Id, GameId, Provider, ExternalId, CreatedOn, UpdatedOn)
-                SELECT lower(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))),
+                SELECT upper(hex(randomblob(4)) || '-' || hex(randomblob(2)) || '-4' || substr(hex(randomblob(2)),2) || '-' || substr('89ab', abs(random()) % 4 + 1, 1) || substr(hex(randomblob(2)),2) || '-' || hex(randomblob(6))),
                        Id, 'IGDB', CAST(IGDBId AS TEXT), CreatedOn, UpdatedOn
                 FROM Games
                 WHERE IGDBId IS NOT NULL

@@ -88,6 +88,13 @@
             </Popconfirm>
         }
 
+        @if (Has(FileManagerFeatures.ColumnPicker))
+        {
+            <Popover Content="ColumnPickerContent" MaxWidth="280" Class="lc-file-manager-columns">
+                <Button Text Class="lc-file-manager-columns-button">Columns</Button>
+            </Popover>
+        }
+
         @if (Has(FileManagerFeatures.Filter))
         {
             <TextInput Small Icon="IconType.MagnifyingGlass" Immediate Value="@_filter" ValueChanged="FilterChanged" Placeholder="Filter this folder" Class="lc-file-manager-filter" aria-label="Filter this folder" />
@@ -143,7 +150,7 @@
                        Values="_selected"
                        ValuesChanged="SelectionChangedAsync"
                        OnRowDoubleClick="OpenAsync"
-                       ColumnPicker="Has(FileManagerFeatures.ColumnPicker)"
+                       ColumnsChanged="StateHasChanged"
                        RowMark="RowMark"
                        SettingsKey="file-manager"
                        Frameless
@@ -253,6 +260,13 @@
     string? _class;
 
     bool Has(FileManagerFeatures feature) => Features.HasFlag(feature);
+
+    // Read when the popover opens: the table is rendered below the nav, so _table is unset on first render
+    RenderFragment ColumnPickerContent => builder =>
+    {
+        if (_table != null)
+            builder.AddContent(0, _table.ColumnPickerContent);
+    };
 
     protected override void OnParametersSet()
     {

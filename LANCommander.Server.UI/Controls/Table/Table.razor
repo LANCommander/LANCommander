@@ -254,6 +254,12 @@
     /// <summary>Adds a Columns button to the toolbar, listing the columns to show or hide.</summary>
     [Parameter] public bool ColumnPicker { get; set; }
 
+    /// <summary>
+    /// Raised after a column is shown or hidden, so a host rendering <see cref="ColumnPickerContent"/>
+    /// in its own toolbar re-renders the checkboxes.
+    /// </summary>
+    [Parameter] public EventCallback ColumnsChanged { get; set; }
+
     /// <summary>Adds a checkbox column; the checked rows are bound through <see cref="Values"/>.</summary>
     [Parameter] public bool Selectable { get; set; }
 
@@ -867,7 +873,11 @@
     bool IsColumnVisible(string key, bool hiddenByDefault) =>
         _settings.HiddenColumns?.Contains(key) != true && (_settings.ShownColumns?.Contains(key) == true || !hiddenByDefault);
 
-    RenderFragment ColumnPickerContent => @<div class="lc-table-column-picker" role="group" aria-label="Columns">
+    /// <summary>
+    /// The column checkboxes behind the Columns button, for a host that puts the button in its own
+    /// toolbar instead of setting <see cref="ColumnPicker"/>.
+    /// </summary>
+    public RenderFragment ColumnPickerContent => @<div class="lc-table-column-picker" role="group" aria-label="Columns">
         @foreach (var column in _columns.Where(c => c.Pickable && !string.IsNullOrEmpty(c.Title)))
         {
             var key = column.Key;
@@ -889,6 +899,7 @@
 
         await SaveSettingsAsync();
         StateHasChanged();
+        await ColumnsChanged.InvokeAsync();
     }
 
     SortOrder? ITableHost.InitialSortOrder(TableColumnInfo column, ColumnSort defaultSort)

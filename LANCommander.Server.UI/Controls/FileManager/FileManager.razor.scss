@@ -79,6 +79,18 @@
     font-size: 12px;
 }
 
+// Columns: a ghost text button beside the upload/delete icons
+.lc-file-manager-columns {
+    flex-shrink: 0;
+}
+
+.lc-file-manager .lc-file-manager-columns-button.lc-button {
+    height: 30px;
+    padding: 0 10px;
+    color: var(--rz-text-secondary-color);
+    font-size: 12px;
+}
+
 .lc-file-manager-filter {
     flex-shrink: 0;
     width: 240px;

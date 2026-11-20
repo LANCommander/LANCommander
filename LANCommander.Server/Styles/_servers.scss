@@ -616,3 +616,13 @@
 .server-file-editor {
     height: 70vh;
 }
+
+// -- List -----------------------------------------------------
+// The Servers list uses the shared rail, header and chips (_filtered-page); its own content
+// scrolls as a whole, since the External Servers table can sit beneath the list.
+.servers-content {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    padding: 14px 24px;
+}

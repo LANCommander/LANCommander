@@ -2,130 +2,212 @@
 @using LANCommander.Server.Models
 @using LANCommander.Server.UI.Pages.Servers.Components
 @using LANCommander.Server.Services.ServerSources
+@using LANCommander.Server.Services.Enums
+@using Microsoft.EntityFrameworkCore
 @using ManifestType = LANCommander.SDK.Enums.ManifestType
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 @inject ServerService ServerService
 @inject ServerManager ServerManager
 @inject ServerSourceRegistry ServerSources
 @inject GameService GameService
+@inject IDbContextFactory<LANCommander.Server.Data.DatabaseContext> DatabaseContextFactory
+@inject AlertService Alerts
 @inject NavigationManager NavigationManager
 @inject DialogService Dialogs
 @inject NotificationService Notifications
 @inject ILogger<Index> Logger
 @implements IDisposable
 
-<PageHeader Title="Servers" Subtitle="@Total.ToString()" />
+@*
+    The servers: the filter rail flush beside the navigation, and beside it the page's header over
+    the list. Statuses are polled here, once for every server, so the rail's status views and the
+    list's status filters follow them.
+*@
+<div class="filtered-page">
+    <ServerFilterRail @ref="_rail" Filters="_filters" FiltersChanged="FiltersChangedAsync" Statuses="_statuses" ExternalCount="_external.Count" OnSaveView="SaveViewAsync" />
 
-<PageContent>
-    <DataTable TItem="Server"
-               @ref="Table"
-               Small
-               ColumnPicker
-               Selectable
-               @bind-Values="SelectedServers"
-               @bind-Total="Total"
-               SearchProperty="s => s.Name"
-               OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))">
-        <RightToolbar>
-            @if (SelectedServers.Any())
+    <div class="filtered-page-main">
+        <PageHeader Title="Servers" Subtitle="@HeaderSubtitle" Class="filtered-page-header">
+            <Extra>
+                <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
+                <Button Primary Icon="IconType.Plus" Href="/Servers/Add">Add Server</Button>
+            </Extra>
+        </PageHeader>
+
+        <div class="servers-content">
+            @if (!ShowExternalOnly)
             {
-                <Button Primary Icon="IconType.Play" IconFill OnClick="StartServersAsync">Start</Button>
-                <Popconfirm OnConfirm="StopServersAsync" Title="Are you sure you want to kill these server processes?" OkText="Stop" Danger>
-                    <Button Primary Danger Icon="IconType.Stop" IconFill>Stop</Button>
-                </Popconfirm>
+                <DataTable TItem="Server"
+                           @ref="Table"
+                           ColumnPicker
+                           Selectable
+                           ShowTotal
+                           @bind-Values="SelectedServers"
+                           @bind-Total="Total"
+                           SearchProperty="s => s.Name"
+                           SearchPlaceholder="Search servers"
+                           Query="_query"
+                           OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/{server.Id}"))"
+                           Class="servers-table">
+                    <FilterBar>
+                        @if (!_filters.IsEmpty)
+                        {
+                            <div class="filter-chips" aria-label="Active filters">
+                                @if (_filters.View != ServerFilters.AllServers)
+                                {
+                                    <span class="filter-chip filter-chip-accent">
+                                        View: @(ServerFilters.Views.FirstOrDefault(v => v.Key == _filters.View)?.Name ?? _filters.View)
+                                        <button type="button" class="filter-chip-close" aria-label="Show all servers" @onclick="() => FiltersChangedAsync(_filters.WithView(ServerFilters.AllServers))"><Icon Type="IconType.X" Bold /></button>
+                                    </span>
+                                }
+                                @foreach (var (facet, values) in _filters.Facets)
+                                {
+                                    @foreach (var value in values)
+                                    {
+                                        var label = _rail?.LabelOf(facet, value) ?? value;
+                                        var chip = $"{_rail?.TitleOf(facet) ?? facet.ToString()}: {label}";
+
+                                        <span class="filter-chip">
+                                            @chip
+                                            <button type="button" class="filter-chip-close" aria-label="@($"Remove {chip}")" @onclick="() => FiltersChangedAsync(_filters.Toggle(facet, value))"><Icon Type="IconType.X" Bold /></button>
+                                        </span>
+                                    }
+                                }
+                                <button type="button" class="filter-link" @onclick="() => FiltersChangedAsync(new ServerFilters())">Clear all</button>
+                            </div>
+                        }
+                    </FilterBar>
+                    <RightToolbar>
+                        @if (SelectedServers.Any())
+                        {
+                            <Button Primary Icon="IconType.Play" IconFill OnClick="StartServersAsync">Start</Button>
+                            <Popconfirm OnConfirm="StopServersAsync" Title="Are you sure you want to kill these server processes?" OkText="Stop" Danger>
+                                <Button Primary Danger Icon="IconType.Stop" IconFill>Stop</Button>
+                            </Popconfirm>
+                        }
+                    </RightToolbar>
+                    <Columns>
+                        <BoundColumn Property="s => s.Game != null ? s.Game.Title : String.Empty" Title="Game" Include="Game,Game.Media" Sortable>
+                            @if (context.Game != null)
+                            {
+                                <Flex Align="Align.Center" Gap="Gap.Small">
+                                    <Image Src="@GetIcon(context.Game)" Width="32" Height="32" />
+                                    <span>@context.Game.Title</span>
+                                </Flex>
+                            }
+                        </BoundColumn>
+                        <BoundColumn Property="s => s.Name" Sortable DefaultSort="ColumnSort.Ascending" />
+                        <BoundColumn Property="s => s.Port" Sortable />
+                        <BoundColumn Property="s => s.CreatedOn" Title="Created On" Sortable>
+                            <LocalTime Value="context.CreatedOn" />
+                        </BoundColumn>
+                        <BoundColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
+                        <BoundColumn Property="s => s.UpdatedOn" Title="Updated On" Sortable>
+                            <LocalTime Value="context.UpdatedOn" />
+                        </BoundColumn>
+                        <BoundColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
+                        <ActionsColumn TItem="Server" Width="300px">
+                            <ServerControl ServerId="context.Id" />
+                            <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/{context.Id}")" title="Edit" />
+                            <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this server?" OkText="Delete" Danger>
+                                <Button Text Danger Icon="IconType.X" title="Delete" />
+                            </Popconfirm>
+                        </ActionsColumn>
+                    </Columns>
+                </DataTable>
             }
 
-            <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
-            <Button Primary Icon="IconType.Plus" Href="/Servers/Add">Add Server</Button>
-        </RightToolbar>
-        <Columns>
-            <BoundColumn Property="s => s.Game != null ? s.Game.Title : String.Empty" Title="Game" Include="Game,Game.Media" Sortable>
-                @if (context.Game != null)
+            @* Servers plugins list rather than ones added here: under All servers, or on their own *@
+            @if (_external.Count > 0 && (ShowExternalOnly || _filters.IsEmpty))
+            {
+                @if (!ShowExternalOnly)
                 {
-                    <Flex Align="Align.Center" Gap="Gap.Small">
-                        <Image Src="@GetIcon(context.Game)" Width="32" Height="32" />
-                        <span>@context.Game.Title</span>
-                    </Flex>
+                    <Divider>External Servers</Divider>
                 }
-            </BoundColumn>
-            <BoundColumn Property="s => s.Name" Sortable DefaultSort="ColumnSort.Ascending" />
-            <BoundColumn Property="s => s.Port" Sortable />
-            <BoundColumn Property="s => s.CreatedOn" Title="Created On" Sortable>
-                <LocalTime Value="context.CreatedOn" />
-            </BoundColumn>
-            <BoundColumn Property="s => s.CreatedBy != null ? s.CreatedBy.UserName : String.Empty" Title="Created By" Sortable Include="CreatedBy" />
-            <BoundColumn Property="s => s.UpdatedOn" Title="Updated On" Sortable>
-                <LocalTime Value="context.UpdatedOn" />
-            </BoundColumn>
-            <BoundColumn Property="s => s.UpdatedBy != null ? s.UpdatedBy.UserName : String.Empty" Title="Updated By" Sortable Include="UpdatedBy" />
-            <ActionsColumn TItem="Server" Width="300px">
-                <ServerControl ServerId="context.Id" />
-                <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/{context.Id}")" title="Edit" />
-                <Popconfirm OnConfirm="() => DeleteAsync(context)" Title="Are you sure you want to delete this server?" OkText="Delete" Danger>
-                    <Button Text Danger Icon="IconType.X" title="Delete" />
-                </Popconfirm>
-            </ActionsColumn>
-        </Columns>
-    </DataTable>
 
-    @* Servers plugins list rather than ones added here *@
-    @if (_external.Count > 0)
-    {
-        <Divider>External Servers</Divider>
-
-        <Table TItem="ExternalServerListing" Items="_external" Key="s => s.Id" Small NoPaging Searchable SearchText="s => s.Server.Name" SettingsKey="servers-external" EmptyText="No servers"
-               OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/External/{server.Id}"))">
-            <RightToolbar>
-                <Button Icon="IconType.ArrowsClockwise" Loading="_refreshing" OnClick="RefreshExternalAsync">Refresh</Button>
-            </RightToolbar>
-            <Columns>
-                <TemplateColumn TItem="ExternalServerListing" Title="Game">
-                    @if (context.Server.GameId is { } gameId && _games.TryGetValue(gameId, out var game))
-                    {
-                        <Flex Align="Align.Center" Gap="Gap.Small">
-                            <Image Src="@GetIcon(game)" Width="32" Height="32" />
-                            <span>@game.Title</span>
-                        </Flex>
-                    }
-                </TemplateColumn>
-                <TemplateColumn TItem="ExternalServerListing" Title="Name">
-                    @context.Server.Name
-                </TemplateColumn>
-                <TemplateColumn TItem="ExternalServerListing" Title="Source">
-                    <Flex Align="Align.Center" Gap="Gap.Small">
-                        <Tag>@context.SourceName</Tag>
-                        @if (!String.IsNullOrWhiteSpace(context.Server.Location))
-                        {
-                            <span>@context.Server.Location</span>
-                        }
-                    </Flex>
-                </TemplateColumn>
-                <TemplateColumn TItem="ExternalServerListing" Title="Address">
-                    @FormatAddress(context.Server)
-                </TemplateColumn>
-                <ActionsColumn TItem="ExternalServerListing" Width="300px">
-                    @if (!String.IsNullOrWhiteSpace(context.StatusMessage))
-                    {
-                        <Tooltip Title="@context.StatusMessage">
-                            <Icon Type="IconType.Warning" />
-                        </Tooltip>
-                    }
-                    <ServerControl @key="context.Id" ServerId="context.Id" AllowStart="context.Server.CanStart" AllowStop="context.Server.CanStop" />
-                    <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/External/{context.Id}")" title="Edit" />
-                    @if (!String.IsNullOrWhiteSpace(context.Server.ManageUrl))
-                    {
-                        <Button Text Icon="IconType.ArrowSquareOut" Href="@context.Server.ManageUrl" NewTab="IsExternal(context.Server.ManageUrl)" title="Manage" />
-                    }
-                </ActionsColumn>
-            </Columns>
-        </Table>
-    }
-</PageContent>
+                <Table TItem="ExternalServerListing" Items="_external" Key="s => s.Id" Small NoPaging Searchable SearchText="s => s.Server.Name" SettingsKey="servers-external" EmptyText="No servers"
+                       OnRowDoubleClick="@(server => NavigationManager.NavigateTo($"/Servers/External/{server.Id}"))">
+                    <RightToolbar>
+                        <Button Icon="IconType.ArrowsClockwise" Loading="_refreshing" OnClick="RefreshExternalAsync">Refresh</Button>
+                    </RightToolbar>
+                    <Columns>
+                        <TemplateColumn TItem="ExternalServerListing" Title="Game">
+                            @if (context.Server.GameId is { } gameId && _games.TryGetValue(gameId, out var game))
+                            {
+                                <Flex Align="Align.Center" Gap="Gap.Small">
+                                    <Image Src="@GetIcon(game)" Width="32" Height="32" />
+                                    <span>@game.Title</span>
+                                </Flex>
+                            }
+                        </TemplateColumn>
+                        <TemplateColumn TItem="ExternalServerListing" Title="Name">
+                            @context.Server.Name
+                        </TemplateColumn>
+                        <TemplateColumn TItem="ExternalServerListing" Title="Source">
+                            <Flex Align="Align.Center" Gap="Gap.Small">
+                                <Tag>@context.SourceName</Tag>
+                                @if (!String.IsNullOrWhiteSpace(context.Server.Location))
+                                {
+                                    <span>@context.Server.Location</span>
+                                }
+                            </Flex>
+                        </TemplateColumn>
+                        <TemplateColumn TItem="ExternalServerListing" Title="Address">
+                            @FormatAddress(context.Server)
+                        </TemplateColumn>
+                        <ActionsColumn TItem="ExternalServerListing" Width="300px">
+                            @if (!String.IsNullOrWhiteSpace(context.StatusMessage))
+                            {
+                                <Tooltip Title="@context.StatusMessage">
+                                    <Icon Type="IconType.Warning" />
+                                </Tooltip>
+                            }
+                            <ServerControl @key="context.Id" ServerId="context.Id" AllowStart="context.Server.CanStart" AllowStop="context.Server.CanStop" />
+                            <Button Text Icon="IconType.PencilSimple" Href="@($"/Servers/External/{context.Id}")" title="Edit" />
+                            @if (!String.IsNullOrWhiteSpace(context.Server.ManageUrl))
+                            {
+                                <Button Text Icon="IconType.ArrowSquareOut" Href="@context.Server.ManageUrl" NewTab="IsExternal(context.Server.ManageUrl)" title="Manage" />
+                            }
+                        </ActionsColumn>
+                    </Columns>
+                </Table>
+            }
+        </div>
+    </div>
+</div>
 
 @code {
-    DataTable<Server> Table = default!;
+    DataTable<Server>? Table;
+    ServerFilterRail? _rail;
 
     int Total;
+    int _serverTotal;
+
+    ServerFilters _filters = new();
+    System.Linq.Expressions.Expression<Func<Server, bool>>? _query;
+    ServerStatusSnapshot _statuses = ServerStatusSnapshot.Empty;
+    Timer? _statusPoll;
+    bool _polling;
+
+    bool ShowExternalOnly => _filters.View == ServerFilters.External;
+
+    /// <summary>"12 servers · 3 running", or "3 of 12" while filtered or searched.</summary>
+    string HeaderSubtitle
+    {
+        get
+        {
+            if (ShowExternalOnly)
+                return $"{_external.Count:N0} external";
+
+            if (!_filters.IsEmpty || (Total > 0 && Total != _serverTotal))
+                return $"{Total:N0} of {_serverTotal:N0}";
+
+            var running = _statuses.IdsIn(ServerProcessStatus.Running, ServerProcessStatus.Starting).Count;
+            var servers = $"{_serverTotal:N0} {(_serverTotal == 1 ? "server" : "servers")}";
+
+            return running > 0 ? $"{servers} · {running:N0} running" : servers;
+        }
+    }
 
     IList<Server> SelectedServers = new List<Server>();
 
@@ -136,7 +218,30 @@
 
     protected override async Task OnInitializedAsync()
     {
+        await PollStatusesAsync();
         await LoadExternalAsync();
+
+        // Every server's status, for the rail's counts and the status filters
+        _statusPoll = new Timer(_ => InvokeAsync(async () =>
+        {
+            try
+            {
+                if (await PollStatusesAsync())
+                {
+                    if (_filters.ByStatus)
+                        _query = _filters.ToExpression(_statuses);
+
+                    if (_rail != null)
+                        await _rail.RefreshCountsAsync();
+
+                    StateHasChanged();
+                }
+            }
+            catch (Exception ex)
+            {
+                Logger.LogDebug(ex, "Could not poll the servers' statuses");
+            }
+        }), null, TimeSpan.FromSeconds(2), TimeSpan.FromSeconds(2));
 
         // Sources are listed in the background; follow them so servers come and go without a reload
         _externalPoll = new Timer(_ => InvokeAsync(async () =>
@@ -152,6 +257,71 @@
                 Logger.LogDebug(ex, "Could not reload the servers listed by sources");
             }
         }), null, TimeSpan.FromSeconds(5), TimeSpan.FromSeconds(5));
+    }
+
+    /// <summary>Asks the server manager for every server's status; true when any changed since the last poll.</summary>
+    async Task<bool> PollStatusesAsync()
+    {
+        if (_polling)
+            return false;
+
+        _polling = true;
+
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            var ids = await context.Set<Server>().AsNoTracking().Select(s => s.Id).ToListAsync();
+            var statuses = new Dictionary<Guid, ServerProcessStatus>();
+
+            foreach (var id in ids)
+                statuses[id] = await ServerManager.GetStatusAsync(id);
+
+            var snapshot = new ServerStatusSnapshot(statuses);
+
+            _serverTotal = ids.Count;
+
+            if (snapshot.SameAs(_statuses))
+                return false;
+
+            _statuses = snapshot;
+
+            return true;
+        }
+        finally
+        {
+            _polling = false;
+        }
+    }
+
+    Task FiltersChangedAsync(ServerFilters filters)
+    {
+        _filters = filters;
+        _query = filters.IsEmpty || filters.View == ServerFilters.External ? null : filters.ToExpression(_statuses);
+
+        return Task.CompletedTask;
+    }
+
+    async Task SaveViewAsync()
+    {
+        var name = await Alerts.PromptAsync("Save View", "Name", okText: "Save", placeholder: "e.g. Docker servers");
+
+        if (string.IsNullOrWhiteSpace(name) || _rail == null)
+            return;
+
+        await _rail.SaveAsync(name.Trim());
+    }
+
+    /// <summary>After adding or deleting servers: the list, the statuses and the counts.</summary>
+    async Task RefreshAsync()
+    {
+        if (Table != null)
+            await Table.ReloadAsync();
+
+        await PollStatusesAsync();
+
+        if (_rail != null)
+            await _rail.RefreshCountsAsync();
     }
 
     async Task LoadExternalAsync()
@@ -206,7 +376,11 @@
 
     static bool IsExternal(string url) => Uri.TryCreate(url, UriKind.Absolute, out _);
 
-    public void Dispose() => _externalPoll?.Dispose();
+    public void Dispose()
+    {
+        _externalPoll?.Dispose();
+        _statusPoll?.Dispose();
+    }
 
     async Task DeleteAsync(Server server)
     {
@@ -216,7 +390,7 @@
 
             Notifications.Success($"Deleted {server.Name}");
 
-            await Table.ReloadAsync();
+            await RefreshAsync();
         }
         catch (Exception ex)
         {
@@ -269,6 +443,6 @@
             ManifestType = ManifestType.Server,
         }, new DialogSettings { NoFooter = true, Size = DialogSize.Large });
 
-        await Table.ReloadAsync();
+        await RefreshAsync();
     }
 }

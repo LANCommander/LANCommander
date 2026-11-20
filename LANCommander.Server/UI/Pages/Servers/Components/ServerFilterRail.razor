@@ -1,0 +1,424 @@
+@using System.Text.Json
+@using Microsoft.EntityFrameworkCore
+@using LANCommander.Server.Data
+@using LANCommander.Server.Services.Enums
+@using LANCommander.Server.Plugins
+@using LANCommander.Server.Settings.Enums
+@using LANCommander.SDK.Enums
+@inject IDbContextFactory<DatabaseContext> DatabaseContextFactory
+@inject PluginServerEngines PluginEngines
+@inject IJSRuntime JS
+@inject ILogger<ServerFilterRail> Logger
+
+@*
+    Beside the Servers list: views by status and setup, saved views, then facets. Counts come from
+    COUNT queries, with each server's status from the page's latest poll.
+*@
+<nav class="filter-rail" aria-label="Filter servers">
+    <div class="filter-rail-header">
+        <h2 class="filter-rail-kicker">Views</h2>
+        <button type="button" class="filter-rail-add" title="Save the current filters as a view" aria-label="Save the current filters as a view"
+                disabled="@(Filters.IsEmpty || Filters.View == ServerFilters.External)" @onclick="() => OnSaveView.InvokeAsync()">
+            <Icon Type="IconType.Plus" Bold />
+        </button>
+    </div>
+
+    <div class="filter-rail-body">
+        <ul class="filter-rail-list">
+            @foreach (var view in ServerFilters.Views)
+            {
+                <li>
+                    <button type="button" class="@ViewClass(Filters.View == view.Key && !HasFacets)" @onclick="() => ShowViewAsync(view.Key)">
+                        @if (view.Tone != FilterViewTone.None)
+                        {
+                            <span class="@($"filter-rail-dot filter-rail-dot-{view.Tone.ToString().ToLowerInvariant()}")" aria-hidden="true"></span>
+                        }
+                        <span class="filter-rail-name">@view.Name</span>
+                        <span class="filter-rail-count">@Count(_viewCounts, view.Key)</span>
+                    </button>
+                </li>
+            }
+            @if (ExternalCount > 0)
+            {
+                <li>
+                    <button type="button" class="@ViewClass(Filters.View == ServerFilters.External)" @onclick="() => ShowViewAsync(ServerFilters.External)">
+                        <span class="filter-rail-dot filter-rail-dot-neutral" aria-hidden="true"></span>
+                        <span class="filter-rail-name">External</span>
+                        <span class="filter-rail-count">@ExternalCount.ToString("N0")</span>
+                    </button>
+                </li>
+            }
+            @foreach (var saved in _saved)
+            {
+                <li class="filter-rail-saved">
+                    <button type="button" class="@ViewClass(Filters == _savedFilters.GetValueOrDefault(saved.Name))" @onclick="() => ShowSavedAsync(saved)">
+                        <span class="filter-rail-dot filter-rail-dot-neutral" aria-hidden="true"></span>
+                        <span class="filter-rail-name">@saved.Name</span>
+                        <span class="filter-rail-count">@Count(_savedCounts, saved.Name)</span>
+                    </button>
+                    <button type="button" class="filter-rail-remove" aria-label="@($"Delete the view {saved.Name}")" title="Delete view" @onclick="() => DeleteSavedAsync(saved)">
+                        <Icon Type="IconType.X" />
+                    </button>
+                </li>
+            }
+        </ul>
+
+        @if (_facets.Count > 0)
+        {
+            <div class="filter-rail-divider" role="separator"></div>
+
+            <section class="filter-rail-section" aria-labelledby="servers-rail-filters">
+                <div class="filter-rail-section-head">
+                    <h2 class="filter-rail-kicker" id="servers-rail-filters">Filters</h2>
+                    @if (HasFacets)
+                    {
+                        <button type="button" class="filter-rail-link" @onclick="ClearAsync">Clear</button>
+                    }
+                </div>
+
+                @foreach (var facet in _facets)
+                {
+                    var open = _open.Contains(facet.Facet);
+                    var chosen = Filters.CountOf(facet.Facet);
+
+                    <div class="@(open ? "filter-rail-group filter-rail-group-open" : "filter-rail-group")">
+                        <button type="button" class="filter-rail-group-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => ToggleOpen(facet.Facet)">
+                            <Icon Type="IconType.CaretRight" Bold Class="filter-rail-caret" />
+                            <span class="filter-rail-group-title">@facet.Title</span>
+                            @if (chosen > 0)
+                            {
+                                <span class="filter-rail-pill" aria-label="@($"{chosen} chosen")">@chosen</span>
+                            }
+                        </button>
+                        @if (open)
+                        {
+                            var all = _showAll.Contains(facet.Facet);
+                            var entries = all
+                                ? facet.Entries
+                                : facet.Entries.Take(CollapsedEntries).Concat(facet.Entries.Skip(CollapsedEntries).Where(e => Filters.Has(facet.Facet, e.Value))).ToList();
+                            var hidden = facet.Entries.Count - entries.Count;
+
+                            <ul class="filter-rail-list">
+                                @foreach (var entry in entries)
+                                {
+                                    @FacetEntry(facet.Facet, entry)
+                                }
+                            </ul>
+                            @if (hidden > 0)
+                            {
+                                <button type="button" class="filter-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">@hidden.ToString("N0") more…</button>
+                            }
+                            else if (all && facet.Entries.Count > CollapsedEntries)
+                            {
+                                <button type="button" class="filter-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">Show fewer</button>
+                            }
+                        }
+                    </div>
+                }
+            </section>
+        }
+    </div>
+</nav>
+
+@code {
+    /// <summary>The filter the list shows.</summary>
+    [Parameter, EditorRequired] public ServerFilters Filters { get; set; } = new();
+
+    [Parameter] public EventCallback<ServerFilters> FiltersChanged { get; set; }
+
+    /// <summary>Each server's status from the page's latest poll, for the status views and facet.</summary>
+    [Parameter] public ServerStatusSnapshot Statuses { get; set; } = ServerStatusSnapshot.Empty;
+
+    /// <summary>How many servers plugins' sources list; the External view shows when there are any.</summary>
+    [Parameter] public int ExternalCount { get; set; }
+
+    /// <summary>The "+" beside Views: keep the current filter under a name.</summary>
+    [Parameter] public EventCallback OnSaveView { get; set; }
+
+    public const string SavedViewsKey = "lc-servers:saved-views";
+
+    /// <summary>Entries shown per facet before "N more…".</summary>
+    const int CollapsedEntries = 5;
+
+    sealed record FacetEntryInfo(string Value, string Name, int Count);
+
+    sealed record FacetGroup(ServerFacet Facet, string Title, IReadOnlyList<FacetEntryInfo> Entries);
+
+    IReadOnlyList<FacetGroup> _facets = [];
+    Dictionary<string, int> _viewCounts = new();
+    Dictionary<string, int> _savedCounts = new();
+    List<SavedServerView> _saved = [];
+    Dictionary<string, ServerFilters> _savedFilters = new();
+
+    // Status, Engine and Autostart are short lists and start open; games can run long
+    readonly HashSet<ServerFacet> _open = [ServerFacet.Status, ServerFacet.Engine, ServerFacet.Autostart];
+    readonly HashSet<ServerFacet> _showAll = [];
+
+    bool HasFacets => Filters.Facets.Any(f => f.Value.Count > 0);
+
+    static string ViewClass(bool active) => active ? "filter-rail-view filter-rail-view-active" : "filter-rail-view";
+
+    static string Count(Dictionary<string, int> counts, string key) =>
+        counts.TryGetValue(key, out var count) ? count.ToString("N0") : "";
+
+    RenderFragment FacetEntry(ServerFacet facet, FacetEntryInfo entry)
+    {
+        var active = Filters.Has(facet, entry.Value);
+
+        return @<li>
+            <button type="button" class="@(active ? "filter-rail-facet filter-rail-facet-active" : "filter-rail-facet")" aria-pressed="@(active ? "true" : "false")" @onclick="() => ToggleAsync(facet, entry.Value)">
+                <span class="filter-rail-check" aria-hidden="true">
+                    @if (active)
+                    {
+                        <Icon Type="IconType.Check" Bold />
+                    }
+                </span>
+                <span class="filter-rail-name" title="@entry.Name">@entry.Name</span>
+                <span class="filter-rail-count">@entry.Count.ToString("N0")</span>
+            </button>
+        </li>;
+    }
+
+    protected override async Task OnInitializedAsync() => await RefreshCountsAsync();
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        await LoadSavedAsync();
+        await CountSavedAsync();
+        StateHasChanged();
+    }
+
+    ServerFilters? _lastFilters;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(Filters, _lastFilters))
+            return;
+
+        _lastFilters = Filters;
+
+        // A facet with chosen values (e.g. from a saved view) opens so they can be seen
+        foreach (var (facet, values) in Filters.Facets)
+        {
+            if (values.Count > 0)
+                _open.Add(facet);
+        }
+    }
+
+    /// <summary>Counts every view and facet entry again, e.g. after servers were added or their status changed.</summary>
+    public async Task RefreshCountsAsync()
+    {
+        try
+        {
+            await using var context = await DatabaseContextFactory.CreateDbContextAsync();
+
+            var servers = context.Set<Server>().AsNoTracking();
+
+            var viewCounts = new Dictionary<string, int>();
+
+            foreach (var view in ServerFilters.Views)
+                viewCounts[view.Key] = view.Predicate == null ? await servers.CountAsync() : await servers.CountAsync(view.Predicate(Statuses));
+
+            _viewCounts = viewCounts;
+
+            _facets =
+            [
+                new(ServerFacet.Status, "Status", await CountStatusesAsync(servers)),
+                new(ServerFacet.Engine, "Engine", await CountEnginesAsync(servers)),
+                new(ServerFacet.Autostart, "Autostart", await CountAutostartAsync(servers)),
+                new(ServerFacet.Game, "Game", await CountGamesAsync(servers)),
+            ];
+
+            _facets = _facets.Where(f => f.Entries.Count > 0).ToList();
+
+            await CountSavedAsync(context);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not count the Servers filters");
+        }
+    }
+
+    /// <summary>Statuses are polled, not stored, so these are counted from the server ids and the snapshot.</summary>
+    async Task<IReadOnlyList<FacetEntryInfo>> CountStatusesAsync(IQueryable<Server> servers)
+    {
+        var ids = await servers.Select(s => s.Id).ToListAsync();
+
+        var counts = ids
+            .GroupBy(id => Statuses.Of(id) == ServerProcessStatus.Retrieving ? ServerProcessStatus.Stopped : Statuses.Of(id))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        return ServerFilters.StatusValues
+            .Where(status => counts.ContainsKey(status) || Filters.Has(ServerFacet.Status, status.ToString()))
+            .Select(status => new FacetEntryInfo(status.ToString(), status.ToString(), counts.GetValueOrDefault(status)))
+            .ToList();
+    }
+
+    async Task<IReadOnlyList<FacetEntryInfo>> CountEnginesAsync(IQueryable<Server> servers)
+    {
+        var counts = await servers
+            .GroupBy(s => new { s.Engine, s.EngineExtensionId })
+            .Select(g => new { g.Key.Engine, g.Key.EngineExtensionId, Count = g.Count() })
+            .ToListAsync();
+
+        return counts
+            .GroupBy(c => ServerFilters.EngineKey(c.Engine, c.EngineExtensionId))
+            .Select(g => new FacetEntryInfo(g.Key, EngineName(g.First().Engine, g.First().EngineExtensionId), g.Sum(c => c.Count)))
+            .OrderByDescending(e => e.Count).ThenBy(e => e.Name)
+            .ToList();
+    }
+
+    string EngineName(ServerEngine engine, string? extensionId)
+    {
+        if (engine != ServerEngine.Extension)
+            return engine.GetDisplayName();
+
+        return PluginEngines.Find(extensionId)?.Name ?? $"{extensionId} (not installed)";
+    }
+
+    static async Task<IReadOnlyList<FacetEntryInfo>> CountAutostartAsync(IQueryable<Server> servers)
+    {
+        var counts = await servers
+            .GroupBy(s => new { s.Autostart, s.AutostartMethod })
+            .Select(g => new { g.Key.Autostart, g.Key.AutostartMethod, Count = g.Count() })
+            .ToListAsync();
+
+        var entries = new List<FacetEntryInfo>();
+
+        foreach (var method in Enum.GetValues<ServerAutostartMethod>())
+        {
+            var count = counts.Where(c => c.Autostart && c.AutostartMethod == method).Sum(c => c.Count);
+
+            if (count > 0)
+                entries.Add(new FacetEntryInfo(method.ToString(), method.GetDisplayName(), count));
+        }
+
+        var off = counts.Where(c => !c.Autostart).Sum(c => c.Count);
+
+        if (off > 0)
+            entries.Add(new FacetEntryInfo(ServerFilters.AutostartOff, "Off", off));
+
+        return entries;
+    }
+
+    static async Task<IReadOnlyList<FacetEntryInfo>> CountGamesAsync(IQueryable<Server> servers)
+    {
+        var counts = await servers
+            .Where(s => s.GameId != null)
+            .GroupBy(s => new { s.Game!.Id, s.Game.Title })
+            .Select(g => new { g.Key.Id, g.Key.Title, Count = g.Count() })
+            .ToListAsync();
+
+        return counts
+            .OrderByDescending(c => c.Count).ThenBy(c => c.Title)
+            .Select(c => new FacetEntryInfo(c.Id.ToString(), c.Title, c.Count))
+            .ToList();
+    }
+
+    // Saved views
+
+    async Task LoadSavedAsync()
+    {
+        try
+        {
+            var json = await JS.InvokeAsync<string?>("localStorage.getItem", SavedViewsKey);
+
+            _saved = string.IsNullOrEmpty(json) ? [] : JsonSerializer.Deserialize<List<SavedServerView>>(json) ?? [];
+            _savedFilters = _saved.ToDictionary(s => s.Name, s => s.ToFilters());
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not read the saved server views");
+        }
+    }
+
+    async Task CountSavedAsync(DatabaseContext? context = null)
+    {
+        if (_saved.Count == 0)
+            return;
+
+        var owned = context == null;
+        context ??= await DatabaseContextFactory.CreateDbContextAsync();
+
+        try
+        {
+            var counts = new Dictionary<string, int>();
+
+            foreach (var saved in _saved)
+                counts[saved.Name] = await context.Set<Server>().AsNoTracking().CountAsync(saved.ToFilters().ToExpression(Statuses));
+
+            _savedCounts = counts;
+        }
+        catch (Exception ex)
+        {
+            Logger.LogError(ex, "Could not count the saved server views");
+        }
+        finally
+        {
+            if (owned)
+                await context.DisposeAsync();
+        }
+    }
+
+    /// <summary>Keeps the current filter under <paramref name="name"/>, replacing a view of the same name.</summary>
+    public async Task SaveAsync(string name)
+    {
+        _saved = _saved.Where(s => s.Name != name).Append(SavedServerView.From(name, Filters)).OrderBy(s => s.Name).ToList();
+
+        await StoreSavedAsync();
+    }
+
+    async Task DeleteSavedAsync(SavedServerView saved)
+    {
+        _saved.Remove(saved);
+
+        await StoreSavedAsync();
+    }
+
+    async Task StoreSavedAsync()
+    {
+        _savedFilters = _saved.ToDictionary(s => s.Name, s => s.ToFilters());
+
+        try
+        {
+            await JS.InvokeVoidAsync("localStorage.setItem", SavedViewsKey, JsonSerializer.Serialize(_saved));
+        }
+        catch (Exception ex)
+        {
+            Logger.LogDebug(ex, "Could not store the saved server views");
+        }
+
+        await CountSavedAsync();
+        StateHasChanged();
+    }
+
+    /// <summary>A facet value's display name, e.g. a game's title for its id.</summary>
+    public string LabelOf(ServerFacet facet, string value) =>
+        _facets.FirstOrDefault(f => f.Facet == facet)?.Entries.FirstOrDefault(e => e.Value == value)?.Name ?? value;
+
+    public string TitleOf(ServerFacet facet) =>
+        _facets.FirstOrDefault(f => f.Facet == facet)?.Title ?? facet.ToString();
+
+    Task ShowViewAsync(string view) => FiltersChanged.InvokeAsync(new ServerFilters { View = view });
+
+    Task ShowSavedAsync(SavedServerView saved) => FiltersChanged.InvokeAsync(_savedFilters[saved.Name]);
+
+    Task ToggleAsync(ServerFacet facet, string value) => FiltersChanged.InvokeAsync(Filters.Toggle(facet, value));
+
+    Task ClearAsync() => FiltersChanged.InvokeAsync(Filters.WithoutFacets());
+
+    void ToggleOpen(ServerFacet facet)
+    {
+        if (!_open.Remove(facet))
+            _open.Add(facet);
+    }
+
+    void ToggleShowAll(ServerFacet facet)
+    {
+        if (!_showAll.Remove(facet))
+            _showAll.Add(facet);
+    }
+}

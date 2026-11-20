@@ -31,11 +31,11 @@
     The library: the filter rail flush beside the navigation, and beside it the page's own header
     over the list (or grid) of games. The page fills the window so the list scrolls within it.
 *@
-<div class="games-page">
+<div class="filtered-page">
     <GameFilterRail @ref="_rail" Filters="_filters" FiltersChanged="FiltersChangedAsync" OnSaveView="SaveViewAsync" />
 
-    <div class="games-main">
-        <PageHeader Title="Games" Subtitle="@HeaderSubtitle" Class="games-header">
+    <div class="filtered-page-main">
+        <PageHeader Title="Games" Subtitle="@HeaderSubtitle" Class="filtered-page-header">
             <Extra>
                 <Button Icon="IconType.UploadSimple" OnClick="OpenImportDialogAsync">Import</Button>
                 <Button Primary Icon="IconType.Plus" OnClick="AddAsync">Add Game</Button>
@@ -67,12 +67,12 @@
                     <FilterBar>
                         @if (!_filters.IsEmpty)
                         {
-                            <div class="games-chips" aria-label="Active filters">
+                            <div class="filter-chips" aria-label="Active filters">
                                 @if (_filters.View != GameFilters.AllGames)
                                 {
-                                    <span class="games-chip games-chip-accent">
+                                    <span class="filter-chip filter-chip-accent">
                                         View: @(GameFilters.Views.FirstOrDefault(v => v.Key == _filters.View)?.Name ?? _filters.View)
-                                        <button type="button" class="games-chip-close" aria-label="Show all games" @onclick="() => FiltersChangedAsync(_filters.WithView(GameFilters.AllGames))"><Icon Type="IconType.X" Bold /></button>
+                                        <button type="button" class="filter-chip-close" aria-label="Show all games" @onclick="() => FiltersChangedAsync(_filters.WithView(GameFilters.AllGames))"><Icon Type="IconType.X" Bold /></button>
                                     </span>
                                 }
                                 @foreach (var (facet, values) in _filters.Facets)
@@ -82,13 +82,13 @@
                                         var label = _rail?.LabelOf(facet, value) ?? value;
                                         var chip = $"{_rail?.TitleOf(facet) ?? facet.ToString()}: {label}";
 
-                                        <span class="games-chip">
+                                        <span class="filter-chip">
                                             @chip
-                                            <button type="button" class="games-chip-close" aria-label="@($"Remove {chip}")" @onclick="() => FiltersChangedAsync(_filters.Toggle(facet, value))"><Icon Type="IconType.X" Bold /></button>
+                                            <button type="button" class="filter-chip-close" aria-label="@($"Remove {chip}")" @onclick="() => FiltersChangedAsync(_filters.Toggle(facet, value))"><Icon Type="IconType.X" Bold /></button>
                                         </span>
                                     }
                                 }
-                                <button type="button" class="games-link" @onclick="() => FiltersChangedAsync(new GameFilters())">Clear all</button>
+                                <button type="button" class="filter-link" @onclick="() => FiltersChangedAsync(new GameFilters())">Clear all</button>
                             </div>
                         }
                     </FilterBar>
@@ -256,7 +256,7 @@
                         </span>
                         @if (Selected.Count < Total)
                         {
-                            <button type="button" class="games-link games-bulkbar-link" @onclick="SelectAllMatchingAsync">Select all <span class="games-mono">@Total.ToString("N0")</span> matching</button>
+                            <button type="button" class="filter-link games-bulkbar-link" @onclick="SelectAllMatchingAsync">Select all <span class="games-mono">@Total.ToString("N0")</span> matching</button>
                         }
                         <span class="games-bulkbar-divider"></span>
                         @if (_view == TableView.Tiles)

@@ -221,13 +221,13 @@ public class PageVisualTests(VisualServerFixture fixture)
             await page.GotoAsync("/Games");
             await page.Locator(".rz-data-row").First.WaitForAsync(new LocatorWaitForOptions { Timeout = 15000 });
 
-            await page.Locator(".games-rail-view", new PageLocatorOptions { HasText = "Missing art" }).ClickAsync();
+            await page.Locator(".filter-rail-view", new PageLocatorOptions { HasText = "Missing art" }).ClickAsync();
 
             // Genre starts collapsed; open it, then pick its first entry
-            var genre = page.Locator(".games-rail-group", new PageLocatorOptions { HasText = "Genre" });
-            await genre.Locator(".games-rail-group-toggle").ClickAsync();
-            await genre.Locator(".games-rail-facet").First.ClickAsync();
-            await page.Locator(".games-chips").WaitForAsync();
+            var genre = page.Locator(".filter-rail-group", new PageLocatorOptions { HasText = "Genre" });
+            await genre.Locator(".filter-rail-group-toggle").ClickAsync();
+            await genre.Locator(".filter-rail-facet").First.ClickAsync();
+            await page.Locator(".filter-chips").WaitForAsync();
 
             await page.Locator("tbody .lc-table-select .rz-chkbox-box").First.ClickAsync();
             await page.Locator(".games-bulkbar button", new PageLocatorOptions { HasText = "matching" }).ClickAsync();

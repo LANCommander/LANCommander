@@ -22,17 +22,8 @@ public enum GameFacet
     Missing,
 }
 
-/// <summary>How a view's dot is coloured in the rail: what kind of attention its games need.</summary>
-public enum GameViewTone
-{
-    None,
-    Neutral,
-    Warning,
-    Danger,
-}
-
 /// <summary>A named filter over the whole library, e.g. "Missing art".</summary>
-public sealed record GameView(string Key, string Name, IconType Icon, Expression<Func<Game, bool>>? Predicate, GameViewTone Tone = GameViewTone.Neutral);
+public sealed record GameView(string Key, string Name, IconType Icon, Expression<Func<Game, bool>>? Predicate, FilterViewTone Tone = FilterViewTone.Neutral);
 
 /// <summary>
 /// What the Games list is narrowed to: an optional view, and per facet the values any of which a
@@ -59,10 +50,10 @@ public sealed record GameFilters
     // After MissingValues and ArtTypes: static initializers run in order, and these use them
     public static IReadOnlyList<GameView> Views { get; } =
     [
-        new(AllGames, "All games", IconType.GameController, null, GameViewTone.None),
-        new("missing-art", "Missing art", IconType.ImageBroken, MissingArt(), GameViewTone.Warning),
-        new("no-archive", "No archive", IconType.FileDashed, g => !g.Archives!.Any(), GameViewTone.Danger),
-        new("no-scripts", "No scripts", IconType.Code, g => !g.Scripts!.Any(), GameViewTone.Warning),
+        new(AllGames, "All games", IconType.GameController, null, FilterViewTone.None),
+        new("missing-art", "Missing art", IconType.ImageBroken, MissingArt(), FilterViewTone.Warning),
+        new("no-archive", "No archive", IconType.FileDashed, g => !g.Archives!.Any(), FilterViewTone.Danger),
+        new("no-scripts", "No scripts", IconType.Code, g => !g.Scripts!.Any(), FilterViewTone.Warning),
         new("added-this-week", "Added this week", IconType.CalendarPlus, AddedThisWeek()),
         new("hidden", "Hidden from depot", IconType.EyeSlash, g => !g.Published),
     ];

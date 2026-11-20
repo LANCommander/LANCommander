@@ -241,7 +241,7 @@ public class GamesListDatabaseTests(BUnitServerFixture fixture) : BUnitTestConte
 
         page.WaitForAssertion(() =>
         {
-            Assert.Matches(@"^\d[\d,]* titles?", page.Find(".games-header .lc-page-header-subtitle").TextContent.Trim());
+            Assert.Matches(@"^\d[\d,]* titles?", page.Find(".filtered-page-header .lc-page-header-subtitle").TextContent.Trim());
 
             var row = page.FindAll("tbody tr.rz-data-row").First(r => r.TextContent.Contains(BUnitServerFixture.TestGameTitle));
 
@@ -265,14 +265,14 @@ public class GamesListDatabaseTests(BUnitServerFixture fixture) : BUnitTestConte
 
         rail.WaitForAssertion(() =>
         {
-            var section = rail.FindAll(".games-rail-section").First(s => s.TextContent.Contains("Missing"));
-            var names = section.QuerySelectorAll(".games-rail-name").Select(n => n.TextContent.Trim()).ToList();
+            var section = rail.FindAll(".filter-rail-section").First(s => s.TextContent.Contains("Missing"));
+            var names = section.QuerySelectorAll(".filter-rail-name").Select(n => n.TextContent.Trim()).ToList();
 
             Assert.Equal(GameFilters.MissingValues, names);
 
             // The seeded game has no media at all, so it lacks a cover
-            var cover = section.QuerySelectorAll(".games-rail-facet").First(f => f.TextContent.Contains("Cover"));
-            Assert.NotEqual("0", cover.QuerySelector(".games-rail-count")!.TextContent.Trim());
+            var cover = section.QuerySelectorAll(".filter-rail-facet").First(f => f.TextContent.Contains("Cover"));
+            Assert.NotEqual("0", cover.QuerySelector(".filter-rail-count")!.TextContent.Trim());
         }, TimeSpan.FromSeconds(5));
     }
 
@@ -285,9 +285,9 @@ public class GamesListDatabaseTests(BUnitServerFixture fixture) : BUnitTestConte
             .Add(x => x.Filters, new GameFilters())
             .Add(x => x.FiltersChanged, filters => changed = filters));
 
-        var logo = rail.WaitForElement(".games-rail-section .games-rail-facet[aria-pressed='false']");
+        var logo = rail.WaitForElement(".filter-rail-section .filter-rail-facet[aria-pressed='false']");
 
-        rail.FindAll(".games-rail-facet").First(f => f.TextContent.Contains("Logo")).Click();
+        rail.FindAll(".filter-rail-facet").First(f => f.TextContent.Contains("Logo")).Click();
 
         rail.WaitForAssertion(() => Assert.NotNull(changed), TimeSpan.FromSeconds(10));
         Assert.True(changed!.Has(GameFacet.Missing, "Logo"));

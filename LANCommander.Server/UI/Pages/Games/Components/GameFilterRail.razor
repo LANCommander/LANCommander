@@ -9,52 +9,52 @@
     Beside the Games list: saved views, what's missing, then facets. Every entry carries the count
     its own query returns, from COUNT queries against the database, never from a loaded list.
 *@
-<nav class="games-rail" aria-label="Filter games">
-    <div class="games-rail-header">
-        <h2 class="games-rail-kicker">Views</h2>
-        <button type="button" class="games-rail-add" title="Save the current filters as a view" aria-label="Save the current filters as a view"
+<nav class="filter-rail" aria-label="Filter games">
+    <div class="filter-rail-header">
+        <h2 class="filter-rail-kicker">Views</h2>
+        <button type="button" class="filter-rail-add" title="Save the current filters as a view" aria-label="Save the current filters as a view"
                 disabled="@Filters.IsEmpty" @onclick="() => OnSaveView.InvokeAsync()">
             <Icon Type="IconType.Plus" Bold />
         </button>
     </div>
 
-    <div class="games-rail-body">
-        <ul class="games-rail-list">
+    <div class="filter-rail-body">
+        <ul class="filter-rail-list">
             @foreach (var view in GameFilters.Views)
             {
                 <li>
                     <button type="button" class="@ViewClass(Filters.View == view.Key && !HasFacets)" @onclick="() => ShowViewAsync(view.Key)">
-                        @if (view.Tone != GameViewTone.None)
+                        @if (view.Tone != FilterViewTone.None)
                         {
-                            <span class="@($"games-rail-dot games-rail-dot-{view.Tone.ToString().ToLowerInvariant()}")" aria-hidden="true"></span>
+                            <span class="@($"filter-rail-dot filter-rail-dot-{view.Tone.ToString().ToLowerInvariant()}")" aria-hidden="true"></span>
                         }
-                        <span class="games-rail-name">@view.Name</span>
-                        <span class="games-rail-count">@Count(_viewCounts, view.Key)</span>
+                        <span class="filter-rail-name">@view.Name</span>
+                        <span class="filter-rail-count">@Count(_viewCounts, view.Key)</span>
                     </button>
                 </li>
             }
             @foreach (var saved in _saved)
             {
-                <li class="games-rail-saved">
+                <li class="filter-rail-saved">
                     <button type="button" class="@ViewClass(Filters == _savedFilters.GetValueOrDefault(saved.Name))" @onclick="() => ShowSavedAsync(saved)">
-                        <span class="games-rail-dot games-rail-dot-neutral" aria-hidden="true"></span>
-                        <span class="games-rail-name">@saved.Name</span>
-                        <span class="games-rail-count">@Count(_savedCounts, saved.Name)</span>
+                        <span class="filter-rail-dot filter-rail-dot-neutral" aria-hidden="true"></span>
+                        <span class="filter-rail-name">@saved.Name</span>
+                        <span class="filter-rail-count">@Count(_savedCounts, saved.Name)</span>
                     </button>
-                    <button type="button" class="games-rail-remove" aria-label="@($"Delete the view {saved.Name}")" title="Delete view" @onclick="() => DeleteSavedAsync(saved)">
+                    <button type="button" class="filter-rail-remove" aria-label="@($"Delete the view {saved.Name}")" title="Delete view" @onclick="() => DeleteSavedAsync(saved)">
                         <Icon Type="IconType.X" />
                     </button>
                 </li>
             }
         </ul>
 
-        <div class="games-rail-divider" role="separator"></div>
+        <div class="filter-rail-divider" role="separator"></div>
 
-        <section class="games-rail-section" aria-labelledby="games-rail-missing">
-            <div class="games-rail-section-head">
-                <h2 class="games-rail-kicker" id="games-rail-missing">Missing</h2>
+        <section class="filter-rail-section" aria-labelledby="filter-rail-missing">
+            <div class="filter-rail-section-head">
+                <h2 class="filter-rail-kicker" id="filter-rail-missing">Missing</h2>
             </div>
-            <ul class="games-rail-list">
+            <ul class="filter-rail-list">
                 @foreach (var value in GameFilters.MissingValues)
                 {
                     @FacetEntry(GameFacet.Missing, new FacetEntryInfo(value, value, _missingCounts.GetValueOrDefault(value)))
@@ -64,14 +64,14 @@
 
         @if (_facets.Count > 0)
         {
-            <div class="games-rail-divider" role="separator"></div>
+            <div class="filter-rail-divider" role="separator"></div>
 
-            <section class="games-rail-section" aria-labelledby="games-rail-filters">
-                <div class="games-rail-section-head">
-                    <h2 class="games-rail-kicker" id="games-rail-filters">Filters</h2>
+            <section class="filter-rail-section" aria-labelledby="filter-rail-filters">
+                <div class="filter-rail-section-head">
+                    <h2 class="filter-rail-kicker" id="filter-rail-filters">Filters</h2>
                     @if (HasFacets)
                     {
-                        <button type="button" class="games-rail-link" @onclick="ClearAsync">Clear</button>
+                        <button type="button" class="filter-rail-link" @onclick="ClearAsync">Clear</button>
                     }
                 </div>
 
@@ -80,13 +80,13 @@
                     var open = _open.Contains(facet.Facet);
                     var chosen = Filters.CountOf(facet.Facet);
 
-                    <div class="@(open ? "games-rail-group games-rail-group-open" : "games-rail-group")">
-                        <button type="button" class="games-rail-group-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => ToggleOpen(facet.Facet)">
-                            <Icon Type="IconType.CaretRight" Bold Class="games-rail-caret" />
-                            <span class="games-rail-group-title">@facet.Title</span>
+                    <div class="@(open ? "filter-rail-group filter-rail-group-open" : "filter-rail-group")">
+                        <button type="button" class="filter-rail-group-toggle" aria-expanded="@(open ? "true" : "false")" @onclick="() => ToggleOpen(facet.Facet)">
+                            <Icon Type="IconType.CaretRight" Bold Class="filter-rail-caret" />
+                            <span class="filter-rail-group-title">@facet.Title</span>
                             @if (chosen > 0)
                             {
-                                <span class="games-rail-pill" aria-label="@($"{chosen} chosen")">@chosen</span>
+                                <span class="filter-rail-pill" aria-label="@($"{chosen} chosen")">@chosen</span>
                             }
                         </button>
                         @if (open)
@@ -97,7 +97,7 @@
                                 : facet.Entries.Take(CollapsedEntries).Concat(facet.Entries.Skip(CollapsedEntries).Where(e => Filters.Has(facet.Facet, e.Value))).ToList();
                             var hidden = facet.Entries.Count - entries.Count;
 
-                            <ul class="games-rail-list">
+                            <ul class="filter-rail-list">
                                 @foreach (var entry in entries)
                                 {
                                     @FacetEntry(facet.Facet, entry)
@@ -105,11 +105,11 @@
                             </ul>
                             @if (hidden > 0)
                             {
-                                <button type="button" class="games-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">@hidden.ToString("N0") more…</button>
+                                <button type="button" class="filter-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">@hidden.ToString("N0") more…</button>
                             }
                             else if (all && facet.Entries.Count > CollapsedEntries)
                             {
-                                <button type="button" class="games-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">Show fewer</button>
+                                <button type="button" class="filter-rail-more" @onclick="() => ToggleShowAll(facet.Facet)">Show fewer</button>
                             }
                         }
                     </div>
@@ -150,7 +150,7 @@
 
     bool HasFacets => Filters.Facets.Any(f => f.Value.Count > 0);
 
-    static string ViewClass(bool active) => active ? "games-rail-view games-rail-view-active" : "games-rail-view";
+    static string ViewClass(bool active) => active ? "filter-rail-view filter-rail-view-active" : "filter-rail-view";
 
     static string Count(Dictionary<string, int> counts, string key) =>
         counts.TryGetValue(key, out var count) ? count.ToString("N0") : "";
@@ -160,15 +160,15 @@
         var active = Filters.Has(facet, entry.Value);
 
         return @<li>
-            <button type="button" class="@(active ? "games-rail-facet games-rail-facet-active" : "games-rail-facet")" aria-pressed="@(active ? "true" : "false")" @onclick="() => ToggleAsync(facet, entry.Value)">
-                <span class="games-rail-check" aria-hidden="true">
+            <button type="button" class="@(active ? "filter-rail-facet filter-rail-facet-active" : "filter-rail-facet")" aria-pressed="@(active ? "true" : "false")" @onclick="() => ToggleAsync(facet, entry.Value)">
+                <span class="filter-rail-check" aria-hidden="true">
                     @if (active)
                     {
                         <Icon Type="IconType.Check" Bold />
                     }
                 </span>
-                <span class="games-rail-name" title="@entry.Name">@entry.Name</span>
-                <span class="games-rail-count">@entry.Count.ToString("N0")</span>
+                <span class="filter-rail-name" title="@entry.Name">@entry.Name</span>
+                <span class="filter-rail-count">@entry.Count.ToString("N0")</span>
             </button>
         </li>;
     }

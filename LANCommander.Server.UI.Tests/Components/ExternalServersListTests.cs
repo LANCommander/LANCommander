@@ -67,6 +67,34 @@ public class ExternalServersListTests : BUnitTestContext
     }
 
     [Fact]
+    public async Task TheRailOffersStatusViewsAndAnExternalView()
+    {
+        await using var registry = await UseSourceAsync(new ExternalServer { Key = "dm", Name = "Linked Deathmatch" });
+
+        var cut = Render<ServersIndex>();
+
+        cut.WaitForAssertion(() => Assert.Contains("Linked Deathmatch", cut.Markup), TimeSpan.FromSeconds(10));
+
+        var views = cut.FindAll(".filter-rail-view").Select(v => v.QuerySelector(".filter-rail-name")!.TextContent).ToList();
+
+        Assert.Contains("All servers", views);
+        Assert.Contains("Running", views);
+        Assert.Contains("Stopped", views);
+        Assert.Contains("Errored", views);
+        Assert.Contains("External", views);
+
+        // External shows the listed servers on their own, without the server's own list
+        cut.FindAll(".filter-rail-view").Single(v => v.TextContent.Contains("External")).Click();
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.Contains("Linked Deathmatch", cut.Markup);
+            Assert.DoesNotContain("External Servers", cut.Markup);
+            Assert.Contains("1 external", cut.Markup);
+        });
+    }
+
+    [Fact]
     public async Task TheSectionIsHiddenWhenNothingIsListed()
     {
         await using var registry = await UseSourceAsync();

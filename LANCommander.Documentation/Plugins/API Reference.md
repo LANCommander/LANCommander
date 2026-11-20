@@ -1067,7 +1067,7 @@ An open `Terminal` console. The server reads it and writes to it at the same tim
 
 `interface` — `LANCommander.Server.Plugins.IServerNavigationExtension`
 
-Contributes a link to the server's primary navigation. Register an implementation in `IPlugin.ConfigureServices`.
+Contributes a link to the server's primary navigation. Register an implementation in `IPlugin.ConfigureServices`, once per link; a plugin may register any number, and `ServerNavigationLink` saves writing a class for each. Links can be gathered under an expandable `IServerNavigationGroupExtension`.
 
 **Properties**
 
@@ -1080,13 +1080,36 @@ Contributes a link to the server's primary navigation. Register an implementatio
 - `string Icon { get; }`
   - Optional LANCommander icon name.
 - `string Section { get; }`
-  - The section the entry is placed in, one of `ServerNavigationSection`. Null places it in the plugin area at the end of the navigation.
+  - The section the entry is placed in: one of `ServerNavigationSection`, or the `Id` of a plugin group. Null places it in the plugin area at the end of the navigation.
 - `string After { get; }`
   - The built-in entry in `Section` this entry follows: a link's route, e.g. `/Settings/Users`, or a group's `ServerNavigationSection`. Use `Start` to place it first; null, or an entry the section does not show, places it last.
 - `int Order { get; }`
   - Orders entries placed at the same spot; ties are sorted by label.
 - `PluginAccessPolicy Access { get; }`
   - Who may see this entry. Defaults to administrators only.
+
+### IServerNavigationGroupExtension
+
+`interface` — `LANCommander.Server.Plugins.IServerNavigationGroupExtension`
+
+Contributes an expandable group to the server's navigation, like Dashboards or Settings. Entries, and other groups, are placed in it by naming its `Id` as their section. Register an implementation in `IPlugin.ConfigureServices`.
+
+**Properties**
+
+- `string Id { get; }`
+  - Stable identifier. Entries placed in the group name it as their `Section`, and nested groups as their `Section`. It cannot be one of the `ServerNavigationSection` values, nor the id of a navigation entry.
+- `string Label { get; }`
+  - Text displayed as the group's title.
+- `string Icon { get; }`
+  - Optional LANCommander icon name.
+- `string Section { get; }`
+  - The section the group is placed in: one of `ServerNavigationSection`, except `Profile`, or the `Id` of another plugin group to nest it. Null places it in the plugin area at the end of the navigation.
+- `string After { get; }`
+  - The built-in entry in `Section` this group follows, as for `After`.
+- `int Order { get; }`
+  - Orders entries and groups placed at the same spot; ties are sorted by label.
+- `PluginAccessPolicy Access { get; }`
+  - Who may see this group, and so any of its entries. Defaults to administrators only.
 
 ### IServerProvider
 
@@ -2449,6 +2472,39 @@ A dedicated game server the LANCommander server runs and monitors.
 `class` — `LANCommander.Server.Plugins.ServerNavigationAnchor`
 
 Special values for `After`. Any other value is the route of a built-in link, or a `ServerNavigationSection` naming a built-in group.
+
+### ServerNavigationGroup
+
+`class` — `LANCommander.Server.Plugins.ServerNavigationGroup`
+
+A ready-made `IServerNavigationGroupExtension`: services.AddSingleton\<IServerNavigationGroupExtension>(new ServerNavigationGroup \{ Id = "com.mycompany.myplugin", Label = "My Plugin", Icon = "Package", Section = ServerNavigationSection.Main, \});
+
+**Properties**
+
+- `string Id { get; init; }`
+- `string Label { get; init; }`
+- `string Icon { get; init; }`
+- `string Section { get; init; }`
+- `string After { get; init; }`
+- `int Order { get; init; }`
+- `PluginAccessPolicy Access { get; init; }`
+
+### ServerNavigationLink
+
+`class` — `LANCommander.Server.Plugins.ServerNavigationLink`
+
+A ready-made `IServerNavigationExtension`, so a plugin can register any number of navigation entries without writing a class for each: services.AddSingleton\<IServerNavigationExtension>(new ServerNavigationLink \{ Id = "com.mycompany.myplugin.catalog", Label = "Catalog", Href = "/Plugins/MyPlugin/Catalog", Section = "com.mycompany.myplugin", \});
+
+**Properties**
+
+- `string Id { get; init; }`
+- `string Label { get; init; }`
+- `string Href { get; init; }`
+- `string Icon { get; init; }`
+- `string Section { get; init; }`
+- `string After { get; init; }`
+- `int Order { get; init; }`
+- `PluginAccessPolicy Access { get; init; }`
 
 ### ServerNavigationSection
 

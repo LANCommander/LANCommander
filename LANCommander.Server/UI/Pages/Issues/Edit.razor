@@ -18,7 +18,7 @@
             <Button Icon="IconType.PushPin" OnClick="TogglePinnedAsync" Loading="_pinning"
                     title="Pinned issues are listed first on the game's Issues tab in the launcher">@(_issue.IsPinned ? "Unpin" : "Pin")</Button>
             <Button Icon="IconType.CheckCircle" OnClick="ResolveAsync" Disabled="IsResolved" Loading="_resolving">Resolve</Button>
-            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync" Loading="_deleting">Delete</Button>
+            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync" Loading="_deleting" title="Delete issue" aria-label="Delete issue" />
         }
         <Button Primary Icon="IconType.FloppyDisk" OnClick="SaveAsync" Disabled="IsResolved" Loading="_saving">Save</Button>
     </Extra>

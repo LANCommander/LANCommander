@@ -14,7 +14,7 @@
     <Extra>
         @if (_collection.Id != Guid.Empty)
         {
-            <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+            <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync" title="Delete collection" aria-label="Delete collection" />
         }
         <Button Primary Icon="IconType.FloppyDisk" Loading="_saving" OnClick="SaveAsync">Save</Button>
     </Extra>

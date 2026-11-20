@@ -134,7 +134,10 @@
                         <Button Icon="IconType.ArrowSquareOut" Href="@manageUrl" NewTab title="Open this server on its host">Open on host</Button>
                     }
 
-                    <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+                    @if (ShowDelete)
+                    {
+                        <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync" title="Delete server" aria-label="Delete server" />
+                    }
                 }
                 @TitleExtraTemplate?.Invoke(Server)
             </Extra>
@@ -169,6 +172,12 @@
 
     /// <summary>Shows the server's Restart/Stop (or Start) buttons in the header.</summary>
     [Parameter] public bool ShowControl { get; set; } = true;
+
+    /// <summary>
+    /// Shows the header's Delete button; only the server itself (General) offers it, not its sections.
+    /// A flag rather than "no Title", since engine and plugin sections have no Title either.
+    /// </summary>
+    [Parameter] public bool ShowDelete { get; set; }
 
     /// <summary>
     /// What the header's mono line leads with, e.g. the console being followed. Defaults to the

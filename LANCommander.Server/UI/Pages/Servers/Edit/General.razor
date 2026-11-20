@@ -24,7 +24,7 @@
 @inject NotificationService Notifications
 @inject DialogService Dialogs
 
-<ServerEditView @ref="_view" Id="Id" OnLoaded="OnServerLoaded" ContentClass="edit-form-content">
+<ServerEditView @ref="_view" Id="Id" ShowDelete OnLoaded="OnServerLoaded" ContentClass="edit-form-content">
     <TitleTemplate>
         @(context.Id == Guid.Empty ? "Add new server" : "General")
     </TitleTemplate>

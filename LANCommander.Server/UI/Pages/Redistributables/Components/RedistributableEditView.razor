@@ -34,9 +34,10 @@
                 }
             </TitleTemplate>
             <Extra>
-                @if (Id != Guid.Empty && !_loading)
+                @* Deleting is offered on the redistributable itself (General), not in its sections *@
+                @if (string.IsNullOrEmpty(Title) && Id != Guid.Empty && !_loading)
                 {
-                    <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync">Delete</Button>
+                    <Button Text Danger Icon="IconType.Trash" Loading="_deleting" OnClick="DeleteAsync" title="Delete redistributable" aria-label="Delete redistributable" />
                 }
 
                 @TitleExtraTemplate?.Invoke(Redistributable)

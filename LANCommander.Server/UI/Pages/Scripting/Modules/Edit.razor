@@ -24,7 +24,7 @@
         <Button Icon="IconType.ArrowLeft" Href="/Scripting/Modules">Back</Button>
         @if (!IsNew)
         {
-            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync">Delete</Button>
+            <Button Text Danger Icon="IconType.Trash" OnClick="DeleteAsync" title="Delete module" aria-label="Delete module" />
         }
         <Button Primary Icon="IconType.FloppyDisk" OnClick="Save">Save</Button>
     </Extra>

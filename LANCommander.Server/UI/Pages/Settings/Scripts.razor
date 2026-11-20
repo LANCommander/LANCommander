@@ -1,5 +1,4 @@
 @page "/Settings/Scripts"
-@using LANCommander.SDK.Enums
 @using LANCommander.Server.Settings
 @using LANCommander.Server.UI.Components
 @using Microsoft.Extensions.Options
@@ -29,10 +28,6 @@
             </Flex>
         </FormItem>
     </Form>
-
-    <Divider>System Scripts</Divider>
-
-    <ScriptEditor AllowedTypes="new[] { ScriptType.UserLogin, ScriptType.UserRegistration }" />
 </PageContent>
 
 @code {

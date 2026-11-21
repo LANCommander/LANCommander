@@ -1,0 +1,90 @@
+---
+title: 2.2.0-rc.4
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.2.0 Release Candidate 4 Release Notes
+
+This is the fourth release candidate for LANCommander 2.2.0. The **Servers** page gets the same filter rail as the games list, plugins can now group their navigation entries and dock bars to the top or bottom of the window, and servers set to start on player activity will now retry after an error. In the launcher, it falls back to offline mode when the saved server can't be reached, titles sort the same way everywhere, and the download queue gets a set of fixes. For the full list of changes in 2.2.0, see the [2.2.0-rc.1 release notes](/Releases/2.2.0-rc.1).
+
+## Server
+
+### Server Filters
+The **Servers** page now has a filter rail like the one on the **Games** page. Views cover all servers, running, stopped, errored, autostart, servers with no game, and servers added this week. The list can also be narrowed by status, game, engine (Local, Remote, or a plugin's engine), and autostart method. Servers listed by plugin sources have their own view.
+
+### Autostart Retries Errored Servers
+Servers set to start on player activity used to be skipped if they were in an error state. They're now started again the next time player activity triggers them, as long as they're stopped or errored. A server set to autostart that no engine manages is now logged as a warning instead of being skipped silently.
+
+### Plugin Navigation Groups
+Plugins can register an `IServerNavigationGroupExtension` (or a `ServerNavigationGroup`) to gather their entries under an expandable group in the sidebar, like **Dashboards** or **Settings**. Groups can be nested, and plugins that declare a group with the same ID share a single group, so related plugins can put their entries together without depending on each other. `ServerNavigationLink` lets a plugin register multiple entries without a class for each.
+
+### Plugin Docked Bars
+Plugins can add a bar along the top or bottom edge of the window with an `IServerDockExtension`, for things that should be visible on every page, such as alerts or a status bar. Bars stay alive as you move between pages, and they take up no space while they have nothing to show. The heights of the docked edges are available to full-window pages as the `--lc-dock-top` and `--lc-dock-bottom` CSS custom properties.
+
+See [Extension Points](/Plugins/Extension%20Points) for details on both.
+
+### Navigation
+- **Chat** has moved out of the **Dashboards** group and into the top level of the sidebar.
+- The user login and registration scripts have moved from the **Scripts** page to a new **System** page under **Scripting**.
+
+### Interface Tweaks
+- Delete buttons in edit page headers are now icon only, and only appear on the item's **General** page instead of each of its sections.
+- Double-clicking a script in the script list opens it for editing.
+- The **Columns** button in the file manager now sits next to the upload and delete buttons.
+- Expanding a base game in the games table no longer changes the order of the rows around it.
+- The text in the media grabber's provider dropdown is now aligned correctly.
+
+## Launcher
+
+### Offline Fallback
+If the last server you used can't be reached, the launcher now gives it five seconds to respond and then goes into offline mode. If you have stored sign-in credentials, your cached library opens so you can play installed games without the server. Without them, the login screen opens with the server marked offline, and you can pick a different server. Thanks to [@aaronpowell](https://github.com/aaronpowell) for this one ([#490](https://github.com/LANCommander/LANCommander/pull/490)).
+
+### Title Sorting
+Sorting by title in the library and the depot now works the same everywhere. Leading articles ("The", "A", "An") are ignored, so *The Witcher* sorts under W, and the comparison is case-insensitive. A blank sort title falls back to the game's title.
+
+### Download Queue
+- Progress in the download queue and on the taskbar no longer jumps around or shows values from earlier in the install. A finished or failed install no longer has its taskbar progress put back by a late update.
+- Items with no icon or cover show an icon based on what's being installed (game, expansion, mod, tool, or redistributable).
+- A game is no longer announced as installed until the redistributables queued for it have finished. Plugins listening for the installed event and the server's install report now see the install once it's actually ready to play.
+
+### Uninstalling State
+The play button now shows **Uninstalling** while a game is being uninstalled, whether the uninstall was started from the game's page or from the library's context menu. Uninstalling a game has been moved to a separate thread, so the UI should no longer hang while files are being deleted.
+
+### External ID Fix
+Fixed an issue where importing a game that already existed with external IDs (such as an IGDB ID) could fail. A migration on both the server and the launcher fixes any existing IDs that were affected. This will only have affected servers that use SQLite as the database engine.
+
+## Changelog
+
+**Launcher**
+- Added: Offline fallback when the saved server is unreachable
+- Added: **Uninstalling** state on the play button
+- Added: Fallback icons in the download queue
+- Changed: Title sorting ignores leading articles and case in the library and depot
+- Changed: Games are announced as installed only after their redistributables finish
+- Fixed: Download progress showing stale or out-of-order values
+- Fixed: Taskbar progress reappearing after an install finished or failed
+- Fixed: Lowercase external ID keys breaking imports of games with external IDs
+
+**Server**
+- Added: Filter rail on the **Servers** page
+- Added: `IServerNavigationGroupExtension` for plugin navigation groups
+- Added: `IServerDockExtension` for plugin bars docked to the top or bottom of the window
+- Added: Double-click a script to edit it
+- Changed: Servers in an error state are started on player activity
+- Changed: **Chat** moved out of **Dashboards** into the main navigation
+- Changed: System scripts moved to **Scripting > System**
+- Changed: Delete buttons are icon only and shown only on the item's **General** page
+- Changed: **Columns** button moved in the file manager
+- Fixed: Lowercase external ID keys breaking imports of games with external IDs (SQLite)
+- Fixed: Row order changing when expanding a base game in the games table
+- Fixed: Text alignment in the media grabber provider dropdown
+
+## Downloads
+
+<ReleaseDownloads release="v2.2.0-rc.4" />
+
+## Contributors
+
+<ContributorGrid from="v2.2.0-rc.3" to="v2.2.0-rc.4" />

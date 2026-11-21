@@ -9,6 +9,7 @@ using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.ViewModels.Components;
 using LANCommander.Launcher.Services;
 using LANCommander.SDK.Enums;
+using LANCommander.SDK.Extensions;
 using LANCommander.SDK.Models;
 using LANCommander.SDK.Services;
 using Microsoft.Extensions.DependencyInjection;
@@ -206,7 +207,7 @@ public partial class DepotViewModel : ViewModelBase
 
             foreach (var game in allGames
                 .Where(g => g.MultiplayerModes?.Any() == true)
-                .OrderBy(g => g.SortTitle ?? g.Title)
+                .OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
                 .Take(20))
                 MultiplayerGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), coverMimeCache.GetValueOrDefault(game.Id), librarySet.Contains(game.Id)));
 
@@ -214,7 +215,7 @@ public partial class DepotViewModel : ViewModelBase
 
             foreach (var game in allGames
                 .Where(g => librarySet.Contains(g.Id))
-                .OrderBy(g => g.SortTitle ?? g.Title)
+                .OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle)
                 .Take(20))
                 BacklogGames.Add(new GameItemViewModel(game, coverCache.GetValueOrDefault(game.Id), coverMimeCache.GetValueOrDefault(game.Id), inLibrary: true, showInLibraryBadge: false));
 
@@ -328,7 +329,7 @@ public partial class DepotViewModel : ViewModelBase
 
         var localGames = await gameService.GetAsync() ?? [];
 
-        foreach (var game in localGames.Where(g => g.ShowInLibrary).OrderBy(g => g.SortTitle ?? g.Title))
+        foreach (var game in localGames.Where(g => g.ShowInLibrary).OrderByTitle(g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle))
         {
             string? GetLocalPath(MediaType type)
             {

@@ -94,7 +94,7 @@ namespace LANCommander.Launcher.Models
             switch (SelectedOptions.SortBy)
             {
                 case SortBy.Title:
-                    items = items.OrderByTitle(i => i.Name ?? i.SortName, SelectedOptions.SortDirection);
+                    items = items.OrderByTitle(i => string.IsNullOrWhiteSpace(i.SortName) ? i.Name : i.SortName,SelectedOptions.SortDirection);
                     break;
 
                 case SortBy.DateAdded:

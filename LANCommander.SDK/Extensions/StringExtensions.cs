@@ -24,6 +24,32 @@ namespace LANCommander.SDK.Extensions
             return filename;
         }
 
+        static readonly Regex LeadingArticleExpression = new Regex(@"^(?:a|an|the)\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
+
+        /// <summary>
+        /// Returns the key a title should be sorted by: leading whitespace and a leading English
+        /// article ("The", "A", "An") are dropped, so "The Witcher" sorts under W.
+        /// </summary>
+        public static string ToSortableTitle(this string? title)
+        {
+            if (string.IsNullOrWhiteSpace(title))
+                return string.Empty;
+
+            title = title.TrimStart();
+
+            var stripped = LeadingArticleExpression.Replace(title, "");
+
+            // A title that is only an article ("The ", "A  ") keeps its original text
+            return stripped.Length > 0 ? stripped : title.TrimEnd();
+        }
+
+        /// <summary>
+        /// Picks the explicit sort title when set, otherwise the title, and normalizes it with
+        /// <see cref="ToSortableTitle(string?)"/>.
+        /// </summary>
+        public static string ToSortableTitle(string? sortTitle, string? title)
+            => (string.IsNullOrWhiteSpace(sortTitle) ? title : sortTitle).ToSortableTitle();
+
         internal static bool ContainsIgnoreCase(this string input, string search)
         {
             return input.IndexOf(search, StringComparison.OrdinalIgnoreCase) != -1;

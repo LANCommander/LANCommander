@@ -1,35 +1,26 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text.RegularExpressions;
 using LANCommander.SDK.Enums;
 
 namespace LANCommander.SDK.Extensions
 {
     public static class IEnumerableExtensions
     {
-        static Regex TitleComparisonExpression = new Regex(@"^(?:a|the|an)\s+", RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
-
-        public static IOrderedEnumerable<T> OrderByTitle<T>(this IEnumerable<T> items, Func<T, string> keySelector, SortDirection direction = SortDirection.Ascending)
+        /// <summary>
+        /// Orders by title the way a library shelf would: leading articles ("The", "A", "An") are
+        /// ignored and the comparison is case-insensitive. See <see cref="StringExtensions.ToSortableTitle(string?)"/>.
+        /// </summary>
+        public static IOrderedEnumerable<T> OrderByTitle<T>(this IEnumerable<T> items, Func<T, string?> keySelector, SortDirection direction = SortDirection.Ascending)
         {
             switch (direction)
             {
+                case SortDirection.Descending:
+                    return items.OrderByDescending(i => keySelector(i).ToSortableTitle(), StringComparer.CurrentCultureIgnoreCase);
+
                 case SortDirection.Ascending:
                 default:
-                    return items.OrderBy(i =>
-                    {
-                        var key = keySelector.Invoke(i);
-
-                        return TitleComparisonExpression.Replace(key, "");
-                    });
-
-                case SortDirection.Descending:
-                    return items.OrderByDescending(i =>
-                    {
-                        var key = keySelector.Invoke(i);
-
-                        return TitleComparisonExpression.Replace(key, "");
-                    });
+                    return items.OrderBy(i => keySelector(i).ToSortableTitle(), StringComparer.CurrentCultureIgnoreCase);
             }
         }
 

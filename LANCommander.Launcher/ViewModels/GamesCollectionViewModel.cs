@@ -293,9 +293,9 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
         filtered = SelectedSortBy switch
         {
-            SortBy.Title => SortAscending
-                ? filtered.OrderBy(g => string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle, StringComparer.OrdinalIgnoreCase)
-                : filtered.OrderByDescending(g => string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle, StringComparer.OrdinalIgnoreCase),
+            SortBy.Title => filtered.OrderByTitle(
+                g => string.IsNullOrWhiteSpace(g.SortTitle) ? g.Title : g.SortTitle,
+                SortAscending ? SortDirection.Ascending : SortDirection.Descending),
             SortBy.DateReleased => SortAscending
                 ? filtered.OrderBy(g => g.ReleasedOn)
                 : filtered.OrderByDescending(g => g.ReleasedOn),
@@ -354,7 +354,7 @@ public abstract partial class GamesCollectionViewModel : ViewModelBase
 
     private static string GetFirstLetter(GameItemViewModel g)
     {
-        var title = (string.IsNullOrEmpty(g.SortTitle) ? g.Title : g.SortTitle).TrimStart();
+        var title = StringExtensions.ToSortableTitle(g.SortTitle, g.Title);
         var first = title.FirstOrDefault();
         
         return char.IsLetter(first) ? char.ToUpper(first).ToString() : "#";

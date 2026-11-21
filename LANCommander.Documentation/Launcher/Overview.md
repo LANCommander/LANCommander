@@ -13,6 +13,11 @@ If the user does not have an account registered on the server, they can register
 
 After logging in, the launcher will immediately start syncing the user's accessible games from the server. Once the sync is complete the user is free to start installing any games listed.
 
+## Offline Mode
+If the last server you used is unreachable, the launcher checks the saved address with a five-second timeout before falling back to offline mode. With stored sign-in credentials, it opens your cached library so you can play installed games without the server. Downloads and syncing require a connection.
+
+Without stored credentials, the launcher shows the login screen with the server marked offline. You can change servers from there.
+
 ## Changing the Install Location
 By default, the launcher will install games to `C:\Games` on Windows. This can be changed in settings by hovering over your username in the top right and clicking **Settings** in the dropdown.
 

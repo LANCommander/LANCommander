@@ -218,19 +218,8 @@ public partial class App : Application
             // Initialize application (same order as main Launcher/Program.cs)
             using (var scope = Services!.CreateScope())
             {
-                var connectionClient = scope.ServiceProvider.GetRequiredService<IConnectionClient>();
                 var settingsProvider = scope.ServiceProvider.GetRequiredService<SettingsProvider<Settings.Settings>>();
                 var databaseContext = scope.ServiceProvider.GetRequiredService<Data.DatabaseContext>();
-
-                // Connect to server
-                _logger?.LogInformation("Connecting to server...");
-                await connectionClient.ConnectAsync().ConfigureAwait(false);
-
-                if (!await connectionClient.PingAsync().ConfigureAwait(false))
-                {
-                    _logger?.LogWarning("Server not reachable, enabling offline mode");
-                    await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
-                }
 
                 // Set default install directory if not configured
                 if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)

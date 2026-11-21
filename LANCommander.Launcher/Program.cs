@@ -175,9 +175,9 @@ class Program
 
             logger.LogInformation("Running headless with data directory {DataDirectory}", AppPaths.GetConfigDirectory());
 
-            await connectionClient.ConnectAsync().ConfigureAwait(false);
-
-            if (!await connectionClient.PingAsync().ConfigureAwait(false))
+            if (await connectionClient.PingAsync().ConfigureAwait(false))
+                await connectionClient.ConnectAsync().ConfigureAwait(false);
+            else
                 await connectionClient.EnableOfflineModeAsync().ConfigureAwait(false);
 
             if (settingsProvider.CurrentValue.Games.InstallDirectories.Length == 0)

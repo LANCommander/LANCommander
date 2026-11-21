@@ -385,12 +385,17 @@ namespace LANCommander.Server.Services
         {
             using var context = await dbContextFactory.CreateDbContextAsync();
 
-            if (updatedEntity.CreatedById != null && updatedEntity.CreatedBy == null)
-                updatedEntity.CreatedById = null;
-            
             var existingEntity = await context.Set<T>().FirstOrDefaultAsync(e => e.Id == updatedEntity.Id);
-            
+
+            // The creator only changes when a CreatedBy user is supplied (importers do this). A bare
+            // CreatedById can't be trusted (it may come from another server's export), and entities
+            // loaded without CreatedBy must not wipe the stored creator, e.g. a finished upload
+            // updating the row /api/Upload/Init created.
+            var createdById = updatedEntity.CreatedBy?.Id ?? existingEntity.CreatedById;
+
             context.Entry(existingEntity).CurrentValues.SetValues(updatedEntity);
+
+            existingEntity.CreatedById = createdById;
 
             if (additionalMapping != null)
             {

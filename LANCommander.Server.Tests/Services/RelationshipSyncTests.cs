@@ -542,4 +542,46 @@ public class RelationshipSyncTests(ApplicationFixture fixture) : DalTest(fixture
     }
 
     #endregion
+
+    #region Audit fields
+
+    /// <summary>
+    /// A chunked upload's row is created by /api/Upload/Init (which records the uploader) and then
+    /// updated once the upload finishes from an entity loaded without CreatedBy. That update must
+    /// keep the recorded creator.
+    /// </summary>
+    [Fact]
+    public async Task UpdatingAnEntityLoadedWithoutCreatedByKeepsTheCreator()
+    {
+        var archiveService = GetService<ArchiveService>();
+
+        var game = await AddGameAsync();
+        var archive = await AddArchiveAsync(game.Id);
+
+        var userId = Guid.NewGuid();
+
+        await using (var db = await GetService<IDbContextFactory<LANCommander.Server.Data.DatabaseContext>>().CreateDbContextAsync())
+        {
+            db.Users.Add(new User { Id = userId, UserName = Unique("uploader") });
+
+            var stored = await db.Set<Archive>().FirstAsync(a => a.Id == archive.Id);
+            stored.CreatedById = userId;
+
+            await db.SaveChangesAsync();
+        }
+
+        var loaded = await archiveService.FirstOrDefaultAsync(a => a.ObjectKey == archive.ObjectKey);
+
+        loaded.CreatedById.ShouldBe(userId);
+        loaded.Version = "2.0";
+
+        await archiveService.UpdateAsync(loaded);
+
+        var updated = await archiveService.GetAsync(archive.Id);
+
+        updated.Version.ShouldBe("2.0");
+        updated.CreatedById.ShouldBe(userId);
+    }
+
+    #endregion
 }

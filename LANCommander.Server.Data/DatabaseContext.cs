@@ -24,7 +24,7 @@ namespace LANCommander.Server.Data
 
             if (!isProviderConfigured && Provider != DatabaseProvider.Unknown && !string.IsNullOrEmpty(ConnectionString))
             {
-                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor(), new AuditSaveChangesInterceptor());
 
                 optionsBuilder.EnableDetailedErrors();
                 optionsBuilder.EnableSensitiveDataLogging();
@@ -55,7 +55,7 @@ namespace LANCommander.Server.Data
             else
             {
                 // Provider is already configured, but we still want to add interceptors and settings if not already added
-                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+                optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor(), new AuditSaveChangesInterceptor());
                 optionsBuilder.EnableDetailedErrors();
                 optionsBuilder.EnableSensitiveDataLogging();
             }

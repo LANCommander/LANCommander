@@ -40,7 +40,7 @@ public class DatabaseContextFactory : IDesignTimeDbContextFactory<DatabaseContex
         // Build options
         var optionsBuilder = new DbContextOptionsBuilder<DatabaseContext>();
         
-        optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor());
+        optionsBuilder.AddInterceptors(new GameSaveChangesInterceptor(), new AuditSaveChangesInterceptor());
         optionsBuilder.EnableDetailedErrors();
         optionsBuilder.EnableSensitiveDataLogging();
 

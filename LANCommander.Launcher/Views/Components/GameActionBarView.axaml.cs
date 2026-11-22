@@ -15,6 +15,14 @@ public partial class GameActionBarView : UserControl
     {
         InitializeComponent();
         DataContextChanged += OnDataContextChanged;
+
+        // A gamepad has no hover; focus stands in for it to show who is playing
+        PlayingNowButton.GotFocus += (_, e) =>
+        {
+            if (e.NavigationMethod is Avalonia.Input.NavigationMethod.Directional or Avalonia.Input.NavigationMethod.Tab)
+                ToolTip.SetIsOpen(PlayingNowButton, true);
+        };
+        PlayingNowButton.LostFocus += (_, _) => ToolTip.SetIsOpen(PlayingNowButton, false);
     }
 
     private void OnDataContextChanged(object? sender, EventArgs e)

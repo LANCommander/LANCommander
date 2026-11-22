@@ -228,12 +228,16 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     /// <summary>The running game's place on the server's network relay; hidden when it is not on it.</summary>
     public RelayStatusViewModel Relay { get; } = new();
 
-    /// <summary>The other players in this game right now; the card over each says what they are doing.</summary>
+    /// <summary>The other players in this game right now, shown as a count; hovering it lists who.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasPlayingNow))]
+    [NotifyPropertyChangedFor(nameof(PlayingNowText))]
     private ObservableCollection<PlayerPresenceViewModel> _playingNow = new();
 
     public bool HasPlayingNow => PlayingNow.Count > 0;
+
+    /// <summary>"1 player", "3 players".</summary>
+    public string PlayingNowText => Localize(PlayingNow.Count == 1 ? "PlayingNowPlayer" : "PlayingNowPlayers", PlayingNow.Count);
 
     partial void OnGameIdChanged(Guid value) => FollowPresence(value);
 
@@ -246,7 +250,10 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
     }
 
     private void OnPlayingNowCollectionChanged(object? sender, System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        => OnPropertyChanged(nameof(HasPlayingNow));
+    {
+        OnPropertyChanged(nameof(HasPlayingNow));
+        OnPropertyChanged(nameof(PlayingNowText));
+    }
 
     private void FollowPresence(Guid gameId)
     {

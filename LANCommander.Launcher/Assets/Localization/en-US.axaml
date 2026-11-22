@@ -137,6 +137,8 @@
     <sys:String x:Key="LastPlayedHoursAgo">{0} hours ago</sys:String>
     <sys:String x:Key="LastPlayedDayAgo">{0} day ago</sys:String>
     <sys:String x:Key="LastPlayedDaysAgo">{0} days ago</sys:String>
+    <sys:String x:Key="PlayingNowPlayer">{0} player</sys:String>
+    <sys:String x:Key="PlayingNowPlayers">{0} players</sys:String>
 
     <!-- ── Game Detail ───────────────────────────────────────────────────── -->
     <sys:String x:Key="Singleplayer">Singleplayer</sys:String>

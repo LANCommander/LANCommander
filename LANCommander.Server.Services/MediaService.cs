@@ -473,6 +473,72 @@ namespace LANCommander.Server.Services
             return hasTransparentPixels;
         }
 
+        /// <summary>Image types a user may upload as an avatar.</summary>
+        public static readonly IReadOnlyCollection<string> AvatarMimeTypes = ["image/png", "image/jpeg", "image/webp"];
+
+        /// <summary>
+        /// Reads the image type from the stream's leading bytes, rather than trusting a client's
+        /// Content-Type. Null when the stream isn't an image ImageSharp recognizes. The stream must be
+        /// seekable; it is rewound to where it started.
+        /// </summary>
+        public static async Task<string?> DetectImageMimeTypeAsync(Stream stream, CancellationToken cancellationToken = default)
+        {
+            var start = stream.Position;
+
+            try
+            {
+                var format = await Image.DetectFormatAsync(stream, cancellationToken);
+
+                return format?.DefaultMimeType;
+            }
+            catch (Exception ex) when (ex is UnknownImageFormatException or InvalidImageContentException)
+            {
+                return null;
+            }
+            finally
+            {
+                stream.Position = start;
+            }
+        }
+
+        /// <summary>
+        /// Sets a user's avatar to the given image, replacing any they had. A replacement gets a new
+        /// file id, so URLs and launcher caches keyed on it see the change.
+        /// </summary>
+        public async Task<Media> SetUserAvatarAsync(Guid userId, Stream stream, string mimeType)
+        {
+            var media = await FirstOrDefaultAsync(m => m.Type == MediaType.Avatar && m.UserId == userId);
+
+            if (media == null)
+            {
+                media = new Media { Type = MediaType.Avatar, UserId = userId };
+            }
+            else
+            {
+                DeleteLocalMediaFile(media);
+
+                media.FileId = Guid.NewGuid();
+            }
+
+            media.SourceUrl = String.Empty;
+            media.MimeType = mimeType;
+
+            return await WriteToFileAsync(media, stream);
+        }
+
+        /// <summary>Removes a user's avatar and its files. False when they had none.</summary>
+        public async Task<bool> RemoveUserAvatarAsync(Guid userId)
+        {
+            var media = await FirstOrDefaultAsync(m => m.Type == MediaType.Avatar && m.UserId == userId);
+
+            if (media == null)
+                return false;
+
+            await DeleteAsync(media);
+
+            return true;
+        }
+
         public void DeleteLocalMediaFile(Media media)
         {
             FileHelpers.DeleteIfExists(GetMediaPath(media));

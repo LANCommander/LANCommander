@@ -1,7 +1,6 @@
 @using Microsoft.Extensions.Options
 @using LANCommander.SDK.Enums
 @inherits OwningComponentBase
-@inject UserService UserService
 @inject MediaService MediaService
 @inject IOptions<Settings.Settings> Settings
 @inject NotificationService Notifications
@@ -52,8 +51,6 @@ else
     bool Uploading;
     Guid _loadedUserId;
 
-    static readonly string[] ValidMimeTypes = ["image/png", "image/jpeg", "image/webp"];
-
     protected override async Task OnParametersSetAsync()
     {
         if (UserId != _loadedUserId)
@@ -82,7 +79,7 @@ else
 
         var config = Settings.Value.Server.Media.GetMediaTypeConfig(MediaType.Avatar);
 
-        if (!ValidMimeTypes.Contains(e.File.ContentType))
+        if (!LANCommander.Server.Services.MediaService.AvatarMimeTypes.Contains(e.File.ContentType))
         {
             Notifications.Error("Unsupported file type");
             return;
@@ -98,25 +95,9 @@ else
 
         try
         {
-            var user = await UserService.Include(u => u.Media!).GetAsync(UserId);
-            var media = user.Media?.FirstOrDefault(m => m.Type == MediaType.Avatar)
-                        ?? new Media { Type = MediaType.Avatar, UserId = UserId };
+            await using var stream = e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize);
 
-            media.SourceUrl = "";
-            media.MimeType = e.File.ContentType;
-
-            if (media.Id == Guid.Empty)
-            {
-                await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
-            }
-            else
-            {
-                MediaService.DeleteLocalMediaFile(media);
-
-                media = await MediaService.WriteToFileAsync(media, e.File.OpenReadStream(maxAllowedSize: config.MaxFileSize));
-
-                await MediaService.UpdateAsync(media);
-            }
+            await MediaService.SetUserAvatarAsync(UserId, stream, e.File.ContentType);
 
             await LoadAvatarAsync();
 

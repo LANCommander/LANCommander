@@ -107,6 +107,10 @@
                         Padding="8,4">
                     <Button.Flyout>
                         <MenuFlyout Placement="BottomEdgeAlignedRight">
+                            <!-- Alias and avatar are kept on the server -->
+                            <MenuItem Header="Edit Profile..."
+                                      Command="{Binding ShellViewModel.ShowEditProfileCommand}"
+                                      IsVisible="{Binding !ShellViewModel.IsOfflineMode}" />
                             <!-- Only shown to accounts that may create games on the server, and
                                  only where packaging can actually run. -->
                             <MenuItem Header="Package a Game..."

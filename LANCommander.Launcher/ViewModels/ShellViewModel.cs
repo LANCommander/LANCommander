@@ -223,6 +223,7 @@ public partial class ShellViewModel : ViewModelBase
     public DownloadQueueViewModel   DownloadQueue            { get; private set; } = null!;
     public SettingsViewModel        SettingsViewModel        { get; private set; } = null!;
     public ProfileViewModel         Profile                  { get; private set; } = null!;
+    public EditProfileViewModel     EditProfileViewModel     { get; private set; } = null!;
     public ChatWindowViewModel      Chat                     { get; private set; } = null!;
     public PackagingWizardViewModel PackagingWizardViewModel { get; private set; } = null!;
 
@@ -358,6 +359,7 @@ public partial class ShellViewModel : ViewModelBase
         _otherGameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
+        EditProfileViewModel     = new EditProfileViewModel(_serviceProvider, Profile);
         PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
 
         SettingsViewModel.SettingsSaved += OnSettingsSaved;
@@ -922,6 +924,21 @@ public partial class ShellViewModel : ViewModelBase
         SettingsViewModel.Load();
 
         _navigationService.NavigateTo(SettingsViewModel);
+    }
+
+    /// <summary>Alias and avatar live on the server, so this is offered only while online.</summary>
+    [RelayCommand]
+    private async Task ShowEditProfileAsync()
+    {
+        if (IsOfflineMode)
+            return;
+
+        // Shown straight away; the server's say on what may change fills in as it arrives
+        var load = EditProfileViewModel.LoadAsync();
+
+        await Views.EditProfileOverlay.ShowAsync(EditProfileViewModel);
+
+        await load;
     }
 
     [RelayCommand]

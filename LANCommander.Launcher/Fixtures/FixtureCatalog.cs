@@ -20,6 +20,7 @@ public static class FixtureCatalog
         .. DownloadFixtures.All,
         .. VerifyFixtures.All,
         .. SettingsFixtures.All,
+        .. ProfileFixtures.All,
         .. PluginFixtures.All,
         .. PackagingFixtures.All,
         .. WindowFixtures.All,

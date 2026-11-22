@@ -21,6 +21,7 @@ public partial class ShellViewModel
         _otherGameDetailViewModel = new GameDetailViewModel(_serviceProvider);
         DownloadQueue            = new DownloadQueueViewModel(_serviceProvider);
         SettingsViewModel        = new SettingsViewModel(_serviceProvider);
+        EditProfileViewModel     = new EditProfileViewModel(_serviceProvider, Profile);
         PackagingWizardViewModel = new PackagingWizardViewModel(_serviceProvider);
         Chat                     = new ChatWindowViewModel(_serviceProvider);
     }

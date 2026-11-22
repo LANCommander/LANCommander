@@ -18,7 +18,11 @@ public partial class ProfileViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(AliasInitial))]
     private string _alias = "Player";
 
-    public string AliasInitial => string.IsNullOrEmpty(Alias) ? "?" : Alias[0].ToString().ToUpper();
+    /// <summary>The account's username, which other players see when no alias is set.</summary>
+    [ObservableProperty]
+    private string _userName = string.Empty;
+
+    public string AliasInitial =>string.IsNullOrEmpty(Alias) ? "?" : Alias[0].ToString().ToUpper();
 
     [ObservableProperty]
     private string? _avatarPath;
@@ -124,20 +128,34 @@ public partial class ProfileViewModel : ViewModelBase
             _logger.LogWarning(ex, "Could not download profile info");
         }
 
+        await RefreshAsync();
+    }
+
+    /// <summary>Shows the alias and avatar as stored locally, after the profile was downloaded or edited.</summary>
+    public async Task RefreshAsync()
+    {
         try
         {
+            using var scope = _serviceProvider.CreateScope();
+
             var userService = scope.ServiceProvider.GetRequiredService<UserService>();
             var mediaService = scope.ServiceProvider.GetRequiredService<MediaService>();
 
             var user = await userService.GetCurrentUser();
             if (user != null)
             {
+                UserName = user.UserName ?? string.Empty;
                 Alias = string.IsNullOrWhiteSpace(user.Alias) ? user.UserName ?? "Player" : user.Alias;
 
                 if (user.Avatar != null && mediaService.FileExists(user.Avatar))
                 {
                     AvatarPath = mediaService.GetImagePath(user.Avatar);
                     HasAvatar = true;
+                }
+                else
+                {
+                    AvatarPath = null;
+                    HasAvatar = false;
                 }
             }
         }

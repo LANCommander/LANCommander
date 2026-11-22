@@ -1,0 +1,137 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:LANCommander.Launcher.ViewModels"
+             xmlns:components="using:LANCommander.Launcher.Views.Components"
+             xmlns:converters="using:LANCommander.Launcher.Converters"
+             x:Class="LANCommander.Launcher.Views.EditProfileOverlay"
+             x:DataType="vm:EditProfileViewModel">
+
+    <UserControl.Resources>
+        <converters:FilePathToBitmapConverter x:Key="FilePathToBitmapConverter" />
+    </UserControl.Resources>
+
+    <!-- Full-window dim backdrop -->
+    <Grid Background="{DynamicResource ScrimBrush}">
+
+        <!-- Centered card -->
+        <Border Classes="Dialog"
+                Width="480"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center">
+
+            <DockPanel>
+
+                <!-- ── Header ─────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Top" Classes="DialogHeader">
+                    <components:DialogTitleBar Title="Edit Profile"
+                                               CloseRequested="TitleBar_CloseRequested" />
+                </Border>
+
+                <!-- ── Buttons ────────────────────────────────────────────── -->
+                <Border DockPanel.Dock="Bottom" Classes="DialogFooterBar">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8"
+                                Classes="DialogFooter">
+                        <Button Classes="Secondary"
+                                Content="Close"
+                                IsEnabled="{Binding !IsBusy}"
+                                Click="Cancel_Click" />
+                        <Button Classes="Primary"
+                                Command="{Binding SaveAliasCommand}"
+                                IsVisible="{Binding CanChangeAlias}">
+                            <Panel>
+                                <TextBlock Text="Save" IsVisible="{Binding !IsBusy}" />
+                                <TextBlock Text="Saving..." IsVisible="{Binding IsBusy}" />
+                            </Panel>
+                        </Button>
+                    </StackPanel>
+                </Border>
+
+                <!-- ── Body ───────────────────────────────────────────────── -->
+                <StackPanel Margin="20,18" Spacing="16">
+
+                    <TextBlock Text="This server doesn't allow changing your alias or avatar."
+                               Opacity="0.85"
+                               TextWrapping="Wrap"
+                               FontSize="{DynamicResource FontSizeLabel}"
+                               IsVisible="{Binding !CanEditAnything}" />
+
+                    <!-- Avatar: applied as soon as an image is picked -->
+                    <StackPanel Spacing="6" IsVisible="{Binding CanChangeAvatar}">
+                        <TextBlock Text="Avatar" Opacity="0.7" />
+
+                        <Grid ColumnDefinitions="Auto,*">
+                            <!-- Same 2px rounded square as the title bar, with the same User icon fallback -->
+                            <Panel Width="80" Height="80">
+                                <Border CornerRadius="2"
+                                        Background="{DynamicResource AccentFillBrush}"
+                                        IsVisible="{Binding !Profile.HasAvatar}">
+                                    <Icon Type="Regular" Value="User" Width="40" Height="40" Color="White" />
+                                </Border>
+                                <Border CornerRadius="2"
+                                        ClipToBounds="True"
+                                        IsVisible="{Binding Profile.HasAvatar}">
+                                    <Image Source="{Binding Profile.AvatarPath, Converter={StaticResource FilePathToBitmapConverter}}"
+                                           Stretch="UniformToFill" />
+                                </Border>
+                            </Panel>
+
+                            <StackPanel Grid.Column="1" Margin="16,0,0,0" Spacing="8" VerticalAlignment="Center">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <Button Classes="Secondary"
+                                            Click="ChangeAvatar_Click"
+                                            IsEnabled="{Binding !IsBusy}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Icon Type="Regular" Value="UploadSimple" Width="14" Height="14" VerticalAlignment="Center" />
+                                            <TextBlock Text="Change..." VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+
+                                    <Button Classes="Secondary"
+                                            Command="{Binding RemoveAvatarCommand}"
+                                            IsVisible="{Binding Profile.HasAvatar}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <Icon Type="Regular" Value="Trash" Width="14" Height="14" VerticalAlignment="Center" />
+                                            <TextBlock Text="Remove" VerticalAlignment="Center" />
+                                        </StackPanel>
+                                    </Button>
+                                </StackPanel>
+
+                                <TextBlock Text="PNG, JPEG, or WebP."
+                                           FontSize="{DynamicResource FontSizeCaption}"
+                                           Foreground="{DynamicResource TextTertiaryBrush}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+
+                    <!-- Alias: applied with Save -->
+                    <StackPanel Spacing="6" IsVisible="{Binding CanChangeAlias}">
+                        <TextBlock Text="Alias" Opacity="0.7" />
+                        <TextBox x:Name="AliasBox"
+                                 Text="{Binding Alias, Mode=TwoWay}"
+                                 Watermark="{Binding Profile.UserName}"
+                                 IsEnabled="{Binding !IsBusy}"
+                                 KeyDown="Alias_KeyDown" />
+                        <TextBlock Text="The name other players see. Leave it blank to go by your username."
+                                   TextWrapping="Wrap"
+                                   FontSize="{DynamicResource FontSizeCaption}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}" />
+                    </StackPanel>
+
+                    <TextBlock Text="{Binding StatusMessage}"
+                               Foreground="{DynamicResource AccentTextBrush}"
+                               FontSize="{DynamicResource FontSizeLabel}"
+                               IsVisible="{Binding StatusMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+
+                    <TextBlock Text="{Binding ErrorMessage}"
+                               Foreground="{DynamicResource ErrorBrush}"
+                               TextWrapping="Wrap"
+                               FontSize="{DynamicResource FontSizeLabel}"
+                               IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" />
+                </StackPanel>
+
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

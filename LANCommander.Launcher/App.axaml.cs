@@ -428,8 +428,7 @@ public partial class App : Application
         registry.Register<GamesListViewModel>(() => new GamesListView());
         registry.Register<LibraryViewModel>(() => new GamesListView());
         registry.Register<GameDetailViewModel>(() => new GameDetailView());
-        registry.Register<SettingsViewModel>(() => new SettingsView());
-        registry.Register<PluginsViewModel>(() => new PluginsView());
+        registry.Register<SettingsViewModel>(() => new SettingsView());        registry.Register<PluginsViewModel>(() => new PluginsView());
         registry.Register<DownloadQueueViewModel>(() => new DownloadQueuePageView());
         registry.Register<VerifyFilesViewModel>(() => new VerifyFilesView());
 

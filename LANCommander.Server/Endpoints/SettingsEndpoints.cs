@@ -33,6 +33,9 @@ public static class SettingsEndpoints
                 AllowRegistration = settingsProvider.CurrentValue.Server.Authentication.AllowRegistration,
                 AllowPassword = settingsProvider.CurrentValue.Server.Authentication.AllowPassword,
                 AutoRedirectToProvider = settingsProvider.CurrentValue.Server.Authentication.AutoRedirectToProvider,
+                // Lets the launcher offer only the profile edits the server will take
+                AllowAliasChange = settingsProvider.CurrentValue.Server.Authentication.AllowAliasChange,
+                AllowAvatarUpload = settingsProvider.CurrentValue.Server.Authentication.AllowAvatarUpload,
                 // Surfaced so the launcher can show the password requirements before the user submits.
                 PasswordRequiredLength = settingsProvider.CurrentValue.Server.Authentication.PasswordRequiredLength,
                 PasswordRequireDigit = settingsProvider.CurrentValue.Server.Authentication.PasswordRequireDigit,

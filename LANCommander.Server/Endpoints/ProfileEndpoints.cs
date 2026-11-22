@@ -17,6 +17,8 @@ public static class ProfileEndpoints
         group.MapGet("/", GetAsync);
         group.MapPut("/ChangeAlias", ChangeAliasAsync);
         group.MapGet("/Avatar", AvatarAsync);
+        group.MapPost("/Avatar", UploadAvatarAsync).DisableAntiforgery();
+        group.MapDelete("/Avatar", RemoveAvatarAsync);
         group.MapGet("/{userName}/Avatar", AvatarByUserNameAsync).AllowAnonymous();
         group.MapGet("/CustomField/{name}", GetCustomFieldAsync);
         group.MapPut("/CustomField/{name}", UpdateCustomFieldAsync);
@@ -53,11 +55,17 @@ public static class ProfileEndpoints
         {
             var user = await userService.GetAsync(userPrincipal.Identity!.Name);
 
-            user.Alias = request.Alias;
+            if (user == null)
+                return TypedResults.NotFound();
+
+            // A blank alias clears it, so the player goes by their username again
+            var alias = request.Alias?.Trim();
+
+            user.Alias = String.IsNullOrEmpty(alias) ? null : alias;
 
             await userService.UpdateAsync(user);
 
-            return TypedResults.Ok(request.Alias);
+            return TypedResults.Ok(user.Alias ?? String.Empty);
         }
 
         return TypedResults.Unauthorized();
@@ -87,6 +95,75 @@ public static class ProfileEndpoints
         }
 
         return TypedResults.NotFound();
+    }
+
+    internal static async Task<IResult> UploadAvatarAsync(
+        IFormFile file,
+        ClaimsPrincipal userPrincipal,
+        [FromServices] UserService userService,
+        [FromServices] MediaService mediaService,
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider,
+        [FromServices] ILoggerFactory loggerFactory,
+        CancellationToken cancellationToken)
+    {
+        if (!settingsProvider.CurrentValue.Server.Authentication.AllowAvatarUpload)
+            return TypedResults.StatusCode(StatusCodes.Status403Forbidden);
+
+        var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
+
+        if (user == null)
+            return TypedResults.Unauthorized();
+
+        var config = settingsProvider.CurrentValue.Server.Media.GetMediaTypeConfig(SDK.Enums.MediaType.Avatar);
+
+        if (config != null && config.MaxFileSize > 0 && file.Length > config.MaxFileSize)
+            return TypedResults.Text(
+                $"The image must be smaller than {ByteSizeLib.ByteSize.FromBytes(config.MaxFileSize)}.",
+                statusCode: StatusCodes.Status413PayloadTooLarge);
+
+        try
+        {
+            await using var stream = file.OpenReadStream();
+
+            // Decided by the file's contents, not the client's say-so
+            var mimeType = await MediaService.DetectImageMimeTypeAsync(stream, cancellationToken);
+
+            if (mimeType == null || !MediaService.AvatarMimeTypes.Contains(mimeType))
+                return TypedResults.Text(
+                    "Avatars must be PNG, JPEG, or WebP images.",
+                    statusCode: StatusCodes.Status415UnsupportedMediaType);
+
+            var media = await mediaService.SetUserAvatarAsync(user.Id, stream, mimeType);
+
+            return TypedResults.Ok(new { media.Crc32 });
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            loggerFactory.CreateLogger("ProfileApi").LogError(ex, "Could not save the avatar uploaded by {UserName}", user.UserName);
+
+            return TypedResults.Text(
+                "The avatar could not be saved. Check the server log for details.",
+                statusCode: StatusCodes.Status500InternalServerError);
+        }
+    }
+
+    internal static async Task<IResult> RemoveAvatarAsync(
+        ClaimsPrincipal userPrincipal,
+        [FromServices] UserService userService,
+        [FromServices] MediaService mediaService,
+        [FromServices] SettingsProvider<Settings.Settings> settingsProvider)
+    {
+        if (!settingsProvider.CurrentValue.Server.Authentication.AllowAvatarUpload)
+            return TypedResults.StatusCode(StatusCodes.Status403Forbidden);
+
+        var user = await userService.GetAsync(userPrincipal?.Identity?.Name);
+
+        if (user == null)
+            return TypedResults.Unauthorized();
+
+        await mediaService.RemoveUserAvatarAsync(user.Id);
+
+        return TypedResults.NoContent();
     }
 
     internal static async Task<IResult> AvatarByUserNameAsync(

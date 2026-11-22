@@ -481,7 +481,7 @@ namespace LANCommander.SDK.Services
                     });
                 });
 
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), Progress = progress }, cancellationToken);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {

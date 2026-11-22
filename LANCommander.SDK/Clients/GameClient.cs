@@ -710,7 +710,7 @@ namespace LANCommander.SDK.Services
                     });
                 });
 
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 _installProgress.Status = InstallStatus.Downloading;
                 OnInstallProgressUpdate?.Invoke(_installProgress);
@@ -2622,7 +2622,7 @@ namespace LANCommander.SDK.Services
                     });
                 });
 
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 _installProgress.Status = skipFiles?.Count > 0 ? InstallStatus.VerifyingFiles : InstallStatus.Downloading;
                 _installProgress.BytesTransferred = 0;
@@ -3617,7 +3617,7 @@ namespace LANCommander.SDK.Services
 
             try
             {
-                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
+                _reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
 
                 while (await _reader.MoveToNextEntryAsync(cancellationToken))
                 {

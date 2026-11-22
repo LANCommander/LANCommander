@@ -15,6 +15,7 @@ using Microsoft.EntityFrameworkCore;
 using PascalCaseNamingConvention = YamlDotNet.Serialization.NamingConventions.PascalCaseNamingConvention;
 using LANCommander.SDK;
 using LANCommander.SDK.Plugins;
+using LANCommander.SDK.Utilities;
 using LANCommander.Server.Plugins;
 
 namespace LANCommander.Server.Services
@@ -212,7 +213,7 @@ namespace LANCommander.Server.Services
             if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
 
-            using (ZipArchive zip = ZipFile.OpenRead(upload))
+            using (ZipArchive zip = ZipFile.Open(upload, ZipArchiveMode.Read, ZipEntryNameEncoding.Instance))
             {
                 var entry = zip.Entries.FirstOrDefault(e => e.FullName == "_manifest.yml");
 
@@ -242,7 +243,7 @@ namespace LANCommander.Server.Services
             if (!File.Exists(upload))
                 throw new FileNotFoundException(upload);
 
-            using (ZipArchive zip = ZipFile.OpenRead(upload))
+            using (ZipArchive zip = ZipFile.Open(upload, ZipArchiveMode.Read, ZipEntryNameEncoding.Instance))
             {
                 var entry = zip.Entries.FirstOrDefault(e => e.FullName == path);
 
@@ -317,7 +318,7 @@ namespace LANCommander.Server.Services
 
             var upload = await GetArchiveFileLocationAsync(archive);
 
-            using (ZipArchive zip = ZipFile.OpenRead(upload))
+            using (ZipArchive zip = ZipFile.Open(upload, ZipArchiveMode.Read, ZipEntryNameEncoding.Instance))
             {
                 return zip.Entries;
             }
@@ -383,7 +384,7 @@ namespace LANCommander.Server.Services
 
             try
             {
-                using (var source = ZipFile.OpenRead(path))
+                using (var source = ZipFile.Open(path, ZipArchiveMode.Read, ZipEntryNameEncoding.Instance))
                 using (var destStream = new FileStream(tempPath, FileMode.Create, FileAccess.ReadWrite))
                 using (var dest = new ZipArchive(destStream, ZipArchiveMode.Create))
                 {

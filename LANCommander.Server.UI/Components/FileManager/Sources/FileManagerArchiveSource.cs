@@ -1,4 +1,4 @@
-﻿
+﻿﻿
 using System.IO.Compression;
 using LANCommander.SDK.Services;
 
@@ -11,6 +11,17 @@ namespace LANCommander.Server.UI.Components
         private Guid ArchiveId { get; set; }
         private FileManagerDirectory CurrentPath { get; set; }
         private IEnumerable<ZipArchiveEntry> ZipArchiveEntries { get; set; }
+
+        /// <summary>
+        /// Every file and folder in the archive keyed by full path (folders end in a separator).
+        /// Many zip tools only write file entries, so folders are also derived from file paths;
+        /// those have no entry of their own and map to null.
+        /// </summary>
+        private Dictionary<string, ZipArchiveEntry?> Paths { get; } = new(StringComparer.Ordinal);
+
+        /// <summary>Child paths of every folder, keyed by the folder's path (empty for the root).</summary>
+        private Dictionary<string, List<string>> Children { get; } = new(StringComparer.Ordinal);
+
         public string DirectorySeparatorCharacter { get; set; } = Separator.ToString();
 
         private const char Separator = '/';
@@ -24,6 +35,24 @@ namespace LANCommander.Server.UI.Components
             task.Wait();
 
             ZipArchiveEntries = task.Result;
+
+            foreach (var entry in ZipArchiveEntries)
+            {
+                Paths[entry.FullName] = entry;
+
+                for (var index = entry.FullName.IndexOf(Separator); index >= 0 && index < entry.FullName.Length - 1; index = entry.FullName.IndexOf(Separator, index + 1))
+                    Paths.TryAdd(entry.FullName.Substring(0, index + 1), null);
+            }
+
+            foreach (var path in Paths.Keys.Order(StringComparer.Ordinal))
+            {
+                var parentPath = GetParentPath(path);
+
+                if (!Children.TryGetValue(parentPath, out var children))
+                    Children[parentPath] = children = new List<string>();
+
+                children.Add(path);
+            }
         }
 
         /// <summary>How many entries, files and folders, the archive holds.</summary>
@@ -59,19 +88,20 @@ namespace LANCommander.Server.UI.Components
             return path.TrimEnd(Separator).Split(Separator).Last();
         }
 
-        private string GetParentPath(string path)
+        /// <summary>The archive path of the folder holding <paramref name="path"/>, with a trailing separator; empty at the root.</summary>
+        private static string GetParentPath(string path)
         {
-            path = path.TrimEnd(Separator);
+            var index = path.TrimEnd(Separator).LastIndexOf(Separator);
 
-            var parts = path.Split(Separator);
-
-            return String.Join(Separator, parts.Take(parts.Length - 1));
+            return index < 0 ? String.Empty : path.Substring(0, index + 1);
         }
 
-        private bool IsDirectChild(string parentPath, string childPath) {
-            var realParentPath = parentPath.TrimStart(Separator);
+        /// <summary>The tree root is "/", archive entries have no leading separator.</summary>
+        private static string ToArchivePath(string path)
+        {
+            path = path.TrimStart(Separator);
 
-            return childPath != realParentPath && childPath.StartsWith(realParentPath) && childPath.TrimEnd(Separator).Substring(realParentPath.Length + 1).Split(Separator).Length == 1;
+            return path.Length == 0 || path.EndsWith(Separator) ? path : path + Separator;
         }
 
         public IEnumerable<FileManagerDirectory> GetDirectoryTree()
@@ -87,7 +117,7 @@ namespace LANCommander.Server.UI.Components
 
             SetCurrentPath(root);
 
-            root.Children = GetEntries(root.Path).Where(e => e is FileManagerDirectory).Select(e => e as FileManagerDirectory).ToHashSet();
+            root.Children = GetEntries(root.Path).OfType<FileManagerDirectory>().ToHashSet();
 
             roots.Add(root);
 
@@ -100,21 +130,21 @@ namespace LANCommander.Server.UI.Components
 
             if (!String.IsNullOrWhiteSpace(path))
             {
-                foreach (var zipArchiveEntry in ZipArchiveEntries.Where(e => IsDirectChild(path, e.FullName)))
-                {
-                    if (zipArchiveEntry.FullName.EndsWith(Separator))
-                    {
-                        var directory = GetDirectory(zipArchiveEntry.FullName);
+                Children.TryGetValue(ToArchivePath(path), out var childPaths);
 
-                        directory.Children = GetEntries(zipArchiveEntry.FullName).Where(e => e is FileManagerDirectory).Select(e => e as FileManagerDirectory).ToHashSet();
+                foreach (var childPath in childPaths ?? [])
+                {
+                    if (childPath.EndsWith(Separator))
+                    {
+                        var directory = GetDirectory(childPath);
+
+                        directory.Children = GetEntries(childPath).OfType<FileManagerDirectory>().ToHashSet();
 
                         entries.Add(directory);
                     }
                     else
                     {
-                        var file = GetFile(zipArchiveEntry.FullName);
-
-                        entries.Add(file);
+                        entries.Add(GetFile(childPath));
                     }
                 }
             }
@@ -139,24 +169,26 @@ namespace LANCommander.Server.UI.Components
 
         public FileManagerDirectory GetDirectory(string path)
         {
-            var zipArchiveEntry = ZipArchiveEntries.FirstOrDefault(e => e.FullName == path);
+            path = ToArchivePath(path);
 
-            var directory = new FileManagerDirectory
+            Paths.TryGetValue(path, out var zipArchiveEntry);
+
+            var modifiedOn = zipArchiveEntry?.LastWriteTime.UtcDateTime.ToLocalTime() ?? default;
+
+            return new FileManagerDirectory
             {
-                Path = zipArchiveEntry.FullName,
-                Name = GetName(zipArchiveEntry.FullName),
-                ModifiedOn = zipArchiveEntry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                CreatedOn = zipArchiveEntry.LastWriteTime.UtcDateTime.ToLocalTime(),
-                Size = zipArchiveEntry.Length,
+                Path = path,
+                Name = GetName(path),
+                ModifiedOn = modifiedOn,
+                CreatedOn = modifiedOn,
+                Size = zipArchiveEntry?.Length ?? 0,
                 Parent = CurrentPath
             };
-
-            return directory;
         }
 
         public FileManagerFile GetFile(string path)
         {
-            var zipArchiveEntry = ZipArchiveEntries.FirstOrDefault(e => e.FullName == path);
+            var zipArchiveEntry = Paths[path]!;
 
             var file = new FileManagerFile
             {

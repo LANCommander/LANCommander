@@ -65,7 +65,7 @@ public class ExpandLatestArchiveCmdlet : AsyncCmdlet
             WriteProgress(progressRecord);
 
             await using var fileStream = File.OpenRead(archivePath);
-            await using var reader = await ReaderFactory.OpenAsyncReader(fileStream, new ReaderOptions(), cancellationToken);
+            await using var reader = await ReaderFactory.OpenAsyncReader(fileStream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding() }, cancellationToken);
             await reader.WriteAllToDirectoryAsync(destinationPath, new ExtractionOptions
             {
                 ExtractFullPath = true,
@@ -126,7 +126,7 @@ public class ExpandLatestArchiveCmdlet : AsyncCmdlet
             progressRecord.StatusDescription = "Extracting archive...";
             WriteProgress(progressRecord);
 
-            await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions(), cancellationToken);
+            await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding() }, cancellationToken);
             await reader.WriteAllToDirectoryAsync(destinationPath, new ExtractionOptions
             {
                 ExtractFullPath = true,

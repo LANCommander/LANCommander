@@ -114,7 +114,7 @@ public static class ArchivesEndpoints
         }
 
         var entries = await cache.GetOrSetAsync<IEnumerable<ArchiveEntry>>(
-            $"Archive/{archive.Id}/Contents",
+            $"Archive/{archive.Id}/Contents/v2",
             async _ =>
             {
                 var filename = await archiveService.GetArchiveFileLocationAsync(archive);
@@ -127,7 +127,7 @@ public static class ArchivesEndpoints
 
                 var items = new List<ArchiveEntry>();
 
-                using (var zip = ZipFile.OpenRead(filename))
+                using (var zip = ZipFile.Open(filename, ZipArchiveMode.Read, LANCommander.SDK.Utilities.ZipEntryNameEncoding.Instance))
                 {
                     foreach (var entry in zip.Entries)
                     {

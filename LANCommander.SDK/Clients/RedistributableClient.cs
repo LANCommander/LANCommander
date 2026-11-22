@@ -259,7 +259,7 @@ namespace LANCommander.SDK.Services
                         });
                     });
 
-                    await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
+                    await using var reader = await ReaderFactory.OpenAsyncReader(stream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
                     await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,
@@ -372,7 +372,7 @@ namespace LANCommander.SDK.Services
                         });
                     });
 
-                    await using var reader = await ReaderFactory.OpenAsyncReader(redistributableStream, new ReaderOptions { Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
+                    await using var reader = await ReaderFactory.OpenAsyncReader(redistributableStream, new ReaderOptions { ArchiveEncoding = LANCommander.SDK.Utilities.ZipEntryNameEncoding.CreateArchiveEncoding(), Progress = progress, RewindableBufferSize = ArchiveRewindableBufferSize }, cancellationToken);
                     await reader.WriteAllToDirectoryAsync(destination, new ExtractionOptions()
                     {
                         ExtractFullPath = true,

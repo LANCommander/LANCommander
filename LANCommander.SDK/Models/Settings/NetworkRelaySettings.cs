@@ -6,5 +6,5 @@ namespace LANCommander.SDK.Models;
 /// </summary>
 public class NetworkRelaySettings
 {
-    public bool Enabled { get; set; } = true;
+    public bool Enabled { get; set; } = false;
 }

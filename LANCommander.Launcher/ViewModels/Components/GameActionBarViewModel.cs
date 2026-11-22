@@ -1129,7 +1129,7 @@ public partial class GameActionBarViewModel : ViewModelBase, IDisposable
 
         InheritedOptionValue Inherit(string key)
         {
-            // Not the schema's default: LAN games join the relay unless it is turned off in Settings
+            // Not the schema's default: LAN games join the relay only when it is turned on in Settings
             if (key == "NetworkRelay.Enabled")
                 return new(launch.JoinsRelayByDefault(localGame) ? "true" : "false",
                     launch.SupportsRelay(localGame) ? "your launcher settings, for games with a LAN mode" : null);

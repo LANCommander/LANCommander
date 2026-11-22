@@ -62,7 +62,7 @@ public partial class SettingsViewModel : ViewModelBase
     public bool IsCompatibilityAvailable => OperatingSystem.IsWindows();
 
     [ObservableProperty]
-    private bool _joinNetworkRelay = true;
+    private bool _joinNetworkRelay;
 
     [ObservableProperty]
     private bool _addInterposerToGames = true;

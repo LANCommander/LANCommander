@@ -171,7 +171,7 @@ public sealed class InterposerGameProcessStarter(
 
     /// <summary>
     /// A relay session for the game, when it should join one: the player's choice for the game wins;
-    /// otherwise games with a LAN mode the relay can carry join it, unless the relay is turned off.
+    /// otherwise games with a LAN mode the relay can carry join it, when the relay is turned on in Settings.
     /// </summary>
     private async Task<RelayOptions?> GetRelaySessionAsync(
         GameProcessStartContext context, InterposerOptions options, SDK.Models.Settings settings, CancellationToken cancellationToken)

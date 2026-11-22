@@ -23,11 +23,27 @@ namespace LANCommander.Launcher.Data.Models
         /// <summary>The server's id for the installed version, when the install was made against a known version.</summary>
         public Guid? InstalledVersionId { get; set; }
 
+        /// <summary>The server's id for the version launchers are offered, as of the last import.</summary>
+        public Guid? LatestVersionId { get; set; }
+
         /// <summary>
         /// Queue updates as soon as they're found. Turned off to keep the game on its current version,
         /// and turned off automatically when the game is rolled back.
         /// </summary>
         public bool AutoUpdate { get; set; } = true;
+
+        /// <summary>
+        /// Whether the install is on the version launchers are offered. Compared by server id when both
+        /// are known: labels aren't reliable, as an install records its newest archive's label, which
+        /// needn't match the version's own (config-only versions, renamed versions, reordered archives).
+        /// </summary>
+        public bool IsOnLatestVersion()
+        {
+            if (LatestVersionId is Guid latestId && InstalledVersionId is Guid installedId)
+                return installedId == latestId;
+
+            return string.IsNullOrWhiteSpace(LatestVersion) || InstalledVersion == LatestVersion;
+        }
 
         /// <summary>
         /// Whether the library knows of a newer version than the one installed and the game takes updates.
@@ -36,8 +52,7 @@ namespace LANCommander.Launcher.Data.Models
         public bool IsUpdateAvailable()
             => Installed
                 && AutoUpdate
-                && !string.IsNullOrWhiteSpace(LatestVersion)
-                && InstalledVersion != LatestVersion;
+                && !IsOnLatestVersion();
 
         [Display(Name = "Released On")]
         public DateTime? ReleasedOn { get; set; }

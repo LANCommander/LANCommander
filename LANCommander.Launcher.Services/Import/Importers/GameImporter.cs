@@ -36,6 +36,9 @@ public class GameImporter(
             ||
             (record.SavePaths?.Any(a => a.UpdatedOn > existing.ImportedOn || a.CreatedOn > existing.ImportedOn) ?? false)
             ||
+            // Also catches games imported before the offered version's id was stored
+            (record.VersionId != null && existing.LatestVersionId != record.VersionId)
+            ||
             // Also catches games imported before modes were stored against their game
             await gameService.MultiplayerModesDifferAsync(record.Id, record.MultiplayerModes);
     }
@@ -78,6 +81,7 @@ public class GameImporter(
                 UpdatedOn = importItemInfo.Record.UpdatedOn,
                 ImportedOn = DateTime.UtcNow,
                 LatestVersion = importItemInfo.Record.Version,
+                LatestVersionId = importItemInfo.Record.VersionId,
             };
 
             ApplyInstallBehavior(game, importItemInfo.Record);
@@ -113,15 +117,29 @@ public class GameImporter(
             existing.CreatedOn = importItemInfo.Record.CreatedOn;
             existing.ImportedOn = DateTime.UtcNow;
             existing.LatestVersion = importItemInfo.Record.Version;
+            existing.LatestVersionId = importItemInfo.Record.VersionId;
 
             ApplyInstallBehavior(existing, importItemInfo.Record);
+
+            var isInstalled = await libraryService.IsInstalledAsync(existing.Id);
+            var isOnImportedVersion = isInstalled && IsOnImportedVersion(existing, importItemInfo.Record);
+
+            // An install on the imported version records it by id and by that version's own label, which
+            // can differ from the archive label recorded at install time
+            if (isOnImportedVersion && importItemInfo.Record.VersionId is Guid importedVersionId)
+            {
+                existing.InstalledVersionId = importedVersionId;
+
+                if (!string.IsNullOrWhiteSpace(importItemInfo.Record.Version))
+                    existing.InstalledVersion = importItemInfo.Record.Version;
+            }
 
             await gameService.UpdateAsync(existing);
             await UpdateRelationships(importItemInfo.Record, existing);
 
             // Only an install already on the imported (latest) version takes its manifest; older installs
             // keep their own version's config
-            if (await libraryService.IsInstalledAsync(existing.Id) && IsOnImportedVersion(existing, importItemInfo.Record))
+            if (isOnImportedVersion)
                 await ManifestHelper.WriteAsync(importItemInfo.Record, existing.InstallDirectory);
 
             return true;

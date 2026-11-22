@@ -283,6 +283,9 @@ namespace LANCommander.Launcher.Data.Migrations
                     b.Property<string>("LatestVersion")
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid?>("LatestVersionId")
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Notes")
                         .HasColumnType("TEXT");
 

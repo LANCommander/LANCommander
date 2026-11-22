@@ -743,11 +743,13 @@ namespace LANCommander.Launcher.Services
                 {
                     // Check if this is an update (versions differ). A game with automatic updates off
                     // stays on its version; only an explicit version switch moves it.
+                    // The queue item's version is its newest archive's label, so it's only a hint when the
+                    // installed and offered versions can't be compared by id.
                     var isUpdate = localGame.AutoUpdate
                         && (queueItem.IsUpdate
-                            || (!string.IsNullOrWhiteSpace(localGame.LatestVersion)
-                                && localGame.InstalledVersion != localGame.LatestVersion)
-                            || (!string.IsNullOrWhiteSpace(queueItem.Version)
+                            || !localGame.IsOnLatestVersion()
+                            || (localGame.LatestVersionId == null
+                                && !string.IsNullOrWhiteSpace(queueItem.Version)
                                 && queueItem.Version != localGame.InstalledVersion));
 
                     if (isUpdate)
@@ -1591,6 +1593,13 @@ namespace LANCommander.Launcher.Services
 
             if (installedVersionId != null)
                 localGame.InstalledVersionId = installedVersionId;
+
+            // The queued label is the newest archive's; an install on the offered version takes that
+            // version's own label so the two read the same
+            if (installedVersionId != null
+                && installedVersionId == localGame.LatestVersionId
+                && !string.IsNullOrWhiteSpace(localGame.LatestVersion))
+                localGame.InstalledVersion = localGame.LatestVersion;
         }
 
         /// <summary>

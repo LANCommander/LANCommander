@@ -35,6 +35,44 @@ public class GameUpdateStateTests
     }
 
     [Fact]
+    public void InstallOnOfferedVersionIsUpToDateWhenLabelsDiffer()
+    {
+        // The install recorded its archive's label; the offered version is labelled differently
+        var versionId = Guid.NewGuid();
+        var game = GameFactory.Make("Game", installed: true);
+        game.InstalledVersion = "1.1-build";
+        game.InstalledVersionId = versionId;
+        game.LatestVersion = "1.1";
+        game.LatestVersionId = versionId;
+
+        game.IsUpdateAvailable().ShouldBeFalse();
+        game.AsListItem().State.ShouldNotBe(ListItemState.UpdateAvailable);
+    }
+
+    [Fact]
+    public void InstallOnOlderVersionHasUpdateWhenLabelsMatch()
+    {
+        var game = GameFactory.Make("Game", installed: true);
+        game.InstalledVersion = "1.0";
+        game.InstalledVersionId = Guid.NewGuid();
+        game.LatestVersion = "1.0";
+        game.LatestVersionId = Guid.NewGuid();
+
+        game.IsUpdateAvailable().ShouldBeTrue();
+    }
+
+    [Fact]
+    public void LabelsDecideWhenOfferedVersionIdIsUnknown()
+    {
+        var game = GameFactory.Make("Game", installed: true);
+        game.InstalledVersion = "1.0";
+        game.InstalledVersionId = Guid.NewGuid();
+        game.LatestVersion = "1.0";
+
+        game.IsUpdateAvailable().ShouldBeFalse();
+    }
+
+    [Fact]
     public void NewGamesTakeUpdatesByDefault()
     {
         GameFactory.Make("Game").AutoUpdate.ShouldBeTrue();

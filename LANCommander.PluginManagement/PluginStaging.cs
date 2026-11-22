@@ -140,6 +140,8 @@ public sealed class PluginStaging
             }
         }
 
+        var updated = new List<PluginUpdateNote>();
+
         if (Directory.Exists(InstallRoot))
         {
             foreach (var staged in Directory.GetDirectories(InstallRoot))
@@ -149,6 +151,9 @@ public sealed class PluginStaging
                 try
                 {
                     var installed = GetInstalledPath(folder);
+
+                    // Read before the folder is replaced, to tell an update from a fresh install
+                    var previous = Directory.Exists(installed) ? PluginPackageRecord.Read(installed) : null;
 
                     if (Directory.Exists(installed))
                     {
@@ -162,6 +167,9 @@ public sealed class PluginStaging
                     MoveDirectory(staged, installed);
 
                     logger.LogInformation("Installed plugin {Folder}", folder);
+
+                    if (previous != null && PluginPackageRecord.Read(installed) is { } current && current.Version != previous.Version)
+                        updated.Add(new PluginUpdateNote(folder, current.Id, current.Title ?? current.Id, previous.Version, current.Version, current.ReleaseNotes));
                 }
                 catch (Exception ex)
                 {
@@ -172,12 +180,37 @@ public sealed class PluginStaging
 
         try
         {
+            PluginUpdateNote.Add(StagingRoot, updated);
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "Could not record the plugins that were updated");
+        }
+
+        try
+        {
             if (Directory.Exists(TempRoot))
                 Directory.Delete(TempRoot, true);
         }
         catch (Exception ex)
         {
             logger.LogWarning(ex, "Could not clear {TempRoot}", TempRoot);
+        }
+    }
+
+    /// <summary>
+    /// The plugins that starting moved to a new version, with their release notes, since these were
+    /// last taken. Returns them once: the host shows them, then they're gone.
+    /// </summary>
+    public IReadOnlyList<PluginUpdateNote> TakeUpdateNotes()
+    {
+        try
+        {
+            return PluginUpdateNote.Take(StagingRoot);
+        }
+        catch (IOException)
+        {
+            return [];
         }
     }
 

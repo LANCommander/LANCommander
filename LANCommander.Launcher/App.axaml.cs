@@ -284,9 +284,10 @@ public partial class App : Application
             // when the shell view was constructed.
             RegisterPluginNavigationViews();
 
-            // What changed in the update just installed, or why it was undone
-            if (updateService.TakeNotice() is { } notice)
-                _ = ShowUpdateNoticeAsync(notice);
+            // What changed in the update just installed, or why it was undone, then in the plugins
+            // updated since the last start
+            _ = ShowUpdateNoticesAsync(updateService.TakeNotice(),
+                Services!.GetRequiredService<LANCommander.PluginManagement.PluginStaging>().TakeUpdateNotes());
 
             _ = updateService.CheckForUpdateAsync();
         }
@@ -294,6 +295,29 @@ public partial class App : Application
         {
             _logger?.LogCritical(ex, "Fatal error during async initialization");
             Console.Error.WriteLine($"Fatal error during async initialization: {ex}");
+        }
+    }
+
+    private static async Task ShowUpdateNoticesAsync(UpdateNotice? notice, IReadOnlyList<LANCommander.PluginManagement.PluginUpdateNote> plugins)
+    {
+        if (notice != null)
+            await ShowUpdateNoticeAsync(notice);
+
+        if (plugins.Count == 0)
+            return;
+
+        try
+        {
+            await UpdateNoticeOverlay.ShowAsync(
+                plugins.Count == 1 ? $"{plugins[0].Name} Was Updated" : "Plugins Were Updated",
+                plugins.Count == 1
+                    ? $"{plugins[0].Name} was updated to version {plugins[0].Version}."
+                    : $"{plugins.Count} plugins were updated.",
+                LANCommander.PluginManagement.PluginUpdateNote.ToMarkdown(plugins));
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Could not show the plugin release notes");
         }
     }
 

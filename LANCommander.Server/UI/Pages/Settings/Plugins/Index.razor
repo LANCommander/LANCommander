@@ -128,6 +128,7 @@
                                                    RepositoryUrl="@context.EffectivePackage?.RepositoryUrl"
                                                    ProjectUrl="@context.EffectivePackage?.ProjectUrl"
                                                    SettingsHref="@SettingsHrefFor(context)"
+                                                   OnShowReleaseNotes="@(String.IsNullOrWhiteSpace(context.EffectivePackage?.ReleaseNotes) ? default : EventCallback.Factory.Create(this, () => ReleaseNotesDialogOptions.OpenForPluginAsync(Dialogs, context.Name, context.EffectivePackage?.Version, context.EffectivePackage!.ReleaseNotes!)))"
                                                    OnUninstall="@(CanUninstall(context) ? EventCallback.Factory.Create(this, () => UninstallAsync(context)) : default)" />
                             </ActionsColumn>
                         </Columns>

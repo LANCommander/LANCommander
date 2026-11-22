@@ -120,6 +120,49 @@ public class PluginPackageTests : IDisposable
     }
 
     [Fact]
+    public async Task AnUpdateIsRecordedWithItsReleaseNotes_UntilTaken()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+
+        // A fresh install isn't an update
+        _staging.TakeUpdateNotes().ShouldBeEmpty();
+
+        using var update = PluginPackage("Acme.Widgets.Plugin", "1.1.0", "Acme.Widgets", releaseNotes: "- Widgets spin faster");
+        await _service.InstallAsync(update);
+        _staging.ApplyPending(NullLogger.Instance);
+
+        var note = _staging.TakeUpdateNotes().ShouldHaveSingleItem();
+        note.Folder.ShouldBe("Acme.Widgets");
+        note.PackageId.ShouldBe("Acme.Widgets.Plugin");
+        note.PreviousVersion.ShouldBe("1.0.0");
+        note.Version.ShouldBe("1.1.0");
+        note.ReleaseNotes.ShouldBe("- Widgets spin faster");
+
+        PluginPackageRecord.Read(_staging.GetInstalledPath("Acme.Widgets"))!.ReleaseNotes.ShouldBe("- Widgets spin faster");
+
+        _staging.TakeUpdateNotes().ShouldBeEmpty();
+    }
+
+    [Fact]
+    public async Task UpdatesNotYetShownKeepTheVersionTheyStartedFrom()
+    {
+        await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
+
+        using (var first = PluginPackage("Acme.Widgets.Plugin", "1.1.0", "Acme.Widgets", releaseNotes: "1.1 notes"))
+            await _service.InstallAsync(first);
+        _staging.ApplyPending(NullLogger.Instance);
+
+        using (var second = PluginPackage("Acme.Widgets.Plugin", "1.2.0", "Acme.Widgets", releaseNotes: "1.2 notes"))
+            await _service.InstallAsync(second);
+        _staging.ApplyPending(NullLogger.Instance);
+
+        var note = _staging.TakeUpdateNotes().ShouldHaveSingleItem();
+        note.PreviousVersion.ShouldBe("1.0.0");
+        note.Version.ShouldBe("1.2.0");
+        note.ReleaseNotes.ShouldBe("1.2 notes");
+    }
+
+    [Fact]
     public async Task InstallingOverAnInstalledVersionIsAnUpdate()
     {
         await InstallAndApplyAsync("Acme.Widgets.Plugin", "1.0.0", "Acme.Widgets");
@@ -541,11 +584,11 @@ public class PluginPackageTests : IDisposable
         _staging.ApplyPending(NullLogger.Instance);
     }
 
-    private MemoryStream PluginPackage(string packageId, string version, string assemblyName, string pluginId = "com.acme.widgets") =>
+    private MemoryStream PluginPackage(string packageId, string version, string assemblyName, string pluginId = "com.acme.widgets", string? releaseNotes = null) =>
         Package(packageId, version, new()
         {
             [$"lib/net10.0/{assemblyName}.dll"] = PluginAssembly(assemblyName, $"""Id = "{pluginId}", Hosts = PluginHost.Server"""),
-        });
+        }, releaseNotes: releaseNotes);
 
     private string WriteAssembly(string assemblyName, string? attributeArguments)
     {
@@ -594,7 +637,7 @@ public class PluginPackageTests : IDisposable
         return output.ToArray();
     }
 
-    internal static MemoryStream Package(string id, string version, Dictionary<string, byte[]> files, string[]? packageTypes = null)
+    internal static MemoryStream Package(string id, string version, Dictionary<string, byte[]> files, string[]? packageTypes = null, string? releaseNotes = null)
     {
         packageTypes ??= [PluginPackageTypes.Plugin, PluginPackageTypes.Server];
 
@@ -614,6 +657,7 @@ public class PluginPackageTests : IDisposable
                         <version>{version}</version>
                         <authors>Acme</authors>
                         <description>A test plugin.</description>
+                        {(releaseNotes == null ? "" : $"<releaseNotes>{System.Security.SecurityElement.Escape(releaseNotes)}</releaseNotes>")}
                         <packageTypes>
                           {string.Concat(packageTypes.Select(type => $"<packageType name=\"{type}\" />"))}
                         </packageTypes>

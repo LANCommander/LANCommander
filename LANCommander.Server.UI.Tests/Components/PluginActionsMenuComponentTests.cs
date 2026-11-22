@@ -11,7 +11,8 @@ public class PluginActionsMenuComponentTests(BUnitServerFixture fixture) : BUnit
         string? repositoryUrl = null,
         string? projectUrl = null,
         string? settingsHref = null,
-        Action? onUninstall = null)
+        Action? onUninstall = null,
+        Action? onShowReleaseNotes = null)
     {
         var cut = Render<PluginActionsMenu>(p =>
         {
@@ -22,6 +23,9 @@ public class PluginActionsMenuComponentTests(BUnitServerFixture fixture) : BUnit
 
             if (onUninstall != null)
                 p.Add(x => x.OnUninstall, EventCallback.Factory.Create(this, onUninstall));
+
+            if (onShowReleaseNotes != null)
+                p.Add(x => x.OnShowReleaseNotes, EventCallback.Factory.Create(this, onShowReleaseNotes));
         });
 
         // The popup's content renders once it has been opened
@@ -96,6 +100,26 @@ public class PluginActionsMenuComponentTests(BUnitServerFixture fixture) : BUnit
         item.QuerySelector("button")!.Click();
 
         Assert.True(uninstalled);
+    }
+
+    [Fact]
+    public void ReleaseNotesHandOffToThePage()
+    {
+        var shown = false;
+        var cut = RenderMenu(onShowReleaseNotes: () => shown = true);
+
+        cut.FindAll(".lc-menu-item").Single(i => i.TextContent.Trim() == "Release notes")
+            .QuerySelector("button")!.Click();
+
+        Assert.True(shown);
+    }
+
+    [Fact]
+    public void OffersNoReleaseNotesWithoutAHandler()
+    {
+        var cut = RenderMenu("https://github.com/acme/widgets");
+
+        Assert.DoesNotContain("Release notes", Items(cut));
     }
 
     [Fact]

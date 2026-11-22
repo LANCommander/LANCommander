@@ -102,6 +102,15 @@ public static class OverlayFixtures
                 "### Fixed\n\n" +
                 "- Games with Japanese file names install correctly.")),
 
+        Over("Overlay.PluginsUpdated", "Release notes for the plugins updated since the last start",
+            () => new UpdateNoticeOverlay("Plugins Were Updated", "2 plugins were updated.",
+                LANCommander.PluginManagement.PluginUpdateNote.ToMarkdown(
+                [
+                    new("LANCommander.Plugins.Steam", "LANCommander.Plugins.Steam", "Steam", "1.2.0", "1.3.0",
+                        "- Imports playtime from Steam profiles.\n- Fixed cover art for games without a library hero."),
+                    new("LANCommander.Plugins.Relay", "LANCommander.Plugins.Relay", "Network Relay", "2.0.1", "2.0.2", null),
+                ]))),
+
         Over("Overlay.UpdateFailed", "An update that was undone, and why",
             () => new UpdateNoticeOverlay(new Services.UpdateNotice("2.4.0", "2.3.0",
                 "LANCommander 2.4.0 did not finish starting within 3 minutes."), string.Empty)),

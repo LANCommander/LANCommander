@@ -1,0 +1,23 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits Dialog<ReleaseNotesDialogOptions, bool>
+
+@* Release notes with an optional line above them: for plugins after they update, or one plugin's on request *@
+<Flex Vertical Gap="Gap.Medium">
+    @if (!String.IsNullOrWhiteSpace(Options.Summary))
+    {
+        <div>@Options.Summary</div>
+    }
+
+    <div>
+        <Markdown Content="@Options.ReleaseNotes" />
+    </div>
+</Flex>
+
+@code {
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = true;
+
+        return Task.FromResult(true);
+    }
+}

@@ -1,5 +1,5 @@
-@* A plugin row's menu: its settings page, its links off the site, and uninstalling it. Nothing shows when there is none of these. *@
-@if (_hasSettings || _hasLinks || _canUninstall)
+@* A plugin row's menu: its settings page, its release notes, its links off the site, and uninstalling it. Nothing shows when there is none of these. *@
+@if (_hasSettings || _hasReleaseNotes || _hasLinks || _canUninstall)
 {
     <Dropdown @ref="_dropdown">
         <ChildContent>
@@ -12,7 +12,12 @@
                     <MenuItem Icon="IconType.Gear" Href="@SettingsHref">Settings</MenuItem>
                 }
 
-                @if (_hasSettings && _hasLinks)
+                @if (_hasReleaseNotes)
+                {
+                    <MenuItem Icon="IconType.Notebook" OnClick="ShowReleaseNotesAsync">Release notes</MenuItem>
+                }
+
+                @if ((_hasSettings || _hasReleaseNotes) && _hasLinks)
                 {
                     <MenuDivider />
                 }
@@ -28,7 +33,7 @@
 
                 @if (_canUninstall)
                 {
-                    @if (_hasSettings || _hasLinks)
+                    @if (_hasSettings || _hasReleaseNotes || _hasLinks)
                     {
                         <MenuDivider />
                     }
@@ -56,10 +61,14 @@
     /// <summary>Removes the plugin; the item is offered only when this is set. The handler confirms first.</summary>
     [Parameter] public EventCallback OnUninstall { get; set; }
 
+    /// <summary>Shows the package's release notes; the item is offered only when this is set.</summary>
+    [Parameter] public EventCallback OnShowReleaseNotes { get; set; }
+
     Dropdown? _dropdown;
     string? _sourceCode;
     string? _website;
     bool _hasSettings;
+    bool _hasReleaseNotes;
     bool _hasLinks;
     bool _canUninstall;
 
@@ -73,6 +82,7 @@
             _website = null;
 
         _hasSettings = SettingsHref != null;
+        _hasReleaseNotes = OnShowReleaseNotes.HasDelegate;
         _hasLinks = _sourceCode != null || _website != null;
         _canUninstall = OnUninstall.HasDelegate;
     }
@@ -84,6 +94,14 @@
             await _dropdown.CloseAsync();
 
         await OnUninstall.InvokeAsync();
+    }
+
+    async Task ShowReleaseNotesAsync()
+    {
+        if (_dropdown != null)
+            await _dropdown.CloseAsync();
+
+        await OnShowReleaseNotes.InvokeAsync();
     }
 
     /// <summary>A repository URL without the trailing slash or ".git" that often differs from the project URL.</summary>

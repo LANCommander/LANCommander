@@ -12,8 +12,8 @@ using LANCommander.Launcher.Services;
 namespace LANCommander.Launcher.Views;
 
 /// <summary>
-/// Shown once after the launcher updates itself: the release notes for the versions it moved past, or,
-/// when the update was undone, why.
+/// Release notes in a dialog: once after the launcher updates itself (or why the update was undone),
+/// once after plugins update, and whenever a plugin's notes are asked for.
 /// </summary>
 public partial class UpdateNoticeOverlay : UserControl
 {
@@ -52,6 +52,20 @@ public partial class UpdateNoticeOverlay : UserControl
         }
     }
 
+    /// <summary>Notes with a title and a line above them, e.g. for plugins.</summary>
+    public UpdateNoticeOverlay(string title, string summary, string releaseNotes) : this()
+    {
+        TitleBar.Title = title;
+        SummaryText.Text = summary;
+        SummaryText.IsVisible = !string.IsNullOrWhiteSpace(summary);
+
+        if (!string.IsNullOrWhiteSpace(releaseNotes))
+        {
+            Notes.Text = releaseNotes;
+            Notes.IsVisible = true;
+        }
+    }
+
     private void OK_Click(object? sender, RoutedEventArgs e) => Close();
     private void TitleBar_CloseRequested(object? sender, EventArgs e) => Close();
 
@@ -63,17 +77,23 @@ public partial class UpdateNoticeOverlay : UserControl
     }
 
     /// <summary>Shows the notice centered in the main window and waits for the user to dismiss it.</summary>
-    public static async Task ShowAsync(UpdateNotice notice, string releaseNotes)
+    public static Task ShowAsync(UpdateNotice notice, string releaseNotes) =>
+        ShowAsync(() => new UpdateNoticeOverlay(notice, releaseNotes));
+
+    /// <inheritdoc cref="UpdateNoticeOverlay(string, string, string)"/>
+    public static Task ShowAsync(string title, string summary, string releaseNotes) =>
+        ShowAsync(() => new UpdateNoticeOverlay(title, summary, releaseNotes));
+
+    private static async Task ShowAsync(Func<UpdateNoticeOverlay> create)
     {
         var tcs = new TaskCompletionSource<bool>();
 
         await Avalonia.Threading.Dispatcher.UIThread.InvokeAsync(() =>
         {
-            var overlay = new UpdateNoticeOverlay(notice, releaseNotes)
-            {
-                HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch,
-                VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch,
-            };
+            var overlay = create();
+
+            overlay.HorizontalAlignment = Avalonia.Layout.HorizontalAlignment.Stretch;
+            overlay.VerticalAlignment = Avalonia.Layout.VerticalAlignment.Stretch;
 
             overlay.Closed += (_, _) => tcs.TrySetResult(true);
 

@@ -105,6 +105,14 @@
                                             </StackPanel>
 
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" Spacing="4" VerticalAlignment="Center">
+                                                <Button Classes="Text"
+                                                        Padding="8,6"
+                                                        IsVisible="{Binding HasReleaseNotes}"
+                                                        ToolTip.Tip="Release notes"
+                                                        Command="{Binding $parent[ItemsControl].((vm:PluginsViewModel)DataContext).ShowReleaseNotesCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Icon Type="Regular" Value="Notebook" Width="14" Height="14" />
+                                                </Button>
                                                 <Button Classes="Secondary"
                                                         Padding="10,6"
                                                         IsVisible="{Binding HasUpdate}"

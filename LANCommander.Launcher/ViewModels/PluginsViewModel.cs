@@ -153,6 +153,12 @@ public partial class PluginsViewModel : ViewModelBase
     private string? InstalledVersionOf(string packageId) => _plugins.FindByPackage(packageId)?.EffectivePackage?.Version;
 
     [RelayCommand]
+    private Task ShowReleaseNotesAsync(InstalledPluginItem? item) =>
+        item is { HasReleaseNotes: true }
+            ? Views.UpdateNoticeOverlay.ShowAsync($"{item.Name} {item.PackageVersion}", string.Empty, item.ReleaseNotes!)
+            : Task.CompletedTask;
+
+    [RelayCommand]
     private async Task UpdateAsync(InstalledPluginItem? item)
     {
         if (item?.Update is not { } update)
@@ -444,6 +450,11 @@ public sealed class InstalledPluginItem
 
     public PluginUpdateOffer? Update { get; }
     public bool HasUpdate => Update != null;
+
+    /// <summary>The installed package's release notes, or the staged one's while an update waits.</summary>
+    public string? ReleaseNotes => _plugin.EffectivePackage?.ReleaseNotes;
+    public bool HasReleaseNotes => !string.IsNullOrWhiteSpace(ReleaseNotes);
+    public string? PackageVersion => _plugin.EffectivePackage?.Version;
 
     public string Version => _plugin.State == PluginInstallState.UpdatePending
         ? $"{_plugin.Package?.Version} → {_plugin.PendingPackage?.Version}"

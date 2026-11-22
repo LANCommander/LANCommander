@@ -21,6 +21,9 @@ public sealed class PluginPackageRecord
     public string? RepositoryUrl { get; set; }
     public string? IconUrl { get; set; }
 
+    /// <summary>The package's release notes (the nuspec's releaseNotes), shown after the plugin updates.</summary>
+    public string? ReleaseNotes { get; set; }
+
     /// <summary>The source it came from; both null for an uploaded package.</summary>
     public string? SourceName { get; set; }
     public string? SourceUrl { get; set; }

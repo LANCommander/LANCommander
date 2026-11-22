@@ -1,13 +1,15 @@
 @namespace LANCommander.Server.UI.Controls
+@using LANCommander.PluginManagement
 @using Microsoft.AspNetCore.Components.Authorization
 @inject AuthenticationStateProvider AuthenticationStateProvider
 @inject UpdateService UpdateService
+@inject PluginStaging PluginStaging
 @inject DialogService Dialogs
 @inject ILogger<UpdateNoticeNotifier> Logger
 
-@* After the server updates itself, the first administrator to open the UI is shown the release
-   notes, or why the update was undone. Only that one administrator, once; anyone can read them
-   again from Settings > Updates. Renders nothing *@
+@* After the server or its plugins update, the first administrator to open the UI is shown the release
+   notes (or why a server update was undone). Only that one administrator, once; the notes stay
+   readable from Settings > Updates and from each plugin's menu on Settings > Plugins. Renders nothing *@
 
 @code {
     protected override async Task OnAfterRenderAsync(bool firstRender)
@@ -22,10 +24,16 @@
             if (!user.IsInRole(RoleService.AdministratorRoleName))
                 return;
 
+            // Both are claimed before either dialog opens, so another administrator doesn't get the
+            // plugin notes while this one reads the server's
             var notice = ServerUpdateNotice.TryClaim(UpdateService.GetUpdateJournalDirectory(), user.Identity?.Name);
+            var plugins = PluginStaging.TakeUpdateNotes();
 
             if (notice != null)
                 await ServerReleaseNotesOptions.OpenAsync(Dialogs, notice);
+
+            if (plugins.Count > 0)
+                await ReleaseNotesDialogOptions.OpenForPluginsAsync(Dialogs, plugins);
         }
         catch (Exception ex)
         {

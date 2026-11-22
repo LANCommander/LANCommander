@@ -108,6 +108,19 @@ namespace LANCommander.SDK.Helpers
         }
 
         /// <summary>
+        /// True when the shim's command template should wrap the action at launch. An action with no declared
+        /// platform keeps the legacy behavior of always being wrapped; otherwise only the shim that bridges the
+        /// action onto this runtime applies, so native actions (e.g. a Linux build on Linux) launch unwrapped.
+        /// </summary>
+        public static bool ShouldWrap(RuntimePlatform actionPlatforms, Guid redistributableId, IReadOnlyList<ShimInfo> shims)
+        {
+            if (actionPlatforms == RuntimePlatform.None)
+                return true;
+
+            return GetBridge(actionPlatforms, shims)?.RedistributableId == redistributableId;
+        }
+
+        /// <summary>
         /// True when the action can run on the current runtime, either natively or via an attached shim.
         /// </summary>
         public static bool CanRunOnCurrentRuntime(RuntimePlatform actionPlatforms, IReadOnlyList<ShimInfo> shims)

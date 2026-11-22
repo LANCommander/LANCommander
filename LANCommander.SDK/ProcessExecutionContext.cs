@@ -290,6 +290,8 @@ namespace LANCommander.SDK
             if (!shimRedistributables.Any())
                 return;
 
+            var shims = CompatibilityResolver.GetShims(manifest);
+
             // Parse per-action overrides
             Dictionary<Guid, Dictionary<string, string>> actionOverrides = null;
 
@@ -327,6 +329,13 @@ namespace LANCommander.SDK
 
                 if (schema == null)
                     continue;
+
+                if (!string.IsNullOrWhiteSpace(schema.CommandTemplate)
+                    && !CompatibilityResolver.ShouldWrap(action?.Platforms ?? RuntimePlatform.None, redistributable.Id, shims))
+                {
+                    logger?.LogTrace("Skipping compatibility runtime {Name}; action {Action} runs natively", redistributable.Name, action?.Name);
+                    continue;
+                }
 
                 // Flatten nested options into dot-notation keys
                 var flatOptions = schema.GetFlattenedOptions();

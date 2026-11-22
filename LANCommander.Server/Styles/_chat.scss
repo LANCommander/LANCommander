@@ -67,6 +67,66 @@ $chat-mobile-header-height: 53px; // .lc-mobile-header: 28px logo + 2 * 12px pad
     overflow-y: auto;
 }
 
+// Holds a thread's button and its delete button, which only shows while the row is hovered
+// (or tabbed to) and takes the unread badge's place while it does
+.chat-list-row {
+    position: relative;
+    flex-shrink: 0;
+
+    // Keyboard focus only: a click focuses the row too, and mustn't leave the button showing
+    &:hover,
+    &:has(:focus-visible) {
+        .chat-list-thread {
+            padding-right: 34px;
+        }
+
+        .chat-list-thread-delete {
+            opacity: 1;
+            pointer-events: auto;
+        }
+
+        .chat-unread {
+            display: none;
+        }
+    }
+
+    &:hover .chat-list-thread:not(.chat-list-thread-active) {
+        background: var(--lc-hover-background);
+    }
+}
+
+.chat-list-thread-delete {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    padding: 0;
+    border: none;
+    border-radius: var(--lc-radius-sm);
+    background: none;
+    color: var(--lc-text-secondary-color);
+    font-size: 12px;
+    cursor: pointer;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateY(-50%);
+
+    // Tinted from its own colour so it stands out on the hovered and the selected row alike
+    &:hover {
+        background: color-mix(in srgb, currentColor 14%, transparent);
+        color: var(--lc-text-title-color);
+    }
+
+    &:focus-visible {
+        outline: 2px solid var(--lc-accent-text-color);
+        outline-offset: -2px;
+    }
+}
+
 .chat-list-thread {
     position: relative;
     display: flex;

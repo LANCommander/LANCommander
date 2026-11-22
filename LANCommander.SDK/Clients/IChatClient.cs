@@ -16,6 +16,13 @@ public interface IChatClient
     Task<ChatThread> GetThreadAsync(Guid threadId);
     Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers);
     Task<IEnumerable<ChatThread>> GetThreadsAsync();
+
+    /// <summary>
+    /// Deletes the thread from this user's list. The other participants keep it, and it comes
+    /// back if someone sends a message to it or this user starts a chat with the same people
+    /// </summary>
+    Task HideThreadAsync(Guid threadId);
+
     Task<IEnumerable<ChatThread>> LoadThreadsAsync();
     Task<IEnumerable<User>> GetUsersAsync();
     Task ReceiveMessagesAsync(Guid threadId, IEnumerable<ChatMessage> messages);

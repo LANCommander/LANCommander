@@ -63,6 +63,7 @@
     /// <summary>Raised when a message arrives in this thread while it's open</summary>
     [Parameter] public EventCallback OnMessageReceived { get; set; }
 
+
     // A sender's messages within this long of each other share a group
     static readonly TimeSpan MaxGroupGap = TimeSpan.FromMinutes(5);
 

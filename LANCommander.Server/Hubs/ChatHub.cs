@@ -24,27 +24,31 @@ public class ChatHub(
 
     public async Task<Guid> StartThreadAsync(string[] userIdentifiers)
     {
-        logger.LogDebug("Starting new thread with {ParticipantCount} participants", userIdentifiers.Length);
+        if (CallerId is not { } callerId)
+            throw new HubException("You must be signed in to chat");
 
-        var thread = await chatService.StartThreadAsync();
+        logger.LogDebug("Starting thread with {ParticipantCount} participants", userIdentifiers.Length);
 
         var userIds = userIdentifiers
             .Select(identifier => Guid.TryParse(identifier, out var id) ? id : Guid.Empty)
-            .Where(id => id != Guid.Empty)
-            .ToHashSet();
+            .Where(id => id != Guid.Empty);
 
-        // Whoever starts a thread is always in it
-        if (CallerId is { } callerId)
-            userIds.Add(callerId);
+        var started = await chatService.StartThreadAsync(callerId, userIds);
 
-        foreach (var userId in userIds)
-            await chatService.AddParticipantAsync(thread.Id, userId);
+        // Everyone hears about a new thread; an existing one only needs to reach the starter,
+        // who may have deleted it. The rest get it back when someone next says something
+        await NotifyAddedAsync(started.Thread.Id, started.Created ? started.ParticipantIds : [callerId]);
 
-        await NotifyAddedAsync(thread.Id, userIds);
+        logger.LogDebug(started.Created ? "Created new thread with ID {ThreadId}" : "Reopened thread with ID {ThreadId}", started.Thread.Id);
 
-        logger.LogDebug("Created new thread with ID {ThreadId}", thread.Id);
+        return started.Thread.Id;
+    }
 
-        return thread.Id;
+    public async Task HideThreadAsync(Guid threadId)
+    {
+        var userId = await RequireParticipantAsync(threadId);
+
+        await chatService.HideThreadAsync(threadId, userId);
     }
 
     public async Task AddParticipantAsync(Guid threadId, string participantId)
@@ -59,8 +63,11 @@ public class ChatHub(
         await NotifyAddedAsync(threadId, [userId]);
     }
 
-    async Task NotifyAddedAsync(Guid threadId, IEnumerable<Guid> userIds)
+    async Task NotifyAddedAsync(Guid threadId, IReadOnlyCollection<Guid> userIds)
     {
+        if (userIds.Count == 0)
+            return;
+
         var thread = sdkMapper.ToSdk(await chatService.GetThreadAsync(threadId));
 
         foreach (var userId in userIds)
@@ -88,10 +95,12 @@ public class ChatHub(
     {
         var userId = await RequireParticipantAsync(threadId);
 
-        var message = await chatService.SendMessageAsync(threadId, userId, content);
-        var participants = await chatService.GetParticipantIdsAsync(threadId);
+        var sent = await chatService.SendMessageAsync(threadId, userId, content);
 
-        await broadcaster.MessageSentAsync(threadId, sdkMapper.ToSdk(message), participants);
+        // Those who had deleted it need the thread back before the message can land anywhere
+        await NotifyAddedAsync(threadId, sent.RevealedTo);
+
+        await broadcaster.MessageSentAsync(threadId, sdkMapper.ToSdk(sent.Message), sent.ParticipantIds);
     }
 
     public async Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int? count)

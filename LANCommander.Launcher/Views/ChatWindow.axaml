@@ -39,6 +39,18 @@
             <Setter Property="Padding" Value="10,7" />
             <Setter Property="CornerRadius" Value="4" />
         </Style>
+        <!-- A thread's delete button only shows while its row is hovered, in place of the unread
+             badge. The badge's IsVisible is bound, and a style setter can't beat a local binding,
+             so the badge is faded out instead -->
+        <Style Selector="ListBoxItem Button.DeleteThread">
+            <Setter Property="IsVisible" Value="False" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover Button.DeleteThread">
+            <Setter Property="IsVisible" Value="True" />
+        </Style>
+        <Style Selector="ListBoxItem:pointerover Border.UnreadBadge">
+            <Setter Property="Opacity" Value="0" />
+        </Style>
         <Style Selector="CheckBox">
             <Setter Property="HorizontalAlignment" Value="Stretch" />
             <Setter Property="HorizontalContentAlignment" Value="Stretch" />
@@ -206,16 +218,29 @@
                                                         </DataTemplate>
                                                     </ItemsControl.ItemTemplate>
                                                 </ItemsControl>
-                                                <Border Grid.Column="2"
-                                                        Background="{DynamicResource AccentFillBrush}"
-                                                        CornerRadius="8" Padding="5,1"
-                                                        IsVisible="{Binding HasUnread}"
-                                                        VerticalAlignment="Center"
-                                                        Margin="6,0,0,0">
-                                                    <TextBlock Text="{Binding UnreadCount}"
-                                                               FontSize="{DynamicResource FontSizeKicker}"
-                                                               Foreground="White" />
-                                                </Border>
+                                                <!-- The unread badge gives way to the delete button while the row is hovered -->
+                                                <Panel Grid.Column="2"
+                                                       VerticalAlignment="Center"
+                                                       Margin="6,0,0,0">
+                                                    <Border Classes="UnreadBadge"
+                                                            Background="{DynamicResource AccentFillBrush}"
+                                                            CornerRadius="8" Padding="5,1"
+                                                            IsVisible="{Binding HasUnread}">
+                                                        <TextBlock Text="{Binding UnreadCount}"
+                                                                   FontSize="{DynamicResource FontSizeKicker}"
+                                                                   Foreground="White" />
+                                                    </Border>
+
+                                                    <!-- Only off this user's list; it comes back with a new message -->
+                                                    <Button Classes="Text DeleteThread"
+                                                            Padding="4"
+                                                            Margin="0,-4,-6,-4"
+                                                            ToolTip.Tip="Delete Conversation"
+                                                            Command="{Binding $parent[ListBox].((vm:ChatWindowViewModel)DataContext).DeleteThreadCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <Icon Type="Regular" Value="X" Width="12" Height="12" />
+                                                    </Button>
+                                                </Panel>
                                             </Grid>
                                         </DataTemplate>
                                     </ListBox.ItemTemplate>

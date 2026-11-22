@@ -56,29 +56,39 @@ public class ServerChatClient(
 
     public async Task<Guid> StartThreadAsync(IEnumerable<string> userIdentifiers)
     {
+        var currentUserId = await RequireCurrentUserIdAsync();
+
         var userIds = userIdentifiers
             .Select(identifier => Guid.TryParse(identifier, out var id) ? id : Guid.Empty)
-            .Where(id => id != Guid.Empty)
-            .ToHashSet();
+            .Where(id => id != Guid.Empty);
 
-        // Whoever starts a thread is always in it
-        userIds.Add(await RequireCurrentUserIdAsync());
+        var started = await chatService.StartThreadAsync(currentUserId, userIds);
 
-        logger.LogDebug("Starting new thread with {ParticipantCount} participants", userIds.Count);
+        // Everyone hears about a new thread; an existing one only needs to reach the starter,
+        // who may have deleted it. The rest get it back when someone next says something
+        await NotifyAddedAsync(started.Thread.Id, started.Created ? started.ParticipantIds : [currentUserId]);
 
-        var thread = await chatService.StartThreadAsync();
+        logger.LogDebug(started.Created ? "Created new thread with ID {ThreadId}" : "Reopened thread with ID {ThreadId}", started.Thread.Id);
+
+        return started.Thread.Id;
+    }
+
+    public async Task HideThreadAsync(Guid threadId)
+    {
+        var userId = await RequireParticipantAsync(threadId);
+
+        await chatService.HideThreadAsync(threadId, userId);
+    }
+
+    async Task NotifyAddedAsync(Guid threadId, IReadOnlyCollection<Guid> userIds)
+    {
+        if (userIds.Count == 0)
+            return;
+
+        var thread = sdkMapper.ToSdk(await chatService.GetThreadAsync(threadId));
 
         foreach (var userId in userIds)
-            await chatService.AddParticipantAsync(thread.Id, userId);
-
-        var sdkThread = sdkMapper.ToSdk(await chatService.GetThreadAsync(thread.Id));
-
-        foreach (var userId in userIds)
-            await broadcaster.ParticipantAddedAsync(sdkThread, userId);
-
-        logger.LogDebug("Created new thread with ID {ThreadId}", thread.Id);
-
-        return thread.Id;
+            await broadcaster.ParticipantAddedAsync(thread, userId);
     }
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
@@ -112,9 +122,11 @@ public class ServerChatClient(
         var userId = await RequireParticipantAsync(threadId);
 
         var sent = await chatService.SendMessageAsync(threadId, userId, message);
-        var participants = await chatService.GetParticipantIdsAsync(threadId);
 
-        await broadcaster.MessageSentAsync(threadId, sdkMapper.ToSdk(sent), participants);
+        // Those who had deleted it need the thread back before the message can land anywhere
+        await NotifyAddedAsync(threadId, sent.RevealedTo);
+
+        await broadcaster.MessageSentAsync(threadId, sdkMapper.ToSdk(sent.Message), sent.ParticipantIds);
     }
 
     public async Task UpdatedReadStatus(Guid threadId)

@@ -9,6 +9,7 @@ public interface IChatHub
 {
     Task<Guid> StartThreadAsync(string[] userIdentifiers);
     Task AddParticipantAsync(Guid threadId, string participantId);
+    Task HideThreadAsync(Guid threadId);
     Task<ChatThread> GetThreadAsync(Guid threadId);
     Task<IEnumerable<ChatThread>> GetThreadsAsync();
     Task SendMessageAsync(Guid threadId, string message);

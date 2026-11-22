@@ -199,6 +199,118 @@ public class ChatComponentTests : BUnitTestContext
         await Assert.ThrowsAsync<UnauthorizedAccessException>(() => client.GetMessagesAsync(threadId, null, 10));
     }
 
+    [Fact]
+    public async Task ServerChatClient_StartingAChatWithTheSamePeople_ReopensTheirThread()
+    {
+        var adminId = await SignInAsync();
+        var friend = await AddUserAsync();
+        var other = await AddUserAsync();
+        var client = Services.GetRequiredService<ServerChatClient>();
+
+        var first = await client.StartThreadAsync([friend.Id.ToString()]);
+        var again = await client.StartThreadAsync([friend.Id.ToString(), adminId.ToString()]);
+        var group = await client.StartThreadAsync([friend.Id.ToString(), other.Id.ToString()]);
+
+        Assert.Equal(first, again);
+        Assert.NotEqual(first, group);
+        Assert.Single(await client.GetThreadsAsync(), t => t.Id == first);
+    }
+
+    [Fact]
+    public async Task ServerChatClient_DeletedThread_ComesBackWithANewMessage()
+    {
+        var adminId = await SignInAsync();
+        var friend = await AddUserAsync();
+        var chatService = Services.GetRequiredService<ChatService>();
+        var client = Services.GetRequiredService<ServerChatClient>();
+
+        var threadId = await client.StartThreadAsync([friend.Id.ToString()]);
+
+        await SendAsLauncherAsync(threadId, friend.Id, "Before it was deleted");
+        await client.HideThreadAsync(threadId);
+
+        Assert.DoesNotContain(await client.GetThreadsAsync(), t => t.Id == threadId);
+
+        // Only gone for the one who deleted it
+        Assert.Contains(await chatService.GetThreadsAsync(friend.Id), t => t.Id == threadId);
+
+        var sent = await chatService.SendMessageAsync(threadId, friend.Id, "After it was deleted");
+
+        // Senders re-announce the thread to these, so a launcher that dropped it picks it back up
+        Assert.Equal([adminId], sent.RevealedTo);
+        Assert.Contains(await client.GetThreadsAsync(), t => t.Id == threadId);
+
+        // What was read before the delete stays read
+        Assert.Equal(1, await client.GetUnreadMessageCountAsync(threadId));
+    }
+
+    [Fact]
+    public async Task ServerChatClient_DeletedThread_ComesBackWhenStartedAgain()
+    {
+        await SignInAsync();
+        var friend = await AddUserAsync();
+        var client = Services.GetRequiredService<ServerChatClient>();
+
+        var threadId = await client.StartThreadAsync([friend.Id.ToString()]);
+
+        await client.HideThreadAsync(threadId);
+
+        Assert.Equal(threadId, await client.StartThreadAsync([friend.Id.ToString()]));
+        Assert.Contains(await client.GetThreadsAsync(), t => t.Id == threadId);
+    }
+
+    [Fact]
+    public async Task Chat_RowDeleteButton_RemovesTheThreadOnceConfirmed()
+    {
+        var adminId = await SignInAsync();
+        var kept = await AddUserAsync();
+        var deleted = await AddUserAsync();
+
+        var keptThreadId = await StartThreadAsync(adminId, kept.Id);
+        var deletedThreadId = await StartThreadAsync(adminId, deleted.Id);
+
+        await SendAsLauncherAsync(keptThreadId, kept.Id, "In the kept thread");
+        await SendAsLauncherAsync(deletedThreadId, deleted.Id, "In the deleted thread");
+
+        // Hosts the confirmation dialog
+        var host = Render<ComponentHost>();
+        var cut = Render<Chat>();
+
+        Open(cut, kept.UserName!);
+
+        cut.WaitForAssertion(() => Assert.Contains("In the kept thread", cut.Markup), Timeout);
+
+        _ = cut.InvokeAsync(() => cut.FindAll(".chat-list-row")
+            .Single(r => r.TextContent.Contains(deleted.UserName!))
+            .QuerySelector(".chat-list-thread-delete")!
+            .ClickAsync(new()));
+
+        host.WaitForAssertion(() => Assert.NotEmpty(host.FindAll(".lc-dialog button")), Timeout);
+        await host.InvokeAsync(() => host.FindAll(".lc-dialog button").First(b => b.TextContent.Trim() == "Delete").Click());
+
+        cut.WaitForAssertion(() =>
+        {
+            Assert.DoesNotContain(cut.FindAll(".chat-list-thread"), t => t.TextContent.Contains(deleted.UserName!));
+
+            // The open conversation wasn't the one deleted, so it stays open
+            Assert.Contains("In the kept thread", cut.Markup);
+        }, Timeout);
+
+        Assert.DoesNotContain(await Services.GetRequiredService<ServerChatClient>().GetThreadsAsync(), t => t.Id == deletedThreadId);
+    }
+
+    [Fact]
+    public async Task ServerChatClient_CannotDeleteSomeoneElsesThread()
+    {
+        await SignInAsync();
+        var first = await AddUserAsync();
+        var second = await AddUserAsync();
+        var threadId = await StartThreadAsync(first.Id, second.Id);
+
+        await Assert.ThrowsAsync<UnauthorizedAccessException>(
+            () => Services.GetRequiredService<ServerChatClient>().HideThreadAsync(threadId));
+    }
+
     /// <summary>Gives the signed-in admin the user ID claim a real sign-in carries</summary>
     async Task<Guid> SignInAsync()
     {
@@ -228,12 +340,12 @@ public class ChatComponentTests : BUnitTestContext
     {
         var chatService = Services.GetRequiredService<ChatService>();
 
-        var message = await chatService.SendMessageAsync(threadId, senderId, content);
+        var sent = await chatService.SendMessageAsync(threadId, senderId, content);
 
         await Services.GetRequiredService<ChatBroadcaster>().MessageSentAsync(
             threadId,
-            Services.GetRequiredService<SdkMapper>().ToSdk(message),
-            await chatService.GetParticipantIdsAsync(threadId));
+            Services.GetRequiredService<SdkMapper>().ToSdk(sent.Message),
+            sent.ParticipantIds);
     }
 
     static void Open(IRenderedComponent<Chat> cut, string userName)

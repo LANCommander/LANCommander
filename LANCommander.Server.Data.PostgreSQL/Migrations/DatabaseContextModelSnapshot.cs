@@ -431,6 +431,9 @@ namespace LANCommander.Server.Data.PostgreSQL.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("uuid");
 
+                    b.Property<bool>("Hidden")
+                        .HasColumnType("boolean");
+
                     b.Property<Guid?>("LastReadMessageId")
                         .HasColumnType("uuid");
 

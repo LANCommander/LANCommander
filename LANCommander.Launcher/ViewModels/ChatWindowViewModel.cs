@@ -345,6 +345,45 @@ public partial class ChatWindowViewModel : ViewModelBase
     partial void OnMessageInputChanged(string value) =>
         SendMessageCommand.NotifyCanExecuteChanged();
 
+    // ── Delete thread ────────────────────────────────────────────────────────
+
+    /// <summary>
+    /// Takes a conversation off this user's list. The others in it keep it, and the server
+    /// hands it back as an added thread if someone sends a new message.
+    /// </summary>
+    [RelayCommand]
+    private async Task DeleteThreadAsync(ChatThreadViewModel? threadVm)
+    {
+        if (_chatClient == null || threadVm == null)
+            return;
+
+        try
+        {
+            await _chatClient.HideThreadAsync(threadVm.Thread.Id);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Failed to delete chat thread {ThreadId}", threadVm.Thread.Id);
+
+            return;
+        }
+
+        await Dispatcher.UIThread.InvokeAsync(() =>
+        {
+            var index = Threads.IndexOf(threadVm);
+            var wasSelected = SelectedThread == threadVm;
+
+            Threads.Remove(threadVm);
+
+            OnPropertyChanged(nameof(HasThreads));
+            UpdateTotalUnreadCount();
+
+            // Deleting the open one moves on to the next conversation down, or the one above if it was the last
+            if (wasSelected)
+                SelectedThread = Threads.Count == 0 ? null : Threads[Math.Clamp(index, 0, Threads.Count - 1)];
+        });
+    }
+
     // ── New thread ───────────────────────────────────────────────────────────
 
     [RelayCommand]

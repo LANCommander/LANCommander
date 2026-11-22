@@ -4,7 +4,10 @@
 
 @* One thread in the list: who is in it, its title and how many messages are unread.
    The list reloads its threads whenever a message arrives, which refreshes the count *@
-<button type="button" class="@CssClass" role="listitem" aria-current="@(Active ? "true" : null)" @onclick="SelectAsync">
+@* The row wraps the thread's button so the delete button, shown on hover, can sit beside it
+   rather than inside it *@
+<div class="chat-list-row" role="listitem">
+<button type="button" class="@CssClass" aria-current="@(Active ? "true" : null)" @onclick="SelectAsync">
     <AvatarGroup Class="chat-list-thread-avatars" Overflow="@Math.Max(0, _others.Count - 3)">
         @foreach (var participant in _others.Take(3))
         {
@@ -20,9 +23,17 @@
     }
 </button>
 
+<button type="button" class="chat-list-thread-delete" title="Delete conversation" aria-label="Delete conversation with @_title" @onclick="DeleteAsync">
+    <Icon Type="IconType.X" />
+</button>
+</div>
+
 @code {
     [Parameter, EditorRequired] public SDK.Models.ChatThread Thread { get; set; } = default!;
     [Parameter] public EventCallback<SDK.Models.ChatThread> OnSelected { get; set; }
+
+    /// <summary>The viewer asked to delete this thread from their list</summary>
+    [Parameter] public EventCallback<SDK.Models.ChatThread> OnDelete { get; set; }
     [Parameter] public bool Active { get; set; }
 
     /// <summary>The viewer, left out of the avatars and title since they're in every thread they see</summary>
@@ -72,5 +83,10 @@
     async Task SelectAsync()
     {
         await OnSelected.InvokeAsync(Thread);
+    }
+
+    async Task DeleteAsync()
+    {
+        await OnDelete.InvokeAsync(Thread);
     }
 }

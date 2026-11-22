@@ -431,6 +431,9 @@ namespace LANCommander.Server.Data.MySQL.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("char(36)");
 
+                    b.Property<bool>("Hidden")
+                        .HasColumnType("tinyint(1)");
+
                     b.Property<Guid?>("LastReadMessageId")
                         .HasColumnType("char(36)");
 

@@ -4,7 +4,7 @@
 <div class="chat-list-threads" role="list">
     @foreach (var thread in Threads)
     {
-        <ChatListThread @key="thread.Id" Thread="thread" CurrentUserId="CurrentUserId" OnSelected="SelectAsync" Active="@(SelectedThread?.Id == thread.Id)" />
+        <ChatListThread @key="thread.Id" Thread="thread" CurrentUserId="CurrentUserId" OnSelected="SelectAsync" OnDelete="OnDelete" Active="@(SelectedThread?.Id == thread.Id)" />
     }
 </div>
 
@@ -13,6 +13,9 @@
     [Parameter] public SDK.Models.ChatThread? SelectedThread { get; set; }
     [Parameter] public Guid? CurrentUserId { get; set; }
     [Parameter] public EventCallback<SDK.Models.ChatThread> SelectedThreadChanged { get; set; }
+
+    /// <summary>The viewer asked to delete a thread from their list</summary>
+    [Parameter] public EventCallback<SDK.Models.ChatThread> OnDelete { get; set; }
 
     async Task SelectAsync(SDK.Models.ChatThread thread)
     {

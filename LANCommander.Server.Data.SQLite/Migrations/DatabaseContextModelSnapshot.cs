@@ -426,6 +426,9 @@ namespace LANCommander.Migrations
                     b.Property<Guid>("UserId")
                         .HasColumnType("TEXT");
 
+                    b.Property<bool>("Hidden")
+                        .HasColumnType("INTEGER");
+
                     b.Property<Guid?>("LastReadMessageId")
                         .HasColumnType("TEXT");
 

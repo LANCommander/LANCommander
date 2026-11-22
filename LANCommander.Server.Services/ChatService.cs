@@ -30,6 +30,67 @@ namespace LANCommander.Server.Services
             return thread;
         }
 
+        /// <summary>
+        /// Opens a conversation between exactly these people: the one they already have if there
+        /// is one, so starting a chat with someone twice doesn't split it in two, or a new one.
+        /// The starter is always one of them, and gets the thread back if they had deleted it.
+        /// </summary>
+        public async Task<StartedChatThread> StartThreadAsync(Guid starterId, IEnumerable<Guid> participantIds)
+        {
+            var userIds = participantIds.Where(id => id != Guid.Empty).ToHashSet();
+
+            userIds.Add(starterId);
+
+            var existing = await FindThreadAsync(userIds);
+
+            if (existing != null)
+            {
+                await chatThreadReadStatusService.RevealAsync(existing.Id, [starterId]);
+                await cache.RemoveAsync(UserThreadCacheKey(starterId));
+
+                return new StartedChatThread(existing, false, userIds.ToList());
+            }
+
+            var thread = await StartThreadAsync();
+
+            foreach (var userId in userIds)
+                await AddParticipantAsync(thread.Id, userId);
+
+            return new StartedChatThread(thread, true, userIds.ToList());
+        }
+
+        /// <summary>The unnamed thread whose participants are exactly these users, most recently active first</summary>
+        async Task<ChatThread?> FindThreadAsync(IReadOnlyCollection<Guid> userIds)
+        {
+            var ids = userIds.ToList();
+            var count = ids.Count;
+
+            var candidates = await chatThreadService.Query(q => q
+                .AsNoTracking()
+                .Where(t => t.Name == null || t.Name == "")
+                .Where(t => t.Participants!.Count == count && t.Participants!.All(p => ids.Contains(p.Id)))
+                .Select(t => new
+                {
+                    Thread = t,
+                    LastActivityOn = t.Messages!.Max(m => (DateTime?)m.CreatedOn) ?? t.CreatedOn,
+                })
+                .OrderByDescending(t => t.LastActivityOn)
+                .Select(t => t.Thread)
+                .Take(1)).GetAsync();
+
+            return candidates.FirstOrDefault();
+        }
+
+        /// <summary>Takes the thread off the user's list. Everyone else keeps it.</summary>
+        public async Task HideThreadAsync(Guid threadId, Guid userId)
+        {
+            if (!await IsParticipantAsync(threadId, userId))
+                throw new UnauthorizedAccessException("Only the thread's participants can delete it");
+
+            await chatThreadReadStatusService.HideAsync(threadId, userId);
+            await cache.RemoveAsync(UserThreadCacheKey(userId));
+        }
+
         public async Task AddParticipantAsync(Guid threadId, Guid userId)
         {
             var thread = await chatThreadService.Include(t => t.Participants).GetAsync(threadId);
@@ -56,7 +117,7 @@ namespace LANCommander.Server.Services
         /// Stores a message from one of the thread's participants
         /// </summary>
         /// <exception cref="UnauthorizedAccessException">The sender isn't in the thread</exception>
-        public async Task<ChatMessage> SendMessageAsync(Guid threadId, Guid senderId, string content)
+        public async Task<SentChatMessage> SendMessageAsync(Guid threadId, Guid senderId, string content)
         {
             var participantIds = await GetParticipantIdsAsync(threadId);
 
@@ -65,6 +126,9 @@ namespace LANCommander.Server.Services
 
             var message = await chatMessageService.AddAsync(threadId, senderId, content);
 
+            // A new message brings the thread back for anyone who had deleted it
+            var revealedTo = await chatThreadReadStatusService.RevealAsync(threadId, participantIds);
+
             // The sender has read their own message
             await UpdateReadStatus(threadId, senderId);
 
@@ -72,7 +136,7 @@ namespace LANCommander.Server.Services
             foreach (var participantId in participantIds)
                 await cache.RemoveAsync(UserThreadCacheKey(participantId));
 
-            return message;
+            return new SentChatMessage(message, participantIds, revealedTo);
         }
 
         public Task<List<Guid>> GetParticipantIdsAsync(Guid threadId)
@@ -176,12 +240,16 @@ namespace LANCommander.Server.Services
                 if (user == null)
                     return new List<ChatThread>();
 
+                // Ones they've deleted stay gone until something new is said in them
+                var hiddenThreadIds = await chatThreadReadStatusService.GetHiddenThreadIdsAsync(userId);
+
                 var dbThreads = await chatThreadService.Query(q =>
                 {
                     return q
                         .AsNoTracking()
                         .AsSplitQuery()
                         .Where(t => t.Participants.Any(p => p.Id == userId))
+                        .Where(t => !hiddenThreadIds.Contains(t.Id))
                         .Include(t => t.Participants)
                         .Include(t => t.Messages);
                 }).GetAsync();
@@ -224,4 +292,12 @@ namespace LANCommander.Server.Services
             return await chatThreadReadStatusService.GetUnreadCountAsync(threadId, lastReadMessageId);
         }
     }
+
+    /// <param name="Created">False when the participants already had a thread, which is what's returned</param>
+    /// <param name="ParticipantIds">Everyone in the thread, the starter included</param>
+    public sealed record StartedChatThread(ChatThread Thread, bool Created, IReadOnlyList<Guid> ParticipantIds);
+
+    /// <param name="ParticipantIds">Everyone who should hear about the message</param>
+    /// <param name="RevealedTo">Participants who had deleted the thread and now have it back</param>
+    public sealed record SentChatMessage(ChatMessage Message, IReadOnlyList<Guid> ParticipantIds, IReadOnlyList<Guid> RevealedTo);
 }

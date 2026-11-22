@@ -14,6 +14,7 @@ public static class ChatEndpoints
 
         group.MapPost("/Thread", StartThreadAsync);
         group.MapGet("/Thread/{id:guid}", GetByThreadIdAsync);
+        group.MapDelete("/Thread/{id:guid}", HideThreadAsync);
         group.MapPost("/Thread/{id:guid}/Message", SendMessageAsync);
     }
 
@@ -58,11 +59,33 @@ public static class ChatEndpoints
         if (GetUserId(user) is not { } userId || !await chatService.IsParticipantAsync(id, userId))
             return TypedResults.Forbid();
 
-        var message = await chatService.SendMessageAsync(id, userId, content);
-        var participants = await chatService.GetParticipantIdsAsync(id);
+        var sent = await chatService.SendMessageAsync(id, userId, content);
 
-        await broadcaster.MessageSentAsync(id, sdkMapper.ToSdk(message), participants);
+        // Those who had deleted it need the thread back before the message can land anywhere
+        if (sent.RevealedTo.Count > 0)
+        {
+            var thread = sdkMapper.ToSdk(await chatService.GetThreadAsync(id));
+
+            foreach (var revealedTo in sent.RevealedTo)
+                await broadcaster.ParticipantAddedAsync(thread, revealedTo);
+        }
+
+        await broadcaster.MessageSentAsync(id, sdkMapper.ToSdk(sent.Message), sent.ParticipantIds);
 
         return TypedResults.Ok();
+    }
+
+    /// <summary>Deletes the thread for the caller only; the other participants keep it</summary>
+    public static async Task<IResult> HideThreadAsync(
+        Guid id,
+        ClaimsPrincipal user,
+        [FromServices] ChatService chatService)
+    {
+        if (GetUserId(user) is not { } userId || !await chatService.IsParticipantAsync(id, userId))
+            return TypedResults.Forbid();
+
+        await chatService.HideThreadAsync(id, userId);
+
+        return TypedResults.NoContent();
     }
 }

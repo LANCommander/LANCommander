@@ -15,4 +15,10 @@ public class ChatThreadReadStatus
     public Guid? LastReadMessageId { get; set; }
     [ForeignKey(nameof(LastReadMessageId))]
     public ChatMessage? LastReadMessage { get; set; }
+
+    /// <summary>
+    /// The user deleted the thread from their list. Threads are shared, so it stays for everyone
+    /// else, and comes back for this user when a new message arrives or they start it again
+    /// </summary>
+    public bool Hidden { get; set; }
 }

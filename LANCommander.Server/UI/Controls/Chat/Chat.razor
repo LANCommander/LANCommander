@@ -4,6 +4,7 @@
 @inject ServerChatClient ChatClient
 @inject ChatBroadcaster Broadcaster
 @inject NotificationService Notifications
+@inject AlertService Alerts
 @inject ChatUnreadState UnreadState
 @inject IJSRuntime JS
 @implements IAsyncDisposable
@@ -32,7 +33,7 @@
 
             @if (_threads.Any())
             {
-                <ChatList Threads="_threads" CurrentUserId="_userId" @bind-SelectedThread="SelectedThread" />
+                <ChatList Threads="_threads" CurrentUserId="_userId" @bind-SelectedThread="SelectedThread" OnDelete="DeleteThreadAsync" />
             }
             else
             {
@@ -169,6 +170,36 @@
     }
 
     void CancelNewThread() => _creatingThread = false;
+
+    async Task DeleteThreadAsync(SDK.Models.ChatThread thread)
+    {
+        if (!await Alerts.ConfirmAsync(
+                "This conversation will be removed from your list. The other people in it keep it, and it will come back if someone sends a new message.",
+                "Delete Conversation?",
+                "Delete",
+                danger: true))
+            return;
+
+        try
+        {
+            await ChatClient.HideThreadAsync(thread.Id);
+        }
+        catch (Exception ex)
+        {
+            Notifications.Error(ex, "The conversation could not be deleted");
+
+            return;
+        }
+
+        var wasSelected = SelectedThread?.Id == thread.Id;
+
+        await LoadThreadsAsync();
+
+        // Deleting the open conversation moves on to the most recent one rather than leave an empty pane
+        SelectedThread = wasSelected
+            ? _threads.FirstOrDefault()
+            : _threads.FirstOrDefault(t => t.Id == SelectedThread?.Id) ?? SelectedThread;
+    }
 
     async Task StartThreadAsync(IEnumerable<SDK.Models.User> participants)
     {

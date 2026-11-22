@@ -119,6 +119,19 @@ public class ChatClient : IChatClient, HubChatClient, IDisposable
         return threadId;
     }
 
+    public async Task HideThreadAsync(Guid threadId)
+    {
+        await EnsureConnectedAsync();
+
+        if (_hub == null)
+            throw new InvalidOperationException("Chat hub is not connected");
+
+        await _hub.HideThreadAsync(threadId);
+
+        // Should a message bring it back, the server announces it again as an added thread
+        _threads.Remove(threadId);
+    }
+
     public event Action<ChatThread>? ThreadAdded;
 
     public async Task AddedToThreadAsync(ChatThread thread)

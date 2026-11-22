@@ -87,6 +87,25 @@ public static class OverlayFixtures
                 "The game could not be started because UT2004.exe is missing from C:\\Games\\Unreal Tournament 2004\\System. " +
                 "Verify the game's files or reinstall it.")),
 
+        Over("Overlay.Confirm", "Asking before updating the launcher while a game installs",
+            () => new AlertOverlay("Installs in Progress",
+                "Unreal Tournament 2004 is still installing or waiting to install. Updating closes the launcher, " +
+                "which stops the downloads; you will need to start them again afterwards.",
+                "Update Anyway")),
+
+        Over("Overlay.WhatsNew", "Release notes after the launcher updated itself",
+            () => new UpdateNoticeOverlay(new Services.UpdateNotice("2.4.0", "2.3.0", null),
+                "## 2.4.0\n\n" +
+                "### New\n\n" +
+                "- The launcher updates itself from your server. A badge beside your profile shows when an update is available.\n" +
+                "- Release notes like these appear after each update.\n\n" +
+                "### Fixed\n\n" +
+                "- Games with Japanese file names install correctly.")),
+
+        Over("Overlay.UpdateFailed", "An update that was undone, and why",
+            () => new UpdateNoticeOverlay(new Services.UpdateNotice("2.4.0", "2.3.0",
+                "LANCommander 2.4.0 did not finish starting within 3 minutes."), string.Empty)),
+
         Over("Overlay.ReportIssue", "Reporting an issue with a game, a title and two files attached",
             () =>
             {

@@ -16,7 +16,12 @@ public static class SettingsFixtures
     [
         Settings("Settings", "Settings as loaded", _ => { }),
 
-        Settings("Settings.Bottom", "Settings scrolled to the notification and debug options", _ => { },
+        Settings("Settings.Bottom", "Settings scrolled to the update and debug options, with an update available", settings =>
+            {
+                settings.IsUpdateSupported = true;
+                settings.IsUpdateAvailable = true;
+                settings.UpdateStatus = "Version 2.4.0 is available.";
+            },
             prepare: window => window.GetVisualDescendants().OfType<SettingsView>().Single()
                 .GetVisualDescendants().OfType<ScrollViewer>().First()
                 .ScrollToEnd()),
@@ -40,6 +45,9 @@ public static class SettingsFixtures
 
             // The default is under the user's own data folder.
             settings.MediaStoragePath = @"D:\LANCommander\Media";
+
+            // The real version changes with every build
+            settings.CurrentVersion = "2.3.0";
 
             configure(settings);
 

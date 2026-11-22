@@ -1,0 +1,73 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:LANCommander.Launcher.ViewModels"
+        xmlns:svg="using:Avalonia.Svg.Skia"
+        x:Class="LANCommander.Launcher.Views.UpdateWindow"
+        x:DataType="vm:UpdateWindowViewModel"
+        Title="Updating LANCommander"
+        Width="640"
+        Height="400"
+        CanResize="False"
+        WindowStartupLocation="CenterScreen"
+        SystemDecorations="None"
+        TransparencyLevelHint="Transparent"
+        Background="Transparent">
+
+    <!-- Shown while the launcher updates itself: its main window is closed, so this is all there is.
+         The window is transparent so the frame below can round its corners. -->
+    <Border CornerRadius="{DynamicResource RadiusLarge}"
+            Background="Black"
+            ClipToBounds="True">
+        <Grid>
+            <!-- Background image (set from code-behind), as on the login screen -->
+            <Image x:Name="BackgroundImage" Stretch="UniformToFill" />
+
+            <!-- Dark overlay for readability on any background -->
+            <Border Background="#AA000000" />
+
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Spacing="24" Width="360">
+                <svg:Svg Path="/Assets/logo.svg"
+                         Width="300"
+                         HorizontalAlignment="Center" />
+
+                <StackPanel Spacing="10">
+                    <ProgressBar Minimum="0"
+                                 Maximum="100"
+                                 Height="4"
+                                 Value="{Binding Progress}"
+                                 IsIndeterminate="{Binding IsIndeterminate}" />
+
+                    <TextBlock Text="{Binding Status}"
+                               Foreground="White"
+                               Opacity="0.75"
+                               FontSize="{DynamicResource FontSizeCaption}"
+                               TextAlignment="Center"
+                               TextWrapping="Wrap"
+                               HorizontalAlignment="Center" />
+                </StackPanel>
+            </StackPanel>
+
+            <TextBlock Text="{Binding Version, StringFormat='Updating to version {0}'}"
+                       Foreground="White"
+                       Opacity="0.5"
+                       FontSize="{DynamicResource FontSizeCaption}"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Bottom"
+                       Margin="0,0,0,16" />
+
+            <!-- The hairline every surface has: a 1px ring, lit along the top edge. A real border,
+                 since an offset-only inset BoxShadow draws nothing in Avalonia. -->
+            <Border CornerRadius="{DynamicResource RadiusLarge}"
+                    BorderThickness="1"
+                    IsHitTestVisible="False">
+                <Border.BorderBrush>
+                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="0%,100%">
+                        <GradientStop Offset="0" Color="#40FFFFFF" />
+                        <GradientStop Offset="0.04" Color="{StaticResource HairlineBorderStrong}" />
+                        <GradientStop Offset="1" Color="{StaticResource HairlineBorderStrong}" />
+                    </LinearGradientBrush>
+                </Border.BorderBrush>
+            </Border>
+        </Grid>
+    </Border>
+</Window>

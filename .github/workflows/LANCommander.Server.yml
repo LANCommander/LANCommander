@@ -112,15 +112,6 @@ jobs:
         echo "SEMVER=$SEMVER"
         echo "ASSEMBLY_VERSION=$ASSEMBLY_VERSION"
 
-        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" \
-          -c "${{ inputs.build_configuration }}" \
-          --self-contained \
-          --runtime "${{ inputs.build_runtime }}" \
-          -p:Version="$SEMVER" \
-          -p:AssemblyVersion="$ASSEMBLY_VERSION" \
-          -p:FileVersion="$ASSEMBLY_VERSION" \
-          -p:InformationalVersion="$SEMVER"
-
         # Disable NetBeauty on ARM64 runners — nbeauty2 only ships x64 native binaries
         DISABLE_BEAUTY="False"
         if [ "${{ inputs.build_arch }}" = "arm64" ] && [ "${{ inputs.build_platform }}" = "Linux" ]; then
@@ -141,8 +132,6 @@ jobs:
     - name: Bundle and Clean
       shell: pwsh
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net10.0/${{ inputs.build_runtime }}/publish/
-        
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(
           'wwwroot/_content/BootstrapBlazor.PdfReader/compat',

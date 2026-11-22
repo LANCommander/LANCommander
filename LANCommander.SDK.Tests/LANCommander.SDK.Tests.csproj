@@ -22,6 +22,11 @@
     <Using Include="Xunit" />
   </ItemGroup>
 
+  <!-- Release notes embedded the way the launcher and server embed theirs -->
+  <ItemGroup>
+    <EmbeddedResource Include="Updating\ReleaseNotes\*.md" LogicalName="ReleaseNotes/%(Filename)%(Extension)" />
+  </ItemGroup>
+
   <ItemGroup>
     <ProjectReference Include="..\LANCommander.SDK\LANCommander.SDK.csproj" />
   </ItemGroup>

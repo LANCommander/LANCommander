@@ -1,0 +1,35 @@
+@namespace LANCommander.Server.UI.Controls
+@using Microsoft.AspNetCore.Components.Authorization
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject UpdateService UpdateService
+@inject DialogService Dialogs
+@inject ILogger<UpdateNoticeNotifier> Logger
+
+@* After the server updates itself, the first administrator to open the UI is shown the release
+   notes, or why the update was undone. Only that one administrator, once; anyone can read them
+   again from Settings > Updates. Renders nothing *@
+
+@code {
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (!firstRender)
+            return;
+
+        try
+        {
+            var user = (await AuthenticationStateProvider.GetAuthenticationStateAsync()).User;
+
+            if (!user.IsInRole(RoleService.AdministratorRoleName))
+                return;
+
+            var notice = ServerUpdateNotice.TryClaim(UpdateService.GetUpdateJournalDirectory(), user.Identity?.Name);
+
+            if (notice != null)
+                await ServerReleaseNotesOptions.OpenAsync(Dialogs, notice);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not show the update notice");
+        }
+    }
+}

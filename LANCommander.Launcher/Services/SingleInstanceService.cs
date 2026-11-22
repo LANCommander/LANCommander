@@ -49,6 +49,28 @@ public class SingleInstanceService : IDisposable
         return createdNew;
     }
 
+    /// <summary>
+    /// Gives up the single-instance lock so another launcher (an updated one) can take it while this
+    /// process is still running. Must be called from the thread that acquired it.
+    /// </summary>
+    public static void ReleaseInstanceLock()
+    {
+        if (_instanceMutex == null)
+            return;
+
+        try
+        {
+            _instanceMutex.ReleaseMutex();
+        }
+        catch (ApplicationException)
+        {
+            // Not owned by this thread; closing the handle below still frees the name
+        }
+
+        _instanceMutex.Dispose();
+        _instanceMutex = null;
+    }
+
     // ── Server (first instance) ──────────────────────────────────────────────
 
     /// <summary>Start listening for messages from secondary instances.</summary>

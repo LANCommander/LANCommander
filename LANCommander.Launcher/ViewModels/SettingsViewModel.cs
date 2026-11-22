@@ -3,6 +3,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading.Tasks;
+using Avalonia.Threading;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using LANCommander.Launcher.Services;
@@ -83,6 +84,22 @@ public partial class SettingsViewModel : ViewModelBase
 
     [ObservableProperty]
     private ObservableCollection<LogLevel> _availableLogLevels = new();
+
+    // Updates
+    [ObservableProperty]
+    private string _currentVersion = UpdateService.GetCurrentVersion().ToString();
+
+    [ObservableProperty]
+    private bool _isUpdateSupported;
+
+    [ObservableProperty]
+    private string? _updateStatus;
+
+    [ObservableProperty]
+    private bool _isUpdateBusy;
+
+    [ObservableProperty]
+    private bool _isUpdateAvailable;
 
     [ObservableProperty]
     private string? _statusMessage;
@@ -180,6 +197,15 @@ public partial class SettingsViewModel : ViewModelBase
 
         StatusMessage = null;
         
+        // Updates
+        var updateService = _serviceProvider.GetRequiredService<UpdateService>();
+
+        IsUpdateSupported = updateService.IsSupported;
+        RefreshUpdateState(updateService);
+
+        if (IsUpdateSupported && !updateService.IsUpdateAvailable)
+            _ = CheckForUpdatesAsync();
+
         _logger.LogInformation("Settings loaded");
     }
 
@@ -262,6 +288,51 @@ public partial class SettingsViewModel : ViewModelBase
             return;
         
         InstallDirectories.Remove(item);
+    }
+
+    [RelayCommand]
+    private async Task CheckForUpdatesAsync()
+    {
+        if (IsUpdateBusy)
+            return;
+
+        var updateService = _serviceProvider.GetRequiredService<UpdateService>();
+
+        IsUpdateBusy = true;
+        UpdateStatus = "Checking for updates...";
+
+        try
+        {
+            await updateService.CheckForUpdateAsync();
+
+            RefreshUpdateState(updateService);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Could not check for launcher updates");
+            UpdateStatus = "Could not check for updates.";
+        }
+        finally
+        {
+            IsUpdateBusy = false;
+        }
+    }
+
+    /// <summary>Downloads and installs the update behind the update window, which replaces this one.</summary>
+    [RelayCommand]
+    private Task InstallUpdateAsync() => _serviceProvider.GetRequiredService<UpdateInstaller>().InstallAsync();
+
+    private void RefreshUpdateState(UpdateService updateService)
+    {
+        IsUpdateAvailable = updateService.IsUpdateAvailable;
+
+        UpdateStatus = updateService switch
+        {
+            { IsSupported: false } => "This launcher can't update itself. Download new versions from the server's web page.",
+            { IsStaged: true } => $"Version {updateService.AvailableVersion} is downloaded and ready to install.",
+            { IsUpdateAvailable: true } => $"Version {updateService.AvailableVersion} is available.",
+            _ => "The launcher is up to date.",
+        };
     }
 
     [RelayCommand]

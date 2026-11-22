@@ -49,7 +49,6 @@
     <File Path="Microsoft.Common.props" />
   </Folder>
   <Project Path="LANCommander.AppHost\LANCommander.AppHost.csproj" />
-  <Project Path="LANCommander.AutoUpdater\LANCommander.AutoUpdater.csproj" />
   <Project Path="LANCommander.CompletionGenerator\LANCommander.CompletionGenerator.csproj" />
   <Project Path="LANCommander.Packaging\LANCommander.Packaging.csproj" />
   <Project Path="LANCommander.Packaging.Abstractions\LANCommander.Packaging.Abstractions.csproj" />

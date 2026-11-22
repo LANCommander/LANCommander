@@ -125,42 +125,6 @@ namespace LANCommander.Launcher.Services.Extensions
                         }
                     }
                     #endregion
-
-                    #region Rename Autoupdater
-                    var updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater.exe");
-
-                    try
-                    {
-                        if (File.Exists($"{updaterPath}.Update"))
-                        {
-                            if (File.Exists(updaterPath))
-                                File.Delete(updaterPath);
-
-                            File.Move($"{updaterPath}.Update", updaterPath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger?.LogError(ex, "Could not rename updater");
-                    }
-
-                    updaterPath = Path.Combine(workingDirectory, "LANCommander.AutoUpdater");
-
-                    try
-                    {
-                        if (File.Exists($"{updaterPath}.Update"))
-                        {
-                            if (File.Exists(updaterPath))
-                                File.Delete(updaterPath);
-
-                            File.Move($"{updaterPath}.Update", updaterPath);
-                        }
-                    }
-                    catch (Exception ex)
-                    {
-                        logger?.LogError(ex, "Could not rename updater");
-                    }
-                    #endregion
                 }
             }
 

@@ -37,11 +37,22 @@
                 </Border>
 
                 <!-- Footer -->
-                <Border Classes="DialogFooter DialogFooterBar">
-                    <Button Content="OK"
-                            Classes="Primary"
-                            HorizontalAlignment="Right"
-                            Click="OK_Click" />
+                <Border Classes="DialogFooterBar">
+                    <StackPanel Orientation="Horizontal"
+                                HorizontalAlignment="Right"
+                                Spacing="8"
+                                Classes="DialogFooter">
+                        <!-- Only when asking the user to confirm -->
+                        <Button x:Name="CancelButton"
+                                Content="Cancel"
+                                Classes="Secondary"
+                                IsVisible="False"
+                                Click="Cancel_Click" />
+                        <Button x:Name="OkButton"
+                                Content="OK"
+                                Classes="Primary"
+                                Click="OK_Click" />
+                    </StackPanel>
                 </Border>
 
             </StackPanel>

@@ -40,14 +40,12 @@ outputs:
 runs:
   using: "composite"
   steps:
-    - name: Publish Updater and Server
+    - name: Publish Server
       run: |
-        dotnet publish "./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
         dotnet publish "./LANCommander.Server/LANCommander.Server.csproj" -c ${{ inputs.build_configuration }} --self-contained --runtime ${{ inputs.build_runtime }} -p:Version="${{ inputs.version_tag }}" -p:AssemblyVersion="${{ inputs.version_semver }}"
 
     - name: Bundle and Clean
       run: |
-        Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/* LANCommander.Server/bin/${{ inputs.build_configuration }}/net9.0/${{ inputs.build_runtime }}/publish/
         
         # Remove unnecessary files in a single operation
         $PathsToRemove = @(

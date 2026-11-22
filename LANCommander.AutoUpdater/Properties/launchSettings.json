@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "LANCommander.AutoUpdater": {
-      "commandName": "Project",
-      "commandLineArgs": "-Version \"0.4.1\" -Path \"Updates\" -Executable \"LANCommander.Server.exe\""
-    }
-  }
-}

@@ -17,10 +17,8 @@ function Build-Server {
     npm install --prefix ./LANCommander.Server.UI
     npm install --prefix ./LANCommander.Server
 
-    dotnet publish ./LANCommander.AutoUpdater/LANCommander.AutoUpdater.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
     dotnet publish ./LANCommander.Server/LANCommander.Server.csproj -c $Configuration --self-contained --runtime $RuntimeIdentifier -p:Version="$Version" -p:AssemblyVersion="$AssemblyVersion"
 
-    Copy-Item -Force -Recurse -Verbose LANCommander.AutoUpdater/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/* LANCommander.Server/bin/$Configuration/net9.0/$RuntimeIdentifier/publish/
 
     $PathsToRemove = @(
         'wwwroot/_content/BootstrapBlazor.PdfReader/compat',

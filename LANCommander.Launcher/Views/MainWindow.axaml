@@ -103,6 +103,16 @@
                     </StackPanel>
                 </Button>
 
+                <!-- A newer launcher is available: installs it behind the update window -->
+                <Button Command="{Binding InstallUpdateCommand}"
+                        IsVisible="{Binding IsUpdateAvailable}"
+                        Classes="Glass"
+                        Padding="6"
+                        VerticalAlignment="Center"
+                        ToolTip.Tip="{Binding UpdateToolTip}">
+                    <Icon Type="Regular" Value="ArrowCircleUp" Width="18" Height="18" Foreground="{DynamicResource AccentTextBrush}" />
+                </Button>
+
                 <Button Classes="Primary"
                         Padding="8,4">
                     <Button.Flyout>

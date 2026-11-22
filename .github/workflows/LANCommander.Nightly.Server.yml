@@ -35,10 +35,9 @@ jobs:
     with:
       component: server
       force: ${{ inputs.force == true }}
-      # Dependency closure of LANCommander.Server and LANCommander.AutoUpdater, plus
+      # Dependency closure of LANCommander.Server, plus
       # the files that change how they are built.
       paths: |
-        LANCommander.AutoUpdater/
         LANCommander.CompletionGenerator/
         LANCommander.SDK/
         LANCommander.SDK.SourceGenerators/

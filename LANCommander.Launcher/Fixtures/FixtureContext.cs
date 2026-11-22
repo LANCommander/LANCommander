@@ -169,6 +169,7 @@ public sealed class FixtureContext : IDisposable
         // Mirrors App.ConfigureServices, with the platform services swapped for inert ones.
         services.AddSingleton<InstallService>();
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<UpdateInstaller>();
         services.AddSingleton<IBatteryService, NullBatteryService>();
         services.AddSingleton<IVolumeService, NullVolumeService>();
         services.AddSingleton<IDeviceCatalog, NullDeviceCatalog>();

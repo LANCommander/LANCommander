@@ -78,6 +78,19 @@ public partial class App : Application
 
             if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
             {
+                // An update cut short in the middle of swapping files was rolled back; the files this
+                // process started from may be a mix of two versions, so start again from the restored ones
+                if (Services.GetRequiredService<UpdateService>().Recover())
+                {
+                    _logger.LogWarning("Restarting after rolling back an interrupted launcher update");
+
+                    LauncherUpdateHandover.RequestRestart();
+                    desktop.Shutdown();
+
+                    base.OnFrameworkInitializationCompleted();
+                    return;
+                }
+
                 desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
                 
                 var mainViewModel = Services.GetRequiredService<MainWindowViewModel>();
@@ -241,6 +254,12 @@ public partial class App : Application
                 _logger?.LogInformation("Database migrations complete");
             }
 
+            // The window is up and the database migrated: if this launcher was just updated, tell the
+            // previous one it worked so it exits, then delete the files the update replaced
+            var updateService = Services!.GetRequiredService<UpdateService>();
+
+            updateService.ConfirmStartup();
+
             // Report which packaging workers were found. Worker discovery works under
             // `dotnet run` and can silently fail in a packaged build where the files were never
             // copied; without this the only symptom is a menu entry that never appears.
@@ -264,11 +283,41 @@ public partial class App : Application
             // list live, so mappings added here are picked up even though the template was attached
             // when the shell view was constructed.
             RegisterPluginNavigationViews();
+
+            // What changed in the update just installed, or why it was undone
+            if (updateService.TakeNotice() is { } notice)
+                _ = ShowUpdateNoticeAsync(notice);
+
+            _ = updateService.CheckForUpdateAsync();
         }
         catch (Exception ex)
         {
             _logger?.LogCritical(ex, "Fatal error during async initialization");
             Console.Error.WriteLine($"Fatal error during async initialization: {ex}");
+        }
+    }
+
+    private static async Task ShowUpdateNoticeAsync(UpdateNotice notice)
+    {
+        try
+        {
+            var releaseNotes = string.Empty;
+
+            if (notice.Succeeded)
+            {
+                var notes = LANCommander.SDK.Updating.ReleaseNotes.Load(typeof(App).Assembly);
+
+                Semver.SemVersion.TryParse(notice.PreviousVersion, Semver.SemVersionStyles.Any, out var previous);
+
+                releaseNotes = LANCommander.SDK.Updating.ReleaseNotes.ToMarkdown(
+                    LANCommander.SDK.Updating.ReleaseNotes.Between(notes, previous, UpdateService.GetCurrentVersion()));
+            }
+
+            await UpdateNoticeOverlay.ShowAsync(notice, releaseNotes);
+        }
+        catch (Exception ex)
+        {
+            _logger?.LogWarning(ex, "Could not show the update notice");
         }
     }
 
@@ -340,6 +389,7 @@ public partial class App : Application
 
         // ViewModels
         services.AddSingleton<MainWindowViewModel>();
+        services.AddSingleton<UpdateInstaller>();
 
         // One script debugger window per game, opened from the game's action bar or context menu.
         services.AddSingleton<ScriptDebuggerWindowService>();

@@ -157,6 +157,31 @@ public static class WindowFixtures
 
             return new InstallOptionsWindow { DataContext = options };
         }) { Width = 460, Height = 600 },
+
+        // Only measured stages: an indeterminate bar animates, so it never renders the same way twice
+        new("Window.Update.Downloading", "The update window downloading an update", _ =>
+            new UpdateWindow
+            {
+                DataContext = new UpdateWindowViewModel
+                {
+                    Version = "2.4.0",
+                    Status = "Downloading update (48.2 of 131.6 MB)...",
+                    Progress = 36.6,
+                    IsIndeterminate = false,
+                },
+            }) { Width = 640, Height = 400 },
+
+        new("Window.Update.Installing", "The update window swapping in the update's files", _ =>
+            new UpdateWindow
+            {
+                DataContext = new UpdateWindowViewModel
+                {
+                    Version = "2.4.0",
+                    Status = "Installing update (212 of 340 files)...",
+                    Progress = 62.4,
+                    IsIndeterminate = false,
+                },
+            }) { Width = 640, Height = 400 },
     ];
 
     private const string InstallDirectory = @"C:\Games\Unreal Tournament 2004";

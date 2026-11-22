@@ -36,6 +36,8 @@ var app = builder.Build();
 var logger = app.Services.GetRequiredService<ILogger<Program>>();
 logger.LogDebug("Building Application");
 
+app.RecoverFromUpdate(args);
+
 app.UseDatabase(args);
 app.ValidateSettings();
 
@@ -105,6 +107,9 @@ await app.StartBeaconAsync();
 app.GenerateThumbnails();
 
 app.Run();
+
+// An update requested while running is applied now that the server has stopped
+await app.HandOverToUpdateAsync(args);
 
 public partial class Program
 {

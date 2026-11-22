@@ -2,14 +2,15 @@
 using Microsoft.Extensions.Logging;
 using Octokit;
 using Semver;
-using System.Diagnostics;
-using System.IO.Compression;
+using System.Collections.Concurrent;
 using System.Net;
 using System.Runtime.InteropServices;
+using System.Text.RegularExpressions;
 using LANCommander.Server.Services.Abstractions;
 using LANCommander.Server.Services.Exceptions;
 using LANCommander.Server.Settings.Enums;
 using LANCommander.SDK;
+using LANCommander.SDK.Updating;
 
 namespace LANCommander.Server.Services
 {
@@ -22,6 +23,16 @@ namespace LANCommander.Server.Services
         ServerManager serverManager) : BaseService(logger, settingsProvider)
     {
         public const string ArtifactUrlBase = "/download/Launcher/";
+
+        private static readonly Regex LauncherReleasePattern = new(
+            @"^LANCommander\.Launcher-(?<Platform>[^-]+)-(?<Architecture>[^-]+)-v(?<Version>.+)\.(?<Extension>zip|AppImage)$",
+            RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+        private static readonly TimeSpan LauncherArtifactCacheLifetime = TimeSpan.FromMinutes(5);
+        private static readonly SemaphoreSlim LauncherArtifactCacheLock = new(1, 1);
+        private static (DateTime CachedOn, List<LauncherArtifact> Artifacts)? _launcherArtifactCache;
+
+        private static readonly ConcurrentDictionary<(string Path, long Length, DateTime LastWriteTimeUtc), string> FileHashes = new();
 
         public async Task<IEnumerable<LauncherArtifact>> GetLauncherArtifactsAsync()
         {
@@ -127,6 +138,87 @@ namespace LANCommander.Server.Services
             };
         }
 
+        /// <summary>
+        /// Finds the newest launcher release for a platform, architecture and package kind among the
+        /// launchers this server offers, preferring a locally hosted copy over GitHub's.
+        /// </summary>
+        public async Task<LauncherUpdate?> FindLauncherUpdateAsync(string platform, string architecture, UpdatePackageKind packageKind)
+        {
+            var artifacts = await GetCachedLauncherArtifactsAsync();
+
+            var match = artifacts
+                .Select(a => (Artifact: a, Release: ParseLauncherRelease(Path.GetFileName(a.Name))))
+                .Where(m => m.Release is { } release
+                    && release.Platform.Equals(platform, StringComparison.OrdinalIgnoreCase)
+                    && release.Architecture.Equals(architecture, StringComparison.OrdinalIgnoreCase)
+                    && release.PackageKind == packageKind)
+                .OrderByDescending(m => m.Release!.Version, SemVersion.PrecedenceComparer)
+                .ThenBy(m => m.Artifact.IsOnline)
+                .FirstOrDefault();
+
+            if (match.Artifact == null)
+                return null;
+
+            var localPath = match.Artifact.IsOnline ? null : GetLauncherFileLocation(Path.GetFileName(match.Artifact.Name));
+
+            if (localPath != null && !File.Exists(localPath))
+                return null;
+
+            return new LauncherUpdate(match.Artifact, match.Release!.Version, Path.GetFileName(match.Artifact.Name), localPath);
+        }
+
+        /// <summary>Lowercase hex SHA-256 of a hosted launcher file, cached until the file changes.</summary>
+        public async Task<string> GetFileHashAsync(string path)
+        {
+            var file = new FileInfo(path);
+            var key = (file.FullName, file.Length, file.LastWriteTimeUtc);
+
+            if (FileHashes.TryGetValue(key, out var hash))
+                return hash;
+
+            hash = await UpdatePackage.ComputeSha256Async(file.FullName);
+
+            FileHashes[key] = hash;
+
+            return hash;
+        }
+
+        public static LauncherRelease? ParseLauncherRelease(string fileName)
+        {
+            var match = LauncherReleasePattern.Match(fileName);
+
+            if (!match.Success || !SemVersion.TryParse(match.Groups["Version"].Value, SemVersionStyles.Any, out var version))
+                return null;
+
+            var packageKind = match.Groups["Extension"].Value.Equals("AppImage", StringComparison.OrdinalIgnoreCase)
+                ? UpdatePackageKind.AppImage
+                : UpdatePackageKind.Archive;
+
+            return new LauncherRelease(match.Groups["Platform"].Value, match.Groups["Architecture"].Value, version, packageKind);
+        }
+
+        // Every launcher checks for updates when it starts; without a cache each check would query GitHub
+        private async Task<List<LauncherArtifact>> GetCachedLauncherArtifactsAsync()
+        {
+            await LauncherArtifactCacheLock.WaitAsync();
+
+            try
+            {
+                if (_launcherArtifactCache is { } cache && DateTime.UtcNow - cache.CachedOn < LauncherArtifactCacheLifetime)
+                    return cache.Artifacts;
+
+                var artifacts = (await GetLauncherArtifactsAsync()).ToList();
+
+                _launcherArtifactCache = (DateTime.UtcNow, artifacts);
+
+                return artifacts;
+            }
+            finally
+            {
+                LauncherArtifactCacheLock.Release();
+            }
+        }
+
         public async Task<bool> UpdateAvailableAsync()
         {
             var latestVersion = await gitHubService.GetLatestVersionAsync(_settingsProvider.CurrentValue.Server.Update.ReleaseChannel);
@@ -136,8 +228,15 @@ namespace LANCommander.Server.Services
             return sortOrder < 0;
         }
 
+        /// <summary>
+        /// Downloads and stages a server release, then stops the server. Once it has stopped, the
+        /// staged files are swapped in and the updated server started; see <see cref="ServerUpdateHandover"/>.
+        /// </summary>
         public async Task DownloadServerReleaseAsync(Release release)
         {
+            var installation = ServerUpdateHandover.DetectInstallation()
+                ?? throw new NotImplementedException("This server can't update itself. Update its container image or package instead");
+
             string releaseFile = release.Assets.FirstOrDefault(a => a.Name.StartsWith($"LANCommander.Server-{GetOS()}-{GetArchitecture()}-"))?.BrowserDownloadUrl ?? String.Empty;
 
             if (String.IsNullOrWhiteSpace(releaseFile))
@@ -150,17 +249,36 @@ namespace LANCommander.Server.Services
             _logger?.LogInformation("Servers stopped");
             _logger?.LogInformation("Downloading release version {Version}", release.TagName);
 
-            if (!String.IsNullOrWhiteSpace(releaseFile))
-            {
-                WebClient client = new WebClient();
+            var journalDirectory = GetUpdateJournalDirectory();
+            var packagePath = Path.Combine(journalDirectory, $"{release.TagName}.zip");
 
-                client.DownloadFileCompleted += ReleaseDownloaded;
-                client.QueryString.Add("Version", release.TagName);
+            Directory.CreateDirectory(journalDirectory);
 
-                await client.DownloadFileTaskAsync(new Uri(releaseFile), AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{release.TagName}.zip"));
-            }
+            using (var client = new WebClient())
+                await client.DownloadFileTaskAsync(new Uri(releaseFile), packagePath);
+
+            _logger?.LogInformation("Update version {Version} has been downloaded", release.TagName);
+
+            var journal = SelfUpdater.Begin(journalDirectory, release.TagName.TrimStart('v'), installation, _logger);
+
+            journal.PreviousVersion = versionProvider.GetCurrentVersion().ToString();
+
+            UpdatePackage.Stage(journal, packagePath, UpdatePackageKind.Archive);
+            journal.Save();
+
+            File.Delete(packagePath);
+
+            _logger?.LogInformation("Update version {Version} is staged, stopping to apply it", release.TagName);
+
+            ServerUpdateHandover.Request(journal.Directory);
+
+            applicationLifetime.StopApplication();
         }
-        
+
+        /// <summary>Where the server keeps its update journal and staged files.</summary>
+        public string GetUpdateJournalDirectory() =>
+            AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath);
+
         public async Task DownloadLatestLauncherReleaseAsync()
         {
             var currentVersion = versionProvider.GetCurrentVersion();
@@ -221,45 +339,6 @@ namespace LANCommander.Server.Services
             }
         }
 
-        private void ReleaseDownloaded(object? sender, System.ComponentModel.AsyncCompletedEventArgs e)
-        {
-            string version = ((WebClient)sender).QueryString["Version"];
-            string path = AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath, $"{version}.zip");
-
-            _logger?.LogInformation("Update version {Version} has been downloaded", version);
-
-            _logger?.LogInformation("New autoupdater is being extracted");
-
-            string processExecutable = String.Empty;
-
-            if (File.Exists("LANCommander.AutoUpdater.exe"))
-                processExecutable = "LANCommander.AutoUpdater.exe";
-            else if (File.Exists("LANCommander.AutoUpdater"))
-                processExecutable = "LANCommander.AutoUpdater";
-
-            using (ZipArchive archive = ZipFile.OpenRead(path))
-            {
-                foreach (ZipArchiveEntry entry in archive.Entries.Where(e => e.FullName == processExecutable))
-                {
-                    entry.ExtractToFile(processExecutable);
-                }
-            }
-
-            _logger?.LogInformation("Running auto updater application");
-
-            var process = new ProcessStartInfo();
-
-            process.FileName = processExecutable;
-            process.Arguments = $"-Version {version} -Path \"{AppPaths.ResolveStorageLocationPath(_settingsProvider.CurrentValue.Server.Update.StoragePath)}\" -Executable {Process.GetCurrentProcess().MainModule.FileName}";
-            process.UseShellExecute = true;
-
-            Process.Start(process);
-
-            _logger?.LogInformation("Shutting down to get out of the way");
-
-            applicationLifetime.StopApplication();
-        }
-
         public string GetLauncherFileLocation(LauncherArtifact artifact) =>
             GetLauncherFileLocation(artifact.Name);
 
@@ -272,6 +351,12 @@ namespace LANCommander.Server.Services
             return GetArtifactFromName(name);
         }
     }
+
+    /// <summary>The platform, architecture, version and package kind in a launcher release's file name.</summary>
+    public sealed record LauncherRelease(string Platform, string Architecture, SemVersion Version, UpdatePackageKind PackageKind);
+
+    /// <summary>A launcher release a launcher can update to. <see cref="LocalPath"/> is set when the server hosts the file.</summary>
+    public sealed record LauncherUpdate(LauncherArtifact Artifact, SemVersion Version, string FileName, string? LocalPath);
 
     public class LauncherArtifact
     {

@@ -1,8 +1,10 @@
-﻿using LANCommander.SDK.Models;
+using LANCommander.SDK.Models;
 using Microsoft.Extensions.Logging;
 using System;
+using System.Threading;
 using System.Threading.Tasks;
 using LANCommander.SDK.Factories;
+using LANCommander.SDK.Updating;
 
 namespace LANCommander.SDK.Services
 {
@@ -10,14 +12,22 @@ namespace LANCommander.SDK.Services
         ILogger<LauncherClient> logger,
         ApiRequestFactory apiRequestFactory)
     {
-        public async Task<CheckForUpdateResponse> CheckForUpdateAsync()
+        /// <summary>Asks the server whether it has a newer launcher for this platform, architecture and package kind.</summary>
+        public async Task<CheckForUpdateResponse> CheckForUpdateAsync(UpdatePackageKind packageKind = UpdatePackageKind.Archive, CancellationToken cancellationToken = default)
         {
             try
             {
                 return await apiRequestFactory
                     .Create()
-                    .UseRoute("/api/Launcher/CheckForUpdate")
+                    .UseAuthenticationToken()
+                    .UseVersioning()
+                    .UseCancellationToken(cancellationToken)
+                    .UseRoute($"/api/Launcher/CheckForUpdate?{PackageQuery(packageKind)}")
                     .GetAsync<CheckForUpdateResponse>();
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {
@@ -27,16 +37,31 @@ namespace LANCommander.SDK.Services
             return null;
         }
 
-        public async Task<string> DownloadAsync(string destination)
+        /// <summary>Downloads the launcher release for this platform, architecture and package kind.</summary>
+        public async Task<string> DownloadAsync(
+            string destination,
+            UpdatePackageKind packageKind = UpdatePackageKind.Archive,
+            Action<DownloadProgressChangedEventArgs> progress = null,
+            CancellationToken cancellationToken = default)
         {
             logger?.LogTrace("Downloading the launcher");
 
-            var result = await apiRequestFactory
+            var request = apiRequestFactory
                 .Create()
-                .UseRoute("/api/Launcher/Download")
-                .DownloadAsync(destination);
+                .UseAuthenticationToken()
+                .UseVersioning()
+                .UseCancellationToken(cancellationToken)
+                .UseRoute($"/api/Launcher/Download?{PackageQuery(packageKind)}");
+
+            if (progress != null)
+                request.OnProgress(progress);
+
+            var result = await request.DownloadAsync(destination);
 
             return result.FullName;
         }
+
+        private static string PackageQuery(UpdatePackageKind packageKind) =>
+            $"platform={UpdateInstallation.Platform}&architecture={UpdateInstallation.Architecture}&package={packageKind}";
     }
 }

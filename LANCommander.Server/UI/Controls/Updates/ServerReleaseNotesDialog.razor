@@ -1,0 +1,64 @@
+@namespace LANCommander.Server.UI.Controls
+@inherits Dialog<ServerReleaseNotesOptions, bool>
+
+@* The server's release notes: after it updates itself, or from the Updates settings page. When an
+   update was undone, why *@
+<Flex Vertical Gap="Gap.Medium">
+    @if (Options.Notice is { Succeeded: false } failed)
+    {
+        <Alert Warning Title="The update was undone">
+            <div>@failed.Error</div>
+        </Alert>
+
+        <div>
+            @if (failed.PreviousVersion != null)
+            {
+                <text>The update to version @failed.Version was rolled back, and version @failed.PreviousVersion is still installed.</text>
+            }
+            else
+            {
+                <text>The update to version @failed.Version was rolled back.</text>
+            }
+            The server's log has the details.
+        </div>
+    }
+    else
+    {
+        @if (Options.Notice is { } updated)
+        {
+            <div>
+                @if (updated.PreviousVersion != null)
+                {
+                    <text>The server was updated from version @updated.PreviousVersion to @updated.Version.</text>
+                }
+                else
+                {
+                    <text>The server was updated to version @updated.Version.</text>
+                }
+            </div>
+        }
+
+        @if (String.IsNullOrWhiteSpace(Options.ReleaseNotes))
+        {
+            <div>
+                Version @Options.Version has no release notes. The full release notes are on
+                <a href="https://lancommander.app" target="_blank" rel="noopener">lancommander.app</a>.
+            </div>
+        }
+        else
+        {
+            <div>
+                <Markdown Content="@Options.ReleaseNotes" />
+            </div>
+        }
+    }
+</Flex>
+
+@code {
+    protected override Task<bool> OnOkAsync()
+    {
+        Result = true;
+
+        return Task.FromResult(true);
+    }
+}

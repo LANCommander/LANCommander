@@ -166,4 +166,10 @@
 
   <ProjectExtensions><VisualStudio><UserProperties /></VisualStudio></ProjectExtensions>
 
+  <!-- Release notes, one markdown file per release (ReleaseNotes/2.3.0.md), read with
+       LANCommander.SDK.Updating.ReleaseNotes. See ReleaseNotes/README.md. -->
+  <ItemGroup>
+    <EmbeddedResource Include="ReleaseNotes\*.md" Exclude="ReleaseNotes\README.md" LogicalName="ReleaseNotes/%(Filename)%(Extension)" />
+  </ItemGroup>
+
 </Project>

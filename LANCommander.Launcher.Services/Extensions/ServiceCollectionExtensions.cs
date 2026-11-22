@@ -105,7 +105,7 @@ namespace LANCommander.Launcher.Services.Extensions
             services.AddScoped<ToolService>();
             services.AddScoped<SaveService>();
             services.AddScoped<TagService>();
-            services.AddScoped<UpdateService>();
+            services.AddSingleton<UpdateService>();
             
             #region Import
 

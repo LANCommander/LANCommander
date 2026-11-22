@@ -24,6 +24,7 @@ using LANCommander.SDK.Plugins;
 using LANCommander.SDK.PowerShell.Debugging;
 using LANCommander.SDK.PowerShell.Debugging.Remote;
 using LANCommander.SDK.Services;
+using LANCommander.SDK.Updating;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
@@ -38,6 +39,12 @@ class Program
 
     /// <summary>The lancommander:// link this process was started to open, if it is the first instance.</summary>
     internal static string? PendingProtocolUrl;
+
+    /// <summary>
+    /// The arguments to start the launcher with again, after an update or a restart. A link this
+    /// process was started for has been handled, so it isn't passed on.
+    /// </summary>
+    internal static string[] LaunchArguments = [];
 
     private static readonly string[] CliVerbs =
     [
@@ -58,6 +65,13 @@ class Program
         if (args.Contains(PackagingWorkerFactory.LauncherWorkerArgument))
         {
             Environment.ExitCode = WorkerHost.RunAsync(args).GetAwaiter().GetResult();
+            return;
+        }
+
+        // A copy of the launcher started with administrator rights to swap in, or roll back, an update
+        if (UpdateHandover.RunFileOperation(args) is { } updateExitCode)
+        {
+            Environment.ExitCode = updateExitCode;
             return;
         }
 
@@ -98,6 +112,7 @@ class Program
 
         // This is the only instance: it opens the link itself once the library is showing
         PendingProtocolUrl = protocolUrl;
+        LaunchArguments = args.Where(a => !ProtocolRequest.IsProtocolUrl(a)).ToArray();
 
         BigScreenMode = args.Any(a => a.Equals("--big-screen", StringComparison.OrdinalIgnoreCase));
 
@@ -106,6 +121,17 @@ class Program
             .WithDeveloperTools()
 #endif
             .StartWithClassicDesktopLifetime(args);
+
+        // The window closed so the launcher could restart, after rolling back an interrupted update
+        if (LauncherUpdateHandover.IsRestartRequested)
+        {
+            SingleInstanceService.ReleaseInstanceLock();
+            LauncherUpdateHandover.Restart(LaunchArguments);
+        }
+
+        // Another launcher, updated or restarted, has taken over; nothing here should keep this one alive
+        if (LauncherUpdateHandover.HasHandedOver)
+            Environment.Exit(0);
     }
 
     // Avalonia configuration, don't remove; also used by visual designer.

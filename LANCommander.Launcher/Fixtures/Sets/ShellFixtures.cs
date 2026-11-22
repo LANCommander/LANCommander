@@ -29,6 +29,13 @@ public static class ShellFixtures
             shell.DownloadQueue.ActiveCount = 2;
         }),
 
+        new("Shell.UpdateAvailable", "A launcher update is available, shown beside the profile button", context =>
+        {
+            context.Main.AvailableUpdateVersion = "2.4.0";
+
+            return context.ShellWindow(Library(context), shell => shell.Profile.Alias = "Pat");
+        }),
+
         new("Shell.BigScreen", "Big screen mode, with battery, volume and clock in the title bar", context =>
         {
             var main = context.Main;

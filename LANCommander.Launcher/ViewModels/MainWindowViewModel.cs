@@ -38,6 +38,15 @@ public partial class MainWindowViewModel : ViewModelBase
 
     public bool IsNotBigScreenMode => !IsBigScreenMode;
 
+    /// <summary>The launcher version the server offers, shown as a badge beside the profile button.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsUpdateAvailable), nameof(UpdateToolTip))]
+    private string? _availableUpdateVersion;
+
+    public bool IsUpdateAvailable => AvailableUpdateVersion != null;
+
+    public string UpdateToolTip => $"LANCommander {AvailableUpdateVersion} is available. Click to update.";
+
     /// <summary>Status items (battery/volume/time) shown in the title bar in big screen mode.</summary>
     public BigScreenStatusViewModel StatusBar { get; }
 
@@ -62,6 +71,9 @@ public partial class MainWindowViewModel : ViewModelBase
         _settingsProvider.Update(s => s.Window.BigScreenMode = false);
         BigScreenModeChanged?.Invoke(this, EventArgs.Empty);
     }
+
+    [RelayCommand]
+    private Task InstallUpdateAsync() => _serviceProvider.GetRequiredService<UpdateInstaller>().InstallAsync();
 
     [RelayCommand]
     private void ExitLauncher()
@@ -122,6 +134,15 @@ public partial class MainWindowViewModel : ViewModelBase
         LoginViewModel.ChangeServerRequested += OnChangeServerRequested;
         ShellViewModel.LogoutRequested += OnLogoutRequested;
         serviceProvider.GetRequiredService<AuthenticationSession>().SessionExpired += OnSessionExpired;
+
+        // The update badge follows the update service, which checks on its own threads
+        var updateService = serviceProvider.GetRequiredService<UpdateService>();
+
+        // An update downloaded in an earlier session is already waiting
+        _availableUpdateVersion = updateService.IsUpdateAvailable ? updateService.AvailableVersion : null;
+
+        updateService.StateChanged += (_, _) => Dispatcher.UIThread.Post(() =>
+            AvailableUpdateVersion = updateService.IsUpdateAvailable ? updateService.AvailableVersion : null);
 
         // Start with splash screen
         _currentView = SplashViewModel;

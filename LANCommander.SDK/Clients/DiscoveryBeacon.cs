@@ -53,10 +53,10 @@ public class DiscoveryBeacon
                 throw new NetworkInformationException();
 
             EndPoint fromEndPoint = new IPEndPoint(IPAddress.Any, 0);
-            
+
             InterfaceIPEndPoint = new IPEndPoint(addressInformation.Address, _port);
 
-            _socket.Bind(InterfaceIPEndPoint);
+            _socket.Bind(GetBindEndPoint(addressInformation));
             _socket.BeginReceiveFrom(_buffer, 0, _buffer.Length, SocketFlags.None, ref fromEndPoint, ReceiveCallback,
                 null);
         }
@@ -65,6 +65,46 @@ public class DiscoveryBeacon
             throw;
         }
     }
+
+    /// <summary>
+    /// The local endpoint the listening socket binds to. Windows delivers a subnet broadcast to a socket
+    /// bound to the receiving interface's unicast address, but Linux and macOS only deliver broadcasts to
+    /// sockets bound to the wildcard address or to the broadcast address itself. Binding to the unicast
+    /// address there means probes reach the host but never reach the beacon, so bind to the interface's
+    /// subnet broadcast address instead. Each interface has its own broadcast address, so the per-interface
+    /// sockets don't collide.
+    /// </summary>
+    internal static IPEndPoint GetBindEndPoint(IPAddress address, IPAddress mask, int port, bool isWindows)
+    {
+        if (isWindows)
+            return new IPEndPoint(address, port);
+
+        var broadcastAddress = GetBroadcastAddress(address, mask);
+
+        return new IPEndPoint(broadcastAddress ?? IPAddress.Any, port);
+    }
+
+    internal static IPAddress GetBroadcastAddress(IPAddress address, IPAddress mask)
+    {
+        if (mask == null || mask.Equals(IPAddress.Any))
+            return null;
+
+        var addressBytes = address.GetAddressBytes();
+        var maskBytes = mask.GetAddressBytes();
+
+        if (addressBytes.Length != 4 || maskBytes.Length != 4)
+            return null;
+
+        var broadcastBytes = new byte[4];
+
+        for (var i = 0; i < 4; i++)
+            broadcastBytes[i] = (byte)(addressBytes[i] | (maskBytes[i] ^ 255));
+
+        return new IPAddress(broadcastBytes);
+    }
+
+    private IPEndPoint GetBindEndPoint(UnicastIPAddressInformation addressInformation)
+        => GetBindEndPoint(addressInformation.Address, addressInformation.IPv4Mask, _port, OperatingSystem.IsWindows());
 
     /// <summary>
     /// Send a message to an endpoint over UDP

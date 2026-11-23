@@ -332,6 +332,7 @@ sb.AppendLine();
 var variableTypes = new Dictionary<string, Type>
 {
     ["GameManifest"] = typeof(LANCommander.SDK.Models.Manifest.Game),
+    ["BaseGameManifest"] = typeof(LANCommander.SDK.Models.Manifest.Game),
     ["ToolManifest"] = typeof(LANCommander.SDK.Models.Manifest.Tool),
     ["RedistributableManifest"] = typeof(LANCommander.SDK.Models.Manifest.Redistributable),
     ["Server"] = typeof(LANCommander.SDK.Models.Server),

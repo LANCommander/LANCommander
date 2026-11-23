@@ -1,5 +1,7 @@
 using System.Text;
+using System.Text.RegularExpressions;
 using LANCommander.SDK.Enums;
+using LANCommander.Server.Plugins;
 using LANCommander.Server.Services.Enums;
 using LANCommander.Server.Services.Models;
 using Markdig;
@@ -23,7 +25,9 @@ public record PageRenderOptions
 
 /// <summary>
 /// Renders page Markdown to HTML, filling in embeds such as <c>{{game:&lt;id&gt;}}</c> with the
-/// item's current details. Everything taken from the database is HTML-encoded.
+/// item's current details. Everything taken from the database is HTML-encoded. Kinds plugins add
+/// through <see cref="IPageEmbedExtension"/> are left as their extension's component, for the page to
+/// render where the HTML is broken around it.
 /// </summary>
 public sealed class PageRenderService(
     ILogger<PageRenderService> logger,
@@ -31,9 +35,10 @@ public sealed class PageRenderService(
     GameService gameService,
     ServerService serverService,
     RedistributableService redistributableService,
-    ServerManager serverManager)
+    ServerManager serverManager,
+    PageEmbedExtensions embedExtensions)
 {
-    /// <summary>The embeds the editor offers, by kind, with whether they take an id</summary>
+    /// <summary>The built-in embeds the editor offers, by kind, with whether they take an id</summary>
     public static readonly IReadOnlyDictionary<string, bool> Kinds = new Dictionary<string, bool>
     {
         ["game"] = true,
@@ -46,9 +51,14 @@ public sealed class PageRenderService(
 
     const int DescriptionLength = 240;
 
-    public async Task<string> RenderAsync(string? markdown, PageRenderOptions? options = null)
+    public async Task<RenderedPage> RenderAsync(string? markdown, PageRenderOptions? options = null)
     {
         options ??= new PageRenderOptions();
+
+        // Marks where plugins' components go. Page text can't forge one: raw HTML is disabled, and the
+        // nonce is new each time.
+        var nonce = Guid.NewGuid().ToString("N");
+        var components = new List<RenderedPageComponent>();
 
         var document = Markdown.Parse(markdown ?? "", PageMarkdown.Pipeline);
         var embeds = document.Descendants<EmbedBlock>().ToList();
@@ -57,7 +67,7 @@ public sealed class PageRenderService(
         {
             try
             {
-                await ResolveAsync(document, embeds, options);
+                await ResolveAsync(document, embeds, options, nonce, components);
             }
             catch (Exception ex)
             {
@@ -75,10 +85,34 @@ public sealed class PageRenderService(
         renderer.Render(document);
         writer.Flush();
 
-        return writer.ToString();
+        return Split(writer.ToString(), nonce, components);
     }
 
-    async Task ResolveAsync(MarkdownDocument document, List<EmbedBlock> embeds, PageRenderOptions options)
+    static RenderedPage Split(string html, string nonce, List<RenderedPageComponent> components)
+    {
+        if (components.Count == 0)
+            return new RenderedPage([new RenderedPageHtml(html)]);
+
+        var segments = new List<RenderedPageSegment>();
+        var position = 0;
+
+        foreach (Match marker in Regex.Matches(html, $@"<!--{nonce}:(\d+)-->\r?\n?"))
+        {
+            if (marker.Index > position)
+                segments.Add(new RenderedPageHtml(html[position..marker.Index]));
+
+            segments.Add(components[Int32.Parse(marker.Groups[1].Value)]);
+
+            position = marker.Index + marker.Length;
+        }
+
+        if (position < html.Length)
+            segments.Add(new RenderedPageHtml(html[position..]));
+
+        return new RenderedPage(segments);
+    }
+
+    async Task ResolveAsync(MarkdownDocument document, List<EmbedBlock> embeds, PageRenderOptions options, string nonce, List<RenderedPageComponent> components)
     {
         Guid[] IdsOf(string kind) => embeds
             .Where(e => e.Kind == kind && Guid.TryParse(e.Argument, out _))
@@ -117,6 +151,27 @@ public sealed class PageRenderService(
 
         foreach (var embed in embeds)
         {
+            if (!Kinds.ContainsKey(embed.Kind) && embedExtensions.Find(embed.Kind) is { } extension)
+            {
+                // Breaking the HTML inside a list or quote would leave pieces that aren't complete
+                if (embed.Parent is MarkdownDocument)
+                {
+                    components.Add(new RenderedPageComponent(extension, new PageEmbed
+                    {
+                        Kind = embed.Kind,
+                        Argument = embed.Argument,
+                        PageId = options.PageId,
+                        IsAdministrator = options.IsAdministrator,
+                    }));
+
+                    embed.Html = $"<!--{nonce}:{components.Count - 1}-->";
+                }
+                else if (options.IsAdministrator)
+                    embed.Html = $"<div class=\"page-embed page-embed-missing\">{HtmlEncode(PageMarkdown.Embed(embed.Kind, embed.Argument))} can only be shown on a line of its own, outside lists and quotes</div>";
+
+                continue;
+            }
+
             Guid.TryParse(embed.Argument, out var id);
 
             embed.Html = embed.Kind switch

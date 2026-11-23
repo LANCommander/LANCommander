@@ -11,6 +11,15 @@ public static class PluginComponents
         type is { IsAbstract: false, IsGenericTypeDefinition: false }
         && type.GetInterfaces().Any(i => i.FullName == "Microsoft.AspNetCore.Components.IComponent");
 
+    /// <summary>
+    /// Whether the component declares a <c>[Parameter]</c> of the name that a value of the type can be
+    /// given to. Matched by name, like <see cref="IsComponent"/>.
+    /// </summary>
+    public static bool HasParameter(Type component, string name, Type valueType) =>
+        component.GetProperty(name, System.Reflection.BindingFlags.Public | System.Reflection.BindingFlags.Instance) is { CanWrite: true } property
+        && property.PropertyType.IsAssignableFrom(valueType)
+        && property.GetCustomAttributes(true).Any(a => a.GetType().FullName == "Microsoft.AspNetCore.Components.ParameterAttribute");
+
     /// <summary>Whether the text can be a page's address segment: letters, digits and <c>-</c>.</summary>
     public static bool IsSlug(string? slug) =>
         !string.IsNullOrEmpty(slug) && slug.Length <= 64 && slug.All(c => char.IsAsciiLetterOrDigit(c) || c == '-');

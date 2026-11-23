@@ -1,19 +1,26 @@
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.Services.Pages
 @inherits Dialog<string, string>
 @inject GameService GameService
 @inject ServerService ServerService
 @inject RedistributableService RedistributableService
 @inject PageService PageService
+@inject PageEmbedExtensions EmbedExtensions
 @inject NotificationService Notifications
 
 @* Picks the item for an embed that needs one; Options is the embed kind, Result the embed syntax *@
-<Select TValue="Guid" Searchable Items="_items" @bind-Value="_selected" Placeholder="@($"Choose a {Options}")" />
+<Select TValue="string" Searchable Items="_items" @bind-Value="_selected" Placeholder="@Placeholder" />
 
 @code {
-    IEnumerable<SelectItem<Guid>> _items = [];
-    Guid _selected;
+    IEnumerable<SelectItem<string>> _items = [];
+    string? _selected;
 
-    protected override bool CanConfirm => _selected != Guid.Empty;
+    protected override bool CanConfirm => !String.IsNullOrEmpty(_selected);
+
+    // A plugin's kind only when it isn't built in, which plugins can't take
+    IPageEmbedExtension? Extension => PageRenderService.Kinds.ContainsKey(Options) ? null : EmbedExtensions.Find(Options);
+
+    string Placeholder => Extension is { } extension ? $"Choose a {extension.Name.ToLowerInvariant()}" : $"Choose a {Options}";
 
     protected override async Task OnInitializedAsync()
     {
@@ -21,10 +28,14 @@
         {
             _items = Options switch
             {
-                "game" => (await GameService.SortBy(g => g.Title).GetAsync()).ToSelectItems(g => g.Id, g => g.Title),
-                "server" => (await ServerService.SortBy(s => s.Name).GetAsync()).ToSelectItems(s => s.Id, s => s.Name),
-                "redistributable" => (await RedistributableService.SortBy(r => r.Name).GetAsync()).ToSelectItems(r => r.Id, r => r.Name),
-                "page" => (await PageService.SortBy(p => p.Route).GetAsync()).ToSelectItems(p => p.Id, p => $"{p.Title} (/{p.Route})"),
+                "game" => (await GameService.SortBy(g => g.Title).GetAsync()).ToSelectItems(g => g.Id.ToString(), g => g.Title),
+                "server" => (await ServerService.SortBy(s => s.Name).GetAsync()).ToSelectItems(s => s.Id.ToString(), s => s.Name),
+                "redistributable" => (await RedistributableService.SortBy(r => r.Name).GetAsync()).ToSelectItems(r => r.Id.ToString(), r => r.Name),
+                "page" => (await PageService.SortBy(p => p.Route).GetAsync()).ToSelectItems(p => p.Id.ToString(), p => $"{p.Title} (/{p.Route})"),
+                _ when Extension is { } extension => (await extension.GetChoicesAsync(CancellationToken.None))
+                    // Anything else couldn't be read back out of the page
+                    .Where(c => !String.IsNullOrEmpty(c.Value) && !c.Value.Any(ch => Char.IsWhiteSpace(ch) || ch is '{' or '}'))
+                    .ToSelectItems(c => c.Value, c => c.Label),
                 _ => [],
             };
 

@@ -8,6 +8,7 @@
 @inject MediaService MediaService
 @inject PageService PageService
 @inject PageRenderService PageRenderService
+@inject PageEmbedExtensions EmbedExtensions
 @inject DialogService Dialogs
 @inject IJSRuntime JS
 @inject GameService GameService
@@ -112,6 +113,17 @@
                                 <MenuDivider />
                                 <MenuItem Icon="IconType.TreeStructure" OnClick="@(() => InsertEmbedAsync("children"))">Child Pages</MenuItem>
                                 <MenuItem Icon="IconType.ListBullets" OnClick="@(() => InsertEmbedAsync("toc"))">Table of Contents</MenuItem>
+                                @if (EmbedExtensions.All.Count > 0)
+                                {
+                                    <MenuDivider />
+
+                                    @foreach (var extension in EmbedExtensions.All)
+                                    {
+                                        var kind = extension.Kind.ToLowerInvariant();
+
+                                        <MenuItem Icon="IconType.PuzzlePiece" OnClick="@(() => InsertEmbedAsync(kind))">@extension.Name</MenuItem>
+                                    }
+                                }
                             </Menu>
                         </Overlay>
                     </Dropdown>
@@ -121,7 +133,7 @@
                 {
                     @* Rendered by the server exactly as visitors see it, embeds included *@
                     <div class="page-editor-preview page-view-content">
-                        @((MarkupString)_previewHtml)
+                        <RenderedPageView Page="_previewPage" />
                     </div>
 
                     <link rel="stylesheet" href="css/pages.css" />
@@ -176,7 +188,7 @@
     const string EditorHostId = "page-editor-markdown";
 
     bool _preview;
-    string _previewHtml = "";
+    RenderedPage _previewPage = RenderedPage.Empty;
 
     static readonly IEnumerable<SelectItem<bool>> EditorModes =
     [
@@ -238,7 +250,7 @@
         {
             try
             {
-                _previewHtml = await PageRenderService.RenderAsync(_selectedPage.Contents, new PageRenderOptions
+                _previewPage = await PageRenderService.RenderAsync(_selectedPage.Contents, new PageRenderOptions
                 {
                     PageId = _selectedPage.Id,
                     IsAdministrator = true,
@@ -256,7 +268,11 @@
 
     async Task InsertEmbedAsync(string kind)
     {
-        var embed = PageRenderService.Kinds.TryGetValue(kind, out var needsItem) && needsItem
+        var needsItem = PageRenderService.Kinds.TryGetValue(kind, out var builtInNeedsItem)
+            ? builtInNeedsItem
+            : EmbedExtensions.Find(kind)?.TakesArgument == true;
+
+        var embed = needsItem
             ? await Dialogs.OpenAsync<InsertEmbedDialog, string, string>(InsertTitle(kind), kind, new DialogSettings { OkText = "Insert" })
             : PageMarkdown.Embed(kind);
 
@@ -277,10 +293,11 @@
         }
     }
 
-    static string InsertTitle(string kind) => kind switch
+    string InsertTitle(string kind) => kind switch
     {
         "page" => "Link to Page",
         "redistributable" => "Insert Redistributable",
+        _ when !PageRenderService.Kinds.ContainsKey(kind) && EmbedExtensions.Find(kind) is { } extension => $"Insert {extension.Name}",
         _ => $"Insert {Char.ToUpperInvariant(kind[0])}{kind[1..]}",
     };
 

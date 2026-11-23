@@ -1,0 +1,49 @@
+@using LANCommander.Server.Services.Pages
+
+@*
+    Shows a page rendered by PageRenderService: its HTML, which disables raw HTML and encodes
+    embeds, with plugins' embeds as their components in between.
+*@
+@if (Page != null)
+{
+    @for (var i = 0; i < Page.Segments.Count; i++)
+    {
+        switch (Page.Segments[i])
+        {
+            case RenderedPageHtml html:
+                @((MarkupString)html.Html)
+                break;
+
+            case RenderedPageComponent component:
+                // Keyed by place and page, so another page's embed starts afresh, errors included
+                <div @key="(i, component.Embed)" class="page-embed-plugin page-embed-plugin-@component.Embed.Kind">
+                    @if (component.Embed.IsAdministrator)
+                    {
+                        <ErrorHandler Inline Title="@($"{component.Extension.Name} could not be displayed")">
+                            <DynamicComponent Type="component.Extension.Component" Parameters="Parameters(component)" />
+                        </ErrorHandler>
+                    }
+                    else
+                    {
+                        @* Visitors don't need to know something was meant to be here *@
+                        <ErrorBoundary>
+                            <ChildContent>
+                                <DynamicComponent Type="component.Extension.Component" Parameters="Parameters(component)" />
+                            </ChildContent>
+                            <ErrorContent />
+                        </ErrorBoundary>
+                    }
+                </div>
+                break;
+        }
+    }
+}
+
+@code {
+    [Parameter] public RenderedPage? Page { get; set; }
+
+    static Dictionary<string, object?> Parameters(RenderedPageComponent component) => new()
+    {
+        ["Embed"] = component.Embed,
+    };
+}

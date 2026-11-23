@@ -124,6 +124,7 @@ public static class IServiceCollectionExtensions
         services.AddScoped<IssueAttachmentService>();
         services.AddScoped<PageService>();
         services.AddScoped<Pages.PageRenderService>();
+        services.AddScoped<Pages.PageEmbedExtensions>();
         services.AddScoped<UserService>();
         services.AddScoped<RoleService>();
         services.AddScoped<UserCustomFieldService>();

@@ -23,6 +23,7 @@ Use the version of the server the plugin targets.
 | `PluginAccessAttribute`, `PluginAccessPolicy` | Who may open a plugin page or see its entry |
 | `IServerEndpointExtension` | Adds HTTP endpoints under `/api/Plugins/{RoutePrefix}` |
 | `IMediaGrabberExtension`, `MediaGrabberItem` | Adds a source to the server's media search |
+| `IPageEmbedExtension`, `PageEmbed`, `PageEmbedChoice` | Adds an embed (shortcode) such as `{{leaderboard:<id>}}` to the server's pages, shown as one of the plugin's components and listed in the page editor's Insert menu |
 | `IPackageImporter` | Imports an LCX package through the server's import pipeline. Provided by the server |
 | `IPackageExporter`, `PackageContents` | Describes and writes LCX packages of games, redistributables, servers and tools through the server's export pipeline. Provided by the server |
 | `IServerEngineExtension`, `IServerEngineTerminal` | Runs game servers somewhere other than as a local process, e.g. in containers, with editor pages, Monitor consoles (logs, terminals) and server files of its own |

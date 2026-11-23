@@ -33,7 +33,7 @@
         </PageHeader>
 
         <PageContent Class="page-view-content">
-            @((MarkupString)Html)
+            <RenderedPageView Page="Content" />
 
             @if (Related.Any())
             {
@@ -74,8 +74,7 @@ else if (NotFoundResult)
     record RelatedItem(string Name, string Href, IconType Icon);
 
     Page Page;
-    // Page contents rendered by PageRenderService, which disables raw HTML and encodes embeds
-    string Html = "";
+    RenderedPage Content = RenderedPage.Empty;
     bool NotFoundResult;
     List<Page> Ancestors = new();
     List<RelatedItem> Related = new();
@@ -124,7 +123,7 @@ else if (NotFoundResult)
                 NotFoundResult = true;
             else
             {
-                Html = await PageRenderService.RenderAsync(Page.Contents, new PageRenderOptions
+                Content = await PageRenderService.RenderAsync(Page.Contents, new PageRenderOptions
                 {
                     PageId = Page.Id,
                     IsAdministrator = IsAdministrator,

@@ -44,9 +44,9 @@
         </header>
     }
 
-    @if (!String.IsNullOrWhiteSpace(_headerHtml))
+    @if (_header is { IsEmpty: false })
     {
-        <div class="page-site-banner page-view-content">@((MarkupString)_headerHtml)</div>
+        <div class="page-site-banner page-view-content"><RenderedPageView Page="_header" /></div>
     }
 
     <SplitPane Class="page-view">
@@ -63,9 +63,9 @@
         </Pane>
     </SplitPane>
 
-    @if (!String.IsNullOrWhiteSpace(_footerHtml))
+    @if (_footer is { IsEmpty: false })
     {
-        <footer class="page-site-footer page-view-content">@((MarkupString)_footerHtml)</footer>
+        <footer class="page-site-footer page-view-content"><RenderedPageView Page="_footer" /></footer>
     }
 </div>
 
@@ -82,8 +82,8 @@
 
     PageSettings _appearance = new();
     List<PageLink> _links = [];
-    string? _headerHtml;
-    string? _footerHtml;
+    RenderedPage? _header;
+    RenderedPage? _footer;
     string? _query;
     string? _lastQuery;
 
@@ -105,10 +105,10 @@
         var options = new PageRenderOptions { IsAdministrator = authState.User.IsInRole(RoleService.AdministratorRoleName) };
 
         if (!String.IsNullOrWhiteSpace(_appearance.Header))
-            _headerHtml = await PageRenderService.RenderAsync(_appearance.Header, options);
+            _header = await PageRenderService.RenderAsync(_appearance.Header, options);
 
         if (!String.IsNullOrWhiteSpace(_appearance.Footer))
-            _footerHtml = await PageRenderService.RenderAsync(_appearance.Footer, options);
+            _footer = await PageRenderService.RenderAsync(_appearance.Footer, options);
     }
 
     protected override void OnParametersSet()

@@ -185,6 +185,79 @@ public void ConfigureServices(IServiceCollection services)
 A source that returns results in pages sets `SupportsPaging`; otherwise the server asks only for
 page 0. A source that throws is shown with its error, and the other sources' results still appear.
 
+## Page embeds
+
+Pages written on the server can embed things on a line of their own, such as `{{game:<id>}}` or
+`{{toc}}`. A plugin adds a kind of its own, shown as one of its Razor components, by registering an
+[`IPageEmbedExtension`](/Plugins/API%20Reference#ipageembedextension). Its `Kind` is what authors
+write between the braces: letters only, matched without regard to case, and not one of the built-in
+kinds (game, server, redistributable, page, children, toc) or another plugin's. The page editor's
+Insert menu lists it by its `Name`.
+
+```csharp
+public sealed class LeaderboardEmbed : IPageEmbedExtension
+{
+    public string Kind => "leaderboard";
+
+    public string Name => "Leaderboard";
+
+    public Type Component => typeof(Leaderboard);
+
+    // {{leaderboard:<argument>}}; the editor asks the author to pick one of the choices
+    public bool TakesArgument => true;
+
+    public Task<IReadOnlyList<PageEmbedChoice>> GetChoicesAsync(CancellationToken cancellationToken) =>
+        Task.FromResult<IReadOnlyList<PageEmbedChoice>>([new("kills", "Most kills"), new("wins", "Most wins")]);
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IPageEmbedExtension, LeaderboardEmbed>();
+}
+```
+
+The component is given the embed as its `Embed` parameter, a `PageEmbed` with the `Kind`, the
+`Argument` as written, the `PageId` (null in the site's header and footer) and whether the visitor
+`IsAdministrator`. An extension whose component has no such parameter isn't offered.
+
+```razor
+@inject IMatchStatisticsProvider Statistics
+
+@if (_rows != null)
+{
+    <div class="page-embed">
+        <div class="page-embed-title">@Embed.Argument</div>
+        @* ... *@
+    </div>
+}
+else if (Embed.IsAdministrator)
+{
+    <div class="page-embed page-embed-missing">No leaderboard called @Embed.Argument</div>
+}
+
+@code {
+    [Parameter] public PageEmbed Embed { get; set; } = default!;
+
+    protected override async Task OnParametersSetAsync()
+    {
+        // Load what the embed shows from Embed.Argument
+    }
+}
+```
+
+The component is rendered interactively wherever the page is shown: on the page, in the site's header
+and footer, and in the editor's preview. It loads what it shows itself and decides what to show when
+the argument names nothing. Pages are public, so show only what any visitor may see unless
+`IsAdministrator` is set. A component that throws shows nothing to visitors and its error to
+administrators, and the rest of the page still appears.
+
+Embeds of a plugin's kind are only shown at the top level of a page, not inside a list or a quote,
+where administrators see a note instead. The built-in embed styles can be reused through the classes
+`page-embed`, `page-embed-body`, `page-embed-title`, `page-embed-meta` and `page-embed-description`;
+each component is wrapped in a `div` with the classes `page-embed-plugin` and
+`page-embed-plugin-{kind}`. An argument can't contain whitespace or braces, so choices that do aren't
+offered.
+
 ## Server engines
 
 The server runs game servers as processes on its own machine (the Local engine) or through another

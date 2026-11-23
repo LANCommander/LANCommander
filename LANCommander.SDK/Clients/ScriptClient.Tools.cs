@@ -40,6 +40,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("ToolManifest", toolManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());

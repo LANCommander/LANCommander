@@ -11,5 +11,7 @@ When an uninstall script is executed, the following variables are available with
 |:--------------------------:|:-------------------------------:|:-------------------------------------------------------------:|
 | `$InstallDirectory`        | `string`                        | The install directory the game archive has been extracted to  |
 | `$GameManifest`            | `LANCommander.SDK.GameManifest` | The game manifest containing metadata about the game          |
+| `$BaseInstallDirectory` | `string` | The base game's install directory. Differs from `$InstallDirectory` for addons installed to a sub directory or their own directory; same as `$InstallDirectory` for main games |
+| `$BaseGameManifest` | `LANCommander.SDK.GameManifest` | The base game's manifest; same as `$GameManifest` for main games |
 | `$DefaultInstallDirectory` | `string`                        | The default install directory as specified in the client      |
 | `$ServerAddress`           | `string`                        | The source LANCommander server address                        |

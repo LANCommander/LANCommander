@@ -24,6 +24,8 @@ const variables: VariableDefinition[] = [
     { name: "$ServerAddress", type: "string", description: "Address of the LANCommander server", scriptTypes: gameClientScriptTypes },
     { name: "$DefaultInstallDirectory", type: "string", description: "Default installation directory", scriptTypes: gameClientScriptTypes },
     { name: "$GameManifest", type: "GameManifest", description: "The game's manifest object containing metadata such as title, ID, sort title, description, notes, and related collections", scriptTypes: ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "SaveUpload", "SaveDownload", "DetectInstall", "RunWrapper"] },
+    { name: "$BaseInstallDirectory", type: "string", description: "Install directory of the base game. For addons installed to a sub directory or their own directory this differs from $InstallDirectory; for main games it is the same", scriptTypes: ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "DetectInstall", "RunWrapper"] },
+    { name: "$BaseGameManifest", type: "GameManifest", description: "The base game's manifest. For main games it is the same as $GameManifest", scriptTypes: ["Install", "Uninstall", "BeforeStart", "AfterStop", "NameChange", "KeyChange", "DetectInstall", "RunWrapper"] },
     { name: "$PlayerAlias", type: "string", description: "Current player's alias/display name", scriptTypes: ["BeforeStart", "AfterStop"] },
     { name: "$NewPlayerAlias", type: "string", description: "New player alias (name change scripts)", scriptTypes: ["NameChange"] },
     { name: "$OldPlayerAlias", type: "string", description: "Previous player alias (name change scripts)", scriptTypes: ["NameChange"] },

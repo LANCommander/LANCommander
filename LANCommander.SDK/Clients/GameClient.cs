@@ -2826,6 +2826,55 @@ namespace LANCommander.SDK.Services
             }
         }
 
+        /// <summary>
+        /// The inverse of <see cref="GetAddonInstallDirectory"/>: finds where the base game of an
+        /// installed addon lives, given the addon's own install directory. Returns
+        /// <paramref name="installDirectory"/> for games that aren't addons, and null when the base
+        /// game's manifest can't be found.
+        /// </summary>
+        public static string GetBaseInstallDirectory(string installDirectory, Models.Manifest.Game manifest)
+        {
+            if (string.IsNullOrWhiteSpace(installDirectory) || manifest == null || !manifest.IsAddon || manifest.BaseGameId == Guid.Empty)
+                return installDirectory;
+
+            var directory = installDirectory.TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            var parent = Path.GetDirectoryName(directory);
+
+            // Try the location InstallTo implies first, then the others in case the setting
+            // changed on the server after the addon was installed
+            var candidates = (manifest.InstallTo ?? GameInstallLocation.BaseGameDirectory) switch
+            {
+                GameInstallLocation.SubDirectory => new[] { parent, directory },
+                GameInstallLocation.OwnDirectory => new string[] { },
+                _ => new[] { directory, parent },
+            };
+
+            foreach (var candidate in candidates)
+            {
+                if (!string.IsNullOrWhiteSpace(candidate) && ManifestHelper.Exists(candidate, manifest.BaseGameId))
+                    return candidate;
+            }
+
+            // Own directory addons sit beside their base game under the same install root
+            if (!string.IsNullOrWhiteSpace(parent) && Directory.Exists(parent))
+            {
+                try
+                {
+                    foreach (var sibling in Directory.EnumerateDirectories(parent))
+                    {
+                        if (ManifestHelper.Exists(sibling, manifest.BaseGameId))
+                            return sibling;
+                    }
+                }
+                catch (Exception)
+                {
+                    // Unreadable install root; fall through to not found
+                }
+            }
+
+            return null;
+        }
+
         private static string ResolveOwnDirectory(Game game, string root)
         {
             var directory = Path.Combine(root, GetDirectoryName(game.DirectoryName, game.Title));

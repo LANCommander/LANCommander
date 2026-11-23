@@ -160,6 +160,47 @@ public class AddonInstallDirectoryTests : IDisposable
         Assert.Equal(Path.GetFullPath(Path.Combine(_baseInstallDirectory, expectedRelative)), Path.GetFullPath(resolved));
     }
 
+    [Theory]
+    [InlineData(null, "")]
+    [InlineData(GameInstallLocation.BaseGameDirectory, "")]
+    [InlineData(GameInstallLocation.SubDirectory, "hipnotic")]
+    [InlineData(GameInstallLocation.OwnDirectory, "../hipnotic")]
+    public void GetBaseInstallDirectory_FindsBaseGameFromAddonDirectory(GameInstallLocation? installTo, string addonRelative)
+    {
+        var addon = new ManifestGame { Id = Guid.NewGuid(), Title = "Scourge of Armagon", Type = GameType.Expansion, InstallTo = installTo, BaseGameId = _baseGameId };
+        var addonDirectory = Path.GetFullPath(Path.Combine(_baseInstallDirectory, addonRelative));
+
+        Directory.CreateDirectory(addonDirectory);
+        ManifestHelper.Write(addon, addonDirectory);
+
+        // A sibling game that isn't the base game must not be picked up
+        var otherDirectory = Path.Combine(_root, "Doom");
+        Directory.CreateDirectory(otherDirectory);
+        ManifestHelper.Write(new ManifestGame { Id = Guid.NewGuid(), Title = "Doom", Type = GameType.MainGame }, otherDirectory);
+
+        var resolved = GameClient.GetBaseInstallDirectory(addonDirectory, addon);
+
+        Assert.Equal(Path.GetFullPath(_baseInstallDirectory), Path.GetFullPath(resolved));
+    }
+
+    [Fact]
+    public void GetBaseInstallDirectory_MainGame_ReturnsOwnDirectory()
+    {
+        var game = new ManifestGame { Id = _baseGameId, Title = "Quake", Type = GameType.MainGame };
+
+        Assert.Equal(_baseInstallDirectory, GameClient.GetBaseInstallDirectory(_baseInstallDirectory, game));
+    }
+
+    [Fact]
+    public void GetBaseInstallDirectory_BaseGameMissing_ReturnsNull()
+    {
+        var addon = new ManifestGame { Id = Guid.NewGuid(), Title = "Orphan", Type = GameType.Mod, InstallTo = GameInstallLocation.OwnDirectory, BaseGameId = Guid.NewGuid() };
+        var addonDirectory = Path.Combine(_root, "Orphan");
+        Directory.CreateDirectory(addonDirectory);
+
+        Assert.Null(GameClient.GetBaseInstallDirectory(addonDirectory, addon));
+    }
+
     private SdkGame MakeAddon(GameInstallLocation installTo, string? directoryName = null) => new()
     {
         Id = Guid.NewGuid(),

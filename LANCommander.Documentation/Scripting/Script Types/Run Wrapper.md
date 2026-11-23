@@ -14,6 +14,8 @@ When a Run Wrapper script is executed, the following variables are available wit
 |:-------------------------:|:---------------------------------------:|:-------------------------------------------------------------:|
 | `$InstallDirectory`        | `string`                                  | The install directory of the game                            |
 | `$GameManifest`             | `LANCommander.SDK.GameManifest`           | The game manifest containing metadata about the game         |
+| `$BaseInstallDirectory` | `string` | The base game's install directory. Differs from `$InstallDirectory` for addons installed to a sub directory or their own directory; same as `$InstallDirectory` for main games |
+| `$BaseGameManifest` | `LANCommander.SDK.GameManifest` | The base game's manifest; same as `$GameManifest` for main games |
 | `$ExecutablePath`           | `string`                                  | The resolved path to the game executable                     |
 | `$Arguments`                | `string`                                  | The resolved command-line arguments for the executable       |
 | `$WorkingDirectory`         | `string`                                  | The resolved working directory for the executable            |

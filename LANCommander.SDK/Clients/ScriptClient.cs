@@ -65,6 +65,38 @@ namespace LANCommander.SDK.Services
             }
         }
 
+        /// <summary>
+        /// Adds <c>$BaseInstallDirectory</c> and <c>$BaseGameManifest</c> so addon scripts can
+        /// reach the game they extend, wherever the addon itself was installed. For a main game
+        /// they're the same as <c>$InstallDirectory</c> and <c>$GameManifest</c>; for an addon whose
+        /// base game can't be found they're null.
+        /// </summary>
+        private void AddBaseGameVariables(PowerShellScript script, string installDirectory, SDK.Models.Manifest.Game manifest)
+        {
+            string baseInstallDirectory = null;
+            SDK.Models.Manifest.Game baseManifest = null;
+
+            try
+            {
+                baseInstallDirectory = GameClient.GetBaseInstallDirectory(installDirectory, manifest);
+
+                if (manifest == null || !manifest.IsAddon || manifest.BaseGameId == Guid.Empty)
+                    baseManifest = manifest;
+                else if (baseInstallDirectory != null)
+                    baseManifest = ManifestHelper.Read<SDK.Models.Manifest.Game>(baseInstallDirectory, manifest.BaseGameId);
+
+                if (baseInstallDirectory == null)
+                    logger?.LogWarning("Could not find the install directory of base game {BaseGameId} for addon {GameTitle}", manifest?.BaseGameId, manifest?.Title);
+            }
+            catch (Exception ex)
+            {
+                logger?.LogError(ex, "Could not resolve the base game for script variables");
+            }
+
+            script.AddVariable("BaseInstallDirectory", baseInstallDirectory);
+            script.AddVariable("BaseGameManifest", baseManifest);
+        }
+
         private async Task<bool> RunScriptExternallyAsync(PowerShellScript script)
         {
             var scriptRunners = serviceProvider.GetServices<IScriptInterceptor>();

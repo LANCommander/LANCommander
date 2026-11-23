@@ -42,6 +42,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -143,6 +144,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -223,6 +225,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -304,6 +307,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -390,6 +394,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -487,6 +492,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());
@@ -574,6 +580,7 @@ public partial class ScriptClient
 
                     script.AddVariable("InstallDirectory", installDirectory);
                     script.AddVariable("GameManifest", gameManifest);
+                    AddBaseGameVariables(script, installDirectory, gameManifest);
                     script.AddVariable("RedistributableManifest", redistributableManifest);
                     script.AddVariable("DefaultInstallDirectory", settingsProvider.CurrentValue.Games.InstallDirectories.FirstOrDefault());
                     script.AddVariable("ServerAddress", connectionClient.GetServerAddress());

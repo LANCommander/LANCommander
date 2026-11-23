@@ -18,6 +18,8 @@ When an install script is executed, the following variables are available within
 |:-------------------------:|:---------------------------------------:|:-------------------------------------------------------------:|-------------------------|
 | `$InstallDirectory`         | `string`                                  | The install directory the game archive has been extracted to  | Games                   |
 | `$GameManifest`             | `LANCommander.SDK.GameManifest`           | The game manifest containing metadata about the game          | Games                   |
+| `$BaseInstallDirectory` | `string` | The base game's install directory. Differs from `$InstallDirectory` for addons installed to a sub directory or their own directory; same as `$InstallDirectory` for main games | Games |
+| `$BaseGameManifest` | `LANCommander.SDK.GameManifest` | The base game's manifest; same as `$GameManifest` for main games | Games |
 | `$DefaultInstallDirectory`  | `string`                                  | The default install directory as specified in the client      | Games                   |
 | `$ServerAddress`            | `string`                                  | The source LANCommander server address                        | Games, Redistributables |
 | `$Redistributable`          | `LANCommander.SDK.Models.Redistributable` | The redistributable's data object                             | Redistributables        |

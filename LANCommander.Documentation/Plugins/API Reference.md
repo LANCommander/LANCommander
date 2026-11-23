@@ -862,6 +862,28 @@ Imports LCX packages through the server's own import pipeline, the same one the 
 - `Task<PackageImportResult> ImportStreamAsync(Stream package, Guid? storageLocationId, ManifestType? manifestType, IProgress<long> copyProgress, CancellationToken cancellationToken)`
   - Copies an LCX package stream to the server's temporary storage, then imports every record in it.
 
+### IPageEmbedExtension
+
+`interface` — `LANCommander.Server.Plugins.IPageEmbedExtension`
+
+Adds a kind of embed (shortcode) to the server's pages, alongside the built-in ones such as `{{game:<id>}}` and `{{toc}}`, shown as a Razor component of the plugin's. Register an implementation in `IPlugin.ConfigureServices`; any number of plugins may, one kind per implementation.
+
+**Properties**
+
+- `string Kind { get; }`
+  - What authors write between the braces, letters only and matched without regard to case, e.g. `leaderboard` for `{{leaderboard:<id>}}`. Must not be one of the built-in kinds (game, server, redistributable, page, children, toc) or another extension's.
+- `string Name { get; }`
+  - The name the editor's Insert menu lists the embed by, e.g. "Leaderboard".
+- `Type Component { get; }`
+  - The Razor component shown in place of each embed, taking the `PageEmbed` as its `Embed` parameter. An extension whose component doesn't is left out.
+- `bool TakesArgument { get; }`
+  - Whether the embed takes an argument. When true, the editor asks the author to pick one of `GetChoicesAsync` before inserting it; when false, it inserts `{{kind}}`.
+
+**Methods**
+
+- `Task<IReadOnlyList<PageEmbedChoice>> GetChoicesAsync(CancellationToken cancellationToken)`
+  - What the editor offers as the argument when `TakesArgument` is set, e.g. the plugin's leaderboards. Only asked by administrators editing a page. Choices whose value has whitespace or braces aren't offered.
+
 ### IPluginSettingsExtension
 
 `interface` — `LANCommander.Server.Plugins.IPluginSettingsExtension`
@@ -1955,6 +1977,36 @@ A child record a package would carry.
   - Bytes of file the package would carry for it, such as an archive's; 0 for none.
 - `DateTime? UpdatedOn { get; init; }`
   - When it was last changed, or null for records that don't track it.
+
+### PageEmbed
+
+`record` — `LANCommander.Server.Plugins.PageEmbed`
+
+One embed of an `IPageEmbedExtension`'s kind, given to its component as the `Embed` parameter.
+
+**Properties**
+
+- `string Kind { get; init; }`
+  - The embed's kind, lower case.
+- `string Argument { get; init; }`
+  - What follows the colon, as written. Null when there is none.
+- `Guid? PageId { get; init; }`
+  - The page being shown. Null outside a page, such as in the site's header or footer.
+- `bool IsAdministrator { get; init; }`
+  - Whether the visitor is an administrator, e.g. to add a link to edit what is shown.
+
+### PageEmbedChoice
+
+`record` — `LANCommander.Server.Plugins.PageEmbedChoice`
+
+An argument the editor offers for an `IPageEmbedExtension`.
+
+**Properties**
+
+- `string Value { get; init; }`
+  - What is written after the colon: no whitespace or braces.
+- `string Label { get; init; }`
+  - What the author picks it by.
 
 ### PasswordCheckResult
 

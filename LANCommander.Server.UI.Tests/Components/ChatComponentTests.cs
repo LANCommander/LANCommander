@@ -300,6 +300,72 @@ public class ChatComponentTests : BUnitTestContext
     }
 
     [Fact]
+    public async Task Chat_ShowsWhoIsTypingUntilTheirMessageArrives()
+    {
+        var adminId = await SignInAsync();
+        var friend = await AddUserAsync();
+        var threadId = await StartThreadAsync(adminId, friend.Id);
+        var participants = new[] { adminId, friend.Id };
+        var broadcaster = Services.GetRequiredService<ChatBroadcaster>();
+
+        var cut = Render<Chat>();
+        Open(cut, friend.UserName!);
+
+        await broadcaster.TypingChangedAsync(threadId, friend.Id, true, participants);
+
+        cut.WaitForAssertion(() => Assert.Contains($"{friend.UserName} is typing", cut.Find(".chat-thread-typing").TextContent), Timeout);
+
+        await SendAsLauncherAsync(threadId, friend.Id, "Done typing");
+
+        cut.WaitForAssertion(() => Assert.Equal(string.Empty, cut.Find(".chat-thread-typing").TextContent.Trim()), Timeout);
+
+        // Nor is the viewer's own typing, from another tab or a launcher, shown back to them
+        await broadcaster.TypingChangedAsync(threadId, adminId, true, participants);
+
+        cut.WaitForAssertion(() => Assert.Contains("Done typing", cut.Markup), Timeout);
+        Assert.Equal(string.Empty, cut.Find(".chat-thread-typing").TextContent.Trim());
+
+        // The open thread marks the message read in the background; let it land, or the
+        // shared admin's unread count shifts under whichever test runs next
+        var chatService = Services.GetRequiredService<ChatService>();
+
+        for (var waited = TimeSpan.Zero; await chatService.GetUnreadMessageCountAsync(threadId, adminId) > 0 && waited < Timeout; waited += TimeSpan.FromMilliseconds(50))
+            await Task.Delay(50);
+    }
+
+    [Fact]
+    public async Task ServerChatClient_SendTyping_ReachesTheThreadAsTheSignedInUser()
+    {
+        var adminId = await SignInAsync();
+        var friend = await AddUserAsync();
+        var threadId = await StartThreadAsync(adminId, friend.Id);
+
+        var broadcaster = Services.GetRequiredService<ChatBroadcaster>();
+        var heard = new List<(Guid ThreadId, Guid UserId, bool Typing)>();
+        void Record(Guid id, Guid userId, bool typing) => heard.Add((id, userId, typing));
+
+        broadcaster.TypingChanged += Record;
+
+        try
+        {
+            var client = Services.GetRequiredService<ServerChatClient>();
+
+            await client.SendTypingAsync(threadId, true);
+            await client.SendTypingAsync(threadId, false);
+
+            // Someone outside a thread can't announce themselves in it
+            var elsewhere = await StartThreadAsync(friend.Id, (await AddUserAsync()).Id);
+            await client.SendTypingAsync(elsewhere, true);
+
+            Assert.Equal([(threadId, adminId, true), (threadId, adminId, false)], heard);
+        }
+        finally
+        {
+            broadcaster.TypingChanged -= Record;
+        }
+    }
+
+    [Fact]
     public async Task ServerChatClient_CannotDeleteSomeoneElsesThread()
     {
         await SignInAsync();

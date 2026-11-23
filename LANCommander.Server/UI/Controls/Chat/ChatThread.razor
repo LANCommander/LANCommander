@@ -53,6 +53,9 @@
     @* Created once the thread is known: the editor only takes its placeholder when it starts *@
     @if (_thread != null)
     {
+        @* Always there, so the box doesn't jump when someone starts typing *@
+        <div class="chat-thread-typing" role="status" aria-live="polite">@_typing.Describe(_others)</div>
+
         <ChatMessageInput ThreadId="@Id" Placeholder="@_placeholder" />
     }
 </section>
@@ -73,18 +76,22 @@
     string? _placeholder;
     InfiniteLoader<SDK.Models.ChatMessageGroup>? _infiniteLoader;
     readonly HashSet<Guid> _loadedMessageIds = new();
+    readonly ChatTypingState _typing = new();
+    Guid? _userId;
 
     protected override async Task OnInitializedAsync()
     {
         Broadcaster.MessageSent += OnMessageSent;
+        Broadcaster.TypingChanged += OnTypingChanged;
+        _typing.Changed += OnTypingStateChanged;
 
         try
         {
             _thread = await ChatClient.GetThreadAsync(Id);
 
-            var userId = await ChatClient.GetCurrentUserIdAsync();
+            _userId = await ChatClient.GetCurrentUserIdAsync();
 
-            _others = _thread.Participants.Where(p => p.Id != userId).ToList();
+            _others = _thread.Participants.Where(p => p.Id != _userId).ToList();
 
             // A thread with only the viewer in it still shows them rather than nothing
             if (_others.Count == 0)
@@ -106,6 +113,9 @@
     {
         if (threadId != Id)
             return;
+
+        // Their message is what they were typing
+        _typing.Stop(message.UserId);
 
         _ = InvokeAsync(async () =>
         {
@@ -220,5 +230,25 @@
         return groups;
     }
 
-    public void Dispose() => Broadcaster.MessageSent -= OnMessageSent;
+    void OnTypingChanged(Guid threadId, Guid userId, bool typing)
+    {
+        // The viewer's own typing, from here or another tab, is nothing to show them
+        if (threadId != Id || userId == _userId)
+            return;
+
+        if (typing)
+            _typing.Start(userId);
+        else
+            _typing.Stop(userId);
+    }
+
+    void OnTypingStateChanged() => _ = InvokeAsync(StateHasChanged);
+
+    public void Dispose()
+    {
+        Broadcaster.MessageSent -= OnMessageSent;
+        Broadcaster.TypingChanged -= OnTypingChanged;
+        _typing.Changed -= OnTypingStateChanged;
+        _typing.Dispose();
+    }
 }

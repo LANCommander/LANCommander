@@ -341,7 +341,7 @@
                     </Border>
 
                     <!-- ── Message area ──────────────────────────────────── -->
-                    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto">
+                    <Grid Grid.Column="1" RowDefinitions="Auto,*,Auto,Auto">
 
                         <!-- Empty state -->
                         <StackPanel Grid.Row="1"
@@ -474,8 +474,19 @@
 
                         </ScrollViewer>
 
+                        <!-- Who's typing. Holds its line while empty so the input bar stays put -->
+                        <TextBlock Grid.Row="2"
+                                   Text="{Binding SelectedThread.TypingText}"
+                                   IsVisible="{Binding HasSelectedThread}"
+                                   Height="18"
+                                   Margin="12,0"
+                                   FontSize="{DynamicResource FontSizeKicker}"
+                                   Foreground="{DynamicResource TextTertiaryBrush}"
+                                   TextTrimming="CharacterEllipsis"
+                                   VerticalAlignment="Center" />
+
                         <!-- Input bar -->
-                        <Border Grid.Row="2"
+                        <Border Grid.Row="3"
                                 BorderBrush="{DynamicResource HairlineBorderBrush}"
                                 BorderThickness="0,1,0,0"
                                 Padding="10,8"

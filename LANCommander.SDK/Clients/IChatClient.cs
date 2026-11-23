@@ -30,6 +30,13 @@ public interface IChatClient
     Task StartTypingAsync(Guid threadId, string userId);
     Task StopTypingAsync(Guid threadId, string userId);
     Task SendMessageAsync(Guid threadId, string message);
+
+    /// <summary>
+    /// Tells the thread's other participants this user started (or stopped) typing in it.
+    /// Best sent through a <see cref="ChatTypingNotifier"/>, which keeps it to a trickle
+    /// </summary>
+    Task SendTypingAsync(Guid threadId, bool isTyping);
+
     Task UpdatedReadStatus(Guid threadId);
     Task<InfiniteResponse<ChatMessage>> GetMessagesAsync(Guid threadId, Guid? cursor, int count);
     Task<int> GetUnreadMessageCountAsync(Guid threadId);

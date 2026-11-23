@@ -407,6 +407,19 @@ $chat-mobile-header-height: 53px; // .lc-mobile-header: 28px logo + 2 * 12px pad
     }
 }
 
+// Who's typing, just above the message box. Holds its line while empty so the box stays put
+.chat-thread-typing {
+    flex-shrink: 0;
+    height: 18px;
+    padding: 0 14px;
+    overflow: hidden;
+    color: var(--lc-text-tertiary-color);
+    font-size: 11px;
+    line-height: 18px;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
 // Always on screen: a hairline above, the editor styled as an input, the send button beside it
 .chat-message-input {
     display: flex;

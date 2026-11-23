@@ -22,6 +22,7 @@ public partial class ChatWindowViewModel : ViewModelBase
     private AuthenticationService? _authenticationService;
     private NotificationService? _notificationService;
     private ChatAvatarCache? _avatarCache;
+    private ChatTypingNotifier? _typingNotifier;
     private bool _initialized;
 
     // ── Thread list ──────────────────────────────────────────────────────────
@@ -92,6 +93,9 @@ public partial class ChatWindowViewModel : ViewModelBase
             _authenticationService = _serviceProvider.GetRequiredService<AuthenticationService>();
             _notificationService = _serviceProvider.GetService<NotificationService>();
             _avatarCache = _serviceProvider.GetService<ChatAvatarCache>();
+
+            var chatClient = _chatClient;
+            _typingNotifier = new ChatTypingNotifier((threadId, typing) => chatClient.SendTypingAsync(threadId, typing));
 
             _chatClient.ThreadAdded += OnThreadAdded;
         }
@@ -197,11 +201,31 @@ public partial class ChatWindowViewModel : ViewModelBase
 
         thread.DispatcherInvoke = async action => await Dispatcher.UIThread.InvokeAsync(action);
 
+        thread.OnStartTypingAsync = userId =>
+        {
+            // This user's own typing elsewhere is nothing to show them
+            if (Guid.TryParse(userId, out var id) && id != GetCurrentUserId())
+                vm.Typing.Start(id);
+
+            return Task.CompletedTask;
+        };
+
+        thread.OnStopTypingAsync = userId =>
+        {
+            if (Guid.TryParse(userId, out var id))
+                vm.Typing.Stop(id);
+
+            return Task.CompletedTask;
+        };
+
         thread.OnMessageReceivedAsync = async message =>
         {
             // The server echoes this user's own messages back to them, from here or elsewhere
             var isOwnMessage = message.UserId == GetCurrentUserId();
             var isWindowActive = false;
+
+            // Their message is what they were typing
+            vm.Typing.Stop(message.UserId);
 
             await Dispatcher.UIThread.InvokeAsync(() =>
             {
@@ -255,7 +279,10 @@ public partial class ChatWindowViewModel : ViewModelBase
     partial void OnSelectedThreadChanged(ChatThreadViewModel? oldValue, ChatThreadViewModel? newValue)
     {
         SendMessageCommand.NotifyCanExecuteChanged();
-        
+
+        // The box is shared, so whatever was being written was for the thread being left
+        _typingNotifier?.Stop();
+
         if (newValue != null)
         {
             _ = MarkThreadReadAsync(newValue);
@@ -342,8 +369,16 @@ public partial class ChatWindowViewModel : ViewModelBase
     private bool CanSendMessage() =>
         SelectedThread != null && !string.IsNullOrWhiteSpace(MessageInput);
 
-    partial void OnMessageInputChanged(string value) =>
+    partial void OnMessageInputChanged(string value)
+    {
         SendMessageCommand.NotifyCanExecuteChanged();
+
+        // Emptying the box (sending clears it) counts as having stopped
+        if (SelectedThread == null || string.IsNullOrWhiteSpace(value))
+            _typingNotifier?.Stop();
+        else
+            _typingNotifier?.Typed(SelectedThread.Thread.Id);
+    }
 
     // ── Delete thread ────────────────────────────────────────────────────────
 
@@ -526,12 +561,21 @@ public partial class ChatThreadViewModel : ViewModelBase
 
     public bool HasUnread => UnreadCount > 0;
 
+    /// <summary>Who among the others is typing in this thread</summary>
+    public ChatTypingState Typing { get; } = new();
+
+    /// <summary>"Alice is typing…" and the like, or null while nobody is</summary>
+    [ObservableProperty]
+    private string? _typingText;
+
     public ChatThreadViewModel(ChatThread thread, Guid currentUserId)
     {
         Thread = thread;
         OtherParticipants = thread.Participants
             .Where(p => p.Id != currentUserId)
             .ToList();
+
+        Typing.Changed += () => Dispatcher.UIThread.Post(() => TypingText = Typing.Describe(OtherParticipants));
 
         OtherParticipantNameList = OtherParticipants
             .Select((p, i) => new ParticipantName(p.Id, p.Name, i < OtherParticipants.Count - 1 ? ", " : string.Empty))

@@ -129,6 +129,17 @@ public class ServerChatClient(
         await broadcaster.MessageSentAsync(threadId, sdkMapper.ToSdk(sent.Message), sent.ParticipantIds);
     }
 
+    public async Task SendTypingAsync(Guid threadId, bool isTyping)
+    {
+        if (await GetCurrentUserIdAsync() is not { } userId)
+            return;
+
+        var participants = await chatService.GetParticipantIdsAsync(threadId);
+
+        if (participants.Contains(userId))
+            await broadcaster.TypingChangedAsync(threadId, userId, isTyping, participants);
+    }
+
     public async Task UpdatedReadStatus(Guid threadId)
     {
         if (await GetCurrentUserIdAsync() is { } userId)

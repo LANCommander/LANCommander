@@ -134,12 +134,19 @@ public class ChatHubClient : IChatClient, IChatHubClient, IDisposable
 
     public async Task AddedToThreadAsync(ChatThread thread)
     {
-        var isNew = !_threads.ContainsKey(thread.Id);
+        // A thread already known (reopened from elsewhere, say) keeps its instance: that's the one
+        // the UI hooked its message and typing handlers to, and a replacement would have none
+        if (_threads.TryGetValue(thread.Id, out var existing))
+        {
+            existing.Participants.Clear();
+            existing.Participants.AddRange(thread.Participants);
+
+            return;
+        }
 
         _threads[thread.Id] = thread;
 
-        if (isNew)
-            ThreadAdded?.Invoke(thread);
+        ThreadAdded?.Invoke(thread);
     }
 
     public async Task<IEnumerable<ChatThread>> GetThreadsAsync()
@@ -216,6 +223,18 @@ public class ChatHubClient : IChatClient, IChatHubClient, IDisposable
 
         if (_threads.TryGetValue(threadId, out var thread))
             await _hub.SendMessageAsync(thread.Id, message);
+    }
+
+    public async Task SendTypingAsync(Guid threadId, bool isTyping)
+    {
+        // Only worth saying over a live connection: a typing hint that arrives late is wrong
+        if (_hub == null || _connection?.State != HubConnectionState.Connected)
+            return;
+
+        if (isTyping)
+            await _hub.StartTypingAsync(threadId);
+        else
+            await _hub.StopTypingAsync(threadId);
     }
 
     public async Task UpdatedReadStatus(Guid threadId)

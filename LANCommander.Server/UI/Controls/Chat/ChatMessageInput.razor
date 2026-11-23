@@ -3,10 +3,12 @@
 @using LANCommander.SDK.Services
 @inject IChatClient ChatClient
 @inject NotificationService Notifications
+@implements IDisposable
 
 @* Writes a message in Markdown beside a send button; Enter sends it, Ctrl+Enter starts a new line *@
 <div class="chat-message-input">
     <EasyMdeEditor @bind-Value="_message"
+                   @bind-Value:after="OnMessageChanged"
                    Class="chat-message-input-editor"
                    InterceptKeys="_keys"
                    OnKey="HandleKeyAsync"
@@ -25,14 +27,30 @@
 
     EasyMdeOptions _options = new();
 
+    ChatTypingNotifier? _typing;
+
     // The editor reads its placeholder from the options, once, when it starts
-    protected override void OnInitialized() => _options = new()
+    protected override void OnInitialized()
     {
-        MinHeight = "0px",
-        Toolbar = EasyMdeToolbar.Disabled,
-        Status = EasyMdeStatus.Disabled,
-        Placeholder = Placeholder,
-    };
+        _options = new()
+        {
+            MinHeight = "0px",
+            Toolbar = EasyMdeToolbar.Disabled,
+            Status = EasyMdeStatus.Disabled,
+            Placeholder = Placeholder,
+        };
+
+        _typing = new((threadId, typing) => ChatClient.SendTypingAsync(threadId, typing));
+    }
+
+    // Emptying the box (or sending it) counts as having stopped
+    void OnMessageChanged()
+    {
+        if (ThreadId == null || string.IsNullOrWhiteSpace(_message))
+            _typing?.Stop();
+        else
+            _typing?.Typed(ThreadId.Value);
+    }
 
     readonly EasyMdeKeyRegistration[] _keys =
     [
@@ -61,6 +79,8 @@
             await ChatClient.SendMessageAsync(ThreadId.Value, _message);
 
             _message = string.Empty;
+
+            _typing?.Stop();
         }
         catch (Exception ex)
         {
@@ -72,4 +92,6 @@
             await InvokeAsync(StateHasChanged);
         }
     }
+
+    public void Dispose() => _typing?.Dispose();
 }

@@ -16,6 +16,9 @@ public sealed class ChatBroadcaster(IHubContext<ChatHub, IChatHubClient> hubCont
     /// <summary>A user was added to a thread</summary>
     public event Action<ChatThread, Guid>? ParticipantAdded;
 
+    /// <summary>Someone in a thread started (true) or stopped (false) typing in it</summary>
+    public event Action<Guid, Guid, bool>? TypingChanged;
+
     public async Task MessageSentAsync(Guid threadId, ChatMessage message, IReadOnlyCollection<Guid> participantIds)
     {
         Raise(MessageSent, handler => handler(threadId, message, participantIds));
@@ -32,7 +35,10 @@ public sealed class ChatBroadcaster(IHubContext<ChatHub, IChatHubClient> hubCont
 
     public async Task TypingChangedAsync(Guid threadId, Guid userId, bool typing, IReadOnlyCollection<Guid> participantIds)
     {
-        var clients = hubContext.Clients.Users(ToIdentifiers(participantIds));
+        Raise(TypingChanged, handler => handler(threadId, userId, typing));
+
+        // The typist's own devices have nothing to show for it
+        var clients = hubContext.Clients.Users(ToIdentifiers(participantIds.Where(id => id != userId)));
 
         if (typing)
             await clients.StartTypingAsync(threadId, userId.ToString());

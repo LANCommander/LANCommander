@@ -183,6 +183,10 @@ else
 
     async Task SetValuesAsync(IEnumerable<TValue>? values)
     {
+        // Radzen hands back a lazy query over its own selection, which it clears and rebuilds when
+        // the parent re-renders; enumerated later it comes up empty, so snapshot it now
+        values = values?.ToList();
+
         // Select all can sweep up group headings; only real choices count
         if (values != null && _headers.Count > 0)
         {

@@ -265,6 +265,38 @@ public class FormTests : ControlsTestContext
         Assert.Equal(action, chosen);
     }
 
+    /// <summary>Binds a multiple select's values and re-renders with them, as a page using @bind-Values does.</summary>
+    private sealed class MultipleSelectHost : ComponentBase
+    {
+        public static readonly Guid Action = Guid.NewGuid(), Racing = Guid.NewGuid();
+
+        public IEnumerable<Guid> Selected { get; private set; } = [];
+
+        protected override void BuildRenderTree(RenderTreeBuilder builder)
+        {
+            builder.OpenComponent<Select<Guid>>(0);
+            builder.AddAttribute(1, nameof(Select<Guid>.Multiple), true);
+            builder.AddAttribute(2, nameof(Select<Guid>.Items), new[] { new SelectItem<Guid>(Action, "Action"), new SelectItem<Guid>(Racing, "Racing") });
+            builder.AddAttribute(3, nameof(Select<Guid>.Values), Selected);
+            builder.AddAttribute(4, nameof(Select<Guid>.ValuesChanged), EventCallback.Factory.Create<IEnumerable<Guid>>(this, values => Selected = values));
+            builder.CloseComponent();
+        }
+    }
+
+    [Fact]
+    public void Select_Multiple_ChoicesSurviveTheParentRerendering()
+    {
+        var host = Render<MultipleSelectHost>();
+
+        host.FindAll("li").First(li => li.TextContent.Contains("Action")).Click();
+
+        Assert.Equal([MultipleSelectHost.Action], host.Instance.Selected);
+
+        host.FindAll("li").First(li => li.TextContent.Contains("Racing")).Click();
+
+        Assert.Equivalent(new[] { MultipleSelectHost.Action, MultipleSelectHost.Racing }, host.Instance.Selected);
+    }
+
     [Fact]
     public void Select_CombinesItemsAndOptionChildren()
     {

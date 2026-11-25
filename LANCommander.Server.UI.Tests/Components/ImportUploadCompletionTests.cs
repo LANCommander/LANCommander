@@ -110,6 +110,7 @@ public class ImportUploadCompletionTests : BUnitTestContext
         }, TimeSpan.FromSeconds(10));
     }
 
+    /// <summary>The button that starts the upload, not the switcher's Upload option.</summary>
     private static AngleSharp.Dom.IElement UploadButton(IRenderedComponent<ComponentHost> host) =>
-        host.FindAll(".lc-dialog button").First(b => b.TextContent.Trim() == "Upload");
+        host.FindAll(".lc-dialog button:not(.lc-segmented-option)").First(b => b.TextContent.Trim() == "Upload");
 }

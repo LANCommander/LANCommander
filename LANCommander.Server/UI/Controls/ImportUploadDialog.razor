@@ -3,6 +3,7 @@
 @using LANCommander.Server.ImportExport.Factories
 @using LANCommander.Server.ImportExport.Models
 @using LANCommander.Server.Models
+@using LANCommander.Server.Plugins
 @using LANCommander.Server.UI.Components
 @inherits Dialog<ImportDialogOptions, bool>
 @implements IAsyncDisposable
@@ -11,38 +12,67 @@
 @inject AlertService Alerts
 @inject UploadTracker UploadTracker
 @inject NotificationService Notifications
+@inject PluginImportSources PluginSources
 @inject ILogger<ImportUploadDialog> Logger
 
 @*
-    Imports an .lcx: upload it (or pick one already on the server), choose which of its records to
-    import, then watch the import. Uploads keep going if the dialog is closed; the upload indicator
-    offers to continue the import when they finish.
+    Imports records: from an .lcx uploaded, one already on the server's disk, or a place a plugin
+    adds (IImportSourceExtension), chosen in the switcher at the top. Then choose which of the
+    package's records to import and watch the import. Uploads keep going if the dialog is closed;
+    the upload indicator offers to continue the import when they finish.
 *@
 @switch (_stage)
 {
-    case ImportStage.Upload:
+    case ImportStage.Source:
         <Flex Vertical Gap="Gap.Medium">
-            <ChunkUploader @ref="_uploader"
-                           Accept=".lcx"
-                           @bind-File="_file"
-                           @bind-Status="_uploadStatus"
-                           StorageLocationId="@(_storageLocation?.Id ?? Guid.Empty)"
-                           UploadType="UploadType.Import"
-                           Hint="@Options.Hint"
-                           OnUploadError="OnUploadErrorAsync" />
+            <Segmented TValue="string" Items="SourceItems" Value="_source" ValueChanged="SourceChanged" Dialog Class="import-source-switcher" />
+
+            <div class="import-source" data-source="@_source">
+                @switch (_source)
+                {
+                    case UploadSource:
+                        <ChunkUploader @ref="_uploader"
+                                       Accept=".lcx"
+                                       @bind-File="_file"
+                                       @bind-Status="_uploadStatus"
+                                       StorageLocationId="@(_storageLocation?.Id ?? Guid.Empty)"
+                                       UploadType="UploadType.Import"
+                                       Hint="@Options.Hint"
+                                       OnUploadError="OnUploadErrorAsync" />
+                        break;
+
+                    case LocalFileSource:
+                        <FilePicker @bind-Value="_localPath"
+                                    Root="@_rootPath"
+                                    Title="Choose an Import File"
+                                    OkText="Use File"
+                                    Placeholder="Path to an .lcx file on the server"
+                                    EntrySelectable="@(entry => entry.Name?.EndsWith(".lcx", StringComparison.OrdinalIgnoreCase) == true)"
+                                    OnSelected="ReadImportFileAsync" />
+                        break;
+
+                    default:
+                        @if (SelectedPluginSource is { } plugin)
+                        {
+                            <ErrorHandler Inline Title="@($"{plugin.Name} could not be displayed")">
+                                <DynamicComponent @key="plugin.Id" Type="plugin.Component" Parameters="PluginParameters" />
+                            </ErrorHandler>
+                        }
+                        break;
+                }
+            </div>
 
             <StorageLocationSelector @bind-Value="_storageLocation" Type="StorageLocationType.Archive" />
 
             <Flex Justify="Justify.End" Gap="Gap.Small">
-                <FilePickerButton Root="@_rootPath"
-                                  Title="Choose an Import File"
-                                  OkText="Use File"
-                                  EntrySelectable="@(entry => entry.Name?.EndsWith(".lcx", StringComparison.OrdinalIgnoreCase) == true)"
-                                  OnSelected="OnLocalFileSelectedAsync"
-                                  Disabled="_uploadStatus != ChunkUploadStatus.Idle">
-                    Use Local File
-                </FilePickerButton>
-                <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || _uploadStatus != ChunkUploadStatus.Idle)" OnClick="UploadAsync">Upload</Button>
+                @if (_source == UploadSource)
+                {
+                    <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || UploadInProgress)" OnClick="UploadAsync">Upload</Button>
+                }
+                else if (_source == LocalFileSource)
+                {
+                    <Button Primary Icon="IconType.FolderOpen" Disabled="String.IsNullOrWhiteSpace(_localPath)" OnClick="() => ReadImportFileAsync(_localPath!)">Open</Button>
+                }
                 <Button OnClick="CancelClickedAsync">Cancel</Button>
             </Flex>
         </Flex>
@@ -133,7 +163,7 @@
 @code {
     enum ImportStage
     {
-        Upload,
+        Source,
         Reading,
         RecordSelection,
         Importing,
@@ -142,6 +172,33 @@
     }
 
     public sealed record ImportNode(string Key, string Name, long Size, IReadOnlyList<ImportNode>? Children = null);
+
+    // The built-in sources; the colon keeps them apart from any plugin source's id
+    const string UploadSource = "builtin:upload";
+    const string LocalFileSource = "builtin:local";
+
+    string _source = UploadSource;
+    string? _localPath;
+    IReadOnlyList<IImportSourceExtension> _pluginSources = [];
+    ImportSourceContext? _pluginContext;
+    readonly CancellationTokenSource _closed = new();
+
+    /// <summary>A package a plugin source handed over to be deleted once the dialog is done with it.</summary>
+    string? _ownedPackagePath;
+
+    IImportSourceExtension? SelectedPluginSource => _pluginSources.FirstOrDefault(s => s.Id == _source);
+
+    bool UploadInProgress => _uploadStatus != ChunkUploadStatus.Idle;
+
+    // The other sources can't be chosen while an upload runs, since that would take the uploader away
+    IEnumerable<SelectItem<string>> SourceItems =>
+    [
+        new(UploadSource, "Upload", Icon: IconType.UploadSimple),
+        new(LocalFileSource, "Local File", Disabled: UploadInProgress, Icon: IconType.HardDrives),
+        .. _pluginSources.Select(s => new SelectItem<string>(s.Id, s.Name, Disabled: UploadInProgress)),
+    ];
+
+    Dictionary<string, object?> PluginParameters => new() { ["Context"] = _pluginContext };
 
     ChunkUploader? _uploader;
     IBrowserFile? _file;
@@ -155,7 +212,7 @@
 
     readonly string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
 
-    ImportStage _stage = ImportStage.Upload;
+    ImportStage _stage = ImportStage.Source;
     readonly List<string> _errors = new();
     int _importProgress = -1;
     string _currentImportItemName = String.Empty;
@@ -172,6 +229,15 @@
         _importContext.OnImportComplete.EventRaised += ImportCompleteAsync;
         _importContext.OnImportStatusUpdate.EventRaised += ImportStatusUpdateAsync;
         _importContext.OnImportError.EventRaised += ImportErrorAsync;
+
+        _pluginSources = PluginSources.For(Options.ManifestType);
+        _pluginContext = new ImportSourceContext(
+            Options.ManifestType,
+            () => _storageLocation?.Id ?? Guid.Empty,
+            (path, deleteWhenDone) => InvokeAsync(() => OnPluginPackageAsync(path, deleteWhenDone)),
+            warnings => InvokeAsync(() => OnPluginCompleted(warnings)),
+            () => InvokeAsync(() => base.CancelAsync()),
+            _closed.Token);
 
         // A finished background upload: go straight to choosing records
         if (!string.IsNullOrWhiteSpace(Options.PreUploadedObjectKey))
@@ -192,6 +258,7 @@
 
         DisposeContext();
         await CleanupUploadArchiveAsync();
+        CleanupOwnedPackage();
 
         StateHasChanged();
     });
@@ -239,7 +306,49 @@
 
             DisposeContext();
             await CleanupUploadArchiveAsync();
+            CleanupOwnedPackage();
         }
+    }
+
+    void SourceChanged(string source)
+    {
+        if (!UploadInProgress)
+            _source = source;
+    }
+
+    async Task OnPluginPackageAsync(string path, bool deleteWhenDone)
+    {
+        // Too late: the administrator moved on or closed the dialog
+        if (_stage != ImportStage.Source || _disposed)
+        {
+            if (deleteWhenDone)
+                DeleteQuietly(path);
+
+            return;
+        }
+
+        if (deleteWhenDone)
+        {
+            CleanupOwnedPackage();
+            _ownedPackagePath = path;
+        }
+
+        await ReadImportFileAsync(path);
+    }
+
+    void OnPluginCompleted(IReadOnlyList<string> warnings)
+    {
+        if (_disposed)
+            return;
+
+        _errors.AddRange(warnings);
+        _stage = ImportStage.Complete;
+        _importProgress = 100;
+
+        DisposeContext();
+        CleanupOwnedPackage();
+
+        StateHasChanged();
     }
 
     async Task CancelClickedAsync()
@@ -284,15 +393,13 @@
             Notifications.Error(ex, "The import file could not be found");
 
             _uploadObjectKey = null;
-            _stage = ImportStage.Upload;
+            _stage = ImportStage.Source;
             StateHasChanged();
             return;
         }
 
         await ReadImportFileAsync(archivePath);
     }
-
-    async Task OnLocalFileSelectedAsync(string path) => await ReadImportFileAsync(path);
 
     async Task ReadImportFileAsync(string path)
     {
@@ -321,7 +428,8 @@
         {
             Notifications.Error(ex, "The import file could not be read");
 
-            _stage = ImportStage.Upload;
+            CleanupOwnedPackage();
+            _stage = ImportStage.Source;
         }
 
         StateHasChanged();
@@ -367,9 +475,34 @@
         _uploadObjectKey = null;
     }
 
+    void CleanupOwnedPackage()
+    {
+        if (_ownedPackagePath == null)
+            return;
+
+        DeleteQuietly(_ownedPackagePath);
+        _ownedPackagePath = null;
+    }
+
+    void DeleteQuietly(string path)
+    {
+        try
+        {
+            if (File.Exists(path))
+                File.Delete(path);
+        }
+        catch (Exception ex)
+        {
+            Logger.LogWarning(ex, "Could not delete the import package {Path}", path);
+        }
+    }
+
     public async ValueTask DisposeAsync()
     {
         _disposed = true;
+
+        // Plugin sources stop whatever they were doing for the dialog
+        _closed.Cancel();
 
         // An upload still running continues in the background, so leave its context alone
         if (_uploadStatus == ChunkUploadStatus.Uploading || _stage == ImportStage.Importing)
@@ -378,5 +511,6 @@
         DisposeContext();
 
         await CleanupUploadArchiveAsync();
+        CleanupOwnedPackage();
     }
 }

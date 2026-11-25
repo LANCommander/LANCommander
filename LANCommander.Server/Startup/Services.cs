@@ -73,6 +73,9 @@ public static class Services
         // their pages join every server's own
         builder.Services.AddSingleton<PluginServerSections>();
 
+        // and the places they import from join the import dialog's Upload and Local File
+        builder.Services.AddSingleton<PluginImportSources>();
+
         // Each plugin's own settings, in PluginData/{PluginId}/Settings.yaml
         builder.Services.AddSingleton(typeof(IPluginSettings<>), typeof(PluginSettings<>));
 

@@ -1024,6 +1024,51 @@ The server registers both services. Plugins should use them instead of resolving
 database services or import internals, which are not part of the plugin surface.
 `PluginContext.Services` is scoped to `InitializeAsync` and must not be retained for later imports.
 
+### Import sources
+
+The import dialog has a switcher at its top: Upload and Local File are built in, and a plugin can
+add its own place to import from by registering an
+[`IImportSourceExtension`](/Plugins/API%20Reference#iimportsourceextension), e.g. a store library
+whose games can be imported directly. The source is offered only when importing one of its
+`SupportedTypes`, and its `Component` is shown below the switcher when chosen:
+
+```csharp
+public sealed class LibraryImportSource : IImportSourceExtension
+{
+    public string Id => "com.mycompany.myplugin.library";
+    public string Name => "My Library";
+    public IReadOnlyCollection<ManifestType> SupportedTypes => [ManifestType.Game];
+    public Type Component => typeof(LibraryImportPanel);
+}
+
+public void ConfigureServices(IServiceCollection services)
+{
+    services.AddSingleton<IImportSourceExtension, LibraryImportSource>();
+}
+```
+
+The component takes an [`ImportSourceContext`](/Plugins/API%20Reference#importsourcecontext) as
+its `Context` parameter and draws its own controls; the dialog adds Cancel and the storage location
+selector. When the administrator picks something, either write an LCX package and hand it back, so
+the dialog lists its records to choose from as for an upload:
+
+```razor
+@code {
+    [Parameter] public ImportSourceContext Context { get; set; } = default!;
+
+    async Task ImportAsync(LibraryGame game)
+    {
+        var package = await Packager.WriteAsync(game, Context.CancellationToken);
+
+        await Context.ImportPackageAsync(package, deleteWhenDone: true);
+    }
+}
+```
+
+or import it yourself, through `IPackageImporter` with `Context.StorageLocationId` or the record
+providers, and call `Context.CompleteAsync()` with any warnings. `Context.CancellationToken` is
+cancelled when the dialog closes.
+
 ## Managing records
 
 A server plugin can read and change the server's records through providers the server registers

@@ -18,7 +18,7 @@
 }
 else
 {
-    <Form Model="_archive">
+    <Form Model="_archive" Disabled="IsBusy">
         @if (ShowVersionPicker)
         {
             <FormItem Label="Game Version">
@@ -55,17 +55,17 @@ else
 
     <Flex Justify="Justify.End" Align="Align.Center" Gap="Gap.Small">
         <Tooltip Title="Moves the selected local file instead of copying it">
-            <Checkbox @bind-Value="_moveLocalFile" Disabled="_status != ChunkUploadStatus.Idle">Move</Checkbox>
+            <Checkbox @bind-Value="_moveLocalFile" Disabled="IsBusy">Move</Checkbox>
         </Tooltip>
         <FilePickerButton EntrySelectable="@(entry => entry.Name?.EndsWith(".zip", StringComparison.OrdinalIgnoreCase) == true)"
                           Title="Choose an Archive"
                           OkText="Use File"
                           OnSelected="OnLocalFileSelectedAsync"
                           Root="@_rootPath"
-                          Disabled="@(_status != ChunkUploadStatus.Idle || !HasVersion)">
+                          Disabled="@(IsBusy || !HasVersion)">
             Use Local File
         </FilePickerButton>
-        <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || _status != ChunkUploadStatus.Idle || !HasVersion)" OnClick="StartAsync">Upload</Button>
+        <Button Primary Icon="IconType.UploadSimple" Disabled="@(_file == null || IsBusy || !HasVersion)" OnClick="StartAsync">Upload</Button>
         <Button OnClick="CancelClickedAsync">Cancel</Button>
     </Flex>
 }
@@ -94,6 +94,10 @@ else
     readonly string _rootPath = Path.GetPathRoot(Directory.GetCurrentDirectory()) ?? "/";
 
     bool HasVersion => !String.IsNullOrWhiteSpace(_archive?.Version);
+
+    // Locks the details while a file is being uploaded or copied in from the server
+    bool _copyingLocalFile;
+    bool IsBusy => _status != ChunkUploadStatus.Idle || _copyingLocalFile;
 
     protected override async Task OnInitializedAsync()
     {
@@ -235,6 +239,8 @@ else
 
     async Task OnLocalFileSelectedAsync(string path)
     {
+        _copyingLocalFile = true;
+
         try
         {
             var objectKey = await ArchiveService.CopyFromLocalFileAsync(path, _storageLocation?.Id ?? Guid.Empty, _moveLocalFile);
@@ -251,6 +257,10 @@ else
         catch (Exception ex)
         {
             Notifications.Error(ex, "An unknown error occurred while trying to use a local file");
+        }
+        finally
+        {
+            _copyingLocalFile = false;
         }
     }
 

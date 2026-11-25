@@ -54,6 +54,23 @@ namespace LANCommander.Launcher.Services
         }
 
         /// <summary>
+        /// Games installed on a known version whose offered (latest) version id was never stored, typically
+        /// imported by an older launcher. Without it the update check falls back to comparing version labels,
+        /// which can differ for the same version. An installed version id shows the server has versions, so a
+        /// re-import will fill it in rather than finding nothing again on every sync.
+        /// </summary>
+        public async Task<HashSet<Guid>> GetIdsMissingLatestVersionIdAsync(IEnumerable<Guid> ids)
+        {
+            var idSet = ids.ToHashSet();
+
+            return (await Context.Set<Game>()
+                .Where(g => idSet.Contains(g.Id) && g.InstalledVersionId != null && g.LatestVersionId == null)
+                .Select(g => g.Id)
+                .ToListAsync())
+                .ToHashSet();
+        }
+
+        /// <summary>
         /// Whether a stored multiplayer mode is the manifest's mode. Modes carry no id, and a game can
         /// have several of one type (two LAN modes with different player counts), so every field counts.
         /// </summary>

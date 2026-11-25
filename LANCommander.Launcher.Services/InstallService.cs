@@ -1076,7 +1076,10 @@ namespace LANCommander.Launcher.Services
                         // Re-import game metadata (scripts, metadata changes)
                         Logger?.LogInformation("[InstallQueue] Update(Game): Re-importing game metadata for {Title} ({Id})", currentItem.Title, currentItem.Id);
                         await scope.Imports.ImportGameAsync(localGame.Id);
-                        localGame = await scope.Games.GetAsync(localGame.Id);
+
+                        // The import saved through its own scope; reload so the saves below don't write this
+                        // scope's stale copy (old LatestVersion/LatestVersionId) back over it
+                        localGame = await scope.Games.ReloadAsync(localGame);
 
                         // Move the install's config (manifest, scripts, redistributables) to the latest
                         // version. A newer version without an archive is a config-only update.

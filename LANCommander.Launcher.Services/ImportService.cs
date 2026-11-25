@@ -51,16 +51,16 @@ namespace LANCommander.Launcher.Services
             // Pre-fetch all local import timestamps in a single query
             var gameIds = remoteLibrary.Select(g => g.Id);
             var importedOnMap = await gameService.GetImportedOnMapAsync(gameIds);
+            var missingLatestVersionId = await gameService.GetIdsMissingLatestVersionIdAsync(gameIds);
 
             // Filter to only games that need importing
             var gamesToImport = remoteLibrary.Where(game =>
             {
-                if (importedOnMap.TryGetValue(game.Id, out var importedOn) && game.UpdatedOn <= importedOn)
-                {
-                    Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
-                    return false;
-                }
-                return true;
+                if (NeedsImport(game, importedOnMap, missingLatestVersionId))
+                    return true;
+
+                Logger?.LogDebug("Skipping unchanged game {GameId}", game.Id);
+                return false;
             }).ToList();
 
             Logger?.LogInformation("Importing {Count} games ({Skipped} skipped as unchanged)",
@@ -104,6 +104,19 @@ namespace LANCommander.Launcher.Services
             // Sync play sessions for all library games
             await SyncPlaySessionsAsync(remoteLibrary.Select(g => g.Id));
         }
+
+        /// <summary>
+        /// Whether a library game needs its manifest fetched: it's new, changed on the server since the last
+        /// import, or was imported without the offered version's id (which an unchanged game would otherwise
+        /// never pick up).
+        /// </summary>
+        internal static bool NeedsImport(
+            SDK.Models.EntityReference game,
+            IReadOnlyDictionary<Guid, DateTime> importedOnMap,
+            IReadOnlySet<Guid> missingLatestVersionId)
+            => !importedOnMap.TryGetValue(game.Id, out var importedOn)
+               || game.UpdatedOn > importedOn
+               || missingLatestVersionId.Contains(game.Id);
 
         internal async Task ReconcileLibraryMembershipAsync(IReadOnlyCollection<Guid> remoteGameIds)
         {

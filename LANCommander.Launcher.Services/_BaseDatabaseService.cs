@@ -27,6 +27,23 @@ namespace LANCommander.Launcher.Services
             return await Context.Set<T>().FindAsync(id);
         }
 
+        /// <summary>
+        /// Re-reads an entity from the database. <see cref="GetAsync(Guid)"/> hands back the instance this
+        /// context already tracks, so it misses writes made through another scope (imports run in their own);
+        /// saving that stale instance would put the old values back. Null if the row no longer exists.
+        /// </summary>
+        public virtual async Task<T?> ReloadAsync(T entity)
+        {
+            var entry = Context.Entry(entity);
+
+            if (entry.State == EntityState.Detached)
+                return await GetAsync(entity.Id);
+
+            await entry.ReloadAsync();
+
+            return entry.State == EntityState.Detached ? null : entity;
+        }
+
         public virtual async Task<T> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate)
         {
             return await Context.Set<T>().FirstOrDefaultAsync(predicate);

@@ -672,6 +672,23 @@ Lists and manages the versions of games. Provided by the server; inject it into 
 - `Task SetRedistributableOptionsAsync(Guid versionId, Guid redistributableId, string optionsJson, CancellationToken cancellationToken)`
   - Sets option values as JSON for a redistributable already linked to the version.
 
+### IImportSourceExtension
+
+`interface` — `LANCommander.Server.Plugins.IImportSourceExtension`
+
+Adds a place to import records from to the server's import dialog, alongside the built-in Upload and Local File, e.g. a store library to pick games from. Register an implementation in `IPlugin.ConfigureServices`; any number of plugins may, one source per implementation.
+
+**Properties**
+
+- `string Id { get; }`
+  - Identifies the source; keep it stable: letters, digits, `.`, `-` and `_`, e.g. `com.mycompany.myplugin.library`.
+- `string Name { get; }`
+  - The name the switcher lists the source by, e.g. "GOG". Keep it short.
+- `IReadOnlyCollection<ManifestType> SupportedTypes { get; }`
+  - The kinds of record the source can import, e.g. only `Game`. The source is only offered when importing one of them.
+- `Type Component { get; }`
+  - The Razor component shown below the switcher, taking the `ImportSourceContext` as its `Context` parameter. An extension whose component doesn't is left out.
+
 ### IKeyProvider
 
 `interface` — `LANCommander.Server.Plugins.IKeyProvider`
@@ -1616,6 +1633,30 @@ Raised after a game version is saved, or an archive is linked to it.
 - `Guid VersionId { get; init; }`
 - `Guid GameId { get; init; }`
 - `string Version { get; init; }`
+
+### ImportSourceContext
+
+`class` — `LANCommander.Server.Plugins.ImportSourceContext`
+
+What an `IImportSourceExtension`'s component is given as its `Context` parameter: what is being imported, and how to hand the import back to the dialog.
+
+**Properties**
+
+- `ManifestType? ManifestType { get; }`
+  - The kind of record being imported, one of the extension's `SupportedTypes`. Null when the dialog wasn't opened for one kind in particular.
+- `Guid StorageLocationId { get; }`
+  - The archive storage location the administrator chose below the source, for an import the component runs itself. `Empty` means the default archive location.
+- `CancellationToken CancellationToken { get; }`
+  - Cancelled when the dialog closes; stop downloading or packaging then.
+
+**Methods**
+
+- `Task ImportPackageAsync(string packagePath, bool deleteWhenDone)`
+  - Hands the dialog an LCX package on the server's disk, which it reads and lists the records of for the administrator to choose from, as for an upload. A package that can't be read is reported and leaves the source shown.
+- `Task CompleteAsync(IReadOnlyList<string> warnings)`
+  - Tells the dialog the component has imported what it was asked to itself, so it shows the import as complete, with any warnings, e.g. records it skipped.
+- `Task CloseAsync()`
+  - Closes the dialog without importing anything.
 
 ### IssueCreatedEvent
 

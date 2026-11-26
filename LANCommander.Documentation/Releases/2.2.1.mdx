@@ -1,0 +1,44 @@
+---
+title: 2.2.1
+---
+
+import ReleaseDownloads from '@site/src/components/ReleaseDownloads';
+import ContributorGrid from '@site/src/components/ContributorGrid';
+
+# LANCommander 2.2.1 Release Notes
+
+:::info Full Release Notes
+This is a patch release for the **2.2 series**. For the complete feature overview, visit the [LANCommander 2.2.0 release notes](./2.2.0).
+:::
+
+## Server
+
+### Import Sources
+The import dialog has been refactored to have a switch at the top for selecting the source of the import: **Upload** for an `.lcx` file from your computer, or **Local File** for one already on the server. Plugins can register additional sources with an `IImportSourceExtension`, such as a store library whose games can be imported directly. See [Extension Points](/Plugins/Extension%20Points#import-sources) for details.
+
+### Settings
+The **Save** button in **Settings** has been moved to the header on all pages for consistency.
+
+## Launcher
+
+### Update Available Fix
+Fixed an issue where a game said an update was available after the game was freshly installed or had already updated. Games imported by an older launcher are refreshed on the next library sync, so they pick up the information the update check needs.
+
+## Changelog
+
+**Launcher**
+- Fixed: Games showing an update as available when already on the latest version
+
+**Server**
+- Added: Import source switcher in the import dialog
+- Added: `IImportSourceExtension` for plugin import sources
+- Changed: **Save** button moved to the header on all **Settings** pages
+- Fixed: Archive upload dialog fields can be changed while uploading
+
+## Downloads
+
+<ReleaseDownloads release="v2.2.1" />
+
+## Contributors
+
+<ContributorGrid from="v2.2.0" to="v2.2.1" />

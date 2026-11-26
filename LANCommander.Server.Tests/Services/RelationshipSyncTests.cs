@@ -306,6 +306,66 @@ public class RelationshipSyncTests(ApplicationFixture fixture) : DalTest(fixture
         updated.Games.ShouldContain(g => g.Id == game.Id);
     }
 
+    /// <summary>
+    /// Per-game redistributable options live in the Options column of the GameRedistributable join
+    /// table (the web UI writes them through GameService.SetRedistributableOptionsAsync). Re-syncing
+    /// the game's relationships used to clear and re-add the join rows, silently resetting every
+    /// saved option to null — the "options always revert to the default" bug.
+    /// </summary>
+    [Fact]
+    public async Task SavingAGameKeepsRedistributableOptions()
+    {
+        var gameService = GetService<GameService>();
+
+        var game = await AddGameAsync();
+        var redistributable = await AddRedistributableAsync();
+
+        var seeded = await gameService.Include(g => g.Redistributables).GetAsync(game.Id);
+        seeded.Redistributables.Add(redistributable);
+        await gameService.UpdateAsync(seeded);
+
+        await gameService.SetRedistributableOptionsAsync(game.Id, redistributable.Id, """{"Architecture":"x64"}""");
+
+        var before = await gameService.GetRedistributableOptionsAsync(game.Id, redistributable.Id);
+        before.ShouldBe("""{"Architecture":"x64"}""");
+
+        // The general edit view loads the Redistributables collection; saving from it must not
+        // touch the join rows that survive the sync.
+        var loaded = await gameService.Include(g => g.Redistributables).GetAsync(game.Id);
+        loaded.Description = "Edited from the general view";
+
+        await gameService.UpdateAsync(loaded);
+
+        var after = await gameService.GetRedistributableOptionsAsync(game.Id, redistributable.Id);
+        after.ShouldBe("""{"Architecture":"x64"}""");
+    }
+
+    [Fact]
+    public async Task RemovingARedistributableFromAGameStillSyncsTheJoinTable()
+    {
+        var gameService = GetService<GameService>();
+
+        var game = await AddGameAsync();
+        var kept = await AddRedistributableAsync();
+        var removed = await AddRedistributableAsync();
+
+        var seeded = await gameService.Include(g => g.Redistributables).GetAsync(game.Id);
+        seeded.Redistributables.Add(kept);
+        seeded.Redistributables.Add(removed);
+        await gameService.UpdateAsync(seeded);
+
+        await gameService.SetRedistributableOptionsAsync(game.Id, kept.Id, """{"Architecture":"x86"}""");
+        await gameService.SetRedistributableOptionsAsync(game.Id, removed.Id, """{"Architecture":"x64"}""");
+
+        var loaded = await gameService.Include(g => g.Redistributables).GetAsync(game.Id);
+        loaded.Redistributables.Remove(loaded.Redistributables.First(r => r.Id == removed.Id));
+
+        await gameService.UpdateAsync(loaded);
+
+        (await gameService.GetRedistributableOptionsAsync(game.Id, kept.Id)).ShouldBe("""{"Architecture":"x86"}""");
+        (await gameService.GetRedistributableOptionsAsync(game.Id, removed.Id)).ShouldBeNull();
+    }
+
     #endregion
 
     #region The fix must not swing too far the other way

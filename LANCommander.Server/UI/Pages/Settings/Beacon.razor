@@ -8,7 +8,11 @@
 @inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Beacon" />
+<PageHeader Title="Beacon">
+    <Extra>
+        <Button Primary Loading="_saving" OnClick="SaveAsync">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" OnSubmit="SaveAsync" Loading="_saving">
@@ -25,10 +29,6 @@
         <FormItem Label="Address">
             <Typography Secondary>Use this to customize the address that is broadcasted to clients. Default: http://&lt;Server IP&gt;:@Settings.Value.Server.Beacon.Port</Typography>
             <TextInput @bind-Value="Settings.Value.Server.Beacon.Address" />
-        </FormItem>
-
-        <FormItem>
-            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>

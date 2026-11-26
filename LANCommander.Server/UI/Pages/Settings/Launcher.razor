@@ -12,6 +12,7 @@
 <PageHeader Title="Launcher">
     <Extra>
         <Button OnClick="DownloadLaunchers" Disabled="!Settings.Value.Server.Launcher.HostUpdates">Download Launchers</Button>
+        <Button Primary OnClick="Save">Save</Button>
     </Extra>
 </PageHeader>
 
@@ -35,10 +36,6 @@
 
         <FormItem Label="Platforms">
             <EnumSelect TEnum="LauncherPlatform" Multiple Disabled="!Settings.Value.Server.Launcher.HostUpdates" @bind-Values="Settings.Value.Server.Launcher.Platforms" />
-        </FormItem>
-
-        <FormItem>
-            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>

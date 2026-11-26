@@ -8,7 +8,11 @@
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="IPX Relay" />
+<PageHeader Title="IPX Relay">
+    <Extra>
+        <Button Primary Loading="_saving" OnClick="SaveAsync">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" OnSubmit="SaveAsync" Loading="_saving">
@@ -27,10 +31,6 @@
 
         <FormItem Label="Logging">
             <Switch @bind-Value="Settings.Value.Server.IPXRelay.Logging" />
-        </FormItem>
-
-        <FormItem>
-            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>

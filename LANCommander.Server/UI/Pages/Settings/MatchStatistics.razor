@@ -11,7 +11,11 @@
 @inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Match Statistics" />
+<PageHeader Title="Match Statistics">
+    <Extra>
+        <Button Primary Loading="_saving" Disabled="AttachmentStorageLocation == null" OnClick="SaveAsync">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent Loading="AttachmentStorageLocation == null">
     @if (AttachmentStorageLocation != null)
@@ -59,10 +63,6 @@
 
             <FormItem Label="Incomplete Upload Timeout (hours)" Help="How long an attachment upload can stay incomplete before it's removed.">
                 <NumberInput @bind-Value="_settings.PendingAttachmentTimeout" Min="1" />
-            </FormItem>
-
-            <FormItem>
-                <Button Primary Submit Loading="_saving">Save</Button>
             </FormItem>
         </Form>
     }

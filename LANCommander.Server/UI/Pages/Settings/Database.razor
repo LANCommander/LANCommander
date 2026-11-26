@@ -13,7 +13,12 @@
 @inject ILogger<Database> Logger
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Database" />
+<PageHeader Title="Database">
+    <Extra>
+        <Button OnClick="TestDatabaseConnection" Loading="Loading">Test</Button>
+        <Button Primary Loading="Loading" OnClick="ValidateDatabaseConnection">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" Loading="Loading" OnSubmit="ValidateDatabaseConnection">
@@ -22,13 +27,6 @@
         </FormItem>
 
         <DatabaseConnectionStringEditor Provider="Settings.Value.Server.Database.Provider" @bind-ConnectionString="Settings.Value.Server.Database.ConnectionString" />
-
-        <FormItem Style="margin-top: 24px">
-            <Flex Gap="Gap.Small">
-                <Button OnClick="TestDatabaseConnection" Loading="Loading">Test</Button>
-                <Button Primary Submit Loading="Loading">Save</Button>
-            </Flex>
-        </FormItem>
     </Form>
 </PageContent>
 

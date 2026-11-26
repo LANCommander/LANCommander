@@ -6,7 +6,11 @@
 @inject SettingsProvider<Settings> SettingsProvider
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Library" />
+<PageHeader Title="Library">
+    <Extra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" OnSubmit="Save">
@@ -26,10 +30,6 @@
                 </ChildContent>
                 <Description>Restricts the games that users can see in their library and the depot based on their role. Visit Settings / Roles to assign collections to roles.</Description>
             </HelpButton>
-        </FormItem>
-
-        <FormItem>
-            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>

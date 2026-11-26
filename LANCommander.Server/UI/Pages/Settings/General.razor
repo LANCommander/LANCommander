@@ -8,7 +8,11 @@
 @inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="General" />
+<PageHeader Title="General">
+    <Extra>
+        <Button Primary OnClick="Save">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent>
     <Form Model="Settings.Value" OnSubmit="Save">
@@ -32,10 +36,6 @@
 
         <FormItem Label="Certificate Password">
             <PasswordInput @bind-Value="Settings.Value.Server.Http.CertificatePassword" Disabled="!Settings.Value.Server.Http.UseSSL" />
-        </FormItem>
-
-        <FormItem>
-            <Button Primary Submit>Save</Button>
         </FormItem>
     </Form>
 </PageContent>

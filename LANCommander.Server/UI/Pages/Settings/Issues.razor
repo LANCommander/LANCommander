@@ -10,7 +10,11 @@
 @inject NotificationService Notifications
 @attribute [Authorize(Roles = RoleService.AdministratorRoleName)]
 
-<PageHeader Title="Issues" />
+<PageHeader Title="Issues">
+    <Extra>
+        <Button Primary Loading="_saving" Disabled="AttachmentStorageLocation == null" OnClick="SaveAsync">Save</Button>
+    </Extra>
+</PageHeader>
 
 <PageContent Loading="AttachmentStorageLocation == null">
     @if (AttachmentStorageLocation != null)
@@ -26,10 +30,6 @@
 
             <FormItem Label="Max Attachment Size (MB)" Help="The largest file a user can attach. Applies to each file separately.">
                 <NumberInput @bind-Value="_issueSettings.MaxAttachmentSize" Min="1" Max="MaxAttachmentSizeLimit" Disabled="_issueSettings.MaxAttachments == 0" />
-            </FormItem>
-
-            <FormItem>
-                <Button Primary Submit Loading="_saving">Save</Button>
             </FormItem>
         </Form>
     }
